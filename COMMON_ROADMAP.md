@@ -127,7 +127,7 @@ src/main/kotlin/com/kiva/infrastructure/common/
 
 ---
 
-## جلسه‌ی ۴: UseCase و Logger
+## جلسه‌ی ۴: UseCase و Logger ✅
 
 **بخون:** `CommandUseCase.kt` و `QueryUseCase.kt` کامن شرکت.
 
@@ -140,7 +140,9 @@ src/main/kotlin/com/kiva/infrastructure/common/
 - `getLogger()` با slf4j-api (تنها وابستگی خارجی مجاز کامن)
 
 **معیار پذیرش:**
-- [ ] یه UseCase نمونه تو تست که هر دو interface رو پیاده کنه و صدا زده بشه
+- [x] یه UseCase نمونه تو تست که هر دو interface رو پیاده کنه و صدا زده بشه
+
+**تصمیم:** Command هم می‌تونه خروجی داشته باشه (`CommandUseCase<C, R, F>`)، معمولاً id چیزی که ساخته. هر جا خروجی لازم نیست، `Unit`. `getLogger()` اسم کلاس رو خودش پیدا می‌کنه، حتی داخل `companion object`
 
 ---
 
@@ -269,3 +271,4 @@ src/main/kotlin/com/kiva/infrastructure/common/
 | 2026-10-04 | ۱ | `Result` (sealed، `out T`/`out F`، `Success`/`Failure`، `success`/`failure`، `isSuccess`/`isFailure`، `getOrNull`/`failureOrNull`) + `ResultFailure` خالی نوشته شد. ۱۱ تست سبز. با حذف آزمایشی `out` و `sealed`، خطای کامپایلر ثابت کرد که هر دو لازمن. این جلسه رو من نوشتم و توضیح دادم |
 | 2026-10-04 | ۲ | `mapOnSuccess`، `mapOnFailure`، `bind`، `onSuccess`، `onFailure`، `fold` و `unwrapOr` به‌صورت extension و `inline` نوشته شدن. ۱۳ تست جدید و جمعاً ۲۴ تست سبز. `fold` ما برخلاف شرکت واقعاً مقدار برمی‌گردونه. `zip` به جلسه‌ی ۳ منتقل شد |
 | 2026-10-04 | ۳ | مدل خطا: `FailureKind` + `ResultFailure(code, kind, field, causes)` با چک `UPPER_SNAKE_CASE`. `zip` با ۲ و ۳ ورودی که همه‌ی خطاها رو جمع می‌کنه (برخلاف شرکت، بدون تغییر دادن یه آبجکت مشترک). `NoFailure` و `value` حذف شدن. جمعاً ۴۸ تست سبز |
+| 2026-10-04 | ۴ | `CommandUseCase<C, R, F>` و `QueryUseCase<Q, R, F>` (هر دو `suspend`) + `getLogger()`. `slf4j-api` تنها وابستگی خارجی `common` شد. درس: `slf4j-api` به‌تنهایی یه لاگر `NOP` می‌ده، پس تست‌ها logback لازم دارن. ۵۴ تست سبز |
