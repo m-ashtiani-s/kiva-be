@@ -235,7 +235,7 @@ src/main/kotlin/com/kiva/infrastructure/common/
 
 ---
 
-## جلسه‌ی ۸: Value Objectهای مشترک
+## جلسه‌ی ۸: Value Objectهای مشترک ✅
 
 **بخون:** `MoneyIRR.kt`، `IranianMobileNumber.kt` و `normalizeDigits` تو کامن شرکت.
 
@@ -250,10 +250,17 @@ src/main/kotlin/com/kiva/infrastructure/common/
 - `Money.ofRials(Long): Result<Money, ...>` + `plus`، `times(qty)` و `compareTo`
 
 **معیار پذیرش:**
-- [ ] `"۰۹۱۲ ۱۲۳ ۴۵۶۷"` و `"+989121234567"` به **یه مقدار** برسن
-- [ ] شماره‌ی ۱۰ رقمی یا با پیش‌شماره‌ی غیر `9` رد بشه
-- [ ] `Money` منفی ساخته نشه. overflow تشخیص داده بشه (`Math.addExact`)
+- [x] `"۰۹۱۲ ۱۲۳ ۴۵۶۷"` و `"+989121234567"` به **یه مقدار** برسن
+- [x] شماره‌ی ۱۰ رقمی یا با پیش‌شماره‌ی غیر `9` رد بشه
+- [x] `Money` منفی ساخته نشه. overflow تشخیص داده بشه (`Math.addExact`)
 
+**تصمیم‌ها:**
+- `Money` یه `value class` روی `Long` (ریال) ـه، نه `Double`. فرمت تومان کار فرانته
+- overflow و تعداد منفی **exception** ان، نه `Result`: تو شاپ واقعی پیش نمیان، پس اگه پیش اومدن باگن و باید با صدای بلند متوقف بشن
+- گرد کردن درصد (تخفیف) فعلاً نوشته نشد و وقتی کد تخفیف اومد تصمیمش گرفته می‌شه
+- موبایل همیشه به شکل `09xxxxxxxxx` ذخیره می‌شه. رقم فارسی، فاصله، خط تیره، `+98`، `0098` و `98` قبول می‌شن، و `+98 0912...` هم قبوله
+- `98` فقط وقتی پیش‌شماره‌ی کشور حساب می‌شه که بعدش یه شماره‌ی کامل بیاد
+- پیش‌شماره‌ی اپراتورها (`0912`، `0935`، ...) چک نمی‌شه، چون لیستش عوض می‌شه. «۱۰ رقم که با ۹ شروع بشه» کافیه
 ---
 
 ## جلسه‌ی ۹: جمع‌بندی
@@ -300,3 +307,4 @@ src/main/kotlin/com/kiva/infrastructure/common/
 | 2026-10-04 | ۵ | `TransactionManager` (تو `common`) + `ExposedTransactionManager` (تو infra، ثبت‌شده تو Koin). دیتابیس `kiva_test` ساخته شد. ۸ تست روی Postgres واقعی سبز و چک‌شده با حذف آزمایشی کد. برنامه هم بالا اومد و `/health` جواب 200 داد |
 | 2026-10-04 | ۶ | `FailureHttpResponse` + `respondResult` (به‌علاوه‌ی نسخه‌ی `Unit` با جواب 204) + `toHttpStatus` + StatusPages. ۱۷ تست با `testApplication` سبز. نکته‌ی محیطی: Gradle پروکسی سیستم رو نمی‌بینه |
 | 2026-10-04 | ۷ | `Pageable`، `Sort` و `Page` (تو `common`) + `call.pageable()`، `PageHttpResponse` و `Query.paginate()` (تو infra). ۲۸ تست جدید سبز (۶ تاش روی `kiva_test`). لزوم tiebreaker با دموی SQL و حذف آزمایشی ثابت شد |
+| 2026-10-04 | ۸ | `normalizeDigits` (فارسی و عربی)، `IranianMobileNumber` (یه شکل ذخیره، ۱۲ شکل ورودی) و `Money` (`value class` با `Long`، `addExact` و `multiplyExact`). ۳۷ تست جدید سبز |
