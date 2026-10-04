@@ -9,6 +9,8 @@ kotlin {
 }
 
 dependencies {
+    api(project(":common"))
+
     testImplementation(kotlin("test"))
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)

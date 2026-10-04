@@ -4,5 +4,6 @@ plugins {
 
 rootProject.name = "kiva-be"
 
+include("common")
 include("domain")
 include("application")
