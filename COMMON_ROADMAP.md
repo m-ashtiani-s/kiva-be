@@ -206,7 +206,7 @@ src/main/kotlin/com/kiva/infrastructure/common/
 
 ---
 
-## جلسه‌ی ۷: صفحه‌بندی
+## جلسه‌ی ۷: صفحه‌بندی ✅
 
 **بخون:** `Page`، `Pageable`، `Sort`، `getPageableFromQueryParams`، `handlePageable` و `PageHttpRes` تو کامن شرکت.
 
@@ -221,9 +221,17 @@ src/main/kotlin/com/kiva/infrastructure/common/
 - infrastructure: خوندن `?page&size&sort`، `Query.paginate(pageable, allowedSorts)` و `PageHttpRes`
 
 **معیار پذیرش:**
-- [ ] `size` بیشتر از حداکثر به حداکثر محدود بشه، یا 400 برگردونه (یکی رو انتخاب کن)
-- [ ] sort روی ستون غیرمجاز 400 برگردونه
-- [ ] تست روی `kiva_test`: ۲۵ ردیف، صفحه‌ی ۳ با `size=10`، ۵ ردیف و `totalElements=25`
+- [x] `size` بیشتر از حداکثر به حداکثر محدود بشه، یا 400 برگردونه (یکی رو انتخاب کن). انتخاب: **400**
+- [x] sort روی ستون غیرمجاز 400 برگردونه
+- [x] تست روی `kiva_test`: ۲۵ ردیف، صفحه‌ی ۳ با `size=10`، ۵ ردیف و `totalItems=25`
+
+**تصمیم‌ها:**
+- صفحه از **۱** شروع می‌شه. `size` پیش‌فرض ۲۰ و حداکثر ۱۰۰ ـه
+- فرمت sort: `?sort=-price,name` (علامت `-` یعنی نزولی)
+- `Pageable` فقط با `Pageable.of` ساخته می‌شه، پس همیشه معتبره. همه‌ی خطاها با `zip` یه‌جا گزارش می‌شن
+- صفحه‌ی بعد از آخر خطا نیست، فقط خالیه
+- **tiebreaker اجباری** (معمولاً id). بدونش، تو دمو با SQL واقعی از ۲۵ کالا **۵ تا دو بار** اومدن و **۵ تا اصلاً نیومدن**. حذف آزمایشی‌ش ۳ تست رو قرمز کرد
+- `COUNT(*)` همیشه زده می‌شه، چون فرانت شماره‌ی صفحه‌ها رو لازم داره. اگه یه روز جدول خیلی بزرگ شد، بازبینی می‌شه
 
 ---
 
@@ -291,3 +299,4 @@ src/main/kotlin/com/kiva/infrastructure/common/
 | 2026-10-04 | ۴ | `CommandUseCase<C, R, F>` و `QueryUseCase<Q, R, F>` (هر دو `suspend`) + `getLogger()`. `slf4j-api` تنها وابستگی خارجی `common` شد. درس: `slf4j-api` به‌تنهایی یه لاگر `NOP` می‌ده، پس تست‌ها logback لازم دارن. ۵۴ تست سبز |
 | 2026-10-04 | ۵ | `TransactionManager` (تو `common`) + `ExposedTransactionManager` (تو infra، ثبت‌شده تو Koin). دیتابیس `kiva_test` ساخته شد. ۸ تست روی Postgres واقعی سبز و چک‌شده با حذف آزمایشی کد. برنامه هم بالا اومد و `/health` جواب 200 داد |
 | 2026-10-04 | ۶ | `FailureHttpResponse` + `respondResult` (به‌علاوه‌ی نسخه‌ی `Unit` با جواب 204) + `toHttpStatus` + StatusPages. ۱۷ تست با `testApplication` سبز. نکته‌ی محیطی: Gradle پروکسی سیستم رو نمی‌بینه |
+| 2026-10-04 | ۷ | `Pageable`، `Sort` و `Page` (تو `common`) + `call.pageable()`، `PageHttpResponse` و `Query.paginate()` (تو infra). ۲۸ تست جدید سبز (۶ تاش روی `kiva_test`). لزوم tiebreaker با دموی SQL و حذف آزمایشی ثابت شد |
