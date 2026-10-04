@@ -146,7 +146,7 @@ src/main/kotlin/com/kiva/infrastructure/common/
 
 ---
 
-## جلسه‌ی ۵: تراکنش
+## جلسه‌ی ۵: تراکنش ✅
 
 **بخون:** `TransactionManager.kt` و `ExposedTransactionManager.kt` کامن شرکت. **دقت کن** وقتی تراکنشی از قبل باز باشه چی می‌شه.
 
@@ -162,9 +162,17 @@ src/main/kotlin/com/kiva/infrastructure/common/
 - دیتابیس `kiva_test` برای تست‌ها
 
 **معیار پذیرش** (تست روی Postgres واقعی):
-- [ ] خطا وسط تراکنش، همه‌چیز rollback بشه
-- [ ] تراکنش تودرتو **یه تراکنش** باشه: اگه داخلی خطا بده، نوشته‌های بیرونی هم برگرده
-- [ ] **اگه block یه `Result.Failure` برگردونه، rollback بشه یا نه؟** تصمیمش رو بگیر و براش تست بنویس
+- [x] خطا وسط تراکنش، همه‌چیز rollback بشه
+- [x] تراکنش تودرتو **یه تراکنش** باشه: اگه داخلی خطا بده، نوشته‌های بیرونی هم برگرده
+- [x] **اگه block یه `Result.Failure` برگردونه، rollback بشه یا نه؟** تصمیم: **بله**
+
+**تصمیم‌ها:**
+- یه تابع واحد: `inTransaction(block: suspend () -> Result<T, F>)`. ورودیش نوع Exposed نداره، پس UseCase نمی‌فهمه دیتابیس چیه
+- `Success` یعنی commit. `Failure` یعنی rollback. exception یعنی rollback و پرتاب دوباره
+- تودرتو: داخلی به تراکنش بیرونی **می‌پیونده** و **فقط بیرونی‌ترین** تصمیم می‌گیره
+- JDBC روی `Dispatchers.IO` اجرا می‌شه
+- isolation فعلاً پیش‌فرض Postgres (`READ COMMITTED`) ـه. هر وقت لازم شد اضافه می‌شه
+- تست‌ها با حذف آزمایشی `rollback()` (۴ تست قرمز) و حذف پیوستن به تراکنش بیرونی (۱ تست قرمز) چک شدن
 
 ---
 
@@ -272,3 +280,4 @@ src/main/kotlin/com/kiva/infrastructure/common/
 | 2026-10-04 | ۲ | `mapOnSuccess`، `mapOnFailure`، `bind`، `onSuccess`، `onFailure`، `fold` و `unwrapOr` به‌صورت extension و `inline` نوشته شدن. ۱۳ تست جدید و جمعاً ۲۴ تست سبز. `fold` ما برخلاف شرکت واقعاً مقدار برمی‌گردونه. `zip` به جلسه‌ی ۳ منتقل شد |
 | 2026-10-04 | ۳ | مدل خطا: `FailureKind` + `ResultFailure(code, kind, field, causes)` با چک `UPPER_SNAKE_CASE`. `zip` با ۲ و ۳ ورودی که همه‌ی خطاها رو جمع می‌کنه (برخلاف شرکت، بدون تغییر دادن یه آبجکت مشترک). `NoFailure` و `value` حذف شدن. جمعاً ۴۸ تست سبز |
 | 2026-10-04 | ۴ | `CommandUseCase<C, R, F>` و `QueryUseCase<Q, R, F>` (هر دو `suspend`) + `getLogger()`. `slf4j-api` تنها وابستگی خارجی `common` شد. درس: `slf4j-api` به‌تنهایی یه لاگر `NOP` می‌ده، پس تست‌ها logback لازم دارن. ۵۴ تست سبز |
+| 2026-10-04 | ۵ | `TransactionManager` (تو `common`) + `ExposedTransactionManager` (تو infra، ثبت‌شده تو Koin). دیتابیس `kiva_test` ساخته شد. ۸ تست روی Postgres واقعی سبز و چک‌شده با حذف آزمایشی کد. برنامه هم بالا اومد و `/health` جواب 200 داد |
