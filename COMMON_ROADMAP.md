@@ -78,7 +78,7 @@ src/main/kotlin/com/kiva/infrastructure/common/
 
 ---
 
-## جلسه‌ی ۲: `Result`، بخش دوم (تبدیل‌ها)
+## جلسه‌ی ۲: `Result`، بخش دوم (تبدیل‌ها) ✅
 
 **بخون:** تو `Result.kt` کامن شرکت، `mapOnSuccess`، `mapOnFailure`، `bind`، `onSuccess`، `onFailure`، `fold` و `unwrapOr`.
 
@@ -90,12 +90,12 @@ src/main/kotlin/com/kiva/infrastructure/common/
 
 **می‌نویسی:**
 - `mapOnSuccess`، `mapOnFailure`، `bind`، `onSuccess`، `onFailure`، `fold`، `unwrapOr`
-- `zip` برای ۲ ورودی، برای ترکیب نتیجه‌ی دو تا Value Object
+- ~~`zip`~~ رفت به جلسه‌ی ۳: `zip` شرکت **همه‌ی** خطاها رو به‌عنوان `causes` جمع می‌کنه، پس به مدل خطا وابسته‌ست
 
 **معیار پذیرش:**
-- [ ] برای هر تابع دو تست: روی `Success` و روی `Failure`
-- [ ] تست: `bind` بعد از اولین `Failure`، lambdaهای بعدی رو **اجرا نکنه** (با یه شمارنده ثابتش کن)
-- [ ] تست: `unwrapOr { return ... }` داخل یه تابع، از خود تابع بیرون بزنه
+- [x] برای هر تابع دو تست: روی `Success` و روی `Failure`
+- [x] تست: `bind` بعد از اولین `Failure`، lambdaهای بعدی رو **اجرا نکنه** (با یه شمارنده ثابتش کن)
+- [x] تست: `unwrapOr { return ... }` داخل یه تابع، از خود تابع بیرون بزنه
 
 ---
 
@@ -113,6 +113,7 @@ src/main/kotlin/com/kiva/infrastructure/common/
 - `abstract class ResultFailure(val failure: Failure)`
 - `object NoFailure`
 - `data class Failure(code, field, value, causes, [kind])`
+- `zip` برای ۲ و ۳ ورودی، که **همه‌ی** خطاها رو جمع کنه، نه فقط اولی رو. مثلاً فرم ثبت آدرس که هم کد پستی و هم موبایلش غلطه
 
 **معیار پذیرش:**
 - [ ] تست: یه Failure با `cause` ساخته بشه و `code` لایه‌ی داخلی از بیرون قابل‌خوندن باشه (همون الگوی `cause` تو `library-be`)
@@ -259,3 +260,4 @@ src/main/kotlin/com/kiva/infrastructure/common/
 | 2026-10-04 | - | فهرست کامن شرکت (4.7.0) بررسی شد و این نقشه نوشته شد |
 | 2026-10-04 | ۰ | ماژول `common` ساخته شد و `domain` با `api` بهش وصل شد. build سبزه و زنجیره‌ی root → application → domain → common برقراره |
 | 2026-10-04 | ۱ | `Result` (sealed، `out T`/`out F`، `Success`/`Failure`، `success`/`failure`، `isSuccess`/`isFailure`، `getOrNull`/`failureOrNull`) + `ResultFailure` خالی نوشته شد. ۱۱ تست سبز. با حذف آزمایشی `out` و `sealed`، خطای کامپایلر ثابت کرد که هر دو لازمن. این جلسه رو من نوشتم و توضیح دادم |
+| 2026-10-04 | ۲ | `mapOnSuccess`، `mapOnFailure`، `bind`، `onSuccess`، `onFailure`، `fold` و `unwrapOr` به‌صورت extension و `inline` نوشته شدن. ۱۳ تست جدید و جمعاً ۲۴ تست سبز. `fold` ما برخلاف شرکت واقعاً مقدار برمی‌گردونه. `zip` به جلسه‌ی ۳ منتقل شد |
