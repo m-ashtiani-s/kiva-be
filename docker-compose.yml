@@ -1,0 +1,15 @@
+# Local PostgreSQL for development: docker compose up -d
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: kiva
+      POSTGRES_USER: kiva
+      POSTGRES_PASSWORD: kiva
+    ports:
+      - "5432:5432"
+    volumes:
+      - kiva-pg:/var/lib/postgresql/data
+
+volumes:
+  kiva-pg:
