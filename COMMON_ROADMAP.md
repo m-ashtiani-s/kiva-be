@@ -42,7 +42,7 @@ src/main/kotlin/com/kiva/infrastructure/common/
 
 ---
 
-## جلسه‌ی ۰: ماژول `common`
+## جلسه‌ی ۰: ماژول `common` ✅
 
 **می‌نویسی:**
 - ماژول Gradle به اسم `common` (`settings.gradle.kts` و `common/build.gradle.kts`)
@@ -52,12 +52,12 @@ src/main/kotlin/com/kiva/infrastructure/common/
 - چرا `api` و نه `implementation`؟ اگه `implementation` بذاریم، کجا خراب می‌شه؟
 
 **معیار پذیرش:**
-- [ ] `./gradlew build` سبز
-- [ ] `common` هیچ وابستگی‌ای جز Kotlin و JUnit (برای تست) نداره
+- [x] `./gradlew build` سبز
+- [x] `common` هیچ وابستگی‌ای جز Kotlin و JUnit (برای تست) نداره
 
 ---
 
-## جلسه‌ی ۱: `Result`، بخش اول (ساختار)
+## جلسه‌ی ۱: `Result`، بخش اول (ساختار) ✅
 
 **بخون:** `Result.kt` کامن شرکت، **فقط** تعریف کلاس و `Success`/`Failure`. اون ۳۴ تا `zip` رو رد کن.
 
@@ -72,9 +72,9 @@ src/main/kotlin/com/kiva/infrastructure/common/
 - `isSuccess`، `isFailure`، `getOrNull()`، `failureOrNull()`
 
 **معیار پذیرش:**
-- [ ] تست: یه `Result<Int, X>` بدون cast به یه `Result<Number, X>` اختصاص داده بشه (اثبات `out`)
-- [ ] تست: `when` روی Result بدون شاخه‌ی `else` کامپایل بشه
-- [ ] **`getOrThrow` وجود نداره**، و دلیلش رو بتونی توضیح بدی
+- [x] تست: یه `Result<Int, X>` بدون cast به یه `Result<Number, X>` اختصاص داده بشه (اثبات `out`)
+- [x] تست: `when` روی Result بدون شاخه‌ی `else` کامپایل بشه
+- [x] **`getOrThrow` وجود نداره**، و دلیلش رو بتونی توضیح بدی
 
 ---
 
@@ -257,3 +257,5 @@ src/main/kotlin/com/kiva/infrastructure/common/
 | تاریخ | جلسه | چی شد |
 |---|---|---|
 | 2026-10-04 | - | فهرست کامن شرکت (4.7.0) بررسی شد و این نقشه نوشته شد |
+| 2026-10-04 | ۰ | ماژول `common` ساخته شد و `domain` با `api` بهش وصل شد. build سبزه و زنجیره‌ی root → application → domain → common برقراره |
+| 2026-10-04 | ۱ | `Result` (sealed، `out T`/`out F`، `Success`/`Failure`، `success`/`failure`، `isSuccess`/`isFailure`، `getOrNull`/`failureOrNull`) + `ResultFailure` خالی نوشته شد. ۱۱ تست سبز. با حذف آزمایشی `out` و `sealed`، خطای کامپایلر ثابت کرد که هر دو لازمن. این جلسه رو من نوشتم و توضیح دادم |
