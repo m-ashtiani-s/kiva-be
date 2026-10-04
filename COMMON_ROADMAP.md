@@ -99,7 +99,7 @@ src/main/kotlin/com/kiva/infrastructure/common/
 
 ---
 
-## جلسه‌ی ۳: مدل خطا
+## جلسه‌ی ۳: مدل خطا ✅
 
 **بخون:** `ResultFailure.kt`، `NoFailure.kt` و `ParvanFailure.kt` تو کامن شرکت. ببین `ParvanFailure` چند تا سازنده داره و `causes` چطور پر می‌شه.
 
@@ -109,15 +109,21 @@ src/main/kotlin/com/kiva/infrastructure/common/
 3. `value` (ورودی خراب کاربر) تو پاسخ HTTP برگرده یا نه؟ (فکر کن: اگه ورودی پسورد یا کد OTP باشه چی؟)
 4. نام‌گذاری `code`: `BookIdIsBlank` یا `book.id.blank`؟ یه قرارداد انتخاب کن.
 
-**می‌نویسی:**
-- `abstract class ResultFailure(val failure: Failure)`
-- `object NoFailure`
-- `data class Failure(code, field, value, causes, [kind])`
-- `zip` برای ۲ و ۳ ورودی، که **همه‌ی** خطاها رو جمع کنه، نه فقط اولی رو. مثلاً فرم ثبت آدرس که هم کد پستی و هم موبایلش غلطه
+**تصمیم‌های گرفته‌شده:**
+- status در HTTP از روی **`kind`** خود خطا تعیین می‌شه، نه با lambda تو هر Route. خطایی که تو جای دیگه معنی دیگه‌ای داره، با `mapOnFailure` پیچیده می‌شه
+- فیلدها **مستقیم روی `ResultFailure`** ان (`code`، `kind`، `field`، `causes`). کلاس جدای `Failure` و لایه‌ی `.failure.failure` نداریم
+- **`value` نداریم.** ورودی خام ممکنه پسورد یا OTP باشه. اطلاعات امن، داخل خود زیرکلاس می‌مونه (`TooLong(length)`)
+- **`NoFailure` نداریم.** `Result<T, Nothing>` یعنی «هیچ‌وقت شکست نمی‌خوره»
+- `code` به‌صورت `UPPER_SNAKE_CASE` ـه و موقع ساخت چک می‌شه
+
+**نوشته شد:**
+- `FailureKind`: `INVALID`، `NOT_FOUND`، `CONFLICT`، `UNAUTHORIZED`، `FORBIDDEN`
+- `abstract class ResultFailure(code, kind, field?, causes)`
+- [x] `zip` برای ۲ و ۳ ورودی، که **همه‌ی** خطاها رو جمع کنه، نه فقط اولی رو. مثلاً فرم ثبت آدرس که هم کد پستی و هم موبایلش غلطه
 
 **معیار پذیرش:**
-- [ ] تست: یه Failure با `cause` ساخته بشه و `code` لایه‌ی داخلی از بیرون قابل‌خوندن باشه (همون الگوی `cause` تو `library-be`)
-- [ ] قرارداد نام‌گذاری `code` تو KDoc نوشته بشه
+- [x] تست: یه Failure با `cause` ساخته بشه و `code` لایه‌ی داخلی از بیرون قابل‌خوندن باشه (همون الگوی `cause` تو `library-be`)
+- [x] قرارداد نام‌گذاری `code` تو KDoc نوشته بشه
 
 ---
 
@@ -237,6 +243,7 @@ src/main/kotlin/com/kiva/infrastructure/common/
 | تو کامن شرکت | چرا نه |
 |---|---|
 | `getSuccessOrException` و `getFailureOrException` | Result رو به exception تبدیل می‌کنه و جواب 500 می‌ده (تله‌ی تسک ۷) |
+| `NoFailure` | `Result<T, Nothing>` همین معنی رو بدون کلاس اضافه می‌ده |
 | ۳۴ نسخه‌ی `zip` | فقط `zip` با ۲ ورودی، بقیه وقتی واقعاً لازم شد |
 | `ContextHolder`، `UserContextPlugin` | کاربر فعلی صریحاً از Route به Command پاس داده می‌شه |
 | `initKtor` و DSLش | `Application.kt` صریح خودمون رو داریم |
@@ -261,3 +268,4 @@ src/main/kotlin/com/kiva/infrastructure/common/
 | 2026-10-04 | ۰ | ماژول `common` ساخته شد و `domain` با `api` بهش وصل شد. build سبزه و زنجیره‌ی root → application → domain → common برقراره |
 | 2026-10-04 | ۱ | `Result` (sealed، `out T`/`out F`، `Success`/`Failure`، `success`/`failure`، `isSuccess`/`isFailure`، `getOrNull`/`failureOrNull`) + `ResultFailure` خالی نوشته شد. ۱۱ تست سبز. با حذف آزمایشی `out` و `sealed`، خطای کامپایلر ثابت کرد که هر دو لازمن. این جلسه رو من نوشتم و توضیح دادم |
 | 2026-10-04 | ۲ | `mapOnSuccess`، `mapOnFailure`، `bind`، `onSuccess`، `onFailure`، `fold` و `unwrapOr` به‌صورت extension و `inline` نوشته شدن. ۱۳ تست جدید و جمعاً ۲۴ تست سبز. `fold` ما برخلاف شرکت واقعاً مقدار برمی‌گردونه. `zip` به جلسه‌ی ۳ منتقل شد |
+| 2026-10-04 | ۳ | مدل خطا: `FailureKind` + `ResultFailure(code, kind, field, causes)` با چک `UPPER_SNAKE_CASE`. `zip` با ۲ و ۳ ورودی که همه‌ی خطاها رو جمع می‌کنه (برخلاف شرکت، بدون تغییر دادن یه آبجکت مشترک). `NoFailure` و `value` حذف شدن. جمعاً ۴۸ تست سبز |

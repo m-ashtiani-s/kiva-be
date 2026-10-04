@@ -7,13 +7,14 @@ import kotlin.test.assertNull
 
 class ResultOperationsTest {
 
-    private sealed class TestFailure : ResultFailure() {
-        data object Blank : TestFailure()
-        data class NotANumber(val raw: String) : TestFailure()
-        data class NotPositive(val value: Int) : TestFailure()
+    private sealed class TestFailure(code: String) : ResultFailure(code, FailureKind.INVALID) {
+        data object Blank : TestFailure("BLANK")
+        data class NotANumber(val raw: String) : TestFailure("NOT_A_NUMBER")
+        data class NotPositive(val value: Int) : TestFailure("NOT_POSITIVE")
     }
 
-    private data class Wrapped(val inner: TestFailure) : ResultFailure()
+    private data class Wrapped(val inner: TestFailure) :
+        ResultFailure("WRAPPED", FailureKind.INVALID, causes = listOf(inner))
 
     private fun parse(raw: String): Result<Int, TestFailure> = when {
         raw.isBlank() -> Result.failure(TestFailure.Blank)

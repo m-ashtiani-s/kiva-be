@@ -13,9 +13,9 @@ class ResultTest {
     // A tiny value object, shaped like Isbn.makeNew in library-be.
     private data class Sku(val value: String)
 
-    private sealed class SkuFailure : ResultFailure() {
-        data object Blank : SkuFailure()
-        data class TooLong(val length: Int) : SkuFailure()
+    private sealed class SkuFailure(code: String) : ResultFailure(code, FailureKind.INVALID, field = "sku") {
+        data object Blank : SkuFailure("SKU_BLANK")
+        data class TooLong(val length: Int) : SkuFailure("SKU_TOO_LONG")
     }
 
     private fun makeSku(raw: String): Result<Sku, SkuFailure> = when {
