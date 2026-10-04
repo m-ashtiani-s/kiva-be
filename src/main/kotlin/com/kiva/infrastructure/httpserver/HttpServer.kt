@@ -1,5 +1,6 @@
 package com.kiva.infrastructure.httpserver
 
+import com.kiva.infrastructure.common.http.configureStatusPages
 import com.kiva.infrastructure.httpserver.route.healthRoutes
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
@@ -22,6 +23,7 @@ fun Application.configureHttp() {
     install(CallLogging) {
         level = Level.INFO
     }
+    configureStatusPages()
 }
 
 fun Application.configureRouting() {

@@ -176,7 +176,7 @@ src/main/kotlin/com/kiva/infrastructure/common/
 
 ---
 
-## جلسه‌ی ۶: لبه‌ی HTTP
+## جلسه‌ی ۶: لبه‌ی HTTP ✅
 
 **بخون:** `respondResult` (تو `MessageLoader.kt`)، `FailureHttpResponse.kt` و `installStatusPages` کامن شرکت.
 
@@ -191,9 +191,18 @@ src/main/kotlin/com/kiva/infrastructure/common/
 - StatusPages: `BadRequestException` و خطای deserialization به 400، و بقیه‌ی `Throwable`ها به 500
 
 **معیار پذیرش** (تست با `testApplication`):
-- [ ] `Failure` به 4xx با `code` درست تبدیل بشه
-- [ ] JSON خراب 400 برگردونه
-- [ ] exception پرت‌شده 500 برگردونه، و **stack trace و پیام exception تو پاسخ نباشه**، فقط تو لاگ
+- [x] `Failure` به 4xx با `code` درست تبدیل بشه
+- [x] JSON خراب 400 برگردونه
+- [x] exception پرت‌شده 500 برگردونه، و **stack trace و پیام exception تو پاسخ نباشه**، فقط تو لاگ
+
+**تصمیم‌ها:**
+- JSON خطا: `{code, field?, causes?}`. فیلدهای خالی فرستاده نمی‌شن
+- `kind` به status: `INVALID`→400، `NOT_FOUND`→404، `CONFLICT`→409، `UNAUTHORIZED`→401، `FORBIDDEN`→403. فقط یه جا (`toHttpStatus`)
+- `Result<Unit>` موفق یعنی `204` بدون بدنه
+- بدنه‌ی خراب (JSON شکسته، فیلد جاافتاده، نوع غلط، خالی) جواب 400 `MALFORMED_REQUEST` می‌گیره
+- هر exception دیگه جواب 500 `INTERNAL_ERROR` می‌گیره. جزئیات فقط تو لاگ
+- `traceId` فعلاً نه. موقع انتشار روی سرور با پلاگین CallId اضافه می‌شه
+- چک‌شده با خرابکاری عمدی: نشت پیام exception (۲ تست قرمز) و حذف handler مربوط به 400 (۴ تست قرمز)
 
 ---
 
@@ -281,3 +290,4 @@ src/main/kotlin/com/kiva/infrastructure/common/
 | 2026-10-04 | ۳ | مدل خطا: `FailureKind` + `ResultFailure(code, kind, field, causes)` با چک `UPPER_SNAKE_CASE`. `zip` با ۲ و ۳ ورودی که همه‌ی خطاها رو جمع می‌کنه (برخلاف شرکت، بدون تغییر دادن یه آبجکت مشترک). `NoFailure` و `value` حذف شدن. جمعاً ۴۸ تست سبز |
 | 2026-10-04 | ۴ | `CommandUseCase<C, R, F>` و `QueryUseCase<Q, R, F>` (هر دو `suspend`) + `getLogger()`. `slf4j-api` تنها وابستگی خارجی `common` شد. درس: `slf4j-api` به‌تنهایی یه لاگر `NOP` می‌ده، پس تست‌ها logback لازم دارن. ۵۴ تست سبز |
 | 2026-10-04 | ۵ | `TransactionManager` (تو `common`) + `ExposedTransactionManager` (تو infra، ثبت‌شده تو Koin). دیتابیس `kiva_test` ساخته شد. ۸ تست روی Postgres واقعی سبز و چک‌شده با حذف آزمایشی کد. برنامه هم بالا اومد و `/health` جواب 200 داد |
+| 2026-10-04 | ۶ | `FailureHttpResponse` + `respondResult` (به‌علاوه‌ی نسخه‌ی `Unit` با جواب 204) + `toHttpStatus` + StatusPages. ۱۷ تست با `testApplication` سبز. نکته‌ی محیطی: Gradle پروکسی سیستم رو نمی‌بینه |
