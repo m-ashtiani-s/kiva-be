@@ -6,14 +6,20 @@ Backend of the Kiva shop. Kotlin · Ktor · Koin · Exposed · PostgreSQL · Fly
 
 | Module | Contains | Allowed to depend on |
 |---|---|---|
-| `domain/` | Entities, value objects, business rules, repository interfaces | nothing (pure Kotlin) |
+| `common/` | Shared building blocks: Result, use case contracts, transactions, pagination, Money, mobile number. See [common/README.md](common/README.md) | nothing but Kotlin and slf4j-api |
+| `domain/` | Entities, value objects, business rules, repository interfaces | `common` |
 | `application/` | Use cases | `domain` |
-| root `src/` | Ktor, Koin, Exposed, Flyway: the infrastructure and bootstrap | `application`, `domain` |
+| root `src/` | Ktor, Koin, Exposed, Flyway: the infrastructure and bootstrap | `application`, `domain`, `common` |
+
+Framework-dependent helpers for the common pieces (respondResult, StatusPages, ExposedTransactionManager,
+paginate) live in `src/main/kotlin/com/kiva/infrastructure/common`.
 
 ## Requirements
 
 - JDK 21 (in IntelliJ: *Settings → Build Tools → Gradle → Gradle JVM* = 21)
 - PostgreSQL 15+ with a `kiva` database (or `docker compose up -d`)
+- For tests: a second database `kiva_test` (same user). Some tests write to it, so Postgres must be running
+  before `./gradlew build`.
 
 ## Run
 
@@ -23,7 +29,17 @@ curl http://localhost:8080/health
 ```
 
 Database settings come from `src/main/resources/application.conf` and can be overridden with
-`KIVA_DB_URL`, `KIVA_DB_USER`, `KIVA_DB_PASSWORD` and `PORT`.
+`KIVA_DB_URL`, `KIVA_DB_USER`, `KIVA_DB_PASSWORD` and `PORT`. Tests use `KIVA_TEST_DB_URL`,
+`KIVA_TEST_DB_USER` and `KIVA_TEST_DB_PASSWORD` (defaults: local `kiva_test`, `kiva`/`kiva`).
+
+## Test
+
+```bash
+./gradlew build
+```
+
+`src/test/kotlin/com/kiva/infrastructure/CommonShowcaseTest.kt` is a complete small feature (add and list
+products) built only from the common pieces. Use it as the template for new features.
 
 ## Database migrations
 
