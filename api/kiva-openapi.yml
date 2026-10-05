@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: KIVA Store API — کیوا
-  version: 1.0.0
+  version: 1.0.1
   contact:
     name: KIVA Engineering
     email: support@kiva.ir
@@ -637,6 +637,8 @@ paths:
       summary: "جزئیات کامل محصول (گالری هر رنگ، ویدیو، قیمت، موجودی، مشخصات، امتیاز، SEO)"
       description: |
         `idOrSlug` می‌تواند `1`، `KV-1001` (کد محصول) یا `mahak-shoulder-bag` باشد.
+        تشخیص بی‌ابهام است: فقط رقم ← id؛ با حروف بزرگ (`KV-...`) ← کد محصول؛ در غیر این صورت ← slug
+        (slug همیشه حروف کوچک است و حداقل یک حرف دارد).
         اگر با id/sku صدا زده شود، `seo.canonicalUrl` آدرس slug را برمی‌گرداند.
         پارامتر `color` فقط `selectedColorKey` را تعیین می‌کند (برای لینک‌هایی مثل `product?id=2&color=olive`).
         در صورت ورود کاربر: `isWishlisted` و `stockAlert.subscribed` پر می‌شوند.
@@ -6187,7 +6189,7 @@ components:
       required: [name, slug, categoryId, bagType, price, materialId]
       properties:
         name: { type: string, maxLength: 120, example: کیف دوشی ماهک }
-        slug: { type: string, pattern: '^[a-z0-9]+(-[a-z0-9]+)*$', example: mahak-shoulder-bag }
+        slug: { type: string, pattern: '^(?=.*[a-z])[a-z0-9]+(-[a-z0-9]+)*$', description: 'حروف کوچک لاتین، رقم و خط تیره؛ حداقل یک حرف (تا با id عددی اشتباه نشود)', example: mahak-shoulder-bag }
         sku: { type: string, nullable: true, description: خالی = تولید خودکار (KV-xxxx), example: KV-1001 }
         categoryId: { type: integer, example: 1 }
         bagType: { $ref: '#/components/schemas/BagType' }
@@ -6292,7 +6294,7 @@ components:
       required: [name, slug]
       properties:
         name: { type: string, example: کیف دوشی }
-        slug: { type: string, example: shoulder }
+        slug: { type: string, pattern: '^(?=.*[a-z])[a-z0-9]+(-[a-z0-9]+)*$', description: 'حداقل یک حرف (تا با id عددی اشتباه نشود)', example: shoulder }
         description: { type: string, nullable: true }
         iconBagType: { $ref: '#/components/schemas/BagType' }
         iconColorKey: { $ref: '#/components/schemas/ColorKey' }
