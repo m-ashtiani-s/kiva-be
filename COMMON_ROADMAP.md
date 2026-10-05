@@ -278,6 +278,28 @@ src/main/kotlin/com/kiva/infrastructure/common/
 
 ---
 
+## فاز ۲: هماهنگی با کانترکت API ✅
+
+بعد از اینکه کانترکت (`kiva-openapi.yml`، ۱۵۷ endpoint) با فرانت چیده شد، کامن باهاش جفت شد تا هر endpoint از روز اول همون چیزی باشه که فرانت انتظار داره.
+
+| موضوع | قبل | بعد (طبق کانترکت) |
+|---|---|---|
+| شکل خطا | `{code, field, causes}` | `application/problem+json`: `{status, code, message, instance, traceId, errors[], meta}` |
+| پیام | نداشت | پیام فارسی برای **همه‌ی ۶۱ کد** کانترکت، تو `ErrorMessages.kt`. عددها فارسی (`۲٬۰۰۰٬۰۰۰`) |
+| خطای فیلدها | تودرتو | `400 VALIDATION_ERROR` + `errors[]` صاف با مسیر نقطه‌ای (`newAddress.postalCode`) |
+| انواع خطا | ۵ تا | + `BUSINESS_RULE` (422) و `RATE_LIMITED` (429) |
+| داده‌ی کمکی خطا | نداشت | `meta` روی `ResultFailure` (مثل `availableQuantity`، `retryAfterSeconds`) |
+| پول | ریال | **تومان** (`ofToman`) + `toRials()` فقط برای درگاه |
+| موبایل | `mobile` / `MOBILE_INVALID` | `phone` / `PHONE_INVALID` و `PHONE_REQUIRED` |
+| صفحه‌بندی | صاف، sort به‌صورت `-price` | `{items, meta:{..., hasNext}}`، sort اسم‌دار (`price_asc`)، پیش‌فرض و سقف size برای هر endpoint |
+| مسیر | `/` | `/api/v1` (`API_V1`). `/health` بیرونش می‌مونه |
+| traceId | نداشت | پلاگین CallId: هدر `X-Trace-Id`، تو بدنه‌ی خطا، و تو هر خط لاگ |
+| متن فارسی | فقط رقم | `normalizePersian()`: `ي→ی`، `ك→ک`، نیم‌فاصله |
+
+**دو باگ که با تست پیدا شد:**
+- `status(404)` تو StatusPages، 404های خودمون (`PRODUCT_NOT_FOUND`) رو با `NOT_FOUND` کلی **جایگزین می‌کرد**. حالا فقط وقتی دخالت می‌کنه که جواب از قبل problem نباشه. حذف آزمایشی این شرط ۲ تست رو قرمز کرد.
+- بدنه‌ی غیر JSON به‌جای 415، جواب 500 می‌داد، چون Ktor یه exception دیگه پرت می‌کنه (`ContentTransformationException`).
+
 ## چیزهایی که عمداً **نمی‌نویسیم**
 
 | تو کامن شرکت | چرا نه |
@@ -315,3 +337,4 @@ src/main/kotlin/com/kiva/infrastructure/common/
 | 2026-10-04 | ۷ | `Pageable`، `Sort` و `Page` (تو `common`) + `call.pageable()`، `PageHttpResponse` و `Query.paginate()` (تو infra). ۲۸ تست جدید سبز (۶ تاش روی `kiva_test`). لزوم tiebreaker با دموی SQL و حذف آزمایشی ثابت شد |
 | 2026-10-04 | ۸ | `normalizeDigits` (فارسی و عربی)، `IranianMobileNumber` (یه شکل ذخیره، ۱۲ شکل ورودی) و `Money` (`value class` با `Long`، `addExact` و `multiplyExact`). ۳۷ تست جدید سبز |
 | 2026-10-04 | ۹ | جمع‌بندی: `CommonShowcaseTest` (۵ تست سرتاسری)، `forField`/`FieldFailure` (۴ تست)، README پروژه و برگه‌ی تقلب `common/README.md`. **کامن تمام شد** |
+| 2026-10-05 | فاز ۲ | هماهنگی با کانترکت: problem+json، پیام فارسی برای ۶۱ کد، ۴۲۲ و ۴۲۹، `meta`، تومان، `phone`، صفحه‌بندی `{items, meta}` با sort اسم‌دار، `/api/v1`، `traceId` و `normalizePersian`. ۱۷۹ تست سبز (۱۲۱ کامن + ۵۸ اصلی) |

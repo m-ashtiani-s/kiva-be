@@ -3,6 +3,7 @@ package com.kiva.infrastructure.common.http
 import com.kiva.common.railway.FailureKind
 import com.kiva.common.railway.Result
 import com.kiva.common.railway.ResultFailure
+import com.kiva.infrastructure.httpserver.TRACE_ID_HEADER
 import com.kiva.infrastructure.httpserver.configureHttp
 import io.ktor.client.request.get
 import io.ktor.client.request.post
@@ -22,13 +23,16 @@ import io.ktor.server.testing.testApplication
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.EnumSource
 import org.junit.jupiter.params.provider.ValueSource
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class HttpEdgeTest {
@@ -39,10 +43,15 @@ class HttpEdgeTest {
     @Serializable
     private data class CreateProductHttpRequest(val name: String, val price: Long)
 
-    private class TestFailure(code: String, kind: FailureKind, field: String? = null, causes: List<ResultFailure> = emptyList()) :
-        ResultFailure(code, kind, field, causes)
+    private class TestFailure(
+        code: String,
+        kind: FailureKind,
+        field: String? = null,
+        causes: List<ResultFailure> = emptyList(),
+        meta: Map<String, Any> = emptyMap(),
+    ) : ResultFailure(code, kind, field, causes, meta)
 
-    /** Starts the real HTTP setup (JSON + StatusPages) with a few test routes, without DB or Koin. */
+    /** Starts the real HTTP setup (JSON + CallId + StatusPages) with a few test routes, without DB or Koin. */
     private fun withApp(block: suspend ApplicationTestBuilder.() -> Unit) = testApplication {
         // Without this, testApplication would load application.conf and boot the whole app (database included).
         environment { config = MapApplicationConfig() }
@@ -60,17 +69,28 @@ class HttpEdgeTest {
                 }
                 get("/fail/{kind}") {
                     val kind = FailureKind.valueOf(call.parameters["kind"]!!)
-                    call.respondResult(Result.failure(TestFailure("SOMETHING_WRONG", kind))) { it: String -> it }
+                    call.respondResult(Result.failure(TestFailure("SOMETHING_WRONG", kind)))
+                }
+                get("/product-not-found") {
+                    call.respondResult(Result.failure(TestFailure("PRODUCT_NOT_FOUND", FailureKind.NOT_FOUND)))
+                }
+                get("/low-stock") {
+                    call.respondResult(
+                        Result.failure(TestFailure("QUANTITY_EXCEEDS_STOCK", FailureKind.BUSINESS_RULE, meta = mapOf("availableQuantity" to 3))),
+                    )
                 }
                 get("/invalid-address") {
                     val failure = TestFailure(
-                        "INVALID_ADDRESS", FailureKind.INVALID,
+                        "INVALID_ADDRESS", FailureKind.INVALID, field = "newAddress",
                         causes = listOf(
                             TestFailure("POSTAL_CODE_INVALID", FailureKind.INVALID, field = "postalCode"),
-                            TestFailure("MOBILE_INVALID", FailureKind.INVALID, field = "mobile"),
+                            TestFailure("PHONE_INVALID", FailureKind.INVALID, field = "recipientPhone"),
                         ),
                     )
                     call.respondResult(Result.failure(failure))
+                }
+                get("/invalid-without-field") {
+                    call.respondResult(Result.failure(TestFailure("DISCOUNT_CODE_INVALID", FailureKind.INVALID)))
                 }
                 post("/products") {
                     val request = call.receive<CreateProductHttpRequest>()
@@ -86,6 +106,11 @@ class HttpEdgeTest {
 
     private suspend fun HttpResponse.json(): JsonElement = Json.parseToJsonElement(bodyAsText())
     private fun json(text: String): JsonElement = Json.parseToJsonElement(text)
+
+    /** The problem body without the per-request parts (traceId, instance), so it can be compared exactly. */
+    private suspend fun HttpResponse.problem(): JsonElement = JsonObject(json().jsonObject - "traceId" - "instance")
+
+    private fun HttpResponse.isProblemJson() = contentType()?.withoutParameters() == ContentType.Application.ProblemJson
 
     @Nested
     inner class Success {
@@ -109,38 +134,75 @@ class HttpEdgeTest {
             assertEquals(HttpStatusCode.NoContent, response.status)
             assertEquals("", response.bodyAsText())
         }
+
+        @Test
+        fun `every response carries a trace id header`() = withApp {
+            assertNotNull(client.get("/product").headers[TRACE_ID_HEADER])
+        }
     }
 
     @Nested
     inner class Failures {
+        @Test
+        fun `the kind to status mapping follows the contract`() {
+            assertEquals(
+                mapOf(
+                    FailureKind.INVALID to 400, FailureKind.UNAUTHORIZED to 401, FailureKind.FORBIDDEN to 403,
+                    FailureKind.NOT_FOUND to 404, FailureKind.CONFLICT to 409, FailureKind.BUSINESS_RULE to 422,
+                    FailureKind.RATE_LIMITED to 429,
+                ),
+                FailureKind.entries.associateWith { it.toHttpStatus().value },
+            )
+        }
+
         @ParameterizedTest
-        @EnumSource(FailureKind::class)
-        fun `each failure kind becomes its HTTP status`(kind: FailureKind) = withApp {
+        @ValueSource(strings = ["NOT_FOUND", "CONFLICT", "BUSINESS_RULE", "RATE_LIMITED", "UNAUTHORIZED", "FORBIDDEN"])
+        fun `a failure is a problem with its kind's status and code`(kind: String) = withApp {
             val response = client.get("/fail/$kind")
-            assertEquals(kind.toHttpStatus(), response.status)
-            assertEquals(json("""{"code":"SOMETHING_WRONG"}"""), response.json())
+            val status = FailureKind.valueOf(kind).toHttpStatus()
+
+            assertEquals(status, response.status)
+            assertTrue(response.isProblemJson())
+            assertEquals(json("""{"status":${status.value},"code":"SOMETHING_WRONG"}"""), JsonObject(response.problem().jsonObject - "message"))
         }
 
         @Test
-        fun `the mapping is the agreed one`() {
+        fun `a known code gets its Persian message, the path and a trace id`() = withApp {
+            val response = client.get("/product-not-found")
+            val body = response.json().jsonObject
+
+            assertEquals(json("""{"status":404,"code":"PRODUCT_NOT_FOUND","message":"این محصول پیدا نشد"}"""), response.problem())
+            assertEquals("/product-not-found", body.getValue("instance").jsonPrimitive.content)
+            assertEquals(response.headers[TRACE_ID_HEADER], body.getValue("traceId").jsonPrimitive.content)
+        }
+
+        @Test
+        fun `meta reaches the client and fills the message`() = withApp {
             assertEquals(
-                listOf(400, 404, 409, 401, 403),
-                listOf(FailureKind.INVALID, FailureKind.NOT_FOUND, FailureKind.CONFLICT, FailureKind.UNAUTHORIZED, FailureKind.FORBIDDEN)
-                    .map { it.toHttpStatus().value },
+                json("""{"status":422,"code":"QUANTITY_EXCEEDS_STOCK","message":"فقط ۳ عدد از این کالا موجوده","meta":{"availableQuantity":3}}"""),
+                client.get("/low-stock").problem(),
             )
         }
 
         @Test
-        fun `causes and fields reach the client`() = withApp {
+        fun `field problems become VALIDATION_ERROR with every field listed by its full path`() = withApp {
             val response = client.get("/invalid-address")
             assertEquals(HttpStatusCode.BadRequest, response.status)
             assertEquals(
                 json(
-                    """{"code":"INVALID_ADDRESS","causes":[
-                         {"code":"POSTAL_CODE_INVALID","field":"postalCode"},
-                         {"code":"MOBILE_INVALID","field":"mobile"}]}""",
+                    """{"status":400,"code":"VALIDATION_ERROR","message":"چند تا از فیلدها رو باید درست کنی","errors":[
+                         {"field":"newAddress.postalCode","code":"POSTAL_CODE_INVALID","message":"این مقدار درست نیست"},
+                         {"field":"newAddress.recipientPhone","code":"PHONE_INVALID","message":"موبایل معتبر وارد کن"}]}""",
                 ),
-                response.json(),
+                response.problem(),
+            )
+        }
+
+        @Test
+        fun `an invalid failure without any field keeps its own code`() = withApp {
+            assertEquals(
+                json("""{"status":400,"code":"DISCOUNT_CODE_INVALID","message":"این کد تخفیف معتبر نیست"}"""),
+                client.get("/invalid-without-field").problem(),
             )
         }
     }
@@ -165,23 +227,45 @@ class HttpEdgeTest {
                 "",                                      // empty body
             ],
         )
-        fun `an unreadable body is a 400, not a 500`(body: String) = withApp {
+        fun `an unreadable body is a 400 VALIDATION_ERROR, not a 500`(body: String) = withApp {
             val response = client.post("/products") {
                 contentType(ContentType.Application.Json)
                 setBody(body)
             }
             assertEquals(HttpStatusCode.BadRequest, response.status)
-            assertEquals(json("""{"code":"MALFORMED_REQUEST"}"""), response.json())
+            assertTrue(response.isProblemJson())
+            assertEquals(json("""{"status":400,"code":"VALIDATION_ERROR","message":"اطلاعات ارسالی قابل خوندن نیست"}"""), response.problem())
+        }
+
+        @Test
+        fun `a body that is not JSON is a 415`() = withApp {
+            val response = client.post("/products") {
+                contentType(ContentType.Text.Plain)
+                setBody("name=Mug")
+            }
+            assertEquals(HttpStatusCode.UnsupportedMediaType, response.status)
+            assertEquals("VALIDATION_ERROR", response.json().jsonObject.getValue("code").jsonPrimitive.content)
+        }
+
+        @Test
+        fun `an unknown route is a 404 problem`() = withApp {
+            val response = client.get("/no-such-route")
+            assertEquals(HttpStatusCode.NotFound, response.status)
+            assertTrue(response.isProblemJson())
+            assertEquals(json("""{"status":404,"code":"NOT_FOUND","message":"چیزی که دنبالش بودی پیدا نشد"}"""), response.problem())
         }
     }
 
     @Nested
     inner class UnexpectedErrors {
         @Test
-        fun `an exception becomes a 500 with only a code`() = withApp {
+        fun `an exception becomes a 500 with only a code and a message`() = withApp {
             val response = client.get("/boom")
             assertEquals(HttpStatusCode.InternalServerError, response.status)
-            assertEquals(json("""{"code":"INTERNAL_ERROR"}"""), response.json())
+            assertEquals(
+                json("""{"status":500,"code":"INTERNAL_ERROR","message":"یه مشکلی پیش اومد. چند لحظه بعد دوباره امتحان کن"}"""),
+                response.problem(),
+            )
         }
 
         @Test
@@ -190,7 +274,6 @@ class HttpEdgeTest {
             assertFalse("s3cret" in body)
             assertFalse("db.internal" in body)
             assertFalse("IllegalStateException" in body)
-            assertTrue(body.length < 40)
         }
     }
 }

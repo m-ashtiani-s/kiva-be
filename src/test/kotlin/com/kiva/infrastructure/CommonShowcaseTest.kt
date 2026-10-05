@@ -17,7 +17,9 @@ import com.kiva.infrastructure.common.http.respondFailure
 import com.kiva.infrastructure.common.http.respondResult
 import com.kiva.infrastructure.common.http.toHttpResponse
 import com.kiva.infrastructure.common.persistence.ExposedTransactionManager
+import com.kiva.infrastructure.common.persistence.SortOrders
 import com.kiva.infrastructure.common.persistence.paginate
+import com.kiva.infrastructure.httpserver.API_V1
 import com.kiva.infrastructure.httpserver.configureHttp
 import io.ktor.client.request.get
 import io.ktor.client.request.post
@@ -31,16 +33,19 @@ import io.ktor.server.config.MapApplicationConfig
 import io.ktor.server.request.receive
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
+import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
+import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.Table
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.SchemaUtils
@@ -95,7 +100,7 @@ class CommonShowcaseTest {
 
     // ============ application ============
 
-    data class AddProductCmd(val name: String, val priceRials: Long)
+    data class AddProductCmd(val name: String, val priceToman: Long)
 
     sealed class AddProductFailure(code: String, kind: FailureKind, field: String? = null, causes: List<ResultFailure> = emptyList()) :
         ResultFailure(code, kind, field, causes) {
@@ -111,7 +116,7 @@ class CommonShowcaseTest {
             // 1) Check every input at once (zip), so the form can show all mistakes together.
             val (name, price) = Result.zip(
                 ProductName.of(command.name),
-                Money.ofRials(command.priceRials).forField("price"),
+                Money.ofToman(command.priceToman).forField("price"),
                 AddProductFailure::InvalidProduct,
             ) { n, p -> n to p }
                 .unwrapOr { return@inTransaction Result.failure(it) }
@@ -139,28 +144,32 @@ class CommonShowcaseTest {
     object ProductsTbl : Table("showcase_products") {
         val id = long("id").autoIncrement()
         val name = varchar("name", 100).uniqueIndex()
-        val price = long("price_rials")
+        val price = long("price_toman")
         override val primaryKey = PrimaryKey(id)
     }
 
     class ExposedProductRepository : ProductRepository {
         companion object {
-            val sortColumns = mapOf("name" to ProductsTbl.name, "price" to ProductsTbl.price)
+            val sortOrders: SortOrders = mapOf(
+                "price_asc" to listOf(ProductsTbl.price to SortOrder.ASC),
+                "price_desc" to listOf(ProductsTbl.price to SortOrder.DESC),
+                "name" to listOf(ProductsTbl.name to SortOrder.ASC),
+            )
         }
 
         override fun nameExists(name: ProductName) = ProductsTbl.selectAll().where { ProductsTbl.name eq name.value }.count() > 0
 
         override fun add(name: ProductName, price: Money): Long = ProductsTbl.insert {
             it[ProductsTbl.name] = name.value
-            it[ProductsTbl.price] = price.rials
+            it[ProductsTbl.price] = price.toman
         }[ProductsTbl.id]
 
         override fun page(pageable: Pageable): Page<Product> =
-            ProductsTbl.selectAll().paginate(pageable, sortColumns, tiebreaker = ProductsTbl.id) {
+            ProductsTbl.selectAll().paginate(pageable, sortOrders, tiebreaker = ProductsTbl.id) {
                 Product(
                     id = it[ProductsTbl.id],
                     name = ProductName.of(it[ProductsTbl.name]).getOrNull()!!,
-                    price = Money.ofRials(it[ProductsTbl.price]).getOrNull()!!,
+                    price = Money.ofToman(it[ProductsTbl.price]).getOrNull()!!,
                 )
             }
     }
@@ -187,18 +196,20 @@ class CommonShowcaseTest {
         application {
             configureHttp()
             routing {
+              route(API_V1) {
                 post("/products") {
                     val request = call.receive<AddProductHttpRequest>()
                     val result = addProduct.execute(AddProductCmd(request.name, request.price))
                     call.respondResult(result, HttpStatusCode.Created) { CreatedHttpResponse(it) }
                 }
                 get("/products") {
-                    val pageable = call.pageable(allowedSorts = ExposedProductRepository.sortColumns.keys)
+                    val pageable = call.pageable(allowedSorts = ExposedProductRepository.sortOrders.keys)
                         .unwrapOr { return@get call.respondFailure(it) }
                     call.respondResult(listProducts.execute(pageable)) { page ->
-                        page.toHttpResponse { ProductHttpResponse(it.id, it.name.value, it.price.rials) }
+                        page.toHttpResponse { ProductHttpResponse(it.id, it.name.value, it.price.toman) }
                     }
                 }
+              }
             }
         }
         block()
@@ -215,13 +226,14 @@ class CommonShowcaseTest {
         transaction(db) { ProductsTbl.deleteAll() }
     }
 
-    private suspend fun ApplicationTestBuilder.addProduct(body: String): HttpResponse = client.post("/products") {
+    private suspend fun ApplicationTestBuilder.addProduct(body: String): HttpResponse = client.post("$API_V1/products") {
         contentType(ContentType.Application.Json)
         setBody(body)
     }
 
     private suspend fun HttpResponse.json(): JsonElement = Json.parseToJsonElement(bodyAsText())
     private fun json(text: String): JsonElement = Json.parseToJsonElement(text)
+    private suspend fun HttpResponse.problem(): JsonElement = JsonObject(json().jsonObject - "traceId" - "instance")
     private fun JsonElement.itemNames(): List<String> =
         jsonObject.getValue("items").jsonArray.map { it.jsonObject.getValue("name").jsonPrimitive.content }
 
@@ -233,9 +245,12 @@ class CommonShowcaseTest {
         assertEquals(HttpStatusCode.Created, created.status)
 
         val id = created.json().jsonObject.getValue("id").jsonPrimitive.long
-        val list = client.get("/products").json()
+        val list = client.get("$API_V1/products").json()
         assertEquals(
-            json("""{"items":[{"id":$id,"name":"Mug","price":250000}],"page":1,"size":20,"totalItems":1,"totalPages":1}"""),
+            json(
+                """{"items":[{"id":$id,"name":"Mug","price":250000}],
+                    "meta":{"page":1,"size":20,"totalItems":1,"totalPages":1,"hasNext":false}}""",
+            ),
             list,
         )
     }
@@ -247,11 +262,11 @@ class CommonShowcaseTest {
         assertEquals(HttpStatusCode.BadRequest, response.status)
         assertEquals(
             json(
-                """{"code":"INVALID_PRODUCT","causes":[
-                     {"code":"PRODUCT_NAME_BLANK","field":"name"},
-                     {"code":"MONEY_NEGATIVE","field":"price"}]}""",
+                """{"status":400,"code":"VALIDATION_ERROR","message":"چند تا از فیلدها رو باید درست کنی","errors":[
+                     {"field":"name","code":"PRODUCT_NAME_BLANK","message":"این مقدار درست نیست"},
+                     {"field":"price","code":"MONEY_NEGATIVE","message":"مبلغ نمی‌تونه منفی باشه"}]}""",
             ),
-            response.json(),
+            response.problem(),
         )
         assertEquals(emptyList(), storedNames())
     }
@@ -262,7 +277,10 @@ class CommonShowcaseTest {
         val response = addProduct("""{"name":"Mug","price":2000}""")
 
         assertEquals(HttpStatusCode.Conflict, response.status)
-        assertEquals(json("""{"code":"PRODUCT_NAME_TAKEN","field":"name"}"""), response.json())
+        assertEquals(
+            json("""{"status":409,"code":"PRODUCT_NAME_TAKEN","message":"این مورد قبلاً ثبت شده یا در این فاصله تغییر کرده"}"""),
+            response.problem(),
+        )
         assertEquals(listOf("Mug"), storedNames())
     }
 
@@ -270,25 +288,24 @@ class CommonShowcaseTest {
     fun `the list is paginated and sorted`() = withApp {
         listOf("A" to 300, "B" to 100, "C" to 200).forEach { (name, price) -> addProduct("""{"name":"$name","price":$price}""") }
 
-        val page1 = client.get("/products?size=2&sort=-price").json()
-        val page2 = client.get("/products?page=2&size=2&sort=-price").json()
+        val page1 = client.get("$API_V1/products?size=2&sort=price_desc").json()
+        val page2 = client.get("$API_V1/products?page=2&size=2&sort=price_desc").json()
 
         assertEquals(listOf("A", "C"), page1.itemNames()) // most expensive first
         assertEquals(listOf("B"), page2.itemNames())
-        assertEquals(3L, page2.jsonObject.getValue("totalItems").jsonPrimitive.long)
+        assertEquals(3L, page2.jsonObject.getValue("meta").jsonObject.getValue("totalItems").jsonPrimitive.long)
     }
 
     @Test
     fun `a bad list request is a 400 with every problem`() = withApp {
-        val response = client.get("/products?page=0&sort=password")
+        val response = client.get("$API_V1/products?page=0&sort=password")
         assertEquals(HttpStatusCode.BadRequest, response.status)
         assertEquals(
             json(
-                """{"code":"INVALID_PAGINATION","causes":[
-                     {"code":"PAGE_INVALID","field":"page"},
-                     {"code":"SORT_NOT_ALLOWED","field":"sort"}]}""",
+                """[{"field":"page","code":"PAGE_INVALID","message":"شماره‌ی صفحه درست نیست"},
+                    {"field":"sort","code":"SORT_NOT_ALLOWED","message":"این نوع مرتب‌سازی پشتیبانی نمی‌شه"}]""",
             ),
-            response.json(),
+            response.json().jsonObject.getValue("errors"),
         )
     }
 }

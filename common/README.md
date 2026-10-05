@@ -16,7 +16,7 @@
 | `fold({ }, { })` | هر دو رنگ به یه مقدار | `.fold({ "ok" }, { "fail" })` |
 | `unwrapOr { return ... }` | محتوا رو بده، اگه قرمز بود از تابع برو بیرون | `val id = X.of(raw).unwrapOr { return Result.failure(it) }` |
 | `Result.zip(a, b, ::Wrapper) { }` | چند ورودی با هم، **همه‌ی** خطاها رو جمع کن | فرم آدرس |
-| `forField("price")` | بگو این خطا مال کدوم فیلد فرمه | `Money.ofRials(p).forField("price")` |
+| `forField("price")` | بگو این خطا مال کدوم فیلد فرمه | `Money.ofToman(p).forField("price")` |
 
 ## خطا
 
@@ -26,13 +26,18 @@ sealed class SkuFailure(code: String) : ResultFailure(code, FailureKind.INVALID,
 }
 ```
 
-| `FailureKind` | HTTP |
-|---|---|
-| `INVALID` | 400 |
-| `NOT_FOUND` | 404 |
-| `CONFLICT` | 409 |
-| `UNAUTHORIZED` | 401 |
-| `FORBIDDEN` | 403 |
+| `FailureKind` | HTTP | کِی |
+|---|---|---|
+| `INVALID` | 400 | فرمت ورودی غلطه (خالی، الگوی اشتباه، خارج از بازه) |
+| `UNAUTHORIZED` | 401 | لاگین نکرده |
+| `FORBIDDEN` | 403 | اجازه نداره |
+| `NOT_FOUND` | 404 | پیدا نشد |
+| `CONFLICT` | 409 | با داده‌ی موجود تداخل داره (تکراری، قیمت عوض شده) |
+| `BUSINESS_RULE` | 422 | ورودی درسته ولی قانون بیزنس اجازه نمی‌ده (ناموجود، غیرقابل لغو) |
+| `RATE_LIMITED` | 429 | زیادی تلاش کرده |
+
+- `meta`: داده‌ی کمکی برای فرانت: `meta = mapOf("availableQuantity" to 3)`
+- **پیام فارسی رو تو کد بیزنس ننویس.** فقط `code` بساز. متن فارسیش تو `infrastructure/common/http/ErrorMessages.kt` ـه.
 
 `Result<T, Nothing>` یعنی «هیچ‌وقت شکست نمی‌خوره».
 
@@ -60,21 +65,32 @@ call.respondResult(unitResult)                                      // 🟢 204 
 call.respondFailure(failure)                                        // فقط خطا
 ```
 
-- بدنه‌ی خراب: `400 MALFORMED_REQUEST`
-- هر exception: `500 INTERNAL_ERROR` (جزئیات فقط تو لاگ)
+همه‌ی routeهای API زیر `route(API_V1) { ... }` ان (`/api/v1`).
+
+خطاها همیشه `application/problem+json`:
+```json
+{ "status": 422, "code": "QUANTITY_EXCEEDS_STOCK", "message": "فقط ۳ عدد از این کالا موجوده",
+  "instance": "/api/v1/cart/items", "traceId": "4bf92f3577b34da6", "meta": { "availableQuantity": 3 } }
+```
+- خطای `INVALID` که فیلد داره: `400 VALIDATION_ERROR` + `errors[]` با مسیر کامل (`newAddress.postalCode`)
+- بدنه‌ی خراب: `400 VALIDATION_ERROR` · غیر JSON: `415` · مسیر ناموجود: `404 NOT_FOUND`
+- هر exception: `500 INTERNAL_ERROR` (جزئیات فقط تو لاگ، با همون `traceId`)
 
 ## صفحه‌بندی
 
 ```kotlin
-// Route
-val pageable = call.pageable(allowedSorts = sortColumns.keys).unwrapOr { return@get call.respondFailure(it) }
-call.respondResult(list.execute(pageable)) { page -> page.toHttpResponse { ItemHttpResponse.from(it) } }
+// Repository: معنی هر گزینه‌ی sort تو دیتابیس
+val sortOrders: SortOrders = mapOf("price_asc" to listOf(Products.price to SortOrder.ASC), ...)
+Products.selectAll().paginate(pageable, sortOrders, tiebreaker = Products.id) { row -> ... }
 
-// Repository
-Table.selectAll().paginate(pageable, sortColumns, tiebreaker = Table.id) { row -> ... }
+// Route: قوانین همون endpoint از کانترکت
+val pageable = call.pageable(allowedSorts = sortOrders.keys, defaultSort = "newest", defaultSize = 24, maxSize = 60)
+    .unwrapOr { return@get call.respondFailure(it) }
+call.respondResult(list.execute(pageable)) { page -> page.toHttpResponse { ItemHttpResponse.from(it) } }
 ```
 
-- `?page=2&size=20&sort=-price,name`. صفحه از ۱ شروع می‌شه و `size` حداکثر ۱۰۰ ـه.
+- `?page=2&size=24&sort=price_asc`. صفحه از ۱ شروع می‌شه. پیش‌فرض و سقف `size` مال هر endpoint ـه (عمومی: ۲۰ و ۱۰۰).
+- جواب: `{ items: [...], meta: { page, size, totalItems, totalPages, hasNext } }`
 - `tiebreaker` اجباریه. بدونش، کالاها بین صفحه‌ها تکرار یا گم می‌شن.
 
 ## Value Objectها
@@ -82,5 +98,6 @@ Table.selectAll().paginate(pageable, sortColumns, tiebreaker = Table.id) { row -
 | ابزار | کارش |
 |---|---|
 | `"۰۹۱۲".normalizeDigits()` | رقم فارسی و عربی رو انگلیسی کن (`"0912"`) |
-| `IranianMobileNumber.of(raw)` | هر شکل از شماره رو قبول می‌کنه و همیشه `09xxxxxxxxx` ذخیره می‌کنه |
-| `Money.ofRials(n)` | پول به ریال (`Long`)، هیچ‌وقت منفی. `+`، `* qty`، `.sum()` و مقایسه داره، و overflow باعث توقف می‌شه |
+| `"كيف".normalizePersian()` | برای جستجو: `ي→ی`، `ك→ک`، رقم‌ها، نیم‌فاصله و فاصله‌های اضافه |
+| `IranianMobileNumber.of(raw)` | هر شکل از شماره رو قبول می‌کنه و همیشه `09xxxxxxxxx` ذخیره می‌کنه (فیلد `phone`، کد `PHONE_INVALID`) |
+| `Money.ofToman(n)` | پول به **تومان** (`Long`)، هیچ‌وقت منفی. `+`، `* qty`، `.sum()`، مقایسه، و `toRials()` فقط برای درگاه |

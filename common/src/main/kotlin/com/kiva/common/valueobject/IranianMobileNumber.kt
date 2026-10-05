@@ -42,8 +42,9 @@ value class IranianMobileNumber private constructor(val value: String) {
         }
     }
 
-    sealed class Failure(code: String) : ResultFailure(code, FailureKind.INVALID, field = "mobile") {
-        data object Blank : Failure("MOBILE_BLANK")
-        data object Invalid : Failure("MOBILE_INVALID")
+    // Codes and field name follow the API contract (`phone`, PHONE_INVALID).
+    sealed class Failure(code: String) : ResultFailure(code, FailureKind.INVALID, field = "phone") {
+        data object Blank : Failure("PHONE_REQUIRED")
+        data object Invalid : Failure("PHONE_INVALID")
     }
 }

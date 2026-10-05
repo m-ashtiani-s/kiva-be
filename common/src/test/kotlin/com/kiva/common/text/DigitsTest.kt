@@ -25,4 +25,28 @@ class DigitsTest {
         assertEquals("09121234567", "09121234567".normalizeDigits())
         assertEquals("", "".normalizeDigits())
     }
+
+    @Test
+    fun `normalizePersian makes Arabic keyboard letters Persian`() {
+        assertEquals("کیف یاسی", "كيف ياسى".normalizePersian())
+    }
+
+    @Test
+    fun `normalizePersian also normalizes digits`() {
+        assertEquals("کیف 2", "کیف ۲".normalizePersian())
+    }
+
+    @Test
+    fun `normalizePersian cleans half-spaces and spaces`() {
+        val zwnj = '‌'
+        assertEquals("کیف${zwnj}ها", "کیف${zwnj}${zwnj}ها".normalizePersian())    // double half-space -> one
+        assertEquals("کیف دوشی", "کیف$zwnj دوشی".normalizePersian())              // half-space next to a space
+        assertEquals("کیف دوشی", "  کیف   دوشی  ".normalizePersian())             // extra spaces
+        assertEquals("کیف", "${zwnj}کیف$zwnj".normalizePersian())                  // half-space at the ends
+    }
+
+    @Test
+    fun `normalizePersian keeps a correct half-space`() {
+        assertEquals("می‌خوام", "می‌خوام".normalizePersian())
+    }
 }

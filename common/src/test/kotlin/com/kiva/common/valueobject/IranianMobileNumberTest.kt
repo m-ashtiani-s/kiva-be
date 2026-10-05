@@ -31,7 +31,7 @@ class IranianMobileNumberTest {
 
     @ParameterizedTest
     @ValueSource(strings = ["", "   ", " - "])
-    fun `empty input is MOBILE_BLANK`(raw: String) {
+    fun `empty input is PHONE_REQUIRED`(raw: String) {
         assertEquals(Result.failure(IranianMobileNumber.Failure.Blank), IranianMobileNumber.of(raw))
     }
 
@@ -46,7 +46,7 @@ class IranianMobileNumberTest {
             "+19121234567",    // another country
         ],
     )
-    fun `anything else is MOBILE_INVALID`(raw: String) {
+    fun `anything else is PHONE_INVALID`(raw: String) {
         assertEquals(Result.failure(IranianMobileNumber.Failure.Invalid), IranianMobileNumber.of(raw))
     }
 
@@ -57,9 +57,9 @@ class IranianMobileNumberTest {
     }
 
     @Test
-    fun `failures point at the mobile field`() {
-        assertEquals("mobile", IranianMobileNumber.Failure.Invalid.field)
-        assertEquals("MOBILE_INVALID", IranianMobileNumber.Failure.Invalid.code)
+    fun `failures use the contract field name and code`() {
+        assertEquals("phone", IranianMobileNumber.Failure.Invalid.field)
+        assertEquals("PHONE_INVALID", IranianMobileNumber.Failure.Invalid.code)
     }
 
     @Test

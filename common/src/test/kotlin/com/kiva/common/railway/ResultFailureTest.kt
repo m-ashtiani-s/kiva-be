@@ -56,6 +56,14 @@ class ResultFailureTest {
     }
 
     @Test
+    fun `defaults to no meta and can carry extra values for the client`() {
+        assertEquals(emptyMap(), AddToCartFailure.ProductNotFound.meta)
+
+        val failure = object : ResultFailure("QUANTITY_EXCEEDS_STOCK", FailureKind.BUSINESS_RULE, meta = mapOf("availableQuantity" to 3)) {}
+        assertEquals(mapOf<String, Any>("availableQuantity" to 3), failure.meta)
+    }
+
+    @Test
     fun `a wrapping failure exposes the inner failure through causes`() {
         val outer = AddToCartFailure.InvalidQuantity(QuantityFailure.NotPositive)
 

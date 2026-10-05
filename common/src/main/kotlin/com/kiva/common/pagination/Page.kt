@@ -13,6 +13,9 @@ data class Page<out T>(
 ) {
     val totalPages: Long get() = if (totalItems == 0L) 0 else (totalItems + size - 1) / size
 
+    /** Is there a page after this one? Lets the client show or hide "next" / "load more". */
+    val hasNext: Boolean get() = page < totalPages
+
     /** Converts every item, keeping the page information (e.g. domain object -> DTO). */
     inline fun <R> map(transform: (T) -> R): Page<R> = Page(items.map(transform), page, size, totalItems)
 }

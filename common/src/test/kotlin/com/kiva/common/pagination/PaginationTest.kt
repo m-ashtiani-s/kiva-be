@@ -6,11 +6,14 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class PaginationTest {
 
-    private val sortable = setOf("price", "name")
+    private val sorts = setOf("newest", "price_asc", "price_desc")
 
     private fun causesOf(result: Result<Pageable, InvalidPagination>): List<String> =
         assertIs<Result.Failure<InvalidPagination>>(result).failure.causes.map { it.code }
@@ -19,12 +22,16 @@ class PaginationTest {
     inner class PageableCreation {
         @Test
         fun `a valid request is accepted`() {
-            val pageable = Pageable.of(page = 2, size = 10, sort = listOf(Sort("price", Sort.Direction.DESC)), allowedSorts = sortable)
-                .getOrNull()!!
+            val pageable = Pageable.of(page = 2, size = 10, sort = "price_desc", allowedSorts = sorts).getOrNull()!!
 
             assertEquals(2, pageable.page)
             assertEquals(10, pageable.size)
-            assertEquals(listOf(Sort("price", Sort.Direction.DESC)), pageable.sort)
+            assertEquals("price_desc", pageable.sort)
+        }
+
+        @Test
+        fun `no sort means the default order`() {
+            assertNull(Pageable.of(1, 10).getOrNull()!!.sort)
         }
 
         @ParameterizedTest
@@ -35,7 +42,7 @@ class PaginationTest {
 
         @ParameterizedTest
         @ValueSource(ints = [0, -5, 101, 1_000_000])
-        fun `size must be between 1 and 100`(size: Int) {
+        fun `size must be between 1 and 100 by default`(size: Int) {
             assertEquals(listOf("PAGE_SIZE_INVALID"), causesOf(Pageable.of(1, size)))
         }
 
@@ -46,17 +53,26 @@ class PaginationTest {
         }
 
         @Test
-        fun `sorting by a field outside the allowed list is rejected`() {
-            val result = Pageable.of(1, 10, listOf(Sort("password")), allowedSorts = sortable)
+        fun `an endpoint can lower the size limit and the failure says what it is`() {
+            assertEquals(60, Pageable.of(1, 60, maxSize = 60).getOrNull()?.size)
 
-            val failure = assertIs<Result.Failure<InvalidPagination>>(result).failure
-            assertEquals(PaginationFailure.SortNotAllowed("password"), failure.causes.single())
-            assertEquals("sort", failure.causes.single().field)
+            val failure = Pageable.of(1, 61, maxSize = 60).failureOrNull()!!.causes.single()
+            assertEquals(PaginationFailure.SizeInvalid(60), failure)
+            assertEquals(mapOf<String, Any>("maxSize" to 60), failure.meta)
+        }
+
+        @Test
+        fun `a sort outside the endpoint's options is rejected and the options are listed`() {
+            val failure = Pageable.of(1, 10, sort = "password", allowedSorts = sorts).failureOrNull()!!.causes.single()
+
+            assertEquals("SORT_NOT_ALLOWED", failure.code)
+            assertEquals("sort", failure.field)
+            assertEquals(mapOf<String, Any>("allowed" to listOf("newest", "price_asc", "price_desc")), failure.meta)
         }
 
         @Test
         fun `every problem is reported at once`() {
-            val result = Pageable.of(0, 500, listOf(Sort("password")), allowedSorts = sortable)
+            val result = Pageable.of(0, 500, sort = "password", allowedSorts = sorts)
             assertEquals(listOf("PAGE_INVALID", "PAGE_SIZE_INVALID", "SORT_NOT_ALLOWED"), causesOf(result))
         }
     }
@@ -91,6 +107,14 @@ class PaginationTest {
         @Test
         fun `an empty list has zero pages`() {
             assertEquals(0L, Page(listOf<Int>(), page = 1, size = 10, totalItems = 0).totalPages)
+        }
+
+        @Test
+        fun `hasNext is true only before the last page`() {
+            assertTrue(Page(listOf<Int>(), page = 2, size = 10, totalItems = 25).hasNext)
+            assertFalse(Page(listOf<Int>(), page = 3, size = 10, totalItems = 25).hasNext)
+            assertFalse(Page(listOf<Int>(), page = 9, size = 10, totalItems = 25).hasNext)
+            assertFalse(Page(listOf<Int>(), page = 1, size = 10, totalItems = 0).hasNext)
         }
 
         @Test

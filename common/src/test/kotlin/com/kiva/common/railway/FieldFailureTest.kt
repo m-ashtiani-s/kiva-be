@@ -9,7 +9,7 @@ class FieldFailureTest {
 
     @Test
     fun `names the field and keeps code and kind`() {
-        val failure = Money.ofRials(-1).forField("price").failureOrNull()!!
+        val failure = Money.ofToman(-1).forField("price").failureOrNull()!!
 
         assertEquals("price", failure.field)
         assertEquals("MONEY_NEGATIVE", failure.code)
@@ -18,10 +18,10 @@ class FieldFailureTest {
 
     @Test
     fun `replaces a field the value object set itself`() {
-        // IranianMobileNumber says "mobile", but this form calls it "receiverMobile".
-        val failure = IranianMobileNumber.of("123").forField("receiverMobile").failureOrNull()!!
-        assertEquals("receiverMobile", failure.field)
-        assertEquals("MOBILE_INVALID", failure.code)
+        // IranianMobileNumber says "phone", but this form calls it "recipientPhone".
+        val failure = IranianMobileNumber.of("123").forField("recipientPhone").failureOrNull()!!
+        assertEquals("recipientPhone", failure.field)
+        assertEquals("PHONE_INVALID", failure.code)
     }
 
     @Test
@@ -34,7 +34,13 @@ class FieldFailureTest {
     }
 
     @Test
+    fun `keeps the meta`() {
+        val withMeta = object : ResultFailure("OUT_OF_STOCK", FailureKind.BUSINESS_RULE, meta = mapOf("availableQuantity" to 0)) {}
+        assertEquals(mapOf<String, Any>("availableQuantity" to 0), Result.failure(withMeta).forField("quantity").failureOrNull()?.meta)
+    }
+
+    @Test
     fun `leaves a success untouched`() {
-        assertEquals(1000L, Money.ofRials(1000).forField("price").getOrNull()?.rials)
+        assertEquals(1000L, Money.ofToman(1000).forField("price").getOrNull()?.toman)
     }
 }
