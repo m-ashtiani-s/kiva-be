@@ -11,10 +11,12 @@ class ZipTest {
     private data class PostalCode(val value: String)
     private data class Mobile(val value: String)
     private data class City(val value: String)
+    private data class Recipient(val value: String)
 
     private data object InvalidPostalCode : ResultFailure("POSTAL_CODE_INVALID", FailureKind.INVALID, field = "postalCode")
     private data object InvalidMobile : ResultFailure("MOBILE_INVALID", FailureKind.INVALID, field = "mobile")
     private data object BlankCity : ResultFailure("CITY_BLANK", FailureKind.INVALID, field = "city")
+    private data object BlankRecipient : ResultFailure("RECIPIENT_BLANK", FailureKind.INVALID, field = "recipient")
 
     private data class InvalidAddress(val reasons: List<ResultFailure>) :
         ResultFailure("INVALID_ADDRESS", FailureKind.INVALID, causes = reasons)
@@ -29,6 +31,9 @@ class ZipTest {
 
     private fun city(raw: String): Result<City, BlankCity> =
         if (raw.isNotBlank()) Result.success(City(raw)) else Result.failure(BlankCity)
+
+    private fun recipient(raw: String): Result<Recipient, BlankRecipient> =
+        if (raw.isNotBlank()) Result.success(Recipient(raw)) else Result.failure(BlankRecipient)
 
     private fun address(rawPostalCode: String, rawMobile: String): Result<Address, InvalidAddress> =
         Result.zip(postalCode(rawPostalCode), mobile(rawMobile), ::InvalidAddress) { p, m -> Address(p, m) }
@@ -82,6 +87,25 @@ class ZipTest {
 
             val failure = assertIs<Result.Failure<InvalidAddress>>(result).failure
             assertEquals(listOf("POSTAL_CODE_INVALID", "CITY_BLANK"), failure.causes.map { it.code })
+        }
+    }
+
+    @Nested
+    inner class FourInputs {
+        @Test
+        fun `combines the values when all succeed`() {
+            val result = Result.zip(postalCode("1234567890"), mobile("09121234567"), city("Tehran"), recipient("Sara"), ::InvalidAddress) { p, m, c, r ->
+                "${r.value}, ${c.value} ${p.value} ${m.value}"
+            }
+            assertEquals(Result.success("Sara, Tehran 1234567890 09121234567"), result)
+        }
+
+        @Test
+        fun `collects every failure in input order`() {
+            val result = Result.zip(postalCode("x"), mobile("123"), city("Tehran"), recipient(""), ::InvalidAddress) { _, _, _, _ -> Unit }
+
+            val failure = assertIs<Result.Failure<InvalidAddress>>(result).failure
+            assertEquals(listOf("POSTAL_CODE_INVALID", "MOBILE_INVALID", "RECIPIENT_BLANK"), failure.causes.map { it.code })
         }
     }
 }

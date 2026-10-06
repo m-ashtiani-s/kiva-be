@@ -28,3 +28,17 @@ inline fun <A, B, C, R, F : ResultFailure> Result.Companion.zip(
     }
     return failure(onFailure(listOfNotNull(a.failureOrNull(), b.failureOrNull(), c.failureOrNull())))
 }
+
+inline fun <A, B, C, D, R, F : ResultFailure> Result.Companion.zip(
+    a: Result<A, ResultFailure>,
+    b: Result<B, ResultFailure>,
+    c: Result<C, ResultFailure>,
+    d: Result<D, ResultFailure>,
+    onFailure: (causes: List<ResultFailure>) -> F,
+    combine: (A, B, C, D) -> R,
+): Result<R, F> {
+    if (a is Result.Success && b is Result.Success && c is Result.Success && d is Result.Success) {
+        return success(combine(a.value, b.value, c.value, d.value))
+    }
+    return failure(onFailure(listOfNotNull(a.failureOrNull(), b.failureOrNull(), c.failureOrNull(), d.failureOrNull())))
+}

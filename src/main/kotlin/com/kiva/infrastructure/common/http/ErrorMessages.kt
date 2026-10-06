@@ -142,6 +142,7 @@ object ErrorMessages {
         "ORDER_CODE_INVALID" to "کد سفارش باید به شکل KV-218340 باشه",
         "STOCK_DELTA_INVALID" to "تغییر موجودی باید یه عدد غیرصفر و حداکثر {maxAbs} باشه (مثبت برای ورود، منفی برای خروج)",
         "ADJUSTMENT_NOTE_TOO_LONG" to "یادداشت حداکثر {maxLength} حرفه",
+        "ADJUSTMENT_REASON_INVALID" to "دلیل تغییر باید یکی از RESTOCK، STOCKTAKE، DAMAGED، RETURNED یا MANUAL_CORRECTION باشه",
         "ADJUSTMENT_DIRECTION_INVALID" to "این دلیل با جهت تغییر جور نیست: ورود کالا و مرجوعی فقط اضافه می‌کنن و آسیب‌دیده فقط کم می‌کنه",
         "RESERVATION_QUANTITY_MISMATCH" to "برای این سفارش قبلاً تعداد دیگه‌ای رزرو شده",
         "ORDER_ALREADY_SHIPPED" to "این سفارش قبلاً ارسال شده",

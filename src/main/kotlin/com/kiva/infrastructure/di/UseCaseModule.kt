@@ -4,6 +4,7 @@ import com.kiva.application.usecase.catalog.usecase.query.GetCategoryUc
 import com.kiva.application.usecase.catalog.usecase.query.ListCategoriesUc
 import com.kiva.application.usecase.catalog.usecase.query.ListColorsUc
 import com.kiva.application.usecase.catalog.usecase.query.ListMaterialsUc
+import com.kiva.application.usecase.inventory.usecase.command.AdjustInventoryUc
 import org.koin.dsl.module
 
 val useCaseModule = module(createdAtStart = true) {
@@ -12,4 +13,9 @@ val useCaseModule = module(createdAtStart = true) {
     single { ListMaterialsUc(transactionManager = get(), materialRepository = get()) }
     single { ListCategoriesUc(transactionManager = get(), categoryRepository = get()) }
     single { GetCategoryUc(transactionManager = get(), categoryRepository = get()) }
+
+    // --- inventory: commands ---
+    single {
+        AdjustInventoryUc(transactionManager = get(), inventoryDomainService = get(), inventoryRepository = get(), clock = get())
+    }
 }

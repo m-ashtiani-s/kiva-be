@@ -1,5 +1,9 @@
 package com.kiva.domain.aggregate.inventory.model.valueobject
 
+import com.kiva.common.railway.FailureKind
+import com.kiva.common.railway.Result
+import com.kiva.common.railway.ResultFailure
+
 /**
  * Why staff changed the stock by hand (the contract's `reason`). Each reason allows only the direction it makes
  * sense in: a delivery can't take bags away and damage can't add any. Stored by name, so never renamed.
@@ -22,4 +26,15 @@ enum class AdjustmentReason(val allowsIncrease: Boolean, val allowsDecrease: Boo
     ;
 
     fun allows(delta: StockDelta): Boolean = if (delta.isIncrease) allowsIncrease else allowsDecrease
+
+    companion object {
+        /** The reason as the contract sends it (`RESTOCK`), exactly; anything else is ADJUSTMENT_REASON_INVALID. */
+        fun makeNew(raw: String): Result<AdjustmentReason, Failure> =
+            entries.firstOrNull { it.name == raw }?.let { Result.success(it) } ?: Result.failure(Failure.Invalid)
+    }
+
+    // Always the `reason` field of the contract's InventoryAdjustmentRequest.
+    sealed class Failure(code: String) : ResultFailure(code, FailureKind.INVALID, field = "reason") {
+        data object Invalid : Failure("ADJUSTMENT_REASON_INVALID")
+    }
 }
