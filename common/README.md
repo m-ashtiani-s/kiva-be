@@ -132,3 +132,4 @@ class Product private constructor() : EventSourceEntity<ProductDomainEvent>() {
 - `applyEventStream`: replay. رویدادهای replay‌شده دوباره ثبت نمی‌شن. جریان خالی، شماره‌ی جاافتاده یا تکراری، یا رویداد یه Aggregate دیگه، یعنی داده‌ی خراب و exception.
 - `getRecordedEvents()`: رویدادهای تازه، همونی که Repository ذخیره می‌کنه.
 - برخلاف کلاس پایه‌ی شرکت، شماره با هر رویداد جلو می‌ره. پس یه Command می‌تونه چند تا رویداد بسازه (۱، ۲، ۳).
+- `ConcurrentChangeException`: دو نفر یه Aggregate رو خوندن و هر دو عوض کردن. اولی ذخیره می‌شه و دومی رد می‌شه، چون شماره‌ی رویدادش تکراریه (قید یکتای event store). Result نیست، چون کاربر کار اشتباهی نکرده؛ تراکنش rollback می‌شه و هیچی از دومی نمی‌مونه.

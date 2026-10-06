@@ -6,7 +6,7 @@ import com.kiva.infrastructure.config.AppConfig
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.koin.dsl.module
 
-/** Things built during boot that other components may need. Repositories and use cases are in daoModule and useCaseModule. */
+/** Things built during boot that other components may need. Repositories, domain services and use cases have their own modules. */
 fun infrastructureModule(config: AppConfig, database: Database) = module {
     single { config }
     single { database }
