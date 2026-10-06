@@ -4,8 +4,10 @@ import com.kiva.application.dto.PriceDto
 import com.kiva.application.dto.ProductCardDto
 import com.kiva.application.repository.PriceRange
 import com.kiva.application.repository.ProductCardQm
+import com.kiva.application.repository.ProductDetailQm
 import com.kiva.application.repository.ProductFilter
 import com.kiva.application.repository.ProductQmRepository
+import com.kiva.application.repository.ProductRef
 import com.kiva.application.repository.VariantQm
 import com.kiva.application.util.MockTransactionManager
 import com.kiva.application.util.factory.CategoryFactory
@@ -53,6 +55,8 @@ private class ListReadModel(var cards: List<ProductCardQm> = emptyList()) : Prod
     }
 
     override fun findVariant(variantId: VariantId): VariantQm? = error("not used here")
+
+    override fun findDetail(ref: ProductRef): ProductDetailQm? = error("not used here")
 
     override fun isSlugTaken(slug: Slug): Boolean = error("not used here")
 

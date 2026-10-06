@@ -1,6 +1,7 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
 import com.kiva.application.usecase.product.usecase.query.FindProductsUc
+import com.kiva.application.usecase.product.usecase.query.GetProductUc
 import com.kiva.common.valueobject.Money
 import com.kiva.infrastructure.TestDatabase
 import com.kiva.infrastructure.common.persistence.ExposedTransactionManager
@@ -8,6 +9,7 @@ import com.kiva.infrastructure.httpserver.API_V1
 import com.kiva.infrastructure.httpserver.configureHttp
 import com.kiva.infrastructure.persistence.exposed.CategoryRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ColorRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.MaterialRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ProductQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.StoredCatalog
 import com.kiva.infrastructure.seed.DevCatalogData
@@ -51,6 +53,10 @@ class WebV1ProductsOnDatabaseTest {
         ExposedTransactionManager(db), ProductQmRepositoryImpl(), CategoryRepositoryImpl(), ColorRepositoryImpl(), clock,
         Money.constructFromPersisted(3_000_000),
     )
+    private val getProductUc = GetProductUc(
+        ExposedTransactionManager(db), ProductQmRepositoryImpl(), CategoryRepositoryImpl(), MaterialRepositoryImpl(), ColorRepositoryImpl(),
+        clock, Money.constructFromPersisted(3_000_000),
+    )
 
     @BeforeEach
     fun seed() {
@@ -67,7 +73,7 @@ class WebV1ProductsOnDatabaseTest {
         environment { config = MapApplicationConfig() }
         application {
             configureHttp()
-            routing { route(API_V1) { webV1Products(findProductsUc) } }
+            routing { route(API_V1) { webV1Products(findProductsUc, getProductUc, siteUrl = "https://kiva.ir") } }
         }
         block()
     }
@@ -150,5 +156,75 @@ class WebV1ProductsOnDatabaseTest {
                 card["badges"]!!.jsonArray.single { it.jsonObject["code"]!!.jsonPrimitive.content == "SALE" }.jsonObject["label"]!!.jsonPrimitive.content,
             ),
         )
+    }
+
+    // ============ step 8 is done when ============
+
+    private suspend fun ApplicationTestBuilder.page(idOrSlug: String): HttpResponse = client.get("$API_V1/products/$idOrSlug")
+
+    /** The product's number, as the list gives it: on kiva_test ids follow the sequence, not the prototype. */
+    private suspend fun ApplicationTestBuilder.idOf(slug: String): Long =
+        client.get("$API_V1/products?size=60").body()["items"]!!.jsonArray
+            .single { it.jsonObject["slug"]!!.jsonPrimitive.content == slug }.jsonObject["id"]!!.jsonPrimitive.content.toLong()
+
+    @Test
+    fun `its number, its code KV-1001 and its slug all open the same product`() = withApp {
+        val id = idOf("mahak-shoulder-bag")
+
+        val pages = listOf("$id", "KV-1001", "mahak-shoulder-bag").map { page(it) }
+
+        assertEquals(List(3) { HttpStatusCode.OK }, pages.map { it.status })
+        val bodies = pages.map { it.body() }
+        assertEquals(List(3) { id }, bodies.map { it["id"]!!.jsonPrimitive.content.toLong() })
+        // However it was asked for, the canonical address is the slug's.
+        assertEquals(List(3) { "https://kiva.ir/product/mahak-shoulder-bag" }, bodies.map { it["seo"]!!.jsonObject["canonicalUrl"]!!.jsonPrimitive.content })
+    }
+
+    @Test
+    fun `a DRAFT product, or one that doesn't exist, is 404 PRODUCT_NOT_FOUND`() = withApp {
+        val draft = others.newProduct(listOf(StoredCatalog.NewColor("lilac")), slug = "unpublished-bag")
+
+        val answers = listOf("${draft.id.value}", "unpublished-bag", draft.sku.value, "999999", "KV-9999", "no-such-bag", "kv-1001").map { page(it) }
+
+        assertEquals(List(7) { HttpStatusCode.NotFound }, answers.map { it.status })
+        assertEquals(List(7) { "PRODUCT_NOT_FOUND" }, answers.map { it.body()["code"]!!.jsonPrimitive.content })
+    }
+
+    @Test
+    fun `the stock number is in the answer only where the status is LOW_STOCK`() = withApp {
+        // Plenty (Mahak, 12 a color), few of each color (Aida 3, Hasti 2) and none (Shabtab).
+        val stocks = listOf("mahak-shoulder-bag", "aida-handbag", "hasti-shoulder-bag", "shabtab-clutch").flatMap { slug ->
+            val body = page(slug).body()
+            listOf(body["stock"]!!.jsonObject) + body["variants"]!!.jsonArray.map { it.jsonObject["stock"]!!.jsonObject }
+        }
+
+        stocks.forEach { stock ->
+            val lowStock = stock["status"]!!.jsonPrimitive.content == "LOW_STOCK"
+            assertEquals(lowStock, "availableQuantity" in stock, "$stock")
+        }
+        assertEquals(setOf("IN_STOCK", "LOW_STOCK", "OUT_OF_STOCK"), stocks.map { it["status"]!!.jsonPrimitive.content }.toSet())
+        // Aida has 3 of each color: each color says so, the bag as a whole (12) doesn't.
+        val aida = page("aida-handbag").body()
+        assertEquals("IN_STOCK", aida["stock"]!!.jsonObject["status"]!!.jsonPrimitive.content)
+        assertEquals(List(4) { "3" }, aida["variants"]!!.jsonArray.map { it.jsonObject["stock"]!!.jsonObject["availableQuantity"]!!.jsonPrimitive.content })
+    }
+
+    @Test
+    fun `a sold-out bag keeps its page, and says so`() = withApp {
+        val shabtab = page("shabtab-clutch")
+
+        assertEquals(HttpStatusCode.OK, shabtab.status)
+        val body = shabtab.body()
+        assertEquals("ناموجود", body["stock"]!!.jsonObject["label"]!!.jsonPrimitive.content)
+        assertEquals(
+            Json.parseToJsonElement("""{"key":"STOCK","label":"موجودی انبار","value":"تمام شد","tone":"DARK"}"""),
+            body["specTable"]!!.jsonArray.last(),
+        )
+    }
+
+    @Test
+    fun `color picks the color shown first`() = withApp {
+        assertEquals("olive", page("nila-crossbody-bag?color=olive").body()["selectedColorKey"]!!.jsonPrimitive.content)
+        assertEquals(HttpStatusCode.BadRequest, page("nila-crossbody-bag?color=Olive").status)
     }
 }

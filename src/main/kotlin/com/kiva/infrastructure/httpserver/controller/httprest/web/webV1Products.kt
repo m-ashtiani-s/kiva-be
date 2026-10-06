@@ -1,12 +1,14 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
 import com.kiva.application.usecase.product.usecase.query.FindProductsUc
+import com.kiva.application.usecase.product.usecase.query.GetProductUc
 import com.kiva.application.usecase.product.usecase.query.ProductSorts
 import com.kiva.common.railway.unwrapOr
 import com.kiva.infrastructure.common.http.pageable
 import com.kiva.infrastructure.common.http.respondFailure
 import com.kiva.infrastructure.common.http.respondResult
 import com.kiva.infrastructure.common.http.toHttpResponse
+import com.kiva.infrastructure.httpserver.controller.httprest.model.response.ProductDetailHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.ProductListHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.ProductSummaryHttpResponse
 import io.ktor.http.Parameters
@@ -19,7 +21,7 @@ import io.ktor.server.routing.get
  * The route only reads the request as it came: paging is checked here (it is the same for every list), the filters
  * by FindProductsUc. The status of each failure comes from its kind (see respondResult).
  */
-fun Route.webV1Products(findProductsUc: FindProductsUc) {
+fun Route.webV1Products(findProductsUc: FindProductsUc, getProductUc: GetProductUc, siteUrl: String) {
     get("/products") {
         // The contract's product grid: 24 a page, at most 60.
         val pageable = call.pageable(allowedSorts = ProductSorts.names, defaultSort = ProductSorts.DEFAULT, defaultSize = 24, maxSize = 60)
@@ -46,6 +48,14 @@ fun Route.webV1Products(findProductsUc: FindProductsUc) {
             val list = page.toHttpResponse { ProductSummaryHttpResponse.from(it, filterColors = query.colors) }
             ProductListHttpResponse(list.items, list.meta, sort = pageable.sort ?: ProductSorts.DEFAULT)
         }
+    }
+
+    // `1`, `KV-1001` or `mahak-shoulder-bag`: the use case tells them apart. `/products/facets` (later) is not caught
+    // here, as Ktor prefers a fixed segment to a parameter.
+    get("/products/{idOrSlug}") {
+        // Always present: the route only matches when the segment is there.
+        val query = GetProductUc.Qry(idOrSlug = call.pathParameters["idOrSlug"].orEmpty(), color = call.request.queryParameters["color"])
+        call.respondResult(getProductUc.execute(query)) { ProductDetailHttpResponse.from(it, siteUrl) }
     }
 }
 

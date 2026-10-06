@@ -20,6 +20,7 @@ data class AppConfig(
                 ),
                 shop = ShopConfig(
                     freeShippingThreshold = Money.constructFromPersisted(config.property("kiva.shop.freeShippingThreshold").getString().toLong()),
+                    siteUrl = config.property("kiva.shop.siteUrl").getString(),
                 ),
                 // Strict: a typo such as "yes" stops the boot instead of quietly meaning false.
                 seed = SeedConfig(enabled = config.property("kiva.seed.enabled").getString().toBooleanStrict()),
@@ -28,11 +29,15 @@ data class AppConfig(
     }
 }
 
-/** Shop rules from config, until the admin settings keep them. */
-data class ShopConfig(val freeShippingThreshold: Money) {
+/**
+ * Shop rules from config, until the admin settings keep them.
+ *
+ * @property siteUrl the shop's own address (`https://kiva.ir`), for the canonical and share links of pages.
+ */
+data class ShopConfig(val freeShippingThreshold: Money, val siteUrl: String) {
     companion object {
         /** The contract's numbers. */
-        val DEFAULT = ShopConfig(freeShippingThreshold = Money.constructFromPersisted(3_000_000))
+        val DEFAULT = ShopConfig(freeShippingThreshold = Money.constructFromPersisted(3_000_000), siteUrl = "https://kiva.ir")
     }
 }
 

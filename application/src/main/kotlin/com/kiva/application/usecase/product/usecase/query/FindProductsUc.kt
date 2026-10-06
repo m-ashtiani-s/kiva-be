@@ -1,11 +1,10 @@
 package com.kiva.application.usecase.product.usecase.query
 
-import com.kiva.application.dto.PriceDto
 import com.kiva.application.dto.ProductCardDto
 import com.kiva.application.repository.PriceRange
-import com.kiva.application.repository.ProductCardQm
 import com.kiva.application.repository.ProductFilter
 import com.kiva.application.repository.ProductQmRepository
+import com.kiva.application.usecase.product.ProductCards
 import com.kiva.common.logging.getLogger
 import com.kiva.common.pagination.Page
 import com.kiva.common.pagination.Pageable
@@ -25,14 +24,9 @@ import com.kiva.common.transaction.TransactionManager
 import com.kiva.common.usecase.QueryUseCase
 import com.kiva.common.valueobject.Money
 import com.kiva.common.valueobject.Slug
-import com.kiva.domain.aggregate.category.entity.Category
 import com.kiva.domain.aggregate.category.repository.CategoryRepository
-import com.kiva.domain.aggregate.color.entity.Color
 import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
 import com.kiva.domain.aggregate.color.repository.ColorRepository
-import com.kiva.domain.aggregate.product.model.policy.BadgePolicy
-import com.kiva.domain.aggregate.product.model.policy.PricePolicy
-import com.kiva.domain.aggregate.product.model.policy.StockPolicy
 import com.kiva.domain.aggregate.product.model.valueobject.BagType
 import com.kiva.domain.aggregate.product.model.valueobject.Occasion
 import com.kiva.domain.aggregate.product.model.valueobject.ProductId
@@ -46,9 +40,8 @@ import java.time.Instant
  * under its parameter (`maxPrice`, `color`, `ids`). A well-formed value that names nothing (a category nobody has) is
  * not a mistake: it simply matches no product. An empty parameter (`minPrice=`) is the same as a missing one.
  *
- * The read model gives the products; their cards are made here with the shop's rules. The card shows the default
- * color's price. Its stock is the whole product's, through StockPolicy, so the exact number never leaves; its badges
- * come from BadgePolicy, «جدید» judged at this request's moment.
+ * The read model gives the products; ProductCards makes their cards with the shop's rules, «جدید» judged at this
+ * request's moment.
  */
 class FindProductsUc(
     private val transactionManager: TransactionManager,
@@ -100,7 +93,9 @@ class FindProductsUc(
             // Both lists are short (8 categories, 13 colors) and the cards of one page need many of them.
             val categories = categoryRepository.findAll().associateBy { it.slug }
             val palette = colorRepository.findAll().associateBy { it.key }
-            Result.success(page.map { cardOf(it, categories, palette, now) })
+            Result.success(
+                page.map { ProductCards.cardOf(it, categories.getValue(it.categorySlug), palette, now, freeShippingThreshold) },
+            )
         }
     }
 
@@ -168,45 +163,6 @@ class FindProductsUc(
         Result.zipAll(raws.map { parse(it).forField(parameter) }, ::InputProblems)
 
     private fun numberOf(raw: String): Long? = raw.normalizeDigits().trim().toLongOrNull()
-
-    // ============ the cards ============
-
-    private fun cardOf(qm: ProductCardQm, categories: Map<Slug, Category>, palette: Map<ColorKey, Color>, now: Instant): ProductCardDto {
-        // The read model's foreign keys keep both lookups whole.
-        val category = categories.getValue(qm.categorySlug)
-        val stock = StockPolicy.stockOf(qm.colors.sumOf { it.available }, qm.maxPerOrder)
-        val isNew = BadgePolicy.isNew(qm.newUntil, now)
-
-        return ProductCardDto(
-            id = qm.productId.value,
-            slug = qm.slug.value,
-            sku = qm.sku.value,
-            name = qm.name.value,
-            category = ProductCardDto.CategoryRef(category.id.value, category.slug.value, category.name.value),
-            bagType = qm.bagType,
-            price = PriceDto.from(qm.priceTag),
-            colors = qm.colors.map { color ->
-                val swatch = palette.getValue(color.colorKey)
-                ProductCardDto.ColorOption(
-                    variantId = color.variantId.value,
-                    key = swatch.key.value,
-                    name = swatch.name.value,
-                    hex = swatch.hex.value,
-                    isLight = swatch.isLight,
-                    sortOrder = swatch.sortOrder,
-                    stockStatus = StockPolicy.stockOf(color.available, qm.maxPerOrder).status,
-                )
-            },
-            // A product in the shop always has an active default color: Product keeps that.
-            defaultColorKey = qm.colors.first { it.isDefault }.colorKey.value,
-            stock = stock,
-            badges = BadgePolicy.badgesOf(isNew, qm.priceTag, qm.hasVideo, stock.status, freeShippingThreshold),
-            isNew = isNew,
-            hasVideo = qm.hasVideo,
-            soldCount = qm.soldCount,
-            freeShippingEligible = PricePolicy.qualifiesForFreeShipping(qm.priceTag, freeShippingThreshold),
-        )
-    }
 
     companion object {
         /** From the contract's `q`. */

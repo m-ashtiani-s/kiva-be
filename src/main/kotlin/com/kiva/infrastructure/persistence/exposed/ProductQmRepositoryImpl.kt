@@ -1,8 +1,10 @@
 package com.kiva.infrastructure.persistence.exposed
 
 import com.kiva.application.repository.ProductCardQm
+import com.kiva.application.repository.ProductDetailQm
 import com.kiva.application.repository.ProductFilter
 import com.kiva.application.repository.ProductQmRepository
+import com.kiva.application.repository.ProductRef
 import com.kiva.application.repository.VariantQm
 import com.kiva.application.usecase.product.usecase.query.ProductSorts
 import com.kiva.common.pagination.Page
@@ -10,11 +12,15 @@ import com.kiva.common.pagination.Pageable
 import com.kiva.common.valueobject.Money
 import com.kiva.common.valueobject.Slug
 import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
+import com.kiva.domain.aggregate.product.model.valueobject.Highlights
+import com.kiva.domain.aggregate.product.model.valueobject.MaterialDescription
 import com.kiva.domain.aggregate.product.model.valueobject.MaxPerOrder
 import com.kiva.domain.aggregate.product.model.valueobject.PriceTag
+import com.kiva.domain.aggregate.product.model.valueobject.ProductDescription
 import com.kiva.domain.aggregate.product.model.valueobject.ProductId
 import com.kiva.domain.aggregate.product.model.valueobject.ProductName
 import com.kiva.domain.aggregate.product.model.valueobject.ProductStatus
+import com.kiva.domain.aggregate.product.model.valueobject.ShortDescription
 import com.kiva.domain.aggregate.product.model.valueobject.Sku
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
 import com.kiva.infrastructure.common.persistence.SortOrders
@@ -123,16 +129,60 @@ class ProductQmRepositoryImpl : ProductQmRepository {
         name = ProductName.constructFromPersisted(row[ProductQmTbl.name]),
         categorySlug = Slug.constructFromPersisted(row[ProductQmTbl.categorySlug]),
         bagType = row[ProductQmTbl.bagType],
-        priceTag = PriceTag.constructFromPersisted(
-            Money.constructFromPersisted(row[ProductQmTbl.price]),
-            row[ProductQmTbl.compareAtPrice]?.let { Money.constructFromPersisted(it) },
-        ),
+        priceTag = priceTagOf(row[ProductQmTbl.price], row[ProductQmTbl.compareAtPrice]),
         hasVideo = row[ProductQmTbl.hasVideo],
         soldCount = row[ProductQmTbl.soldCount],
         newUntil = row[ProductQmTbl.newUntil]?.toInstant(),
         maxPerOrder = MaxPerOrder.constructFromPersisted(row[ProductQmTbl.maxPerOrder]),
         colors = colors,
     )
+
+    private fun priceTagOf(price: Long, compareAtPrice: Long?): PriceTag =
+        PriceTag.constructFromPersisted(Money.constructFromPersisted(price), compareAtPrice?.let { Money.constructFromPersisted(it) })
+
+    // ============ one product's page ============
+
+    override fun findDetail(ref: ProductRef): ProductDetailQm? {
+        val row = ProductQmTbl.selectAll()
+            .where { (ProductQmTbl.status eq ProductStatus.ACTIVE) and matching(ref) }
+            .singleOrNull()
+            ?: return null
+
+        val variants = ProductVariantQmTbl.selectAll()
+            .where { (ProductVariantQmTbl.productId eq row[ProductQmTbl.productId]) and (ProductVariantQmTbl.isActive eq true) }
+            .orderBy(ProductVariantQmTbl.sortOrder to SortOrder.ASC, ProductVariantQmTbl.variantId to SortOrder.ASC)
+            .map {
+                ProductDetailQm.Variant(
+                    variantId = VariantId.constructFromPersisted(it[ProductVariantQmTbl.variantId]),
+                    colorKey = ColorKey.constructFromPersisted(it[ProductVariantQmTbl.colorKey]),
+                    sku = Sku.constructFromPersisted(it[ProductVariantQmTbl.sku]),
+                    priceTag = priceTagOf(it[ProductVariantQmTbl.price], it[ProductVariantQmTbl.compareAtPrice]),
+                    isDefault = it[ProductVariantQmTbl.isDefault],
+                    available = it[ProductVariantQmTbl.onHand] - it[ProductVariantQmTbl.reserved],
+                    media = it[ProductVariantQmTbl.media].map { media -> media.toDomain() },
+                )
+            }
+
+        return ProductDetailQm(
+            card = cardOf(row, variants.map { ProductCardQm.Color(it.variantId, it.colorKey, it.isDefault, it.available) }),
+            materialSlug = Slug.constructFromPersisted(row[ProductQmTbl.materialSlug]),
+            materialDescription = row[ProductQmTbl.materialDescription]?.let { MaterialDescription.constructFromPersisted(it) },
+            shortDescription = row[ProductQmTbl.shortDescription]?.let { ShortDescription.constructFromPersisted(it) },
+            description = row[ProductQmTbl.description]?.let { ProductDescription.constructFromPersisted(it) },
+            highlights = Highlights.constructFromPersisted(row[ProductQmTbl.highlights]),
+            specs = row[ProductQmTbl.specs].toDomain(),
+            returnable = row[ProductQmTbl.returnable],
+            publishedOn = row[ProductQmTbl.publishedOn]?.toInstant(),
+            updatedOn = row[ProductQmTbl.updatedOn].toInstant(),
+            variants = variants,
+        )
+    }
+
+    private fun matching(ref: ProductRef): Op<Boolean> = when (ref) {
+        is ProductRef.ById -> ProductQmTbl.productId eq ref.id.value
+        is ProductRef.BySku -> ProductQmTbl.sku eq ref.sku.value
+        is ProductRef.BySlug -> ProductQmTbl.slug eq ref.slug.value
+    }
 
     // ============ one color, slugs and codes in use ============
 

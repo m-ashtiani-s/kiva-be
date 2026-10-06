@@ -2,8 +2,10 @@ package com.kiva.application.usecase.product.usecase.command
 
 import com.kiva.application.dto.CreatedProductDto
 import com.kiva.application.repository.ProductCardQm
+import com.kiva.application.repository.ProductDetailQm
 import com.kiva.application.repository.ProductFilter
 import com.kiva.application.repository.ProductQmRepository
+import com.kiva.application.repository.ProductRef
 import com.kiva.application.repository.VariantQm
 import com.kiva.application.usecase.product.usecase.command.CreateProductUc.Cmd
 import com.kiva.application.util.MockTransactionManager
@@ -75,6 +77,8 @@ private class CountingIds : ProductIdGenerator {
 /** The read model as far as creating a product needs it: the slugs and codes already in use. */
 private class ReadModel(val takenSlugs: Set<String> = emptySet(), val takenSkus: Set<String> = emptySet()) : ProductQmRepository {
     override fun find(filter: ProductFilter, pageable: Pageable): Page<ProductCardQm> = error("not used here")
+
+    override fun findDetail(ref: ProductRef): ProductDetailQm? = error("not used here")
 
     override fun isSlugTaken(slug: Slug): Boolean = slug.value in takenSlugs
 

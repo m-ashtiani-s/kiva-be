@@ -22,6 +22,9 @@ interface ProductQmRepository {
      */
     fun find(filter: ProductFilter, pageable: Pageable): Page<ProductCardQm>
 
+    /** One product's page, if it is in the shop: a draft or an archived product is null, like one nobody has. */
+    fun findDetail(ref: ProductRef): ProductDetailQm?
+
     /** One color of any product, whatever its status, or null when no product has it. */
     fun findVariant(variantId: VariantId): VariantQm?
 

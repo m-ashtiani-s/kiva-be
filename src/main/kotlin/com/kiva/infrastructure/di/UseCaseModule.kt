@@ -7,6 +7,7 @@ import com.kiva.application.usecase.catalog.usecase.query.ListMaterialsUc
 import com.kiva.application.usecase.inventory.usecase.command.AdjustInventoryUc
 import com.kiva.application.usecase.product.usecase.command.CreateProductUc
 import com.kiva.application.usecase.product.usecase.query.FindProductsUc
+import com.kiva.application.usecase.product.usecase.query.GetProductUc
 import com.kiva.infrastructure.config.AppConfig
 import org.koin.dsl.module
 
@@ -23,6 +24,18 @@ val useCaseModule = module(createdAtStart = true) {
             transactionManager = get(),
             productQmRepository = get(),
             categoryRepository = get(),
+            colorRepository = get(),
+            clock = get(),
+            freeShippingThreshold = get<AppConfig>().shop.freeShippingThreshold,
+        )
+    }
+
+    single {
+        GetProductUc(
+            transactionManager = get(),
+            productQmRepository = get(),
+            categoryRepository = get(),
+            materialRepository = get(),
             colorRepository = get(),
             clock = get(),
             freeShippingThreshold = get<AppConfig>().shop.freeShippingThreshold,
