@@ -123,6 +123,13 @@ object ErrorMessages {
         "POCKETS_TOO_LONG" to "توضیح جیب‌ها حداکثر {maxLength} حرفه",
         "MEDIA_URL_INVALID" to "آدرس فایل باید یه آدرس کامل http یا https باشه",
         "MEDIA_ALT_TOO_LONG" to "متن جایگزین عکس حداکثر {maxLength} حرفه",
+        "COMPARE_AT_PRICE_NOT_ABOVE_PRICE" to "قیمت قبل از تخفیف باید از قیمت فروش بیشتر باشه",
+        "PRODUCT_ARCHIVED" to "این محصول آرشیو شده و دیگه قابل ویرایش نیست",
+        "PRODUCT_ALREADY_ACTIVE" to "این محصول از قبل منتشر شده",
+        "PRODUCT_ALREADY_DRAFT" to "این محصول از قبل پیش‌نویسه",
+        "PRODUCT_ALREADY_ARCHIVED" to "این محصول از قبل آرشیو شده",
+        "NO_ACTIVE_VARIANT" to "برای انتشار، محصول حداقل یه رنگ فعال لازم داره",
+        "COLOR_ALREADY_ON_PRODUCT" to "این رنگ قبلاً برای این محصول تعریف شده",
     )
 
     // Used when a code has no text of its own (or its placeholders can't be filled).
