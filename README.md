@@ -23,6 +23,9 @@ paginate) live in `src/main/kotlin/com/kiva/infrastructure/common`.
 
 ## Run
 
+In IntelliJ: open `src/main/kotlin/com/kiva/infrastructure/Application.kt` and press ▶ next to `fun main`.
+From a terminal:
+
 ```bash
 ./gradlew run
 curl http://localhost:8080/health

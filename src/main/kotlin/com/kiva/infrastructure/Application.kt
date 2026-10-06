@@ -13,12 +13,17 @@ import io.ktor.server.application.install
 import org.koin.ktor.plugin.Koin
 import org.koin.logger.slf4jLogger
 
+/** Run this to start the server (the ▶ next to it in IntelliJ). Port and settings come from application.conf. */
+fun main(args: Array<String>): Unit =
+    io.ktor.server.cio.EngineMain.main(args)
+
 /**
- * Entry point referenced from application.conf (ktor.application.modules).
+ * Called by Ktor after [main] has read application.conf (ktor.application.modules points here).
  * Boot order, top to bottom:
  *   config -> datasource -> migrations -> Exposed -> DI -> HTTP plugins -> routes
  */
-fun Application.module() {
+@Suppress("unused") // referenced only from application.conf, so the IDE can't see it is used
+fun Application.start() {
     val config = AppConfig.from(environment.config)
 
     val dataSource = DatabaseFactory.createDataSource(config.datasource)
