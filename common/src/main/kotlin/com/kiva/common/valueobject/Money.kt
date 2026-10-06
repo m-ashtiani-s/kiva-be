@@ -38,7 +38,7 @@ value class Money private constructor(val toman: Long) : Comparable<Money> {
     companion object {
         val ZERO = Money(0)
 
-        fun ofToman(toman: Long): Result<Money, Failure> =
+        fun makeNew(toman: Long): Result<Money, Failure> =
             if (toman >= 0) Result.success(Money(toman)) else Result.failure(Failure.Negative)
     }
 

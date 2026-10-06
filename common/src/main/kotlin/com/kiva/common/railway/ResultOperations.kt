@@ -56,7 +56,7 @@ inline fun <T, F : ResultFailure, R> Result<T, F>.fold(onSuccess: (T) -> R, onFa
  * Returns the value, or runs [onFailure], which must leave the function (`return` or `throw`).
  *
  * ```kotlin
- * val sku = Sku.of(raw).unwrapOr { return Result.failure(PlaceOrderFailure.InvalidSku(it)) }
+ * val sku = Sku.makeNew(raw).unwrapOr { return Result.failure(PlaceOrderFailure.InvalidSku(it)) }
  * // from here on `sku` is a plain Sku, not a Result
  * ```
  */

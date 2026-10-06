@@ -338,3 +338,4 @@ src/main/kotlin/com/kiva/infrastructure/common/
 | 2026-10-04 | ۸ | `normalizeDigits` (فارسی و عربی)، `IranianMobileNumber` (یه شکل ذخیره، ۱۲ شکل ورودی) و `Money` (`value class` با `Long`، `addExact` و `multiplyExact`). ۳۷ تست جدید سبز |
 | 2026-10-04 | ۹ | جمع‌بندی: `CommonShowcaseTest` (۵ تست سرتاسری)، `forField`/`FieldFailure` (۴ تست)، README پروژه و برگه‌ی تقلب `common/README.md`. **کامن تمام شد** |
 | 2026-10-05 | فاز ۲ | هماهنگی با کانترکت: problem+json، پیام فارسی برای ۶۱ کد، ۴۲۲ و ۴۲۹، `meta`، تومان، `phone`، صفحه‌بندی `{items, meta}` با sort اسم‌دار، `/api/v1`، `traceId` و `normalizePersian`. ۱۷۹ تست سبز (۱۲۱ کامن + ۵۸ اصلی) |
+| 2026-10-06 | گام ۱ کاتالوگ | `Slug` به کامن اضافه شد. کارخونه‌ی همه‌ی VOها از `of` و `ofToman` به `makeNew` تغییر کرد (`Money.makeNew(toman = …)`)، همون اسم شرکت و جفتِ `constructFromPersisted`. `init { require }` دیوار دوم VOهاییه که از ذخیره‌سازی هم ساخته می‌شن |

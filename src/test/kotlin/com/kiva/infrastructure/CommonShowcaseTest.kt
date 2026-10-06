@@ -74,7 +74,7 @@ class CommonShowcaseTest {
     @JvmInline
     value class ProductName private constructor(val value: String) {
         companion object {
-            fun of(raw: String): Result<ProductName, Failure> {
+            fun makeNew(raw: String): Result<ProductName, Failure> {
                 val trimmed = raw.trim()
                 return when {
                     trimmed.isEmpty() -> Result.failure(Failure.Blank)
@@ -115,8 +115,8 @@ class CommonShowcaseTest {
         override suspend fun execute(command: AddProductCmd) = tx.inTransaction<Long, AddProductFailure> {
             // 1) Check every input at once (zip), so the form can show all mistakes together.
             val (name, price) = Result.zip(
-                ProductName.of(command.name),
-                Money.ofToman(command.priceToman).forField("price"),
+                ProductName.makeNew(command.name),
+                Money.makeNew(toman = command.priceToman).forField("price"),
                 AddProductFailure::InvalidProduct,
             ) { n, p -> n to p }
                 .unwrapOr { return@inTransaction Result.failure(it) }
@@ -168,8 +168,8 @@ class CommonShowcaseTest {
             ProductsTbl.selectAll().paginate(pageable, sortOrders, tiebreaker = ProductsTbl.id) {
                 Product(
                     id = it[ProductsTbl.id],
-                    name = ProductName.of(it[ProductsTbl.name]).getOrNull()!!,
-                    price = Money.ofToman(it[ProductsTbl.price]).getOrNull()!!,
+                    name = ProductName.makeNew(it[ProductsTbl.name]).getOrNull()!!,
+                    price = Money.makeNew(toman = it[ProductsTbl.price]).getOrNull()!!,
                 )
             }
     }

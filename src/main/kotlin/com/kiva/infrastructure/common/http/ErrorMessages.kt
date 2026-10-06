@@ -88,12 +88,23 @@ object ErrorMessages {
         "UPLOAD_TYPE_NOT_ALLOWED" to "این نوع فایل پذیرفته نمی‌شه",
         "DUPLICATE_SLUG" to "این آدرس (slug) قبلاً استفاده شده",
         "DUPLICATE_SKU" to "این کد کالا (SKU) قبلاً استفاده شده",
-        // --- field-level codes produced by common ---
+        // --- field-level codes produced by common and the domain value objects ---
         "PHONE_REQUIRED" to "موبایلت رو وارد کن",
         "MONEY_NEGATIVE" to "مبلغ نمی‌تونه منفی باشه",
         "PAGE_INVALID" to "شماره‌ی صفحه درست نیست",
         "PAGE_SIZE_INVALID" to "تعداد آیتم‌های هر صفحه حداکثر {maxSize} تاست",
         "SORT_NOT_ALLOWED" to "این نوع مرتب‌سازی پشتیبانی نمی‌شه",
+        "SLUG_INVALID" to "آدرس (slug) فقط حروف کوچک انگلیسی، رقم و خط تیره می‌گیره و باید حداقل یه حرف داشته باشه",
+        "COLOR_KEY_INVALID" to "کلید رنگ باید با حرف کوچک انگلیسی شروع بشه و فقط حروف کوچک، رقم و خط تیره داشته باشه",
+        "CATEGORY_ID_INVALID" to "دسته‌بندی انتخاب‌شده درست نیست",
+        "MATERIAL_ID_INVALID" to "متریال انتخاب‌شده درست نیست",
+        "HEX_COLOR_INVALID" to "کد رنگ باید به شکل #RRGGBB باشه، مثل #C8B6E2",
+        "COLOR_NAME_REQUIRED" to "اسم رنگ رو وارد کن",
+        "COLOR_NAME_TOO_LONG" to "اسم رنگ حداکثر {maxLength} حرفه",
+        "CATEGORY_NAME_REQUIRED" to "اسم دسته‌بندی رو وارد کن",
+        "CATEGORY_NAME_TOO_LONG" to "اسم دسته‌بندی حداکثر {maxLength} حرفه",
+        "MATERIAL_NAME_REQUIRED" to "اسم متریال رو وارد کن",
+        "MATERIAL_NAME_TOO_LONG" to "اسم متریال حداکثر {maxLength} حرفه",
     )
 
     // Used when a code has no text of its own (or its placeholders can't be filled).

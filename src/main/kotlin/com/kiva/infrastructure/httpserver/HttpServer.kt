@@ -1,7 +1,12 @@
 package com.kiva.infrastructure.httpserver
 
+import com.kiva.application.usecase.catalog.usecase.query.GetCategoryUc
+import com.kiva.application.usecase.catalog.usecase.query.ListCategoriesUc
+import com.kiva.application.usecase.catalog.usecase.query.ListColorsUc
+import com.kiva.application.usecase.catalog.usecase.query.ListMaterialsUc
 import com.kiva.infrastructure.common.http.KivaJson
 import com.kiva.infrastructure.common.http.configureStatusPages
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Catalog
 import com.kiva.infrastructure.httpserver.route.healthRoutes
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
@@ -10,7 +15,9 @@ import io.ktor.server.plugins.callid.CallId
 import io.ktor.server.plugins.callid.callIdMdc
 import io.ktor.server.plugins.calllogging.CallLogging
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
+import org.koin.ktor.ext.inject
 import org.slf4j.event.Level
 import java.util.UUID
 
@@ -38,7 +45,15 @@ fun Application.configureHttp() {
 }
 
 fun Application.configureRouting() {
+    val listColorsUc by inject<ListColorsUc>()
+    val listMaterialsUc by inject<ListMaterialsUc>()
+    val listCategoriesUc by inject<ListCategoriesUc>()
+    val getCategoryUc by inject<GetCategoryUc>()
+
     routing {
         healthRoutes()
+        route(API_V1) {
+            webV1Catalog(listColorsUc, listMaterialsUc, listCategoriesUc, getCategoryUc)
+        }
     }
 }

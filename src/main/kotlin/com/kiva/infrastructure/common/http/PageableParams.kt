@@ -24,7 +24,7 @@ fun ApplicationCall.pageable(
     maxSize: Int = Pageable.MAX_SIZE,
 ): Result<Pageable, InvalidPagination> {
     val params = request.queryParameters
-    return Pageable.of(
+    return Pageable.makeNew(
         page = params["page"].toIntParam(default = 1),
         size = params["size"].toIntParam(default = defaultSize),
         sort = params["sort"]?.trim()?.ifEmpty { null } ?: defaultSort,

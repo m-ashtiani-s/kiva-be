@@ -9,7 +9,7 @@ import kotlin.test.assertTrue
 
 class MoneyTest {
 
-    private fun toman(amount: Long): Money = Money.ofToman(amount).getOrNull()!!
+    private fun toman(amount: Long): Money = Money.makeNew(toman = amount).getOrNull()!!
 
     @Nested
     inner class Creation {
@@ -21,7 +21,7 @@ class MoneyTest {
 
         @Test
         fun `a negative amount is MONEY_NEGATIVE`() {
-            assertEquals(Result.failure(Money.Failure.Negative), Money.ofToman(-1))
+            assertEquals(Result.failure(Money.Failure.Negative), Money.makeNew(toman = -1))
         }
     }
 

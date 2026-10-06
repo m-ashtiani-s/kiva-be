@@ -1,7 +1,9 @@
 package com.kiva.infrastructure
 
 import com.kiva.infrastructure.config.AppConfig
+import com.kiva.infrastructure.di.daoModule
 import com.kiva.infrastructure.di.infrastructureModule
+import com.kiva.infrastructure.di.useCaseModule
 import com.kiva.infrastructure.httpserver.configureHttp
 import com.kiva.infrastructure.httpserver.configureRouting
 import com.kiva.infrastructure.persistence.DatabaseFactory
@@ -26,7 +28,7 @@ fun Application.module() {
 
     install(Koin) {
         slf4jLogger()
-        modules(infrastructureModule(config, database))
+        modules(infrastructureModule(config, database), daoModule, useCaseModule)
     }
 
     configureHttp()

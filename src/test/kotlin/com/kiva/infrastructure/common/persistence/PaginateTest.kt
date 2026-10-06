@@ -57,7 +57,7 @@ class PaginateTest {
 
     private fun page(page: Int, size: Int, sort: String? = null): Page<Item> = transaction(db) {
         Items.selectAll().paginate(
-            Pageable.of(page, size, sort, sortOrders.keys).getOrNull()!!,
+            Pageable.makeNew(page, size, sort, sortOrders.keys).getOrNull()!!,
             sortOrders,
             tiebreaker = Items.id,
         ) { Item(it[Items.id], it[Items.name], it[Items.price]) }
@@ -103,7 +103,7 @@ class PaginateTest {
     fun `filters of the original query still apply and are counted`() {
         val result = transaction(db) {
             Items.selectAll().where { Items.price greaterEq 1000L }.paginate(
-                Pageable.of(1, 100).getOrNull()!!, sortOrders, tiebreaker = Items.id,
+                Pageable.makeNew(1, 100).getOrNull()!!, sortOrders, tiebreaker = Items.id,
             ) { it[Items.id] }
         }
         assertEquals(all.count { it.price >= 1000L }.toLong(), result.totalItems)
@@ -112,7 +112,7 @@ class PaginateTest {
 
     @Test
     fun `an allowed sort without a mapped column is a programming error`() {
-        val pageable = Pageable.of(1, 10, "color_asc", allowedSorts = setOf("color_asc")).getOrNull()!!
+        val pageable = Pageable.makeNew(1, 10, "color_asc", allowedSorts = setOf("color_asc")).getOrNull()!!
         assertFailsWith<IllegalStateException> {
             transaction(db) { Items.selectAll().paginate(pageable, sortOrders, Items.id) { it[Items.id] } }
         }

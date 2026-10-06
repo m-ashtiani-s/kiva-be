@@ -14,7 +14,7 @@ import com.kiva.common.railway.zip
  * - [sort] is one named option from the endpoint's list (`newest`, `price_asc`, ...), or null for the default order.
  *   What each name means in the database is decided by the repository.
  *
- * Only [of] can create one, so every Pageable in the system is valid.
+ * Only [makeNew] can create one, so every Pageable in the system is valid.
  */
 @ConsistentCopyVisibility
 data class Pageable private constructor(
@@ -29,7 +29,7 @@ data class Pageable private constructor(
         const val DEFAULT_SIZE = 20
         const val MAX_SIZE = 100
 
-        fun of(
+        fun makeNew(
             page: Int,
             size: Int,
             sort: String? = null,

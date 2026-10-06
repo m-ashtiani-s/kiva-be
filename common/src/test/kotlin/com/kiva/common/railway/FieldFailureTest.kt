@@ -9,7 +9,7 @@ class FieldFailureTest {
 
     @Test
     fun `names the field and keeps code and kind`() {
-        val failure = Money.ofToman(-1).forField("price").failureOrNull()!!
+        val failure = Money.makeNew(toman = -1).forField("price").failureOrNull()!!
 
         assertEquals("price", failure.field)
         assertEquals("MONEY_NEGATIVE", failure.code)
@@ -19,7 +19,7 @@ class FieldFailureTest {
     @Test
     fun `replaces a field the value object set itself`() {
         // IranianMobileNumber says "phone", but this form calls it "recipientPhone".
-        val failure = IranianMobileNumber.of("123").forField("recipientPhone").failureOrNull()!!
+        val failure = IranianMobileNumber.makeNew("123").forField("recipientPhone").failureOrNull()!!
         assertEquals("recipientPhone", failure.field)
         assertEquals("PHONE_INVALID", failure.code)
     }
@@ -41,6 +41,6 @@ class FieldFailureTest {
 
     @Test
     fun `leaves a success untouched`() {
-        assertEquals(1000L, Money.ofToman(1000).forField("price").getOrNull()?.toman)
+        assertEquals(1000L, Money.makeNew(toman = 1000).forField("price").getOrNull()?.toman)
     }
 }

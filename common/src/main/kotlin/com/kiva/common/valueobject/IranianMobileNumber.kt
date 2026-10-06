@@ -19,7 +19,7 @@ import com.kiva.common.text.normalizeDigits
 value class IranianMobileNumber private constructor(val value: String) {
 
     companion object {
-        fun of(raw: String): Result<IranianMobileNumber, Failure> {
+        fun makeNew(raw: String): Result<IranianMobileNumber, Failure> {
             val cleaned = raw.normalizeDigits().filterNot { it in IGNORED }
             if (cleaned.isEmpty()) return Result.failure(Failure.Blank)
 

@@ -12,7 +12,7 @@ data class FieldFailure(val name: String, val original: ResultFailure) :
 /**
  * Names the input field a failure belongs to, so the client can highlight it:
  * ```kotlin
- * Money.ofToman(request.price).forField("price")   // MONEY_NEGATIVE now comes with field = "price"
+ * Money.makeNew(toman = request.price).forField("price")   // MONEY_NEGATIVE now comes with field = "price"
  * ```
  */
 fun <T> Result<T, ResultFailure>.forField(name: String): Result<T, FieldFailure> = mapOnFailure { FieldFailure(name, it) }

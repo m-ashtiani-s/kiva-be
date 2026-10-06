@@ -26,13 +26,13 @@ class IranianMobileNumberTest {
         ],
     )
     fun `every common way of writing the number is stored the same way`(raw: String) {
-        assertEquals("09121234567", IranianMobileNumber.of(raw).getOrNull()?.value)
+        assertEquals("09121234567", IranianMobileNumber.makeNew(raw).getOrNull()?.value)
     }
 
     @ParameterizedTest
     @ValueSource(strings = ["", "   ", " - "])
     fun `empty input is PHONE_REQUIRED`(raw: String) {
-        assertEquals(Result.failure(IranianMobileNumber.Failure.Blank), IranianMobileNumber.of(raw))
+        assertEquals(Result.failure(IranianMobileNumber.Failure.Blank), IranianMobileNumber.makeNew(raw))
     }
 
     @ParameterizedTest
@@ -47,13 +47,13 @@ class IranianMobileNumberTest {
         ],
     )
     fun `anything else is PHONE_INVALID`(raw: String) {
-        assertEquals(Result.failure(IranianMobileNumber.Failure.Invalid), IranianMobileNumber.of(raw))
+        assertEquals(Result.failure(IranianMobileNumber.Failure.Invalid), IranianMobileNumber.makeNew(raw))
     }
 
     @Test
     fun `a leading 98 is only treated as country code when a full number follows`() {
         // 10 digits starting with 98: a national number, not "98" + "12345678"
-        assertEquals("09812345678", IranianMobileNumber.of("9812345678").getOrNull()?.value)
+        assertEquals("09812345678", IranianMobileNumber.makeNew("9812345678").getOrNull()?.value)
     }
 
     @Test
@@ -64,6 +64,6 @@ class IranianMobileNumberTest {
 
     @Test
     fun `the same number typed differently is equal`() {
-        assertEquals(IranianMobileNumber.of("+98 912 123 4567"), IranianMobileNumber.of("۰۹۱۲۱۲۳۴۵۶۷"))
+        assertEquals(IranianMobileNumber.makeNew("+98 912 123 4567"), IranianMobileNumber.makeNew("۰۹۱۲۱۲۳۴۵۶۷"))
     }
 }

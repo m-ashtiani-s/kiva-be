@@ -14,9 +14,9 @@
 | `mapOnFailure { }` | برچسب جعبه‌ی قرمز رو عوض کن | `.mapOnFailure { InvalidQuantity(it) }` |
 | `onSuccess { }` / `onFailure { }` | فقط یه نگاه، مثلاً لاگ | `.onFailure { logger.warn("$it") }` |
 | `fold({ }, { })` | هر دو رنگ به یه مقدار | `.fold({ "ok" }, { "fail" })` |
-| `unwrapOr { return ... }` | محتوا رو بده، اگه قرمز بود از تابع برو بیرون | `val id = X.of(raw).unwrapOr { return Result.failure(it) }` |
+| `unwrapOr { return ... }` | محتوا رو بده، اگه قرمز بود از تابع برو بیرون | `val id = X.makeNew(raw).unwrapOr { return Result.failure(it) }` |
 | `Result.zip(a, b, ::Wrapper) { }` | چند ورودی با هم، **همه‌ی** خطاها رو جمع کن | فرم آدرس |
-| `forField("price")` | بگو این خطا مال کدوم فیلد فرمه | `Money.ofToman(p).forField("price")` |
+| `forField("price")` | بگو این خطا مال کدوم فیلد فرمه | `Money.makeNew(toman = p).forField("price")` |
 
 ## خطا
 
@@ -99,5 +99,9 @@ call.respondResult(list.execute(pageable)) { page -> page.toHttpResponse { ItemH
 |---|---|
 | `"۰۹۱۲".normalizeDigits()` | رقم فارسی و عربی رو انگلیسی کن (`"0912"`) |
 | `"كيف".normalizePersian()` | برای جستجو: `ي→ی`، `ك→ک`، رقم‌ها، نیم‌فاصله و فاصله‌های اضافه |
-| `IranianMobileNumber.of(raw)` | هر شکل از شماره رو قبول می‌کنه و همیشه `09xxxxxxxxx` ذخیره می‌کنه (فیلد `phone`، کد `PHONE_INVALID`) |
-| `Money.ofToman(n)` | پول به **تومان** (`Long`)، هیچ‌وقت منفی. `+`، `* qty`، `.sum()`، مقایسه، و `toRials()` فقط برای درگاه |
+| `IranianMobileNumber.makeNew(raw)` | هر شکل از شماره رو قبول می‌کنه و همیشه `09xxxxxxxxx` ذخیره می‌کنه (فیلد `phone`، کد `PHONE_INVALID`) |
+| `Money.makeNew(toman = n)` | پول به **تومان** (`Long`)، هیچ‌وقت منفی. `+`، `* qty`، `.sum()`، مقایسه، و `toRials()` فقط برای درگاه |
+| `Slug.makeNew(raw)` | آدرس خوانا (`mahak-shoulder-bag`): حروف کوچک، رقم و `-`، حداقل یه حرف، حداکثر ۱۰۰. ورودی رو عوض نمی‌کنه (کد `SLUG_INVALID`، بدون field) |
+
+`constructFromPersisted(value)` برای خوندن از ذخیره‌سازی ـه (ردیف جدول، رویداد). ورودی کاربر همیشه از `makeNew` رد می‌شه و
+خطاش `Failure` ـه. `init { require(...) }` دیوار دومه: مقدار خراب از **هر** راهی exception می‌ده، چون داده‌ی ذخیره‌شده‌ی خراب یعنی باگ.
