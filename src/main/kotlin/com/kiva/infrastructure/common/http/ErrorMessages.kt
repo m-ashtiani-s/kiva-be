@@ -147,6 +147,11 @@ object ErrorMessages {
         "RESERVATION_QUANTITY_MISMATCH" to "برای این سفارش قبلاً تعداد دیگه‌ای رزرو شده",
         "ORDER_ALREADY_SHIPPED" to "این سفارش قبلاً ارسال شده",
         "RESERVATION_NOT_FOUND" to "برای این سفارش چیزی از این رنگ رزرو نشده",
+        "BAG_TYPE_INVALID" to "نوع کیف باید یکی از HOBO، CROSSBODY، BACKPACK، SATCHEL، CLUTCH، TOTE، BUCKET یا WALLET باشه",
+        "CLOSURE_TYPE_INVALID" to "نوع بسته شدن کیف از گزینه‌های مجاز نیست",
+        "OCCASION_INVALID" to "«مناسب برای» از گزینه‌های مجاز نیست",
+        "PRODUCT_STATUS_INVALID" to "وضعیت محصول باید DRAFT، ACTIVE یا ARCHIVED باشه",
+        "PRICE_OVERRIDE_REQUIRED" to "قیمت قبل از تخفیف این رنگ بدون قیمت فروش خودش معنی نداره",
     )
 
     // Used when a code has no text of its own (or its placeholders can't be filled).

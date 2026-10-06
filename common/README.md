@@ -16,6 +16,7 @@
 | `fold({ }, { })` | هر دو رنگ به یه مقدار | `.fold({ "ok" }, { "fail" })` |
 | `unwrapOr { return ... }` | محتوا رو بده، اگه قرمز بود از تابع برو بیرون | `val id = X.makeNew(raw).unwrapOr { return Result.failure(it) }` |
 | `Result.zip(a, b, ::Wrapper) { }` | چند ورودی با هم، **همه‌ی** خطاها رو جمع کن | فرم آدرس |
+| `Result.zipAll(list, ::Wrapper)` | همون zip برای یه لیست هم‌جنس (تا هر تعداد) | رنگ‌های یه محصول |
 | `forField("price")` | بگو این خطا مال کدوم فیلد فرمه | `Money.makeNew(toman = p).forField("price")` |
 
 ## خطا

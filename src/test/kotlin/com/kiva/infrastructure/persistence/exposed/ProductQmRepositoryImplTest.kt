@@ -3,6 +3,7 @@ package com.kiva.infrastructure.persistence.exposed
 import com.kiva.application.repository.VariantQm
 import com.kiva.common.valueobject.Slug
 import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
+import com.kiva.domain.aggregate.product.model.valueobject.Sku
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
 import com.kiva.infrastructure.TestDatabase
 import com.kiva.infrastructure.persistence.event.ProductEventSamples
@@ -40,6 +41,20 @@ class ProductQmRepositoryImplTest {
             transaction(db) { repository.findVariant(black.id) },
         )
         assertNull(transaction(db) { repository.findVariant(VariantId.constructFromPersisted(999_999)) })
+    }
+
+    @Test
+    fun `slugs and codes in use are found, a draft's and a color's out of the shop included`() {
+        val draft = catalog.newProduct(listOf(NewColor("lilac"), NewColor("black")), slug = "mahak-shoulder-bag")
+        val black = draft.variants.single { it.colorKey.value == "black" }
+        catalog.change(draft.id) { it.deactivateVariant(black.id, staff, now) }
+        val free = Sku.constructFromPersisted("KV-FREE-CODE")
+
+        transaction(db) {
+            assertEquals(listOf(true, false), listOf(repository.isSlugTaken(slug("mahak-shoulder-bag")), repository.isSlugTaken(slug("nila-crossbody-bag"))))
+            assertEquals(setOf(draft.sku, black.sku), repository.findTakenSkus(listOf(draft.sku, black.sku, free)))
+            assertEquals(emptySet(), repository.findTakenSkus(emptyList()))
+        }
     }
 
     @Test

@@ -66,6 +66,10 @@ private class KnownColors(vararg colors: VariantQm) : ProductQmRepository {
 
     override fun findVariant(variantId: VariantId): VariantQm? = byId[variantId]
 
+    override fun isSlugTaken(slug: Slug): Boolean = error("not used here")
+
+    override fun findTakenSkus(skus: Collection<Sku>): Set<Sku> = error("not used here")
+
     override fun countActiveByCategory(): Map<Slug, Int> = error("not used here")
 
     override fun countActiveByMaterial(): Map<Slug, Int> = error("not used here")

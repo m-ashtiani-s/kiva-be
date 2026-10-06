@@ -13,6 +13,7 @@ import com.kiva.infrastructure.persistence.exposed.tbl.ProductVariantQmTbl
 import org.jetbrains.exposed.v1.core.Column
 import org.jetbrains.exposed.v1.core.count
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
@@ -33,6 +34,20 @@ class ProductQmRepositoryImpl : ProductQmRepository {
                     isActive = it[ProductVariantQmTbl.isActive],
                 )
             }
+
+    override fun isSlugTaken(slug: Slug): Boolean =
+        !ProductQmTbl.select(ProductQmTbl.id).where { ProductQmTbl.slug eq slug.value }.empty()
+
+    // A code is unique across products and their colors: KV-1001 can't be one product's and another's color's.
+    override fun findTakenSkus(skus: Collection<Sku>): Set<Sku> {
+        if (skus.isEmpty()) return emptySet()
+        val codes = skus.map { it.value }
+        val ofProducts = ProductQmTbl.select(ProductQmTbl.sku).where { ProductQmTbl.sku inList codes }.map { it[ProductQmTbl.sku] }
+        val ofColors = ProductVariantQmTbl.select(ProductVariantQmTbl.sku)
+            .where { ProductVariantQmTbl.sku inList codes }
+            .map { it[ProductVariantQmTbl.sku] }
+        return (ofProducts + ofColors).map { Sku.constructFromPersisted(it) }.toSet()
+    }
 
     override fun countActiveByCategory(): Map<Slug, Int> =
         countActiveBy(ProductQmTbl.categorySlug).mapKeys { Slug.constructFromPersisted(it.key) }

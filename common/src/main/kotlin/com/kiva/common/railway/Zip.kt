@@ -42,3 +42,16 @@ inline fun <A, B, C, D, R, F : ResultFailure> Result.Companion.zip(
     }
     return failure(onFailure(listOfNotNull(a.failureOrNull(), b.failureOrNull(), c.failureOrNull(), d.failureOrNull())))
 }
+
+/**
+ * zip for a list of inputs of one kind (the colors of a product, the rows of a form): all the values in order,
+ * or every failure at once. An empty list is a success with an empty list.
+ */
+inline fun <T, F : ResultFailure> Result.Companion.zipAll(
+    results: List<Result<T, ResultFailure>>,
+    onFailure: (causes: List<ResultFailure>) -> F,
+): Result<List<T>, F> {
+    val failures = results.mapNotNull { it.failureOrNull() }
+    if (failures.isNotEmpty()) return failure(onFailure(failures))
+    return success(results.map { (it as Result.Success).value })
+}

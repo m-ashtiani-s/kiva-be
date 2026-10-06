@@ -2,6 +2,7 @@ package com.kiva.application.repository
 
 import com.kiva.common.valueobject.Slug
 import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
+import com.kiva.domain.aggregate.product.model.valueobject.Sku
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
 
 /**
@@ -15,6 +16,12 @@ interface ProductQmRepository {
 
     /** One color of any product, whatever its status, or null when no product has it. */
     fun findVariant(variantId: VariantId): VariantQm?
+
+    /** Whether a product, whatever its status, already has this slug. */
+    fun isSlugTaken(slug: Slug): Boolean
+
+    /** Those of [skus] that a product or a color of one, whatever its status, already has. */
+    fun findTakenSkus(skus: Collection<Sku>): Set<Sku>
 
     /** How many products in the shop are in each category, by slug. A category with none is missing. */
     fun countActiveByCategory(): Map<Slug, Int>

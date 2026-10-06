@@ -4,6 +4,7 @@ import io.ktor.server.config.ApplicationConfig
 
 data class AppConfig(
     val datasource: DatasourceConfig,
+    val seed: SeedConfig = SeedConfig(enabled = false),
 ) {
     companion object {
         fun from(config: ApplicationConfig): AppConfig {
@@ -15,10 +16,15 @@ data class AppConfig(
                     password = ds.property("password").getString(),
                     maxPoolSize = ds.property("maxPoolSize").getString().toInt(),
                 ),
+                // Strict: a typo such as "yes" stops the boot instead of quietly meaning false.
+                seed = SeedConfig(enabled = config.property("kiva.seed.enabled").getString().toBooleanStrict()),
             )
         }
     }
 }
+
+/** @property enabled run DevCatalogSeeder on startup. Local development only. */
+data class SeedConfig(val enabled: Boolean)
 
 data class DatasourceConfig(
     val url: String,

@@ -108,4 +108,27 @@ class ZipTest {
             assertEquals(listOf("POSTAL_CODE_INVALID", "MOBILE_INVALID", "RECIPIENT_BLANK"), failure.causes.map { it.code })
         }
     }
+
+    @Nested
+    inner class AList {
+        @Test
+        fun `gives every value in order when all succeed`() {
+            val result = Result.zipAll(listOf(city("Tehran"), city("Shiraz"), city("Rasht")), ::InvalidAddress)
+
+            assertEquals(Result.success(listOf(City("Tehran"), City("Shiraz"), City("Rasht"))), result)
+        }
+
+        @Test
+        fun `collects every failure in input order`() {
+            val result = Result.zipAll(listOf(postalCode("x"), postalCode("1234567890"), postalCode("y")), ::InvalidAddress)
+
+            val failure = assertIs<Result.Failure<InvalidAddress>>(result).failure
+            assertEquals(listOf<ResultFailure>(InvalidPostalCode, InvalidPostalCode), failure.causes)
+        }
+
+        @Test
+        fun `an empty list is an empty success`() {
+            assertEquals(Result.success(emptyList()), Result.zipAll(emptyList<Result<City, ResultFailure>>(), ::InvalidAddress))
+        }
+    }
 }

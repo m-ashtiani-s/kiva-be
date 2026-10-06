@@ -6,4 +6,4 @@ import org.koin.core.module.Module
 
 /** Every module the app loads, in one list, so a test can build exactly the same graph. */
 fun appModules(config: AppConfig, database: Database): List<Module> =
-    listOf(infrastructureModule(config, database), daoModule, domainServiceModule, useCaseModule)
+    listOf(infrastructureModule(config, database), daoModule, domainServiceModule, useCaseModule, seedModule)

@@ -35,6 +35,11 @@ Database settings come from `src/main/resources/application.conf` and can be ove
 `KIVA_DB_URL`, `KIVA_DB_USER`, `KIVA_DB_PASSWORD` and `PORT`. Tests use `KIVA_TEST_DB_URL`,
 `KIVA_TEST_DB_USER` and `KIVA_TEST_DB_PASSWORD` (defaults: local `kiva_test`, `kiva`/`kiva`).
 
+To fill an empty local catalog with the prototype's 16 bags, start once with `KIVA_SEED_ENABLED=true`
+(in IntelliJ: *Run configuration → Environment variables*). The seeder goes through the use cases, like real
+data, and skips bags that are already there, so leaving it on is harmless. It is off by default and must stay
+off on a server.
+
 ## Test
 
 ```bash
