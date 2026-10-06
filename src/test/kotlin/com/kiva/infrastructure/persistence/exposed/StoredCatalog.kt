@@ -50,22 +50,23 @@ class StoredCatalog {
     )
 
     /**
-     * A new draft product with these colors, positioned in the given order, saved. The slug is made from the id unless
-     * given, so tests never share one.
+     * A new draft product with these colors, positioned in the given order, saved [at] that moment. The slug is made
+     * from the id unless given, so tests never share one.
      */
     fun newProduct(
         colors: List<NewColor>,
         priceTag: PriceTag = priceTag(1_750_000),
         details: ProductDetails = ProductEventSamples.fullDetails,
         slug: String? = null,
+        at: Instant = now,
     ): Product = transaction(db) {
         val id = ids.nextProductId()
         productIds += id.value
-        val product = Product.create(id, Slug.constructFromPersisted(slug ?: "bag-${id.value}"), null, details, priceTag, staff, now)
+        val product = Product.create(id, Slug.constructFromPersisted(slug ?: "bag-${id.value}"), null, details, priceTag, staff, at)
             .orFail()
         colors.forEachIndexed { index, color ->
             val variantId = ids.nextVariantId().also { variantIds += it.value }
-            product.addVariant(variantId, ColorKey.constructFromPersisted(color.key), null, color.ownPriceTag, color.makeDefault, index, color.media, staff, now)
+            product.addVariant(variantId, ColorKey.constructFromPersisted(color.key), null, color.ownPriceTag, color.makeDefault, index, color.media, staff, at)
                 .orFail()
         }
         products.save(product)

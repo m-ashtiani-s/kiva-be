@@ -1,5 +1,7 @@
 package com.kiva.application.repository
 
+import com.kiva.common.pagination.Page
+import com.kiva.common.pagination.Pageable
 import com.kiva.common.valueobject.Slug
 import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
 import com.kiva.domain.aggregate.product.model.valueobject.Sku
@@ -13,6 +15,12 @@ import com.kiva.domain.aggregate.product.model.valueobject.VariantId
  * domain never reads it. Products in the shop are the ACTIVE ones; drafts and archived products are never counted.
  */
 interface ProductQmRepository {
+
+    /**
+     * One page of the products in the shop that pass [filter], in the order of [pageable]'s sort (one of
+     * ProductSorts), or in the order of [ProductFilter.ids] when those are given.
+     */
+    fun find(filter: ProductFilter, pageable: Pageable): Page<ProductCardQm>
 
     /** One color of any product, whatever its status, or null when no product has it. */
     fun findVariant(variantId: VariantId): VariantQm?

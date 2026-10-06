@@ -4,9 +4,11 @@ import com.kiva.application.dto.CreatedProductDto
 import com.kiva.application.repository.ProductQmRepository
 import com.kiva.common.logging.getLogger
 import com.kiva.common.railway.FailureKind
+import com.kiva.common.railway.InputProblems
 import com.kiva.common.railway.Result
 import com.kiva.common.railway.ResultFailure
 import com.kiva.common.railway.bind
+import com.kiva.common.railway.flattenGroups
 import com.kiva.common.railway.forField
 import com.kiva.common.railway.mapOnFailure
 import com.kiva.common.railway.unwrapOr
@@ -148,13 +150,13 @@ class CreateProductUc(
         // Every input at once, so the form shows all mistakes together; before the transaction, so bad input never
         // takes a database connection.
         val input = Result.zip(
-            Result.zip(Slug.makeNew(command.slug).forField("slug"), skuOf(command.sku), statusOf(command.status), ::Problems) { slug, sku, status ->
+            Result.zip(Slug.makeNew(command.slug).forField("slug"), skuOf(command.sku), statusOf(command.status), ::InputProblems) { slug, sku, status ->
                 Triple(slug, sku, status)
             },
             detailsOf(command),
             priceTagOf(command.price, command.compareAtPrice, "price", "compareAtPrice"),
-            Result.zipAll(command.variants.mapIndexed { index, variant -> newVariantOf(variant).forField("variants.$index") }, ::Problems),
-            { problems -> Failure.InvalidInput(problems.flatMap(::withoutGroups)) },
+            Result.zipAll(command.variants.mapIndexed { index, variant -> newVariantOf(variant).forField("variants.$index") }, ::InputProblems),
+            { problems -> Failure.InvalidInput(problems.flattenGroups()) },
         ) { (slug, sku, status), details, priceTag, variants -> Input(slug, sku, status, details, priceTag, variants) }
             .unwrapOr { return Result.failure(it) }
 
@@ -189,20 +191,20 @@ class CreateProductUc(
             CategoryId.makeNew(command.categoryId).forField("categoryId"),
             MaterialId.makeNew(command.materialId).forField("materialId"),
             BagType.makeNew(command.bagType),
-            ::Problems,
+            ::InputProblems,
         ) { name, categoryId, materialId, bagType -> Basics(name, categoryId, materialId, bagType) },
         Result.zip(
             MaterialDescription.makeNew(command.materialDescription),
             ShortDescription.makeNew(command.shortDescription),
             ProductDescription.makeNew(command.description),
             Highlights.makeNew(command.highlights),
-            ::Problems,
+            ::InputProblems,
         ) { materialDescription, shortDescription, description, highlights ->
             Texts(materialDescription, shortDescription, description, highlights)
         },
         specsOf(command.specs),
         command.maxPerOrder?.let { MaxPerOrder.makeNew(it) } ?: Result.success(MaxPerOrder.DEFAULT),
-        ::Problems,
+        ::InputProblems,
     ) { basics, texts, specs, maxPerOrder ->
         ProductDetails(
             name = basics.name,
@@ -235,14 +237,14 @@ class CreateProductUc(
         // ProductSpecs checks the weight and the texts itself. Asked here on their own, so their problems come
         // together with those of the typed parts; with everything valid, the real call below can't fail.
         val weightAndTexts = ProductSpecs.makeNew(null, specs.weightGrams, null, specs.strap, specs.pockets, emptySet())
-            .mapOnFailure { Problems(it.causes) }
+            .mapOnFailure { InputProblems(it.causes) }
 
         return Result.zip(
             specs.dimensions?.let { Dimensions.makeNew(it.lengthCm, it.heightCm, it.widthCm) } ?: Result.success(null),
             specs.closure?.let { ClosureType.makeNew(it) } ?: Result.success(null),
-            Result.zipAll(specs.occasions.mapIndexed { index, raw -> Occasion.makeNew(raw).forField("occasions.$index") }, ::Problems),
+            Result.zipAll(specs.occasions.mapIndexed { index, raw -> Occasion.makeNew(raw).forField("occasions.$index") }, ::InputProblems),
             weightAndTexts,
-            ::Problems,
+            ::InputProblems,
         ) { dimensions, closure, occasions, checked ->
             ProductSpecs.makeNew(dimensions, checked.weightGrams, closure, checked.strap, checked.pockets, occasions.toSet())
                 .unwrapOr { error("Checked just above: $it") }
@@ -254,7 +256,7 @@ class CreateProductUc(
         val amounts: Result<Pair<Money, Money?>, ResultFailure> = Result.zip(
             Money.makeNew(price).forField(priceField),
             compareAtPrice?.let { Money.makeNew(it).forField(compareAtField) } ?: Result.success(null),
-            ::Problems,
+            ::InputProblems,
         ) { amount, compareAt -> amount to compareAt }
         return amounts.bind { (amount, compareAt) -> PriceTag.makeNew(amount, compareAt).forField(compareAtField) }
     }
@@ -263,7 +265,7 @@ class CreateProductUc(
         ColorKey.makeNew(variant.colorKey).forField("colorKey"),
         skuOf(variant.sku),
         ownPriceTagOf(variant),
-        ::Problems,
+        ::InputProblems,
     ) { colorKey, sku, ownPriceTag -> NewVariant(colorKey, sku, ownPriceTag, variant.isDefault, variant.sortOrder, media = emptyList()) }
 
     private fun ownPriceTagOf(variant: Cmd.Variant): Result<PriceTag?, ResultFailure> = when {
@@ -279,13 +281,6 @@ class CreateProductUc(
 
     private fun statusOf(raw: String?): Result<ProductStatus, ResultFailure> =
         raw?.let { ProductStatus.makeNew(it) } ?: Result.success(ProductStatus.DRAFT)
-
-    /** The groups above only collect; the client gets their problems as one list. */
-    private fun withoutGroups(failure: ResultFailure): List<ResultFailure> =
-        if (failure is Problems) failure.causes.flatMap(::withoutGroups) else listOf(failure)
-
-    /** Several problems found together while checking; flattened into [Failure.InvalidInput] before anyone sees it. */
-    private class Problems(causes: List<ResultFailure>) : ResultFailure("VALIDATION_ERROR", FailureKind.INVALID, causes = causes)
 
     // ============ in the transaction ============
 

@@ -4,9 +4,11 @@ import com.kiva.application.usecase.catalog.usecase.query.GetCategoryUc
 import com.kiva.application.usecase.catalog.usecase.query.ListCategoriesUc
 import com.kiva.application.usecase.catalog.usecase.query.ListColorsUc
 import com.kiva.application.usecase.catalog.usecase.query.ListMaterialsUc
+import com.kiva.application.usecase.product.usecase.query.FindProductsUc
 import com.kiva.infrastructure.common.http.KivaJson
 import com.kiva.infrastructure.common.http.configureStatusPages
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Catalog
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Products
 import com.kiva.infrastructure.httpserver.route.healthRoutes
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
@@ -49,11 +51,13 @@ fun Application.configureRouting() {
     val listMaterialsUc by inject<ListMaterialsUc>()
     val listCategoriesUc by inject<ListCategoriesUc>()
     val getCategoryUc by inject<GetCategoryUc>()
+    val findProductsUc by inject<FindProductsUc>()
 
     routing {
         healthRoutes()
         route(API_V1) {
             webV1Catalog(listColorsUc, listMaterialsUc, listCategoriesUc, getCategoryUc)
+            webV1Products(findProductsUc)
         }
     }
 }

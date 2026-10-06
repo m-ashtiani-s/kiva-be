@@ -1,6 +1,8 @@
 package com.kiva.application.usecase.product.usecase.command
 
 import com.kiva.application.dto.CreatedProductDto
+import com.kiva.application.repository.ProductCardQm
+import com.kiva.application.repository.ProductFilter
 import com.kiva.application.repository.ProductQmRepository
 import com.kiva.application.repository.VariantQm
 import com.kiva.application.usecase.product.usecase.command.CreateProductUc.Cmd
@@ -8,6 +10,8 @@ import com.kiva.application.util.MockTransactionManager
 import com.kiva.application.util.factory.CategoryFactory
 import com.kiva.application.util.factory.ColorFactory
 import com.kiva.application.util.factory.MaterialFactory
+import com.kiva.common.pagination.Page
+import com.kiva.common.pagination.Pageable
 import com.kiva.common.railway.FailureKind
 import com.kiva.common.railway.Result
 import com.kiva.common.railway.ResultFailure
@@ -70,6 +74,8 @@ private class CountingIds : ProductIdGenerator {
 
 /** The read model as far as creating a product needs it: the slugs and codes already in use. */
 private class ReadModel(val takenSlugs: Set<String> = emptySet(), val takenSkus: Set<String> = emptySet()) : ProductQmRepository {
+    override fun find(filter: ProductFilter, pageable: Pageable): Page<ProductCardQm> = error("not used here")
+
     override fun isSlugTaken(slug: Slug): Boolean = slug.value in takenSlugs
 
     override fun findTakenSkus(skus: Collection<Sku>): Set<Sku> = skus.filter { it.value in takenSkus }.toSet()

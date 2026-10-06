@@ -152,6 +152,10 @@ object ErrorMessages {
         "OCCASION_INVALID" to "«مناسب برای» از گزینه‌های مجاز نیست",
         "PRODUCT_STATUS_INVALID" to "وضعیت محصول باید DRAFT، ACTIVE یا ARCHIVED باشه",
         "PRICE_OVERRIDE_REQUIRED" to "قیمت قبل از تخفیف این رنگ بدون قیمت فروش خودش معنی نداره",
+        "SEARCH_QUERY_TOO_LONG" to "متن جستجو حداکثر {maxLength} حرفه",
+        "IDS_TOO_MANY" to "حداکثر {maxItems} محصول رو می‌شه با هم خواست",
+        "NUMBER_INVALID" to "اینجا باید یه عدد بدون اعشار بنویسی",
+        "PRICE_RANGE_INVALID" to "حداقل قیمت نمی‌تونه از حداکثر قیمت بیشتر باشه",
     )
 
     // Used when a code has no text of its own (or its placeholders can't be filled).

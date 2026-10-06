@@ -1,9 +1,11 @@
 package com.kiva.infrastructure.config
 
+import com.kiva.common.valueobject.Money
 import io.ktor.server.config.ApplicationConfig
 
 data class AppConfig(
     val datasource: DatasourceConfig,
+    val shop: ShopConfig = ShopConfig.DEFAULT,
     val seed: SeedConfig = SeedConfig(enabled = false),
 ) {
     companion object {
@@ -16,10 +18,21 @@ data class AppConfig(
                     password = ds.property("password").getString(),
                     maxPoolSize = ds.property("maxPoolSize").getString().toInt(),
                 ),
+                shop = ShopConfig(
+                    freeShippingThreshold = Money.constructFromPersisted(config.property("kiva.shop.freeShippingThreshold").getString().toLong()),
+                ),
                 // Strict: a typo such as "yes" stops the boot instead of quietly meaning false.
                 seed = SeedConfig(enabled = config.property("kiva.seed.enabled").getString().toBooleanStrict()),
             )
         }
+    }
+}
+
+/** Shop rules from config, until the admin settings keep them. */
+data class ShopConfig(val freeShippingThreshold: Money) {
+    companion object {
+        /** The contract's numbers. */
+        val DEFAULT = ShopConfig(freeShippingThreshold = Money.constructFromPersisted(3_000_000))
     }
 }
 

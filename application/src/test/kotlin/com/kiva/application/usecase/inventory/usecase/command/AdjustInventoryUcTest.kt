@@ -1,11 +1,15 @@
 package com.kiva.application.usecase.inventory.usecase.command
 
 import com.kiva.application.dto.InventoryAdjustmentDto
+import com.kiva.application.repository.ProductCardQm
+import com.kiva.application.repository.ProductFilter
 import com.kiva.application.repository.ProductQmRepository
 import com.kiva.application.repository.VariantQm
 import com.kiva.application.util.MockTransactionManager
 import com.kiva.common.event.ConcurrentChangeException
 import com.kiva.common.event.valueobject.EventAggregateId
+import com.kiva.common.pagination.Page
+import com.kiva.common.pagination.Pageable
 import com.kiva.common.railway.FailureKind
 import com.kiva.common.railway.Result
 import com.kiva.common.valueobject.Quantity
@@ -65,6 +69,8 @@ private class KnownColors(vararg colors: VariantQm) : ProductQmRepository {
     private val byId = colors.associateBy { it.variantId }
 
     override fun findVariant(variantId: VariantId): VariantQm? = byId[variantId]
+
+    override fun find(filter: ProductFilter, pageable: Pageable): Page<ProductCardQm> = error("not used here")
 
     override fun isSlugTaken(slug: Slug): Boolean = error("not used here")
 
