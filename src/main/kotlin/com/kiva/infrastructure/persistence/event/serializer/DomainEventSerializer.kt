@@ -1,6 +1,11 @@
 package com.kiva.infrastructure.persistence.event.serializer
 
 import com.kiva.common.event.valueobject.EventVersion
+import com.kiva.domain.aggregate.inventory.entity.event.InventoryDomainEvent
+import com.kiva.domain.aggregate.inventory.entity.event.ReservationReleased
+import com.kiva.domain.aggregate.inventory.entity.event.StockAdjusted
+import com.kiva.domain.aggregate.inventory.entity.event.StockReserved
+import com.kiva.domain.aggregate.inventory.entity.event.StockShipped
 import com.kiva.domain.aggregate.product.entity.event.ProductArchived
 import com.kiva.domain.aggregate.product.entity.event.ProductCreated
 import com.kiva.domain.aggregate.product.entity.event.ProductDetailsChanged
@@ -14,6 +19,10 @@ import com.kiva.domain.aggregate.product.entity.event.VariantDeactivated
 import com.kiva.domain.aggregate.product.entity.event.VariantMediaReplaced
 import com.kiva.domain.aggregate.product.entity.event.VariantReactivated
 import com.kiva.infrastructure.persistence.event.serializer.payload.EventPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.inventory.ReservationReleasedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.inventory.StockAdjustedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.inventory.StockReservedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.inventory.StockShippedPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.product.ProductArchivedPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.product.ProductCreatedPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.product.ProductDetailsChangedPayload
@@ -35,11 +44,15 @@ import kotlinx.serialization.json.Json
  *
  * A type or version this code doesn't know is not a business failure but stored data it can't read (a bug or a
  * missing reader), so it stops loudly instead of returning a Result.
+ *
+ * One pair of functions per aggregate: the repository knows which kind of stream it reads, so it asks for that one.
  */
 object DomainEventSerializer {
 
     // Strict on purpose: a missing or an unknown field means the stored shape and the payload class disagree.
     private val json = Json
+
+    // ============ product ============
 
     fun serialize(event: ProductDomainEvent): String = when (event) {
         is ProductCreated -> json.encodeToString(ProductCreatedPayload(event))
@@ -72,6 +85,28 @@ object DomainEventSerializer {
             VariantReactivated.TYPE.value -> json.decodeFromString<VariantReactivatedPayload>(payload)
             VariantMediaReplaced.TYPE.value -> json.decodeFromString<VariantMediaReplacedPayload>(payload)
             else -> error("Unknown product event type '$eventType'")
+        }
+        return eventPayload.toDomainEvent()
+    }
+
+    // ============ inventory ============
+
+    fun serialize(event: InventoryDomainEvent): String = when (event) {
+        is StockAdjusted -> json.encodeToString(StockAdjustedPayload(event))
+        is StockReserved -> json.encodeToString(StockReservedPayload(event))
+        is ReservationReleased -> json.encodeToString(ReservationReleasedPayload(event))
+        is StockShipped -> json.encodeToString(StockShippedPayload(event))
+    }
+
+    fun deserializeInventory(payload: String, payloadVersion: Int, eventType: String): InventoryDomainEvent {
+        check(payloadVersion == EventVersion.FIRST.value) { "No reader for version $payloadVersion of '$eventType'" }
+
+        val eventPayload: EventPayload<InventoryDomainEvent> = when (eventType) {
+            StockAdjusted.TYPE.value -> json.decodeFromString<StockAdjustedPayload>(payload)
+            StockReserved.TYPE.value -> json.decodeFromString<StockReservedPayload>(payload)
+            ReservationReleased.TYPE.value -> json.decodeFromString<ReservationReleasedPayload>(payload)
+            StockShipped.TYPE.value -> json.decodeFromString<StockShippedPayload>(payload)
+            else -> error("Unknown inventory event type '$eventType'")
         }
         return eventPayload.toDomainEvent()
     }

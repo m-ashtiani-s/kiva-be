@@ -1,5 +1,6 @@
 package com.kiva.infrastructure.di
 
+import com.kiva.domain.aggregate.inventory.InventoryDomainService
 import com.kiva.domain.aggregate.product.ProductDomainService
 import com.kiva.infrastructure.TestDatabase
 import com.kiva.infrastructure.config.AppConfig
@@ -15,10 +16,11 @@ class AppModulesTest {
 
     /** Everything is created at start, so a missing binding fails here instead of when the server boots. */
     @Test
-    fun `the app's modules build the whole graph, ProductDomainService included`() {
+    fun `the app's modules build the whole graph, the domain services included`() {
         val app = koinApplication { modules(appModules(config, TestDatabase.database)) }
         try {
             assertNotNull(app.koin.get<ProductDomainService>())
+            assertNotNull(app.koin.get<InventoryDomainService>())
         } finally {
             app.close()
         }
