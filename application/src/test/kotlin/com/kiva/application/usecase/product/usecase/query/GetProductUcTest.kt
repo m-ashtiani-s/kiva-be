@@ -1,5 +1,6 @@
 package com.kiva.application.usecase.product.usecase.query
 
+import com.kiva.application.repository.ProductFacetsQm
 import com.kiva.application.dto.PriceDto
 import com.kiva.application.dto.ProductDetailDto
 import com.kiva.application.repository.ProductCardQm
@@ -62,6 +63,10 @@ private class PageReadModel(var product: ProductDetailQm? = null) : ProductQmRep
     override fun find(filter: ProductFilter, pageable: Pageable): Page<ProductCardQm> = error("not used here")
 
     override fun findVariant(variantId: VariantId): VariantQm? = error("not used here")
+
+    override fun facets(filter: ProductFilter, now: Instant): ProductFacetsQm = error("not used here")
+
+    override fun findRelated(productId: ProductId, limit: Int): List<ProductCardQm>? = error("not used here")
 
     override fun isSlugTaken(slug: Slug): Boolean = error("not used here")
 

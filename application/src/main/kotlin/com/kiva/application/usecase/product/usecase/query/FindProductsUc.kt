@@ -1,194 +1,104 @@
 package com.kiva.application.usecase.product.usecase.query
 
 import com.kiva.application.dto.ProductCardDto
-import com.kiva.application.repository.PriceRange
+import com.kiva.application.dto.ProductListDto
 import com.kiva.application.repository.ProductFilter
 import com.kiva.application.repository.ProductQmRepository
 import com.kiva.application.usecase.product.ProductCards
+import com.kiva.application.usecase.product.ProductFilterQuery
+import com.kiva.application.usecase.product.ProductFilters
 import com.kiva.common.logging.getLogger
-import com.kiva.common.pagination.Page
 import com.kiva.common.pagination.Pageable
 import com.kiva.common.railway.FailureKind
-import com.kiva.common.railway.InputProblems
 import com.kiva.common.railway.Result
 import com.kiva.common.railway.ResultFailure
-import com.kiva.common.railway.bind
-import com.kiva.common.railway.flattenGroups
-import com.kiva.common.railway.forField
 import com.kiva.common.railway.unwrapOr
-import com.kiva.common.railway.zip
-import com.kiva.common.railway.zipAll
-import com.kiva.common.text.normalizeDigits
-import com.kiva.common.text.normalizePersian
 import com.kiva.common.transaction.TransactionManager
 import com.kiva.common.usecase.QueryUseCase
 import com.kiva.common.valueobject.Money
 import com.kiva.common.valueobject.Slug
+import com.kiva.domain.aggregate.category.entity.Category
 import com.kiva.domain.aggregate.category.repository.CategoryRepository
+import com.kiva.domain.aggregate.color.entity.Color
 import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
 import com.kiva.domain.aggregate.color.repository.ColorRepository
-import com.kiva.domain.aggregate.product.model.valueobject.BagType
-import com.kiva.domain.aggregate.product.model.valueobject.Occasion
-import com.kiva.domain.aggregate.product.model.valueobject.ProductId
+import com.kiva.domain.aggregate.material.entity.Material
+import com.kiva.domain.aggregate.material.repository.MaterialRepository
 import java.time.Clock
-import java.time.Instant
 
 /**
- * The shop's product list (`GET /products`): filtered, sorted and paged, as product cards.
+ * The shop's product list (`GET /products`): filtered, sorted and paged, as product cards, with the filters named as
+ * the shop shows them (for the page's title and filter chips).
  *
- * Every filter is checked at once, before any transaction: all mistakes come back together as VALIDATION_ERROR, each
- * under its parameter (`maxPrice`, `color`, `ids`). A well-formed value that names nothing (a category nobody has) is
- * not a mistake: it simply matches no product. An empty parameter (`minPrice=`) is the same as a missing one.
- *
- * The read model gives the products; ProductCards makes their cards with the shop's rules, «جدید» judged at this
- * request's moment.
+ * Every filter is checked at once, before any transaction (ProductFilters). The read model gives the products;
+ * ProductCards makes their cards with the shop's rules, «جدید» judged at this request's moment.
  */
 class FindProductsUc(
     private val transactionManager: TransactionManager,
     private val productQmRepository: ProductQmRepository,
     private val categoryRepository: CategoryRepository,
     private val colorRepository: ColorRepository,
+    private val materialRepository: MaterialRepository,
     private val clock: Clock,
     private val freeShippingThreshold: Money,
-) : QueryUseCase<FindProductsUc.Qry, Page<ProductCardDto>, FindProductsUc.Failure> {
+) : QueryUseCase<FindProductsUc.Qry, ProductListDto, FindProductsUc.Failure> {
 
     private val logger = getLogger()
 
-    /**
-     * The contract's query parameters as they arrived, list parameters already split at their commas. [pageable] is
-     * checked by the route, with ProductSorts as the sorts it allows.
-     *
-     * @property minPrice / maxPrice as typed, Persian digits included.
-     * @property ids as typed: product ids, at most [MAX_IDS].
-     */
-    data class Qry(
-        val pageable: Pageable,
-        val q: String? = null,
-        val categories: List<String> = emptyList(),
-        val colors: List<String> = emptyList(),
-        val minPrice: String? = null,
-        val maxPrice: String? = null,
-        val onSale: Boolean = false,
-        val inStock: Boolean = false,
-        val isNew: Boolean = false,
-        val hasVideo: Boolean = false,
-        val bagTypes: List<String> = emptyList(),
-        val materials: List<String> = emptyList(),
-        val occasions: List<String> = emptyList(),
-        val ids: List<String> = emptyList(),
-    )
+    /** [pageable] is checked by the route, with ProductSorts as the sorts it allows; [filters] as they arrived. */
+    data class Qry(val pageable: Pageable, val filters: ProductFilterQuery = ProductFilterQuery())
 
-    override suspend fun execute(query: Qry): Result<Page<ProductCardDto>, Failure> {
+    override suspend fun execute(query: Qry): Result<ProductListDto, Failure> {
         logger.info(
-            "FindProductsUc.execute q=${query.q} category=${query.categories} color=${query.colors} " +
+            "FindProductsUc.execute q=${query.filters.q} category=${query.filters.categories} color=${query.filters.colors} " +
                 "sort=${query.pageable.sort} page=${query.pageable.page}",
         )
 
         val now = clock.instant()
         // Every filter at once, before the transaction, so bad input never takes a database connection.
-        val filter = filterOf(query, now).unwrapOr { return Result.failure(it) }
+        val filter = ProductFilters.parse(query.filters, now).unwrapOr { return Result.failure(Failure.InvalidInput(it.problems)) }
 
         return transactionManager.inTransaction {
             val page = productQmRepository.find(filter, query.pageable)
-            // Both lists are short (8 categories, 13 colors) and the cards of one page need many of them.
+            // All three lists are short (8 categories, 13 colors, 12 materials) and one page needs many of them.
             val categories = categoryRepository.findAll().associateBy { it.slug }
             val palette = colorRepository.findAll().associateBy { it.key }
+            val materials = materialRepository.findAll().associateBy { it.slug }
+
             Result.success(
-                page.map { ProductCards.cardOf(it, categories.getValue(it.categorySlug), palette, now, freeShippingThreshold) },
+                ProductListDto(
+                    page = page.map { ProductCards.cardOf(it, categories.getValue(it.categorySlug), palette, now, freeShippingThreshold) },
+                    applied = appliedOf(query.filters, filter, categories, palette, materials),
+                ),
             )
         }
     }
 
-    // ============ checking the filters ============
+    /** The request's filters by name, in the order they came; values that name nothing are left out. */
+    private fun appliedOf(
+        raw: ProductFilterQuery,
+        filter: ProductFilter,
+        categories: Map<Slug, Category>,
+        palette: Map<ColorKey, Color>,
+        materials: Map<Slug, Material>,
+    ) = ProductListDto.AppliedFilters(
+        q = raw.q?.trim()?.ifEmpty { null },
+        categories = filter.categories.mapNotNull { categories[it] }.map { ProductCardDto.CategoryRef(it.id.value, it.slug.value, it.name.value) },
+        colors = filter.colors.mapNotNull { palette[it] }.map { ProductListDto.Swatch(it.key.value, it.name.value, it.hex.value) },
+        minPrice = filter.price.min?.toman,
+        maxPrice = filter.price.max?.toman,
+        onSale = filter.onSale,
+        inStock = filter.inStock,
+        isNew = filter.newAt != null,
+        hasVideo = filter.hasVideo,
+        bagTypes = filter.bagTypes.toList(),
+        materials = filter.materials.mapNotNull { materials[it] }.map { ProductListDto.MaterialRef(it.slug.value, it.name.value) },
+        occasions = filter.occasions.toList(),
+    )
 
-    private fun filterOf(query: Qry, now: Instant): Result<ProductFilter, Failure.InvalidInput> = Result.zip(
-        Result.zip(wordsOf(query.q), idsOf(query.ids), ::InputProblems) { words, ids -> words to ids },
-        Result.zip(
-            each(query.categories, "category") { Slug.makeNew(it) },
-            each(query.colors, "color") { ColorKey.makeNew(it) },
-            each(query.materials, "material") { Slug.makeNew(it) },
-            ::InputProblems,
-        ) { categories, colors, materials -> Triple(categories, colors, materials) },
-        Result.zip(
-            each(query.bagTypes, "bagType") { BagType.makeNew(it) },
-            each(query.occasions, "occasion") { Occasion.makeNew(it) },
-            ::InputProblems,
-        ) { bagTypes, occasions -> bagTypes to occasions },
-        priceRangeOf(query.minPrice, query.maxPrice),
-        { problems -> Failure.InvalidInput(problems.flattenGroups()) },
-    ) { (words, ids), (categories, colors, materials), (bagTypes, occasions), price ->
-        ProductFilter(
-            words = words,
-            categories = categories.toSet(),
-            colors = colors.toSet(),
-            price = price,
-            onSale = query.onSale,
-            inStock = query.inStock,
-            newAt = now.takeIf { query.isNew },
-            hasVideo = query.hasVideo,
-            bagTypes = bagTypes.toSet(),
-            materials = materials.toSet(),
-            occasions = occasions.toSet(),
-            ids = ids,
-        )
-    }
-
-    /** The search text in words, normalized like the read model's searchText: «كيف» typed on an Arabic keyboard finds «کیف». */
-    private fun wordsOf(q: String?): Result<List<String>, ResultFailure> {
-        val text = q?.trim().orEmpty()
-        if (text.length > MAX_QUERY_LENGTH) return Result.failure(Failure.SearchTooLong)
-        return Result.success(text.normalizePersian().lowercase().split(' ').filter { it.isNotEmpty() })
-    }
-
-    private fun idsOf(raws: List<String>): Result<List<ProductId>, ResultFailure> {
-        if (raws.size > MAX_IDS) return Result.failure(Failure.TooManyIds)
-        return each(raws, "ids") { raw -> numberOf(raw)?.let { ProductId.makeNew(it) } ?: Result.failure(Failure.NotANumber) }
-    }
-
-    /** Both ends first, then the rule between them. */
-    private fun priceRangeOf(minPrice: String?, maxPrice: String?): Result<PriceRange, ResultFailure> {
-        val ends: Result<Pair<Money?, Money?>, ResultFailure> =
-            Result.zip(moneyOf(minPrice, "minPrice"), moneyOf(maxPrice, "maxPrice"), ::InputProblems) { min, max -> min to max }
-        return ends.bind { (min, max) -> PriceRange.makeNew(min, max) }
-    }
-
-    private fun moneyOf(raw: String?, parameter: String): Result<Money?, ResultFailure> {
-        val text = raw?.trim()?.ifEmpty { null } ?: return Result.success(null)
-        val amount = numberOf(text) ?: return Result.failure(Failure.NotANumber).forField(parameter)
-        return Money.makeNew(amount).forField(parameter)
-    }
-
-    /** Every value of a list parameter, each problem under the parameter's name. */
-    private fun <T> each(raws: List<String>, parameter: String, parse: (String) -> Result<T, ResultFailure>): Result<List<T>, ResultFailure> =
-        Result.zipAll(raws.map { parse(it).forField(parameter) }, ::InputProblems)
-
-    private fun numberOf(raw: String): Long? = raw.normalizeDigits().trim().toLongOrNull()
-
-    companion object {
-        /** From the contract's `q`. */
-        const val MAX_QUERY_LENGTH = 100
-
-        /** From the contract's `ids`. */
-        const val MAX_IDS = 60
-    }
-
-    sealed class Failure(
-        code: String,
-        kind: FailureKind,
-        field: String? = null,
-        causes: List<ResultFailure> = emptyList(),
-        meta: Map<String, Any> = emptyMap(),
-    ) : ResultFailure(code, kind, field, causes, meta) {
+    sealed class Failure(code: String, kind: FailureKind, causes: List<ResultFailure> = emptyList()) :
+        ResultFailure(code, kind, causes = causes) {
         /** One or more parameters are wrong; each cause names its parameter (400 VALIDATION_ERROR). */
-        data class InvalidInput(val problems: List<ResultFailure>) :
-            Failure("VALIDATION_ERROR", FailureKind.INVALID, causes = problems)
-
-        data object SearchTooLong :
-            Failure("SEARCH_QUERY_TOO_LONG", FailureKind.INVALID, "q", meta = mapOf("maxLength" to MAX_QUERY_LENGTH))
-
-        data object TooManyIds : Failure("IDS_TOO_MANY", FailureKind.INVALID, "ids", meta = mapOf("maxItems" to MAX_IDS))
-
-        /** Not a whole number. No field here: the caller names the parameter. */
-        data object NotANumber : Failure("NUMBER_INVALID", FailureKind.INVALID)
+        data class InvalidInput(val problems: List<ResultFailure>) : Failure("VALIDATION_ERROR", FailureKind.INVALID, problems)
     }
 }

@@ -3,8 +3,13 @@ package com.kiva.infrastructure.httpserver.controller.httprest.web
 import com.kiva.application.dto.PriceDto
 import com.kiva.application.dto.ProductCardDto
 import com.kiva.application.dto.ProductDetailDto
+import com.kiva.application.dto.ProductFacetsDto
+import com.kiva.application.dto.ProductListDto
 import com.kiva.application.repository.PriceRange
+import com.kiva.application.usecase.product.ProductFilterQuery
 import com.kiva.application.usecase.product.usecase.query.FindProductsUc
+import com.kiva.application.usecase.product.usecase.query.FindRelatedProductsUc
+import com.kiva.application.usecase.product.usecase.query.GetProductFacetsUc
 import com.kiva.application.usecase.product.usecase.query.GetProductUc
 import com.kiva.application.usecase.product.usecase.query.ProductSorts
 import com.kiva.common.pagination.Page
@@ -54,14 +59,16 @@ import kotlin.test.assertEquals
 class WebV1ProductsTest {
 
     private val findProductsUc = mockk<FindProductsUc>()
+    private val getProductFacetsUc = mockk<GetProductFacetsUc>()
     private val getProductUc = mockk<GetProductUc>()
+    private val findRelatedProductsUc = mockk<FindRelatedProductsUc>()
 
     /** The real HTTP setup (JSON, CallId, StatusPages) with only the products route; no database, no Koin. */
     private fun withApp(block: suspend ApplicationTestBuilder.() -> Unit) = testApplication {
         environment { config = MapApplicationConfig() }
         application {
             configureHttp()
-            routing { route(API_V1) { webV1Products(findProductsUc, getProductUc, siteUrl = "https://kiva.ir") } }
+            routing { route(API_V1) { webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, siteUrl = "https://kiva.ir") } }
         }
         block()
     }
@@ -75,11 +82,20 @@ class WebV1ProductsTest {
     private fun pageable(page: Int = 1, size: Int = 24, sort: String = ProductSorts.NEWEST) =
         Pageable.makeNew(page, size, sort, ProductSorts.names, 60).getOrNull()!!
 
-    /** Answers [cards] for any query and keeps the query it got. */
-    private fun answering(vararg cards: ProductCardDto): CapturingSlot<FindProductsUc.Qry> {
+    /**
+     * Answers [cards] for any query and keeps the query it got. The applied filters are [applied], or else the asked
+     * colors named by their keys, as the card's picture depends on them.
+     */
+    private fun answering(vararg cards: ProductCardDto, applied: ProductListDto.AppliedFilters? = null): CapturingSlot<FindProductsUc.Qry> {
         val query = slot<FindProductsUc.Qry>()
         coEvery { findProductsUc.execute(capture(query)) } answers {
-            Result.success(Page(cards.toList(), query.captured.pageable.page, query.captured.pageable.size, cards.size.toLong()))
+            val asked = query.captured
+            Result.success(
+                ProductListDto(
+                    page = Page(cards.toList(), asked.pageable.page, asked.pageable.size, cards.size.toLong()),
+                    applied = applied ?: ProductListDto.AppliedFilters(colors = asked.filters.colors.map { ProductListDto.Swatch(it, it, "#000000") }),
+                ),
+            )
         }
         return query
     }
@@ -120,19 +136,21 @@ class WebV1ProductsTest {
         assertEquals(
             FindProductsUc.Qry(
                 pageable = pageable(page = 2, size = 12, sort = ProductSorts.PRICE_ASC),
-                q = "کیف",
-                categories = listOf("shoulder", "cross"),
-                colors = listOf("lilac", "black"),
-                minPrice = "900",
-                maxPrice = "",
-                onSale = true,
-                inStock = false,
-                isNew = true,
-                hasVideo = false,
-                bagTypes = listOf("HOBO"),
-                materials = listOf("satin"),
-                occasions = listOf("DAILY", "WORK"),
-                ids = listOf("12", "7"),
+                filters = ProductFilterQuery(
+                    q = "کیف",
+                    categories = listOf("shoulder", "cross"),
+                    colors = listOf("lilac", "black"),
+                    minPrice = "900",
+                    maxPrice = "",
+                    onSale = true,
+                    inStock = false,
+                    isNew = true,
+                    hasVideo = false,
+                    bagTypes = listOf("HOBO"),
+                    materials = listOf("satin"),
+                    occasions = listOf("DAILY", "WORK"),
+                    ids = listOf("12", "7"),
+                ),
             ),
             query.captured,
         )
@@ -146,7 +164,12 @@ class WebV1ProductsTest {
 
         assertEquals(FindProductsUc.Qry(pageable()), query.captured)
         assertEquals(
-            json("""{"items":[],"meta":{"page":1,"size":24,"totalItems":0,"totalPages":0,"hasNext":false},"sort":"newest"}"""),
+            json(
+                """
+                {"items":[],"meta":{"page":1,"size":24,"totalItems":0,"totalPages":0,"hasNext":false},
+                 "title":"فروشگاه کیوا","breadcrumbs":[{"label":"خانه","url":"/"},{"label":"فروشگاه"}],"appliedFilters":[],"sort":"newest"}
+                """,
+            ),
             response.json(),
         )
     }
@@ -362,5 +385,139 @@ class WebV1ProductsTest {
             json("""{"status":404,"code":"PRODUCT_NOT_FOUND","message":"این محصول پیدا نشد","instance":"/api/v1/products/a-draft"}"""),
             JsonObject(response.json().jsonObject - "traceId"),
         )
+    }
+
+    // ============ the list's headings and chips ============
+
+    @Test
+    fun `one category names the page, and every filter in use is a chip, as on the prototype`() = withApp {
+        answering(
+            applied = ProductListDto.AppliedFilters(
+                q = "کیف",
+                categories = listOf(ProductCardDto.CategoryRef(1, "shoulder", "کیف دوشی")),
+                colors = listOf(ProductListDto.Swatch("lilac", "یاسی", "#C8B6E2")),
+                minPrice = 500_000,
+                maxPrice = 2_500_000,
+                onSale = true,
+                inStock = true,
+                isNew = true,
+                hasVideo = true,
+                bagTypes = listOf(BagType.HOBO),
+                materials = listOf(ProductListDto.MaterialRef("satin", "ساتن")),
+                occasions = listOf(Occasion.PARTY),
+            ),
+        )
+
+        val body = client.get("$API_V1/products").json().jsonObject
+
+        assertEquals("کیف دوشی", body["title"]!!.jsonPrimitive.content)
+        assertEquals(
+            json("""[{"label":"خانه","url":"/"},{"label":"فروشگاه","url":"/products"},{"label":"کیف دوشی"}]"""),
+            body["breadcrumbs"],
+        )
+        assertEquals(
+            json(
+                """
+                [{"key":"q","value":"کیف","label":"جستجو: «کیف»"},
+                 {"key":"category","value":"shoulder","label":"کیف دوشی"},
+                 {"key":"color","value":"lilac","label":"یاسی","swatchHex":"#C8B6E2"},
+                 {"key":"price","label":"۵۰۰٬۰۰۰ تا ۲٬۵۰۰٬۰۰۰ تومان"},
+                 {"key":"onSale","label":"تخفیف‌خورده"},
+                 {"key":"inStock","label":"موجود"},
+                 {"key":"isNew","label":"جدید"},
+                 {"key":"hasVideo","label":"ویدیو دار"},
+                 {"key":"bagType","value":"HOBO","label":"دوشی هوبو"},
+                 {"key":"material","value":"satin","label":"ساتن"},
+                 {"key":"occasion","value":"PARTY","label":"مهمانی و مجالس"}]
+                """,
+            ),
+            body["appliedFilters"],
+        )
+    }
+
+    @Test
+    fun `the sale view without a category is titled so, and one end of the price is a chip of its own`() = withApp {
+        answering(applied = ProductListDto.AppliedFilters(onSale = true, maxPrice = 900_000))
+
+        val body = client.get("$API_V1/products").json().jsonObject
+
+        assertEquals("تخفیف‌خورده‌ها", body["title"]!!.jsonPrimitive.content)
+        assertEquals(json("""[{"key":"price","label":"تا ۹۰۰٬۰۰۰ تومان"},{"key":"onSale","label":"تخفیف‌خورده"}]"""), body["appliedFilters"])
+    }
+
+    // ============ facets ============
+
+    private fun facets() = ProductFacetsDto(
+        categories = listOf(ProductFacetsDto.Option("shoulder", "کیف دوشی", 2, selected = true)),
+        colors = listOf(ProductFacetsDto.Option("lilac", "یاسی", 1, selected = false, hex = "#C8B6E2")),
+        materials = listOf(ProductFacetsDto.Option("satin", "ساتن", 0, selected = false)),
+        bagTypes = listOf(ProductFacetsDto.BagTypeOption(BagType.HOBO, 2, selected = false)),
+        price = ProductFacetsDto.PriceRange(590_000, 3_160_000, 10_000),
+        onSaleCount = 1,
+        inStockCount = 2,
+        newCount = 0,
+        withVideoCount = 1,
+    )
+
+    private val facetsJson =
+        """
+        {"categories":[{"value":"shoulder","label":"کیف دوشی","count":2,"selected":true}],
+         "colors":[{"value":"lilac","label":"یاسی","count":1,"selected":false,"hex":"#C8B6E2"}],
+         "materials":[{"value":"satin","label":"ساتن","count":0,"selected":false}],
+         "bagTypes":[{"value":"HOBO","label":"دوشی هوبو","count":2,"selected":false}],
+         "price":{"min":590000,"max":3160000,"step":10000},
+         "onSaleCount":1,"inStockCount":2,"newCount":0,"withVideoCount":1}
+        """
+
+    @Test
+    fun `GET products facets reads the same filters as the list and answers the contract's ProductFacets`() = withApp {
+        val query = slot<GetProductFacetsUc.Qry>()
+        coEvery { getProductFacetsUc.execute(capture(query)) } returns Result.success(facets())
+
+        val response = client.get("$API_V1/products/facets?category=shoulder&color=lilac,black&onSale=true&minPrice=1000")
+
+        assertEquals(json(facetsJson), response.json())
+        assertEquals(
+            ProductFilterQuery(categories = listOf("shoulder"), colors = listOf("lilac", "black"), onSale = true, minPrice = "1000"),
+            query.captured.filters,
+        )
+    }
+
+    @Test
+    fun `the list carries its facets only when asked for, counted on the same filters`() = withApp {
+        answering(card())
+        val query = slot<GetProductFacetsUc.Qry>()
+        coEvery { getProductFacetsUc.execute(capture(query)) } returns Result.success(facets())
+
+        val without = client.get("$API_V1/products?color=lilac").json().jsonObject
+        val with = client.get("$API_V1/products?color=lilac&includeFacets=true").json().jsonObject
+
+        assertEquals(null, without["facets"])
+        assertEquals(json(facetsJson), with["facets"])
+        assertEquals(ProductFilterQuery(colors = listOf("lilac")), query.captured.filters)
+        coVerify(exactly = 1) { getProductFacetsUc.execute(any()) }
+    }
+
+    // ============ related products ============
+
+    @Test
+    fun `GET related passes the product number and limit on, and answers a list of cards`() = withApp {
+        coEvery { findRelatedProductsUc.execute(FindRelatedProductsUc.Qry("2", "4")) } returns Result.success(listOf(card()))
+
+        val body = client.get("$API_V1/products/2/related?limit=4").json()
+
+        assertEquals(listOf("nila-crossbody-bag"), body.jsonArray.map { it.jsonObject["slug"]!!.jsonPrimitive.content })
+        // No filter here: the card shows its default color.
+        assertEquals("black", body.jsonArray.single().jsonObject["displayColorKey"]!!.jsonPrimitive.content)
+    }
+
+    @Test
+    fun `related of a product not in the shop is a 404 PRODUCT_NOT_FOUND`() = withApp {
+        coEvery { findRelatedProductsUc.execute(any()) } returns Result.failure(FindRelatedProductsUc.Failure.ProductNotFound)
+
+        val response = client.get("$API_V1/products/999/related")
+
+        assertEquals(HttpStatusCode.NotFound, response.status)
+        assertEquals("PRODUCT_NOT_FOUND", response.json().jsonObject["code"]!!.jsonPrimitive.content)
     }
 }

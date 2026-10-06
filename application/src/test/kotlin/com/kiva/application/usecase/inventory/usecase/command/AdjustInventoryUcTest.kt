@@ -1,5 +1,6 @@
 package com.kiva.application.usecase.inventory.usecase.command
 
+import com.kiva.application.repository.ProductFacetsQm
 import com.kiva.application.dto.InventoryAdjustmentDto
 import com.kiva.application.repository.ProductCardQm
 import com.kiva.application.repository.ProductDetailQm
@@ -75,6 +76,10 @@ private class KnownColors(vararg colors: VariantQm) : ProductQmRepository {
     override fun find(filter: ProductFilter, pageable: Pageable): Page<ProductCardQm> = error("not used here")
 
     override fun findDetail(ref: ProductRef): ProductDetailQm? = error("not used here")
+
+    override fun facets(filter: ProductFilter, now: Instant): ProductFacetsQm = error("not used here")
+
+    override fun findRelated(productId: ProductId, limit: Int): List<ProductCardQm>? = error("not used here")
 
     override fun isSlugTaken(slug: Slug): Boolean = error("not used here")
 

@@ -5,6 +5,8 @@ import com.kiva.application.usecase.catalog.usecase.query.ListCategoriesUc
 import com.kiva.application.usecase.catalog.usecase.query.ListColorsUc
 import com.kiva.application.usecase.catalog.usecase.query.ListMaterialsUc
 import com.kiva.application.usecase.product.usecase.query.FindProductsUc
+import com.kiva.application.usecase.product.usecase.query.FindRelatedProductsUc
+import com.kiva.application.usecase.product.usecase.query.GetProductFacetsUc
 import com.kiva.application.usecase.product.usecase.query.GetProductUc
 import com.kiva.infrastructure.common.http.KivaJson
 import com.kiva.infrastructure.config.AppConfig
@@ -54,14 +56,16 @@ fun Application.configureRouting() {
     val listCategoriesUc by inject<ListCategoriesUc>()
     val getCategoryUc by inject<GetCategoryUc>()
     val findProductsUc by inject<FindProductsUc>()
+    val getProductFacetsUc by inject<GetProductFacetsUc>()
     val getProductUc by inject<GetProductUc>()
+    val findRelatedProductsUc by inject<FindRelatedProductsUc>()
     val config by inject<AppConfig>()
 
     routing {
         healthRoutes()
         route(API_V1) {
             webV1Catalog(listColorsUc, listMaterialsUc, listCategoriesUc, getCategoryUc)
-            webV1Products(findProductsUc, getProductUc, config.shop.siteUrl)
+            webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, config.shop.siteUrl)
         }
     }
 }

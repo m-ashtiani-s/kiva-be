@@ -1,7 +1,9 @@
 package com.kiva.application.usecase.product.usecase.query
 
+import com.kiva.application.repository.ProductFacetsQm
 import com.kiva.application.dto.PriceDto
 import com.kiva.application.dto.ProductCardDto
+import com.kiva.application.dto.ProductListDto
 import com.kiva.application.repository.PriceRange
 import com.kiva.application.repository.ProductCardQm
 import com.kiva.application.repository.ProductDetailQm
@@ -9,9 +11,11 @@ import com.kiva.application.repository.ProductFilter
 import com.kiva.application.repository.ProductQmRepository
 import com.kiva.application.repository.ProductRef
 import com.kiva.application.repository.VariantQm
+import com.kiva.application.usecase.product.ProductFilterQuery
 import com.kiva.application.util.MockTransactionManager
 import com.kiva.application.util.factory.CategoryFactory
 import com.kiva.application.util.factory.ColorFactory
+import com.kiva.application.util.factory.MaterialFactory
 import com.kiva.common.pagination.Page
 import com.kiva.common.pagination.Pageable
 import com.kiva.common.railway.ResultFailure
@@ -23,6 +27,9 @@ import com.kiva.domain.aggregate.category.repository.CategoryRepository
 import com.kiva.domain.aggregate.color.entity.Color
 import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
 import com.kiva.domain.aggregate.color.repository.ColorRepository
+import com.kiva.domain.aggregate.material.entity.Material
+import com.kiva.domain.aggregate.material.model.valueobject.MaterialId
+import com.kiva.domain.aggregate.material.repository.MaterialRepository
 import com.kiva.domain.aggregate.product.model.valueobject.BadgeCode
 import com.kiva.domain.aggregate.product.model.valueobject.BagType
 import com.kiva.domain.aggregate.product.model.valueobject.MaxPerOrder
@@ -58,6 +65,10 @@ private class ListReadModel(var cards: List<ProductCardQm> = emptyList()) : Prod
 
     override fun findDetail(ref: ProductRef): ProductDetailQm? = error("not used here")
 
+    override fun facets(filter: ProductFilter, now: Instant): ProductFacetsQm = error("not used here")
+
+    override fun findRelated(productId: ProductId, limit: Int): List<ProductCardQm>? = error("not used here")
+
     override fun isSlugTaken(slug: Slug): Boolean = error("not used here")
 
     override fun findTakenSkus(skus: Collection<Sku>): Set<Sku> = error("not used here")
@@ -90,8 +101,14 @@ class FindProductsUcTest {
         override fun findByKey(key: ColorKey): Color? = error("not used here")
     }
 
+    private val materials = object : MaterialRepository {
+        private val all = listOf(MaterialFactory.generate(id = 11, slug = "satin", name = "ساتن"))
+        override fun findAll(): List<Material> = all
+        override fun findById(id: MaterialId): Material? = error("not used here")
+    }
+
     private val useCase = FindProductsUc(
-        transactionManager, readModel, categories, colors, Clock.fixed(now, ZoneOffset.UTC), Money.constructFromPersisted(3_000_000),
+        transactionManager, readModel, categories, colors, materials, Clock.fixed(now, ZoneOffset.UTC), Money.constructFromPersisted(3_000_000),
     )
 
     private val firstPage = Pageable.makeNew(1, 24, ProductSorts.NEWEST, ProductSorts.names, 60).getOrNull()!!
@@ -122,19 +139,21 @@ class FindProductsUcTest {
             useCase.execute(
                 FindProductsUc.Qry(
                     pageable = firstPage,
-                    q = "  كيف   دوشي  Mahak ",
-                    categories = listOf("shoulder", "cross"),
-                    colors = listOf("lilac", "black", "lilac"),
-                    minPrice = "۵۰۰۰۰۰",
-                    maxPrice = " 2500000 ",
-                    onSale = true,
-                    inStock = true,
-                    isNew = true,
-                    hasVideo = true,
-                    bagTypes = listOf("HOBO"),
-                    materials = listOf("satin"),
-                    occasions = listOf("PARTY", "DAILY"),
-                    ids = listOf("12", "۷"),
+                    filters = ProductFilterQuery(
+                        q = "  كيف   دوشي  Mahak ",
+                        categories = listOf("shoulder", "cross"),
+                        colors = listOf("lilac", "black", "lilac"),
+                        minPrice = "۵۰۰۰۰۰",
+                        maxPrice = " 2500000 ",
+                        onSale = true,
+                        inStock = true,
+                        isNew = true,
+                        hasVideo = true,
+                        bagTypes = listOf("HOBO"),
+                        materials = listOf("satin"),
+                        occasions = listOf("PARTY", "DAILY"),
+                        ids = listOf("12", "۷"),
+                    ),
                 ),
             )
 
@@ -160,9 +179,44 @@ class FindProductsUcTest {
 
         @Test
         fun `empty price parameters are no price filter`() = runTest {
-            useCase.execute(FindProductsUc.Qry(firstPage, minPrice = "", maxPrice = "  "))
+            useCase.execute(FindProductsUc.Qry(firstPage, ProductFilterQuery(minPrice = "", maxPrice = "  ")))
 
             assertEquals(PriceRange.ANY, readModel.askedFilter?.price)
+        }
+
+        @Test
+        fun `the filters come back named for the page, in the order asked, values that name nothing left out`() = runTest {
+            val list = useCase.execute(
+                FindProductsUc.Qry(
+                    firstPage,
+                    ProductFilterQuery(
+                        q = "  کیف ",
+                        categories = listOf("shoulder", "nope"),
+                        colors = listOf("black", "lilac", "teal"),
+                        minPrice = "500000",
+                        onSale = true,
+                        isNew = true,
+                        bagTypes = listOf("HOBO"),
+                        materials = listOf("satin", "nope"),
+                        occasions = listOf("PARTY"),
+                    ),
+                ),
+            ).getOrNull()!!
+
+            assertEquals(
+                ProductListDto.AppliedFilters(
+                    q = "کیف",
+                    categories = listOf(ProductCardDto.CategoryRef(1, "shoulder", "کیف دوشی")),
+                    colors = listOf(ProductListDto.Swatch("black", "مشکی", "#2B2930"), ProductListDto.Swatch("lilac", "یاسی", "#C8B6E2")),
+                    minPrice = 500_000,
+                    onSale = true,
+                    isNew = true,
+                    bagTypes = listOf(BagType.HOBO),
+                    materials = listOf(ProductListDto.MaterialRef("satin", "ساتن")),
+                    occasions = listOf(Occasion.PARTY),
+                ),
+                list.applied,
+            )
         }
     }
 
@@ -170,7 +224,7 @@ class FindProductsUcTest {
     inner class Refusing {
         @Test
         fun `minPrice above maxPrice is PRICE_RANGE_INVALID on maxPrice`() = runTest {
-            val failure = useCase.execute(FindProductsUc.Qry(firstPage, minPrice = "900", maxPrice = "100")).failureOrNull()!!
+            val failure = useCase.execute(FindProductsUc.Qry(firstPage, ProductFilterQuery(minPrice = "900", maxPrice = "100"))).failureOrNull()!!
 
             assertEquals("VALIDATION_ERROR", failure.code)
             assertEquals(listOf("maxPrice PRICE_RANGE_INVALID"), fieldErrors(failure))
@@ -181,15 +235,17 @@ class FindProductsUcTest {
         fun `every wrong parameter is reported at once under its name, before any transaction`() = runTest {
             val wrong = FindProductsUc.Qry(
                 pageable = firstPage,
-                q = "ک".repeat(101),
-                categories = listOf("shoulder", "Shoulder Bags"),
-                colors = listOf("Lilac"),
-                minPrice = "ارزان",
-                maxPrice = "-5",
-                bagTypes = listOf("SHOULDER"),
-                materials = listOf("satin"),
-                occasions = listOf("PICNIC"),
-                ids = listOf("7", "x"),
+                filters = ProductFilterQuery(
+                    q = "ک".repeat(101),
+                    categories = listOf("shoulder", "Shoulder Bags"),
+                    colors = listOf("Lilac"),
+                    minPrice = "ارزان",
+                    maxPrice = "-5",
+                    bagTypes = listOf("SHOULDER"),
+                    materials = listOf("satin"),
+                    occasions = listOf("PICNIC"),
+                    ids = listOf("7", "x"),
+                ),
             )
 
             val failure = useCase.execute(wrong).failureOrNull()!!
@@ -213,7 +269,7 @@ class FindProductsUcTest {
 
         @Test
         fun `more ids than the contract allows is IDS_TOO_MANY`() = runTest {
-            val failure = useCase.execute(FindProductsUc.Qry(firstPage, ids = List(61) { "${it + 1}" })).failureOrNull()!!
+            val failure = useCase.execute(FindProductsUc.Qry(firstPage, ProductFilterQuery(ids = List(61) { "${it + 1}" }))).failureOrNull()!!
 
             assertEquals(listOf("ids IDS_TOO_MANY"), fieldErrors(failure))
         }
@@ -246,7 +302,7 @@ class FindProductsUcTest {
 
         private suspend fun only(qm: ProductCardQm): ProductCardDto {
             readModel.cards = listOf(qm)
-            return useCase.execute(FindProductsUc.Qry(firstPage)).getOrNull()!!.items.single()
+            return useCase.execute(FindProductsUc.Qry(firstPage)).getOrNull()!!.page.items.single()
         }
 
         @Test

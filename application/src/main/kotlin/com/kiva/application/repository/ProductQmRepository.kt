@@ -4,8 +4,10 @@ import com.kiva.common.pagination.Page
 import com.kiva.common.pagination.Pageable
 import com.kiva.common.valueobject.Slug
 import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
+import com.kiva.domain.aggregate.product.model.valueobject.ProductId
 import com.kiva.domain.aggregate.product.model.valueobject.Sku
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
+import java.time.Instant
 
 /**
  * The product read model: what use cases read about products, instead of replaying their events. Only the projectors
@@ -24,6 +26,18 @@ interface ProductQmRepository {
 
     /** One product's page, if it is in the shop: a draft or an archived product is null, like one nobody has. */
     fun findDetail(ref: ProductRef): ProductDetailQm?
+
+    /**
+     * The counts behind the list's filters for [filter], each filter's own value left out of its own count (see
+     * ProductFacetsQm). [now] decides which products are «جدید».
+     */
+    fun facets(filter: ProductFilter, now: Instant): ProductFacetsQm
+
+    /**
+     * Up to [limit] other products in the shop to show beside [productId]: those of its category first, then the best
+     * selling, those that can be bought before those that can't. Null when [productId] itself is not in the shop.
+     */
+    fun findRelated(productId: ProductId, limit: Int): List<ProductCardQm>?
 
     /** One color of any product, whatever its status, or null when no product has it. */
     fun findVariant(variantId: VariantId): VariantQm?

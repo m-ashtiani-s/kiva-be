@@ -1,7 +1,9 @@
 package com.kiva.infrastructure.persistence.exposed
 
 import com.kiva.application.repository.ProductCardQm
+import com.kiva.application.repository.PriceRange
 import com.kiva.application.repository.ProductDetailQm
+import com.kiva.application.repository.ProductFacetsQm
 import com.kiva.application.repository.ProductFilter
 import com.kiva.application.repository.ProductQmRepository
 import com.kiva.application.repository.ProductRef
@@ -44,9 +46,12 @@ import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.lessEq
 import org.jetbrains.exposed.v1.core.like
 import org.jetbrains.exposed.v1.core.lowerCase
+import org.jetbrains.exposed.v1.core.max
+import org.jetbrains.exposed.v1.core.min
+import org.jetbrains.exposed.v1.core.neq
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
+import java.time.Instant
 import java.time.ZoneOffset
 
 /** Reads productqm_tbl and productvariantqm_tbl. Runs inside the use case's transaction; it never opens one itself. */
@@ -214,29 +219,82 @@ class ProductQmRepositoryImpl : ProductQmRepository {
         return (ofProducts + ofColors).map { Sku.constructFromPersisted(it) }.toSet()
     }
 
+    // ============ related products ============
+
+    override fun findRelated(productId: ProductId, limit: Int): List<ProductCardQm>? {
+        val category = ProductQmTbl.select(ProductQmTbl.categorySlug)
+            .where { (ProductQmTbl.productId eq productId.value) and (ProductQmTbl.status eq ProductStatus.ACTIVE) }
+            .singleOrNull()
+            ?.get(ProductQmTbl.categorySlug)
+            ?: return null
+
+        val rows = ProductQmTbl.selectAll()
+            .where { (ProductQmTbl.status eq ProductStatus.ACTIVE) and (ProductQmTbl.productId neq productId.value) }
+            .orderBy(
+                // Same category first (true sorts after false, so DESC), then the best selling; on a tie, what can be bought.
+                (ProductQmTbl.categorySlug eq category) to SortOrder.DESC,
+                ProductQmTbl.soldCount to SortOrder.DESC,
+                ProductQmTbl.inStock to SortOrder.DESC,
+                ProductQmTbl.id to SortOrder.ASC,
+            )
+            .limit(limit)
+            .toList()
+
+        val colors = activeColorsOf(rows.map { it[ProductQmTbl.productId] })
+        return rows.map { cardOf(it, colors[it[ProductQmTbl.productId]].orEmpty()) }
+    }
+
     // ============ counts for the menus and filters ============
 
+    /** Each filter counted without its own value, so the other values of a picked filter still show their counts. */
+    override fun facets(filter: ProductFilter, now: Instant): ProductFacetsQm {
+        val prices = filter.copy(price = PriceRange.ANY)
+        val cheapest = ProductQmTbl.price.min()
+        val dearest = ProductQmTbl.price.max()
+        val range = ProductQmTbl.select(cheapest, dearest).where { conditionsOf(prices) }.single()
+
+        return ProductFacetsQm(
+            categories = countBy(ProductQmTbl.categorySlug, filter.copy(categories = emptySet())).mapKeys { Slug.constructFromPersisted(it.key) },
+            colors = colorCounts(filter.copy(colors = emptySet())),
+            materials = countBy(ProductQmTbl.materialSlug, filter.copy(materials = emptySet())).mapKeys { Slug.constructFromPersisted(it.key) },
+            bagTypes = countBy(ProductQmTbl.bagType, filter.copy(bagTypes = emptySet())),
+            minPrice = range[cheapest]?.let { Money.constructFromPersisted(it) },
+            maxPrice = range[dearest]?.let { Money.constructFromPersisted(it) },
+            onSale = countOf(filter.copy(onSale = false), ProductQmTbl.discountPercent greater 0),
+            inStock = countOf(filter.copy(inStock = false), ProductQmTbl.inStock eq true),
+            new = countOf(filter.copy(newAt = null), ProductQmTbl.newUntil greater now.atOffset(ZoneOffset.UTC)),
+            withVideo = countOf(filter.copy(hasVideo = false), ProductQmTbl.hasVideo eq true),
+        )
+    }
+
     override fun countActiveByCategory(): Map<Slug, Int> =
-        countActiveBy(ProductQmTbl.categorySlug).mapKeys { Slug.constructFromPersisted(it.key) }
+        countBy(ProductQmTbl.categorySlug, ProductFilter()).mapKeys { Slug.constructFromPersisted(it.key) }
 
     override fun countActiveByMaterial(): Map<Slug, Int> =
-        countActiveBy(ProductQmTbl.materialSlug).mapKeys { Slug.constructFromPersisted(it.key) }
+        countBy(ProductQmTbl.materialSlug, ProductFilter()).mapKeys { Slug.constructFromPersisted(it.key) }
 
-    // A product counts once for each of its active colors: unnest turns the colorKeys array into one row per color.
-    override fun countActiveByColor(): Map<ColorKey, Int> =
-        TransactionManager.current().exec(
-            """SELECT unnest("colorKeys"), count(*) FROM productqm_tbl WHERE status = '${ProductStatus.ACTIVE.name}' GROUP BY 1""",
-        ) { rows ->
-            buildMap { while (rows.next()) put(ColorKey.constructFromPersisted(rows.getString(1)), rows.getInt(2)) }
-        }.orEmpty()
+    override fun countActiveByColor(): Map<ColorKey, Int> = colorCounts(ProductFilter())
 
-    private fun countActiveBy(column: Column<String>): Map<String, Int> {
+    /** How many products pass [filter], for each value of [column] they have. */
+    private fun <T> countBy(column: Column<T>, filter: ProductFilter): Map<T, Int> {
         val products = ProductQmTbl.id.count()
         return ProductQmTbl.select(column, products)
-            .where { ProductQmTbl.status eq ProductStatus.ACTIVE }
+            .where { conditionsOf(filter) }
             .groupBy(column)
             .associate { it[column] to it[products].toInt() }
     }
+
+    // A product counts once for each of its active colors. Counted here rather than with unnest in SQL, so it can take
+    // the same conditions as everything else; the shop has hundreds of products, not millions.
+    private fun colorCounts(filter: ProductFilter): Map<ColorKey, Int> =
+        ProductQmTbl.select(ProductQmTbl.colorKeys)
+            .where { conditionsOf(filter) }
+            .flatMap { it[ProductQmTbl.colorKeys] }
+            .groupingBy { ColorKey.constructFromPersisted(it) }
+            .eachCount()
+
+    private fun countOf(filter: ProductFilter, also: Op<Boolean>): Int =
+        ProductQmTbl.selectAll().where { conditionsOf(filter) and also }.count().toInt()
 
     companion object {
         private const val ESCAPE = '\\'

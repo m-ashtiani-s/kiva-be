@@ -156,6 +156,7 @@ object ErrorMessages {
         "IDS_TOO_MANY" to "حداکثر {maxItems} محصول رو می‌شه با هم خواست",
         "NUMBER_INVALID" to "اینجا باید یه عدد بدون اعشار بنویسی",
         "PRICE_RANGE_INVALID" to "حداقل قیمت نمی‌تونه از حداکثر قیمت بیشتر باشه",
+        "LIMIT_INVALID" to "تعداد باید عددی بین ۱ و {max} باشه",
     )
 
     // Used when a code has no text of its own (or its placeholders can't be filled).

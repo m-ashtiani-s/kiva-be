@@ -1,5 +1,6 @@
 package com.kiva.application.usecase.product.usecase.command
 
+import com.kiva.application.repository.ProductFacetsQm
 import com.kiva.application.dto.CreatedProductDto
 import com.kiva.application.repository.ProductCardQm
 import com.kiva.application.repository.ProductDetailQm
@@ -79,6 +80,10 @@ private class ReadModel(val takenSlugs: Set<String> = emptySet(), val takenSkus:
     override fun find(filter: ProductFilter, pageable: Pageable): Page<ProductCardQm> = error("not used here")
 
     override fun findDetail(ref: ProductRef): ProductDetailQm? = error("not used here")
+
+    override fun facets(filter: ProductFilter, now: Instant): ProductFacetsQm = error("not used here")
+
+    override fun findRelated(productId: ProductId, limit: Int): List<ProductCardQm>? = error("not used here")
 
     override fun isSlugTaken(slug: Slug): Boolean = slug.value in takenSlugs
 

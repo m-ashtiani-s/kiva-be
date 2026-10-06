@@ -1,6 +1,9 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
+import com.kiva.application.usecase.catalog.usecase.query.ListCategoriesUc
 import com.kiva.application.usecase.product.usecase.query.FindProductsUc
+import com.kiva.application.usecase.product.usecase.query.FindRelatedProductsUc
+import com.kiva.application.usecase.product.usecase.query.GetProductFacetsUc
 import com.kiva.application.usecase.product.usecase.query.GetProductUc
 import com.kiva.common.valueobject.Money
 import com.kiva.infrastructure.TestDatabase
@@ -40,8 +43,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * `GET /products` over the real stack on kiva_test: route, FindProductsUc and the read model of the prototype's 16
- * bags, seeded the way the dev seeder does it, plus one draft. Step 7 of the catalog plan is done when these pass.
+ * The products routes over the real stack on kiva_test: routes, use cases and the read model of the prototype's 16
+ * bags, seeded the way the dev seeder does it, plus one draft. Steps 7, 8 and 9 of the catalog plan are done when
+ * their checks here pass.
  */
 class WebV1ProductsOnDatabaseTest {
 
@@ -50,6 +54,14 @@ class WebV1ProductsOnDatabaseTest {
     private val seeded = SeededCatalog(clock)
     private val others = StoredCatalog()
     private val findProductsUc = FindProductsUc(
+        ExposedTransactionManager(db), ProductQmRepositoryImpl(), CategoryRepositoryImpl(), ColorRepositoryImpl(), MaterialRepositoryImpl(),
+        clock, Money.constructFromPersisted(3_000_000),
+    )
+    private val getProductFacetsUc = GetProductFacetsUc(
+        ExposedTransactionManager(db), ProductQmRepositoryImpl(), CategoryRepositoryImpl(), ColorRepositoryImpl(), MaterialRepositoryImpl(),
+        clock,
+    )
+    private val findRelatedProductsUc = FindRelatedProductsUc(
         ExposedTransactionManager(db), ProductQmRepositoryImpl(), CategoryRepositoryImpl(), ColorRepositoryImpl(), clock,
         Money.constructFromPersisted(3_000_000),
     )
@@ -73,7 +85,7 @@ class WebV1ProductsOnDatabaseTest {
         environment { config = MapApplicationConfig() }
         application {
             configureHttp()
-            routing { route(API_V1) { webV1Products(findProductsUc, getProductUc, siteUrl = "https://kiva.ir") } }
+            routing { route(API_V1) { webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, siteUrl = "https://kiva.ir") } }
         }
         block()
     }
@@ -227,4 +239,65 @@ class WebV1ProductsOnDatabaseTest {
         assertEquals("olive", page("nila-crossbody-bag?color=olive").body()["selectedColorKey"]!!.jsonPrimitive.content)
         assertEquals(HttpStatusCode.BadRequest, page("nila-crossbody-bag?color=Olive").status)
     }
+
+    // ============ step 9 is done when ============
+
+    private suspend fun ApplicationTestBuilder.totalOf(query: String): Long =
+        client.get("$API_V1/products?$query").body()["meta"]!!.jsonObject["totalItems"]!!.jsonPrimitive.content.toLong()
+
+    private suspend fun ApplicationTestBuilder.facetsOf(query: String): JsonObject = client.get("$API_V1/products/facets?$query").body()
+
+    private fun JsonObject.counts(facet: String): Map<String, Long> =
+        this[facet]!!.jsonArray.associate { it.jsonObject["value"]!!.jsonPrimitive.content to it.jsonObject["count"]!!.jsonPrimitive.content.toLong() }
+
+    @Test
+    fun `each color's count is what the list really gives with that color added, whatever else is filtered`() = withApp {
+        for (filters in listOf("", "onSale=true", "category=cross", "inStock=true&maxPrice=1500000", "color=lilac")) {
+            val colors = facetsOf(filters).counts("colors")
+            // The list's own color filter is replaced by the one counted: that is what disjunctive counting means.
+            val others = filters.split('&').filter { it.isNotEmpty() && !it.startsWith("color=") }
+            colors.forEach { (color, count) ->
+                assertEquals(totalOf((others + "color=$color").joinToString("&")), count, "color $color with [$filters]")
+            }
+        }
+    }
+
+    @Test
+    fun `the category counts add up to the filtered list, as every bag has one category`() = withApp {
+        for (filters in listOf("", "onSale=true", "color=black", "q=%DA%A9%DB%8C%D9%81")) {
+            assertEquals(totalOf(filters), facetsOf(filters).counts("categories").values.sum(), "[$filters]")
+        }
+    }
+
+    @Test
+    fun `the menus' productCount is the facets' count without filters`() = withApp {
+        val menu = ListCategoriesUc(ExposedTransactionManager(db), CategoryRepositoryImpl(), ProductQmRepositoryImpl())
+            .execute(ListCategoriesUc.Qry).getOrNull()!!
+
+        assertEquals(menu.associate { it.slug to it.productCount.toLong() }, facetsOf("").counts("categories"))
+    }
+
+    @Test
+    fun `facets come with the list when asked for, and the price range spans the shop rounded to 10,000`() = withApp {
+        val list = client.get("$API_V1/products?includeFacets=true&size=1").body()
+
+        assertEquals(
+            Json.parseToJsonElement("""{"min":590000,"max":3150000,"step":10000}"""),
+            list["facets"]!!.jsonObject["price"],
+        )
+        assertEquals(16L, list["facets"]!!.jsonObject.counts("bagTypes").values.sum())
+    }
+
+    @Test
+    fun `related to Mahak are the other shoulder bag first, never Mahak itself, eight by default`() = withApp {
+        val related = client.get("$API_V1/products/${idOf("mahak-shoulder-bag")}/related").slugs()
+
+        assertEquals(8, related.size)
+        assertEquals("hasti-shoulder-bag", related.first())
+        assertTrue("mahak-shoulder-bag" !in related)
+        assertEquals(HttpStatusCode.NotFound, client.get("$API_V1/products/999999/related").status)
+    }
+
+    private suspend fun HttpResponse.slugs(): List<String> =
+        Json.parseToJsonElement(bodyAsText()).jsonArray.map { it.jsonObject["slug"]!!.jsonPrimitive.content }
 }

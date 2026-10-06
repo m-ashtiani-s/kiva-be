@@ -3,6 +3,7 @@ package com.kiva.infrastructure.httpserver.controller.httprest.model.response
 import com.kiva.application.dto.PriceDto
 import com.kiva.application.dto.ProductDetailDto
 import com.kiva.domain.aggregate.product.model.valueobject.BadgeCode
+import com.kiva.domain.aggregate.product.model.valueobject.BagType
 import com.kiva.domain.aggregate.product.model.valueobject.ClosureType
 import com.kiva.domain.aggregate.product.model.valueobject.MediaView
 import com.kiva.domain.aggregate.product.model.valueobject.Occasion
@@ -30,6 +31,17 @@ object ProductTexts {
         StockStatus.IN_STOCK -> "موجود در انبار"
         StockStatus.LOW_STOCK -> "فقط ${shown(stock)} عدد در انبار باقی مونده"
         StockStatus.OUT_OF_STOCK -> "ناموجود"
+    }
+
+    fun bagType(bagType: BagType): String = when (bagType) {
+        BagType.HOBO -> "دوشی هوبو"
+        BagType.CROSSBODY -> "کراس‌بادی"
+        BagType.BACKPACK -> "کوله"
+        BagType.SATCHEL -> "دستی"
+        BagType.CLUTCH -> "کلاچ / مجلسی"
+        BagType.TOTE -> "شاپر / توت"
+        BagType.BUCKET -> "سطلی"
+        BagType.WALLET -> "کیف پول"
     }
 
     fun closure(type: ClosureType): String = when (type) {

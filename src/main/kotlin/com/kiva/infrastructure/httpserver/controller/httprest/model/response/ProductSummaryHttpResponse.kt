@@ -3,7 +3,6 @@ package com.kiva.infrastructure.httpserver.controller.httprest.model.response
 import com.kiva.application.dto.PriceDto
 import com.kiva.application.dto.ProductCardDto
 import com.kiva.domain.aggregate.product.model.valueobject.StockInfo
-import com.kiva.infrastructure.common.http.PageMetaHttpResponse
 import kotlinx.serialization.Serializable
 
 /**
@@ -118,15 +117,4 @@ data class ProductColorOptionHttpResponse(
     val variantId: Long,
     val color: ColorHttpResponse,
     val stockStatus: String,
-)
-
-/**
- * Contract schema `ProductListResponse`. Not sent yet: `title`, `subtitle`, `breadcrumbs`, `appliedFilters` and
- * `facets`; they come with the facets.
- */
-@Serializable
-data class ProductListHttpResponse(
-    val items: List<ProductSummaryHttpResponse>,
-    val meta: PageMetaHttpResponse,
-    val sort: String,
 )
