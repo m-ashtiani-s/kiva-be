@@ -106,6 +106,23 @@ object ErrorMessages {
         "CATEGORY_NAME_TOO_LONG" to "اسم دسته‌بندی حداکثر {maxLength} حرفه",
         "MATERIAL_NAME_REQUIRED" to "اسم متریال رو وارد کن",
         "MATERIAL_NAME_TOO_LONG" to "اسم متریال حداکثر {maxLength} حرفه",
+        "PRODUCT_ID_INVALID" to "محصول انتخاب‌شده درست نیست",
+        "VARIANT_ID_INVALID" to "رنگ انتخاب‌شده درست نیست",
+        "SKU_INVALID" to "کد کالا (SKU) باید با حرف انگلیسی شروع بشه و فقط حرف، رقم و خط تیره داشته باشه",
+        "PRODUCT_NAME_REQUIRED" to "اسم محصول رو وارد کن",
+        "PRODUCT_NAME_TOO_LONG" to "اسم محصول حداکثر {maxLength} حرفه",
+        "MATERIAL_DESCRIPTION_TOO_LONG" to "توضیح جنس حداکثر {maxLength} حرفه",
+        "SHORT_DESCRIPTION_TOO_LONG" to "توضیح کوتاه حداکثر {maxLength} حرفه",
+        "DESCRIPTION_TOO_LONG" to "توضیحات حداکثر {maxLength} حرفه",
+        "HIGHLIGHTS_TOO_MANY" to "حداکثر {maxItems} ویژگی می‌شه نوشت",
+        "HIGHLIGHT_TOO_LONG" to "هر ویژگی حداکثر {maxLength} حرفه",
+        "MAX_PER_ORDER_INVALID" to "سقف تعداد در هر سفارش باید حداقل ۱ باشه",
+        "DIMENSIONS_INVALID" to "ابعاد باید عدد مثبت و حداکثر {maxCm} سانتی‌متر باشه",
+        "WEIGHT_INVALID" to "وزن باید عدد مثبت و حداکثر {maxGrams} گرم باشه",
+        "STRAP_TOO_LONG" to "توضیح بند حداکثر {maxLength} حرفه",
+        "POCKETS_TOO_LONG" to "توضیح جیب‌ها حداکثر {maxLength} حرفه",
+        "MEDIA_URL_INVALID" to "آدرس فایل باید یه آدرس کامل http یا https باشه",
+        "MEDIA_ALT_TOO_LONG" to "متن جایگزین عکس حداکثر {maxLength} حرفه",
     )
 
     // Used when a code has no text of its own (or its placeholders can't be filled).
