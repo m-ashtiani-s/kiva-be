@@ -133,6 +133,9 @@ object ErrorMessages {
         "INACTIVE_VARIANT_CANNOT_BE_DEFAULT" to "رنگ غیرفعال نمی‌تونه رنگ پیش‌فرض باشه",
         "VARIANT_ALREADY_INACTIVE" to "این رنگ از قبل غیرفعاله",
         "VARIANT_ALREADY_ACTIVE" to "این رنگ از قبل فعاله",
+        "CATEGORY_NOT_FOUND" to "این دسته‌بندی وجود نداره",
+        "MATERIAL_NOT_FOUND" to "این متریال وجود نداره",
+        "COLOR_NOT_FOUND" to "این رنگ تو پالت رنگ‌ها نیست",
         "LAST_ACTIVE_VARIANT" to "محصول منتشرشده حداقل یه رنگ فعال لازم داره؛ اول محصول رو از انتشار دربیار",
     )
 

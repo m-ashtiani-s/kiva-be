@@ -2,6 +2,7 @@ package com.kiva.infrastructure.persistence.exposed
 
 import com.kiva.common.valueobject.Slug
 import com.kiva.domain.aggregate.category.model.valueobject.CategoryIcon
+import com.kiva.domain.aggregate.category.model.valueobject.CategoryId
 import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
 import com.kiva.domain.aggregate.product.model.valueobject.BagType
 import com.kiva.infrastructure.TestDatabase
@@ -50,6 +51,16 @@ class CategoryRepositoryImplTest {
         assertEquals(CategoryIcon(BagType.CROSSBODY, ColorKey.constructFromPersisted("red")), cross.icon)
         assertEquals(3, cross.sortOrder)
         assertEquals(true, cross.showInMenu)
+    }
+
+    @Test
+    fun `findById finds a category by its number, and null for a number nobody has`() {
+        val (cross, none) = transaction(db) {
+            repository.findById(CategoryId.constructFromPersisted(3)) to repository.findById(CategoryId.constructFromPersisted(99))
+        }
+
+        assertEquals("cross", cross?.slug?.value)
+        assertNull(none)
     }
 
     @Test

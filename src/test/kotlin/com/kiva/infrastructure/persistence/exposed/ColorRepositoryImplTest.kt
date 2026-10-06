@@ -1,9 +1,11 @@
 package com.kiva.infrastructure.persistence.exposed
 
+import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
 import com.kiva.infrastructure.TestDatabase
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 /** Reads the palette that V2__catalog_reference_data.sql seeds into the freshly migrated kiva_test. */
 class ColorRepositoryImplTest {
@@ -29,6 +31,16 @@ class ColorRepositoryImplTest {
         assertEquals("#C8B6E2", lilac.hex.value)
         assertEquals(true, lilac.isLight)
         assertEquals(4, lilac.sortOrder)
+    }
+
+    @Test
+    fun `findByKey finds a palette color, and null for a key nobody uses`() {
+        val (lilac, teal) = transaction(db) {
+            repository.findByKey(ColorKey.constructFromPersisted("lilac")) to repository.findByKey(ColorKey.constructFromPersisted("teal"))
+        }
+
+        assertEquals("یاسی", lilac?.name?.value)
+        assertNull(teal)
     }
 
     @Test

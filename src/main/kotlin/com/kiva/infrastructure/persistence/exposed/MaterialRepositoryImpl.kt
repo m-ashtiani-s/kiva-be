@@ -8,6 +8,7 @@ import com.kiva.domain.aggregate.material.repository.MaterialRepository
 import com.kiva.infrastructure.persistence.exposed.tbl.MaterialTbl
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.selectAll
 
 /** Runs inside the use case's transaction; it never opens one itself. */
@@ -17,6 +18,12 @@ class MaterialRepositoryImpl : MaterialRepository {
         MaterialTbl.selectAll()
             .orderBy(MaterialTbl.id to SortOrder.ASC)
             .map { it.toMaterial() }
+
+    override fun findById(id: MaterialId): Material? =
+        MaterialTbl.selectAll()
+            .where { MaterialTbl.id eq id.value }
+            .singleOrNull()
+            ?.toMaterial()
 
     private fun ResultRow.toMaterial(): Material =
         Material.constructFromPersisted(

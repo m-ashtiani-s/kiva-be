@@ -8,6 +8,7 @@ import com.kiva.domain.aggregate.color.repository.ColorRepository
 import com.kiva.infrastructure.persistence.exposed.tbl.ColorTbl
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.selectAll
 
 /** Runs inside the use case's transaction; it never opens one itself. */
@@ -18,6 +19,12 @@ class ColorRepositoryImpl : ColorRepository {
         ColorTbl.selectAll()
             .orderBy(ColorTbl.sortOrder to SortOrder.ASC, ColorTbl.id to SortOrder.ASC)
             .map { it.toColor() }
+
+    override fun findByKey(key: ColorKey): Color? =
+        ColorTbl.selectAll()
+            .where { ColorTbl.colorKey eq key.value }
+            .singleOrNull()
+            ?.toColor()
 
     private fun ResultRow.toColor(): Color =
         Color.constructFromPersisted(

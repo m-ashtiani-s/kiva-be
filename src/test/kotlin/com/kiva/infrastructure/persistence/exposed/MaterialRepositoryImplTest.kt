@@ -1,6 +1,7 @@
 package com.kiva.infrastructure.persistence.exposed
 
 import com.kiva.domain.aggregate.material.model.valueobject.MaterialFamily
+import com.kiva.domain.aggregate.material.model.valueobject.MaterialId
 import com.kiva.infrastructure.TestDatabase
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.junit.jupiter.api.Test
@@ -34,6 +35,16 @@ class MaterialRepositoryImplTest {
             ),
             materials,
         )
+    }
+
+    @Test
+    fun `findById finds a material by its number, and null for a number nobody has`() {
+        val (matte, none) = transaction(db) {
+            repository.findById(MaterialId.constructFromPersisted(4)) to repository.findById(MaterialId.constructFromPersisted(99))
+        }
+
+        assertEquals("faux-leather-matte", matte?.slug?.value)
+        assertNull(none)
     }
 
     @Test

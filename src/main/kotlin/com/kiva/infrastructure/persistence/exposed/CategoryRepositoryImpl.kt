@@ -28,6 +28,12 @@ class CategoryRepositoryImpl : CategoryRepository {
             .singleOrNull()
             ?.toCategory()
 
+    override fun findById(id: CategoryId): Category? =
+        CategoryTbl.selectAll()
+            .where { CategoryTbl.id eq id.value }
+            .singleOrNull()
+            ?.toCategory()
+
     private fun ResultRow.toCategory(): Category =
         Category.constructFromPersisted(
             id = CategoryId.constructFromPersisted(this[CategoryTbl.id].value),
