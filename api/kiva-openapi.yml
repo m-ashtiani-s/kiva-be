@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: KIVA Store API — کیوا
-  version: 1.0.1
+  version: 1.1.0
   contact:
     name: KIVA Engineering
     email: support@kiva.ir
@@ -32,7 +32,7 @@ info:
     | صفحه‌بندی | `page` (از ۱) و `size` — پاسخ: `{ items: [], meta: { page, size, totalItems, totalPages, hasNext } }` |
     | خطا | `application/problem+json` (RFC 7807) + فیلد ماشینی `code` (لیست کامل در `ErrorCode`) + `message` فارسی قابل نمایش به کاربر + `errors[]` برای خطای فیلدها |
     | 400 در برابر 422 | `400 VALIDATION_ERROR` = ورودی از نظر شکل/فرمت غلط است. `422` = ورودی درست است ولی قانون کسب‌وکار اجازه نمی‌دهد (مثل `DISCOUNT_MIN_SUBTOTAL_NOT_MET`). |
-    | Idempotency | `POST /orders` و `POST /payments/{id}/retry` هدر `Idempotency-Key` (UUID) می‌گیرند؛ تکرار با همان کلید همان پاسخ را برمی‌گرداند. |
+    | Idempotency | `POST /orders`، `POST /payments/{id}/retry` و `POST /me/orders/{code}/payments` هدر `Idempotency-Key` (UUID) می‌گیرند؛ تکرار با همان کلید همان پاسخ را برمی‌گرداند. |
     | کش | `GET /config`، `/home`، `/categories`، `/colors`، `/faq`، `/geo/*` و بلاگ با `ETag` + `Cache-Control: public, max-age=300` کش می‌شوند. |
     | Rate limit | OTP: هر شماره ۱ بار در ۱۲۰ ثانیه و حداکثر ۵ بار در ساعت. پیگیری مهمان: ۱۰ بار در ۱۰ دقیقه برای هر IP. پاسخ `429` با هدر `Retry-After`. |
 
@@ -102,7 +102,9 @@ info:
     | تسویه `checkout` | `GET /checkout`، `POST /orders`، `GET /payments/{id}`، `GET /geo/provinces` |
     | ورود `login` | `POST /auth/otp/send`، `POST /auth/otp/verify`، `PATCH /me` |
     | حساب `account` | `GET /me/dashboard`، `GET /me/orders`، `GET /me/orders/{code}`، `GET /me/tracking`، `/me/addresses`، `/me/wishlist`، `GET /me/reviews`، `GET/PATCH /me` |
-    | علاقه‌مندی `wishlist` | `GET /me/wishlist`، `DELETE /me/wishlist`، `POST /me/wishlist/add-to-cart`، `POST /me/wishlist/share` |
+    | کارهای سفارش در `account` (طبق `actions`) | `POST /me/orders/{code}/payments`، `POST /me/orders/{code}/cancel`، `POST /me/orders/{code}/media-feedback`، `POST /me/orders/{code}/returns`، `GET /me/orders/{code}/invoice` |
+    | علاقه‌مندی `wishlist` | `GET /me/wishlist`، `DELETE /me/wishlist`، `POST /me/wishlist/add-to-cart`، `POST/DELETE /me/wishlist/share` |
+    | لیست اشتراکی `wishlist/shared/{token}` (بدون ورود) | `GET /wishlists/shared/{token}` |
     | پیگیری `track` | `POST /tracking/lookup`، `GET /tracking/daily/days`، `GET /tracking/daily` |
     | بلاگ | `GET /blog/categories`، `GET /blog/posts`، `GET /blog/posts/{idOrSlug}`، `GET /blog/posts/{id}/related`، `POST /blog/posts/{id}/feedback` |
     | سوالات متداول `faq` | `GET /faq` |
@@ -1721,6 +1723,7 @@ paths:
       tags: [Wishlist]
       operationId: getSharedWishlist
       summary: "مشاهده‌ی لیست اشتراکی دیگران (عمومی) [پیشنهادی]"
+      description: داده‌ی صفحه‌ی فرانت `https://kiva.ir/wishlist/shared/{token}` (همان `WishlistShare.url`).
       parameters:
         - name: token
           in: path
@@ -1773,6 +1776,40 @@ paths:
               schema: { $ref: '#/components/schemas/OrderDetail' }
         '404': { $ref: '#/components/responses/NotFound' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+  /me/orders/{orderCode}/payments:
+    post:
+      tags: [Orders]
+      operationId: payMyOrder
+      summary: "پرداخت سفارش «در انتظار پرداخت» از حساب کاربری — امکان تغییر درگاه"
+      description: |
+        مثل `POST /payments/{paymentId}/retry`، ولی با کد سفارش؛ چون صفحه‌ی سفارش `paymentId` ندارد.
+        فقط وقتی مجاز است که `actions.canPay = true` باشد. یک تراکنش جدید به مبلغ `totals.payable` ساخته می‌شود.
+        بازگشت از درگاه مثل تسویه است: `https://kiva.ir/checkout/result?paymentId=...`
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrderCode'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                gateway: { $ref: '#/components/schemas/PaymentGatewayCode' }
+      responses:
+        '201':
+          description: تراکنش جدید؛ کاربر را به `redirect` هدایت کنید
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaymentInit' }
+        '422':
+          description: "`ORDER_ALREADY_PAID`، `PAYMENT_EXPIRED` (موجودی آزاد شده) یا `PAYMENT_GATEWAY_UNAVAILABLE`"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /me/orders/{orderCode}/media:
     get:
       tags: [Orders]
@@ -4460,7 +4497,7 @@ components:
               properties:
                 subscribed: { type: boolean }
                 alertId: { type: integer, nullable: true }
-            shareUrl: { type: string, format: uri, example: 'https://kiva.ir/p/KV-1001' }
+            shareUrl: { type: string, format: uri, description: 'همان `seo.canonicalUrl` (مسیر `product/{slug}`)', example: 'https://kiva.ir/product/mahak-shoulder-bag' }
             seo: { $ref: '#/components/schemas/SeoMeta' }
             publishedAt: { type: string, format: date-time }
             updatedAt: { type: string, format: date-time }
@@ -5171,7 +5208,7 @@ components:
             canRequestChange: { type: boolean, example: true }
             canApproveMedia: { type: boolean, example: true }
             canReturn: { type: boolean, example: false }
-            canPay: { type: boolean, example: false }
+            canPay: { type: boolean, description: 'دکمه‌ی «پرداخت» ← `POST /me/orders/{code}/payments`', example: false }
             canAddToReservation: { type: boolean, example: false }
             canReview: { type: boolean, example: false }
     OrderItem:
@@ -5684,7 +5721,7 @@ components:
       type: object
       properties:
         token: { type: string, example: 'wl_9Kq2Xz' }
-        url: { type: string, format: uri, example: 'https://kiva.ir/w/wl_9Kq2Xz' }
+        url: { type: string, format: uri, description: 'سرور با الگوی `https://kiva.ir/wishlist/shared/{token}` می‌سازد (مسیر صفحه‌ی فرانت)', example: 'https://kiva.ir/wishlist/shared/wl_9Kq2Xz' }
         createdAt: { type: string, format: date-time }
     SharedWishlist:
       type: object
