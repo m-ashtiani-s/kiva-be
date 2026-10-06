@@ -102,6 +102,33 @@ call.respondResult(list.execute(pageable)) { page -> page.toHttpResponse { ItemH
 | `IranianMobileNumber.makeNew(raw)` | هر شکل از شماره رو قبول می‌کنه و همیشه `09xxxxxxxxx` ذخیره می‌کنه (فیلد `phone`، کد `PHONE_INVALID`) |
 | `Money.makeNew(toman = n)` | پول به **تومان** (`Long`)، هیچ‌وقت منفی. `+`، `* qty`، `.sum()`، مقایسه، و `toRials()` فقط برای درگاه |
 | `Slug.makeNew(raw)` | آدرس خوانا (`mahak-shoulder-bag`): حروف کوچک، رقم و `-`، حداقل یه حرف، حداکثر ۱۰۰. ورودی رو عوض نمی‌کنه (کد `SLUG_INVALID`، بدون field) |
+| `UserId.makeNew(id)` / `UserId.SYSTEM` | کی انجامش داده: شناسه‌ی حساب (از ۱)، یا `SYSTEM` (۰) وقتی آدمی پشتش نیست (seeder، کار زمان‌بندی‌شده). هیچ‌وقت id یه آدم واقعی رو جای سیستم نذار |
 
 `constructFromPersisted(value)` برای خوندن از ذخیره‌سازی ـه (ردیف جدول، رویداد). ورودی کاربر همیشه از `makeNew` رد می‌شه و
 خطاش `Failure` ـه. `init { require(...) }` دیوار دومه: مقدار خراب از **هر** راهی exception می‌ده، چون داده‌ی ذخیره‌شده‌ی خراب یعنی باگ.
+
+## Event Sourcing (`com.kiva.common.event`)
+
+نمونه‌ی کامل و کوچیک: `Lamp` تو `common/src/test/.../event/EventSourceEntityTest.kt`.
+
+```kotlin
+class Product private constructor() : EventSourceEntity<ProductDomainEvent>() {
+    var id: ProductId by Delegates.notNull()        // value class: lateinit مجاز نیست
+        private set
+
+    constructor(events: List<ProductDomainEvent>) : this() { applyEventStream(events) }   // خوندن: replay
+
+    fun archive(by: UserId): Result<Product, ArchiveFailure> {
+        if (status == ARCHIVED) return Result.failure(ArchiveFailure.AlreadyArchived)    // اول قانون
+        raiseEvent(ProductArchived(..., sequence = nextSequence(), occurredByUserId = by)) // بعد رویداد
+        return Result.success(this)
+    }
+
+    override fun apply(event: ProductDomainEvent) { ... }   // فقط فیلد پر کن؛ نه قانون، نه ساعت
+}
+```
+
+- `raiseEvent`: رویداد رو اعمال و ثبت می‌کنه. شماره‌ش باید `nextSequence()` باشه، وگرنه exception.
+- `applyEventStream`: replay. رویدادهای replay‌شده دوباره ثبت نمی‌شن. جریان خالی، شماره‌ی جاافتاده یا تکراری، یا رویداد یه Aggregate دیگه، یعنی داده‌ی خراب و exception.
+- `getRecordedEvents()`: رویدادهای تازه، همونی که Repository ذخیره می‌کنه.
+- برخلاف کلاس پایه‌ی شرکت، شماره با هر رویداد جلو می‌ره. پس یه Command می‌تونه چند تا رویداد بسازه (۱، ۲، ۳).

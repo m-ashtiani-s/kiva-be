@@ -94,6 +94,7 @@ object ErrorMessages {
         "PAGE_INVALID" to "شماره‌ی صفحه درست نیست",
         "PAGE_SIZE_INVALID" to "تعداد آیتم‌های هر صفحه حداکثر {maxSize} تاست",
         "SORT_NOT_ALLOWED" to "این نوع مرتب‌سازی پشتیبانی نمی‌شه",
+        "USER_ID_INVALID" to "شناسه‌ی کاربر درست نیست",
         "SLUG_INVALID" to "آدرس (slug) فقط حروف کوچک انگلیسی، رقم و خط تیره می‌گیره و باید حداقل یه حرف داشته باشه",
         "COLOR_KEY_INVALID" to "کلید رنگ باید با حرف کوچک انگلیسی شروع بشه و فقط حروف کوچک، رقم و خط تیره داشته باشه",
         "CATEGORY_ID_INVALID" to "دسته‌بندی انتخاب‌شده درست نیست",
