@@ -130,6 +130,10 @@ object ErrorMessages {
         "PRODUCT_ALREADY_ARCHIVED" to "این محصول از قبل آرشیو شده",
         "NO_ACTIVE_VARIANT" to "برای انتشار، محصول حداقل یه رنگ فعال لازم داره",
         "COLOR_ALREADY_ON_PRODUCT" to "این رنگ قبلاً برای این محصول تعریف شده",
+        "INACTIVE_VARIANT_CANNOT_BE_DEFAULT" to "رنگ غیرفعال نمی‌تونه رنگ پیش‌فرض باشه",
+        "VARIANT_ALREADY_INACTIVE" to "این رنگ از قبل غیرفعاله",
+        "VARIANT_ALREADY_ACTIVE" to "این رنگ از قبل فعاله",
+        "LAST_ACTIVE_VARIANT" to "محصول منتشرشده حداقل یه رنگ فعال لازم داره؛ اول محصول رو از انتشار دربیار",
     )
 
     // Used when a code has no text of its own (or its placeholders can't be filled).

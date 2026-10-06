@@ -9,6 +9,7 @@ import com.kiva.domain.aggregate.product.ProductTestData.later
 import com.kiva.domain.aggregate.product.ProductTestData.newProduct
 import com.kiva.domain.aggregate.product.ProductTestData.now
 import com.kiva.domain.aggregate.product.ProductTestData.priceTag
+import com.kiva.domain.aggregate.product.ProductTestData.snapshot
 import com.kiva.domain.aggregate.product.ProductTestData.variantId
 import com.kiva.domain.aggregate.product.ProductTestData.withColor
 import com.kiva.domain.aggregate.product.entity.event.ProductCreated
@@ -305,7 +306,7 @@ class ProductTest {
 
             val loaded = Product(original.getRecordedEvents())
 
-            assertEquals(snapshot(original), snapshot(loaded))
+            assertEquals(original.snapshot(), loaded.snapshot())
             assertEquals(emptyList(), loaded.getRecordedEvents())
         }
 
@@ -318,11 +319,5 @@ class ProductTest {
 
             assertEquals(listOf(3L), loaded.getRecordedEvents().map { it.sequence.value })
         }
-
-        // Every field, the colors' too (a Variant's equals only compares ids).
-        private fun snapshot(product: Product): List<Any?> = listOf(
-            product.id, product.slug, product.sku, product.details, product.priceTag, product.status,
-            product.variants.map { listOf(it.id, it.colorKey, it.sku, it.ownPriceTag, it.isDefault, it.isActive, it.sortOrder, it.media) },
-        )
     }
 }

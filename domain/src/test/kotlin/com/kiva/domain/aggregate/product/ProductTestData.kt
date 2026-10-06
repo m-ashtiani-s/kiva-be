@@ -11,6 +11,7 @@ import com.kiva.domain.aggregate.product.model.valueobject.BagType
 import com.kiva.domain.aggregate.product.model.valueobject.Highlights
 import com.kiva.domain.aggregate.product.model.valueobject.MaterialDescription
 import com.kiva.domain.aggregate.product.model.valueobject.MaxPerOrder
+import com.kiva.domain.aggregate.product.model.valueobject.MediaType
 import com.kiva.domain.aggregate.product.model.valueobject.PriceTag
 import com.kiva.domain.aggregate.product.model.valueobject.ProductDetails
 import com.kiva.domain.aggregate.product.model.valueobject.ProductId
@@ -82,4 +83,13 @@ object ProductTestData {
         by = admin,
         now = now,
     ).getOrNull()!!
+
+    fun photo(name: String): ProductMedia =
+        ProductMedia.constructFromPersisted(MediaType.IMAGE, "https://cdn.kiva.ir/p/1/$name.webp", null, null)
+
+    /** Every field of a product, its colors' too (a Variant's equals only compares ids): for replay tests. */
+    fun Product.snapshot(): List<Any?> = listOf(
+        id, slug, sku, details, priceTag, status,
+        variants.map { listOf(it.id, it.colorKey, it.sku, it.ownPriceTag, it.isDefault, it.isActive, it.sortOrder, it.media) },
+    )
 }
