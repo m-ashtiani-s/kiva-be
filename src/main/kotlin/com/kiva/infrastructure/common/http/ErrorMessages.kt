@@ -65,6 +65,7 @@ object ErrorMessages {
         "TERMS_NOT_ACCEPTED" to "برای ادامه باید قوانین رو بپذیری",
         "PRICE_CHANGED" to "قیمت‌ها تغییر کرده؛ مبلغ قابل پرداخت الان {payable} تومانه",
         "IDEMPOTENCY_KEY_REUSED" to "این درخواست قبلاً با اطلاعات دیگه‌ای ثبت شده",
+        "RESERVATION_UNAVAILABLE" to "رزرو ۴ روزه برای این خرید در دسترس نیست",
         // --- orders & payment ---
         "ORDER_NOT_FOUND" to "سفارش پیدا نشد",
         "ORDER_NOT_CANCELLABLE" to "این سفارش دیگه قابل لغو نیست",

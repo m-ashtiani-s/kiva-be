@@ -2,34 +2,32 @@ package com.kiva.infrastructure.common.http
 
 import com.kiva.common.railway.FailureKind
 import org.junit.jupiter.api.Test
+import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class ErrorMessagesTest {
 
-    /** The `ErrorCode` enum of the API contract (api/kiva-openapi.yml). Update both together. */
-    private val contractCodes = listOf(
-        "VALIDATION_ERROR", "UNAUTHORIZED", "TOKEN_EXPIRED", "REFRESH_TOKEN_INVALID", "FORBIDDEN", "NOT_FOUND",
-        "RATE_LIMITED", "INTERNAL_ERROR", "PHONE_INVALID", "OTP_INVALID", "OTP_EXPIRED", "OTP_TOO_MANY_ATTEMPTS",
-        "OTP_RESEND_TOO_SOON", "PHONE_ALREADY_REGISTERED", "PRODUCT_NOT_FOUND", "VARIANT_NOT_FOUND", "PRODUCT_UNAVAILABLE",
-        "OUT_OF_STOCK", "QUANTITY_EXCEEDS_STOCK", "QUANTITY_EXCEEDS_LIMIT", "CART_NOT_FOUND", "CART_EMPTY",
-        "CART_ITEM_NOT_FOUND", "DISCOUNT_CODE_INVALID", "DISCOUNT_CODE_EXPIRED", "DISCOUNT_CODE_NOT_STARTED",
-        "DISCOUNT_MIN_SUBTOTAL_NOT_MET", "DISCOUNT_FIRST_ORDER_ONLY", "DISCOUNT_USAGE_LIMIT_REACHED",
-        "DISCOUNT_LOGIN_REQUIRED", "DISCOUNT_NOT_APPLICABLE", "ADDRESS_NOT_FOUND", "ADDRESS_LIMIT_REACHED",
-        "CITY_NOT_IN_PROVINCE", "SHIPPING_METHOD_UNAVAILABLE", "MESSENGER_REQUIRED", "MESSENGER_PHONE_INVALID",
-        "TERMS_NOT_ACCEPTED", "PRICE_CHANGED", "IDEMPOTENCY_KEY_REUSED", "ORDER_NOT_FOUND", "ORDER_NOT_CANCELLABLE",
-        "ORDER_NOT_RETURNABLE", "RETURN_WINDOW_EXPIRED", "ORDER_ALREADY_PAID", "CHANGE_REQUEST_NOT_ALLOWED",
-        "INVALID_STATUS_TRANSITION", "PAYMENT_NOT_FOUND", "PAYMENT_FAILED", "PAYMENT_EXPIRED",
-        "PAYMENT_GATEWAY_UNAVAILABLE", "TRACKING_NOT_FOUND", "REVIEW_ALREADY_EXISTS", "REVIEW_NOT_EDITABLE",
-        "STOCK_ALERT_EXISTS", "PRODUCT_IN_STOCK", "WISHLIST_LIMIT_REACHED", "UPLOAD_TOO_LARGE",
-        "UPLOAD_TYPE_NOT_ALLOWED", "DUPLICATE_SLUG", "DUPLICATE_SKU",
-    )
+    /**
+     * The `ErrorCode` enum read straight from the API contract in this repo (api/kiva-openapi.yml),
+     * so a code added to the contract can't be forgotten here. Tests run with the project root as working directory.
+     */
+    private val contractCodes: List<String> by lazy {
+        val lines = File("api/kiva-openapi.yml").readLines()
+        val schema = lines.indexOfFirst { it.trimEnd() == "    ErrorCode:" }
+        require(schema >= 0) { "ErrorCode schema not found in api/kiva-openapi.yml" }
+        lines.drop(schema + 1)
+            .dropWhile { it.trim() != "enum:" }
+            .drop(1)
+            .takeWhile { it.trimStart().startsWith("- ") }
+            .map { it.trim().removePrefix("- ").trim() }
+    }
 
     @Test
     fun `every error code of the contract has a Persian message`() {
         val missing = contractCodes - ErrorMessages.knownCodes
         assertEquals(emptyList(), missing, "Add a message to ErrorMessages for: $missing")
-        assertEquals(61, contractCodes.size)
+        assertTrue(contractCodes.size > 50, "Read only ${contractCodes.size} codes from the contract; the parser is broken")
     }
 
     @Test

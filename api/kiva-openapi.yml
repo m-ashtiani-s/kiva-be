@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: KIVA Store API — کیوا
-  version: 1.1.0
+  version: 1.2.0
   contact:
     name: KIVA Engineering
     email: support@kiva.ir
@@ -54,7 +54,19 @@ info:
     * **کد تخفیف:** نوع درصدی روی `subtotal` محاسبه و به نزدیک‌ترین ۱٬۰۰۰ تومان گرد می‌شود؛ نوع مبلغی حداکثر به اندازه‌ی `subtotal`. شرط‌ها: حداقل خرید، فقط خرید اول، بازه‌ی زمانی، سقف تخفیف، سقف استفاده.
     * **موجودی:** موجودی دقیق هیچ‌وقت لو نمی‌رود؛ فقط وقتی کمتر از `lowStockThreshold` (پیش‌فرض ۵) است، `availableQuantity` برگردانده می‌شود («فقط ۳ عدد باقی مونده»). سقف تعداد در سبد = موجودی ورینت.
     * **ناموجودها** در لیست محصولات به انتهای لیست می‌روند، مگر در مرتب‌سازی قیمتی.
-    * **رزرو ۴ روزه:** مبلغ کامل پرداخت می‌شود و سفارش با وضعیت `RESERVED` تا ۴ روز نگه داشته می‌شود. هر سفارش پرداخت‌شده‌ی جدید همان کاربر در این بازه **به همان آدرس**، به گروه ارسال آن رزرو می‌پیوندد و هزینه‌ی ارسالش صفر می‌شود (`freeReason = RESERVATION_CONSOLIDATION`). در پایان مهلت، کل گروه با یک کد رهگیری ارسال می‌شود.
+    * **رزرو ۴ روزه:** سوییچ «رزرو ۴ روزه» در سبد و تسویه، **کنار** روش ارسال (پست/تیپاکس) است و جای آن را نمی‌گیرد.
+      مبلغ کامل (با هزینه‌ی ارسال) پرداخت می‌شود و سفارش `RESERVED` می‌ماند؛ هر خرید دیگری در این مدت به همان سفارش می‌پیوندد و هزینه‌ی ارسال ندارد.
+      * **شروع و پایان مهلت:** مهلت از لحظه‌ی **پرداخت موفق** اولین سفارش (سفارش اصلی) شروع می‌شود و `reservationHoldDays` (۴) روز بعد تمام می‌شود.
+        این زمان برای کل گروه ثابت است و با پیوستن سفارش‌های بعدی تمدید نمی‌شود.
+      * **پیوستن (ادغام):** اگر کاربر رزرو فعال داشته باشد و سفارش جدید را **به همان آدرس** ثبت کند، سفارش جدید خودکار به گروه می‌پیوندد:
+        هزینه‌ی ارسالش صفر می‌شود (`freeReason = RESERVATION_CONSOLIDATION`)، روش ارسالش همان روش سفارش اصلی است، و بعد از پرداخت آن هم `RESERVED` می‌شود.
+        تصمیم ادغام هنگام `POST /orders` گرفته می‌شود و اگر مهلت در فاصله‌ی ثبت تا پرداخت (حداکثر ۱۵ دقیقه) تمام شود، ارسال رایگان همچنان حفظ می‌شود.
+      * **فقط یک رزرو فعال:** هر کاربر در هر لحظه حداکثر یک رزرو فعال دارد. وقتی رزرو فعال دارد سوییچ رزرو در دسترس نیست
+        (`reservation.available = false`، `unavailableReason = HAS_ACTIVE_RESERVATION`): سفارش به همان آدرس ادغام می‌شود و سفارش به آدرس دیگر عادی ارسال می‌شود.
+      * **کالای غیرقابل‌رزرو:** اگر حتی یک کالای سبد `reservable = false` باشد، رزرو در دسترس نیست (`ITEM_NOT_RESERVABLE`).
+      * **پایان مهلت:** همه‌ی سفارش‌های گروه **خودکار** از `RESERVED` به `PROCESSING` می‌روند (عکس قبل از ارسال، سپس ارسال گروهی با **یک کد رهگیری**).
+      * **لغو:** هر سفارش گروه تا قبل از `SHIPPED` قابل لغو است (بازگشت کامل وجه). لغو سفارش اصلی گروه یا مهلتش را از بین نمی‌برد و
+        ارسال رایگان سفارش‌های پیوسته حفظ می‌شود. هزینه‌ی ارسال سفارش اصلی بعد از پیوستن سفارش‌های دیگر دوباره محاسبه نمی‌شود.
     * **عکس قبل از ارسال (امضای کیوا):** انتخاب پیام‌رسان (روبیکا/تلگرام/بله) و شماره‌ی آن در تسویه **اجباری** است. اپراتور قبل از بسته‌بندی عکس/ویدیو را آپلود و ارسال می‌کند؛ یک نسخه برای همیشه در جزئیات سفارش می‌ماند. تا قبل از `SHIPPED` مشتری می‌تواند تأیید کند، تغییر رنگ/مدل بخواهد یا لغو کند (بازگشت کامل وجه).
     * **بازگشت کالا:** تا ۷ روز بعد از تحویل. اگر مشکل از کیوا باشد (`NOT_AS_PICTURED`، `MANUFACTURING_DEFECT`، ...) هزینه‌ی برگشت با کیواست؛ در `CHANGED_MIND` با مشتری.
     * **جمعه‌ها** ارسال نداریم (`nonShippingWeekdays`).
@@ -75,6 +87,7 @@ info:
     | `RETURN_REQUESTED` / `RETURNED` / `REFUNDED` | درخواست مرجوعی / مرجوع شد / وجه برگشت داده شد | — | warn / default |
 
     مسیر اصلی: `PENDING_PAYMENT → (RESERVED) → PROCESSING → PHOTO_SENT → SHIPPED → DELIVERED`.
+    `RESERVED → PROCESSING` فقط خودکار و در پایان مهلت رزرو انجام می‌شود؛ `RESERVED → CANCELLED` با لغو مشتری یا ادمین.
     سرور برای هر سفارش آبجکت آماده‌ی `progress` (۴ مرحله با تاریخ هر مرحله) و `statusLabel`/`statusTone` را برمی‌گرداند تا کلاینت منطق نگاشت نداشته باشد.
 
     ## ۵. پیامک‌ها و اعلان‌ها
@@ -1044,6 +1057,9 @@ paths:
       tags: [Cart]
       operationId: setCartReservation
       summary: "فعال/غیرفعال کردن رزرو ۴ روزه"
+      description: |
+        فقط وقتی `cart.reservation.available = true` است می‌توان رزرو را فعال کرد (دلیل در دسترس نبودن در `unavailableReason`).
+        غیرفعال کردن همیشه مجاز است.
       security: [{}, { bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/CartToken'
@@ -1062,6 +1078,11 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Cart' }
+        '422':
+          description: "`RESERVATION_UNAVAILABLE` — رزرو برای این سبد در دسترس نیست (`meta.reason` = همان `unavailableReason`)"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '400': { $ref: '#/components/responses/ValidationError' }
   /cart/discount-code:
     post:
@@ -1170,6 +1191,8 @@ paths:
         موجودی ورینت‌ها برای مدت `payment.expiresAt` (۱۵ دقیقه) رزرو موقت می‌شود.
         اگر `expectedPayable` با مبلغ محاسبه‌شده‌ی سرور فرق کند `409 PRICE_CHANGED` برمی‌گردد تا کاربر مبلغ جدید را ببیند.
         اگر مبلغ قابل پرداخت صفر باشد (کد تخفیف کامل)، `payment = null` و سفارش مستقیماً پرداخت‌شده است.
+        رزرو: اگر `reserve = true` باشد ولی رزرو در دسترس نباشد `422 RESERVATION_UNAVAILABLE`. اگر کاربر رزرو فعال به همین آدرس داشته باشد،
+        سفارش بدون توجه به `reserve` به گروه رزرو می‌پیوندد (هزینه‌ی ارسال صفر) — قوانین کامل در بخش «قوانین کسب‌وکار».
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -4027,6 +4050,7 @@ components:
         - UPLOAD_TYPE_NOT_ALLOWED
         - DUPLICATE_SLUG
         - DUPLICATE_SKU
+        - RESERVATION_UNAVAILABLE
       example: DISCOUNT_MIN_SUBTOTAL_NOT_MET
 
     # ============ MEDIA ============
@@ -4881,6 +4905,15 @@ components:
       description: وضعیت سوییچ «رزرو ۴ روزه» در سبد/تسویه
       properties:
         available: { type: boolean, example: true }
+        unavailableReason:
+          type: string
+          nullable: true
+          description: |
+            فقط وقتی `available = false`:
+            `HAS_ACTIVE_RESERVATION` کاربر رزرو فعال دارد (خرید به همان آدرس خودکار ادغام می‌شود؛ `consolidation` را ببینید) ·
+            `ITEM_NOT_RESERVABLE` حداقل یک کالای سبد قابل رزرو نیست · `RESERVATION_DISABLED` رزرو در تنظیمات سایت خاموش است
+          enum: [HAS_ACTIVE_RESERVATION, ITEM_NOT_RESERVABLE, RESERVATION_DISABLED, null]
+          example: null
         enabled: { type: boolean, example: false }
         holdDays: { type: integer, example: 4 }
         shipAfterDate: { type: string, format: date, description: «ارسال بعد از سه‌شنبه ۱۵ مهر», example: '2026-10-09' }
@@ -4900,6 +4933,9 @@ components:
         expiresAt: { type: string, format: date-time }
         addressId: { type: integer, description: فقط ارسال به همین آدرس ادغام می‌شود }
         shippingWaived: { type: boolean, example: true }
+        shippingMethod:
+          allOf: [{ $ref: '#/components/schemas/ShippingMethodCode' }]
+          description: روش ارسال گروه (همان روش سفارش اصلی)؛ برای سفارش پیوسته قابل انتخاب نیست
         message: { type: string, example: این خرید به سفارش رزروی KV-218340 اضافه می‌شه و هزینه ارسال نداره. }
     Cart:
       type: object
@@ -5141,8 +5177,8 @@ components:
       properties:
         active: { type: boolean, example: true }
         orderCode: { $ref: '#/components/schemas/OrderCode' }
-        startedAt: { type: string, format: date-time }
-        expiresAt: { type: string, format: date-time, description: برای شمارنده «۲ روز و ۱۴ ساعت و ۵ دقیقه مانده» }
+        startedAt: { type: string, format: date-time, description: لحظه‌ی پرداخت موفق سفارش اصلی (شروع مهلت) }
+        expiresAt: { type: string, format: date-time, description: 'startedAt + reservationHoldDays؛ برای کل گروه ثابت است و تمدید نمی‌شود. برای شمارنده «۲ روز و ۱۴ ساعت و ۵ دقیقه مانده»' }
         remainingSeconds: { type: integer, example: 223500 }
         groupOrderCodes:
           type: array
