@@ -111,6 +111,9 @@ class Product private constructor() : EventSourceEntity<ProductDomainEvent>() {
 
     fun findVariant(id: VariantId): Variant? = variantList.firstOrNull { it.id == id }
 
+    /** At least one color in the shop has a video. */
+    fun hasVideo(): Boolean = activeVariants().any { it.hasVideo }
+
     private fun canBeEdited(): Boolean = status != ARCHIVED
 
     /** The color that takes over as the default: the first active one in display order, [except] left out. */

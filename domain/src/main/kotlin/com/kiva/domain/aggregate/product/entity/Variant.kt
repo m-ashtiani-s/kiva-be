@@ -1,6 +1,7 @@
 package com.kiva.domain.aggregate.product.entity
 
 import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
+import com.kiva.domain.aggregate.product.model.valueobject.MediaType
 import com.kiva.domain.aggregate.product.model.valueobject.PriceTag
 import com.kiva.domain.aggregate.product.model.valueobject.ProductMedia
 import com.kiva.domain.aggregate.product.model.valueobject.Sku
@@ -31,6 +32,9 @@ data class Variant internal constructor(
     val sortOrder: Int,
     val media: List<ProductMedia>,
 ) {
+    /** A color with a video gets the «ویدیو دارد» badge and passes the `hasVideo` filter. */
+    val hasVideo: Boolean get() = media.any { it.type == MediaType.VIDEO }
+
     override fun equals(other: Any?): Boolean = other is Variant && other.id == id
 
     override fun hashCode(): Int = id.hashCode()

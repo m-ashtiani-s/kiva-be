@@ -22,6 +22,15 @@ value class Money private constructor(val toman: Long) : Comparable<Money> {
 
     operator fun plus(other: Money): Money = Money(Math.addExact(toman, other.toman))
 
+    /**
+     * What is left after taking [other] away (a discount from a price). Money is never negative, so taking more than
+     * there is is a bug (e.g. a discount above the price): it stops loudly.
+     */
+    operator fun minus(other: Money): Money {
+        require(other <= this) { "Can't take $other from $this" }
+        return Money(toman - other.toman)
+    }
+
     /** Price of [quantity] items. [quantity] is checked earlier (e.g. by a Quantity value object), so negative is a bug. */
     operator fun times(quantity: Int): Money {
         require(quantity >= 0) { "Quantity can't be negative: $quantity" }

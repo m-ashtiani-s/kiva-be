@@ -13,7 +13,9 @@ import com.kiva.domain.aggregate.product.ProductTestData.snapshot
 import com.kiva.domain.aggregate.product.ProductTestData.variantId
 import com.kiva.domain.aggregate.product.ProductTestData.withColor
 import com.kiva.domain.aggregate.product.entity.event.VariantDeactivated
+import com.kiva.domain.aggregate.product.model.valueobject.MediaType
 import com.kiva.domain.aggregate.product.model.valueobject.PriceTag
+import com.kiva.domain.aggregate.product.model.valueobject.ProductMedia
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
@@ -253,6 +255,20 @@ class ProductVariantTest {
 
             assertTrue(product.replaceVariantMedia(variantId(101), listOf(photo("front")), admin, later).isSuccess)
             assertEquals(2, product.getRecordedEvents().size)
+        }
+
+        @Test
+        fun `a color with a video has one, and so does the product while that color is in the shop`() {
+            val video = ProductMedia.constructFromPersisted(MediaType.VIDEO, "https://cdn.kiva.ir/p/1/lilac/intro.mp4", null, null)
+            val product = threeColors()
+            product.replaceVariantMedia(variantId(102), listOf(photo("front"), video), admin, now)
+
+            assertTrue(product.variant(102).hasVideo)
+            assertFalse(product.variant(101).hasVideo)
+            assertTrue(product.hasVideo())
+
+            product.deactivateVariant(variantId(102), admin, later)
+            assertFalse(product.hasVideo())
         }
 
         @Test

@@ -33,6 +33,13 @@ class MoneyTest {
         }
 
         @Test
+        fun `subtracts an amount, down to zero but never below`() {
+            assertEquals(toman(300_000), toman(1_750_000) - toman(1_450_000))
+            assertEquals(Money.ZERO, toman(1_450_000) - toman(1_450_000))
+            assertFailsWith<IllegalArgumentException> { toman(1_450_000) - toman(1_750_000) }
+        }
+
+        @Test
         fun `multiplies by a quantity`() {
             assertEquals(toman(750_000), toman(250_000) * 3)
             assertEquals(Money.ZERO, toman(250_000) * 0)
