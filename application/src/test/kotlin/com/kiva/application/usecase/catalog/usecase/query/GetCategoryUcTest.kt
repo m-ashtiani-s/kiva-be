@@ -1,6 +1,7 @@
 package com.kiva.application.usecase.catalog.usecase.query
 
 import com.kiva.application.dto.CategoryDto
+import com.kiva.application.repository.ProductQmRepository
 import com.kiva.application.util.MockTransactionManager
 import com.kiva.application.util.factory.CategoryFactory
 import com.kiva.common.railway.Result
@@ -20,16 +21,19 @@ class GetCategoryUcTest {
 
     private val transactionManager = MockTransactionManager()
     private val categories = mockk<CategoryRepository>()
-    private val useCase = GetCategoryUc(transactionManager, categories)
+    private val productQm = mockk<ProductQmRepository>()
+    private val useCase = GetCategoryUc(transactionManager, categories, productQm)
 
     @Test
-    fun `an existing slug returns its category`() = runTest {
+    fun `an existing slug returns its category, with its products in the shop`() = runTest {
         every { categories.findBySlug(Slug.constructFromPersisted("shoulder")) } returns CategoryFactory.generate()
+        every { productQm.countActiveByCategory() } returns
+            mapOf(Slug.constructFromPersisted("shoulder") to 4, Slug.constructFromPersisted("cross") to 1)
 
         val result = useCase.execute(GetCategoryUc.Qry("shoulder"))
 
         assertEquals(
-            Result.success(CategoryDto(1, "shoulder", "کیف دوشی", null, BagType.HOBO, "lilac", 1, showInMenu = true, productCount = 0)),
+            Result.success(CategoryDto(1, "shoulder", "کیف دوشی", null, BagType.HOBO, "lilac", 1, showInMenu = true, productCount = 4)),
             result,
         )
         assertEquals(1, transactionManager.transactionsOpened)
@@ -54,7 +58,7 @@ class GetCategoryUcTest {
 
         assertEquals(Result.failure(GetCategoryUc.Failure.CategoryNotFound), result)
         assertEquals(0, transactionManager.transactionsOpened)
-        confirmVerified(categories) // nothing verified, so this fails if the repository was called at all
+        confirmVerified(categories, productQm) // nothing verified, so this fails if a repository was called at all
     }
 
     @Test

@@ -8,7 +8,7 @@ import org.jetbrains.exposed.v1.jdbc.Database
 /**
  * Connection to the separate `kiva_test` database used by integration tests.
  * Defaults match the local dev Postgres; override with KIVA_TEST_DB_URL / _USER / _PASSWORD.
- * Postgres must be running (D:\Personal\kiva\pg-start.cmd).
+ * Postgres must be running (here: D:\Programs\postgresql-17\start.cmd).
  *
  * On first use the database is wiped and every migration is applied from scratch, the same way the app does
  * it on startup. So each test run starts from exactly what the migrations create, seed data included,

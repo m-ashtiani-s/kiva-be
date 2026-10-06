@@ -16,8 +16,6 @@ import com.kiva.infrastructure.TestDatabase
 import com.kiva.infrastructure.persistence.exposed.tbl.EventStoreTbl
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.core.inList
-import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
@@ -33,24 +31,22 @@ import kotlin.test.assertTrue
 
 /**
  * Stock stored as events in kiva_test and read back, each step in its own transaction as in the app.
- * Every color gets a fresh id from the real sequence; its rows are deleted after each test.
+ * Every color is one of a real stored product, because saving stock projects it into that color's read model row.
+ * Everything is deleted after each test.
  */
 class InventoryRepositoryImplTest {
 
     private val db = TestDatabase.database
     private val repository = InventoryRepositoryImpl()
-    private val ids = ProductIdGeneratorImpl()
+    private val catalog = StoredCatalog()
 
     private val staff = UserId.constructFromPersisted(12)
     private val now = Instant.parse("2026-10-06T08:00:00Z")
-    private val used = mutableListOf<VariantId>()
 
     @AfterEach
-    fun deleteWhatWasStored() {
-        transaction(db) { EventStoreTbl.deleteWhere { aggregateId inList used.map { it.value.toString() } } }
-    }
+    fun deleteWhatWasStored() = catalog.deleteAll()
 
-    private fun newColor(): VariantId = transaction(db) { ids.nextVariantId() }.also { used += it }
+    private fun newColor(): VariantId = catalog.newColor()
 
     private fun delta(value: Int) = StockDelta.constructFromPersisted(value)
     private fun order(code: String) = OrderCode.constructFromPersisted(code)
@@ -118,7 +114,8 @@ class InventoryRepositoryImplTest {
                 it[eventId] = UUID.randomUUID()
                 it[aggregateName] = "PRODUCT"
                 it[aggregateId] = saved.variantId.value.toString()
-                it[sequence] = 1
+                // Not 1: the color's own product may happen to have the same number, and its stream starts at 1.
+                it[sequence] = 1_000
                 it[eventType] = "ProductCreated"
                 it[payloadVersion] = 1
                 it[payload] = "{}"

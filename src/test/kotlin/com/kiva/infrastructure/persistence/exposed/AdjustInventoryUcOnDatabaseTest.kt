@@ -12,9 +12,8 @@ import com.kiva.infrastructure.TestDatabase
 import com.kiva.infrastructure.common.persistence.ExposedTransactionManager
 import com.kiva.infrastructure.persistence.exposed.tbl.EventStoreTbl
 import kotlinx.coroutines.test.runTest
+import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.core.inList
-import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.junit.jupiter.api.AfterEach
@@ -32,15 +31,12 @@ import kotlin.test.assertEquals
 class AdjustInventoryUcOnDatabaseTest {
 
     private val db = TestDatabase.database
-    private val ids = ProductIdGeneratorImpl()
+    private val catalog = StoredCatalog()
     private val inventories = InventoryRepositoryImpl()
     private val staff = UserId.constructFromPersisted(12)
-    private val used = mutableListOf<VariantId>()
 
     @AfterEach
-    fun deleteWhatWasStored() {
-        transaction(db) { EventStoreTbl.deleteWhere { aggregateId inList used.map { it.value.toString() } } }
-    }
+    fun deleteWhatWasStored() = catalog.deleteAll()
 
     /**
      * The real repository, except that just before the first save another request saves its own change and commits.
@@ -68,17 +64,26 @@ class AdjustInventoryUcOnDatabaseTest {
 
     @Test
     fun `a real refused save is rolled back and the retry lands on top of the other request's change`() = runTest {
-        val color = transaction(db) { ids.nextVariantId() }.also { used += it }
+        val lilac = catalog.newProduct(listOf(StoredCatalog.NewColor("lilac"))).variants.single()
+        val color = lilac.id
         transaction(db) { delivery(color, 5) }
 
         val repository = AnotherRequestSavesFirst { delivery(color, 2) }
-        val useCase = AdjustInventoryUc(ExposedTransactionManager(db), InventoryDomainService(repository), repository, Clock.systemUTC())
+        val useCase = AdjustInventoryUc(
+            ExposedTransactionManager(db), InventoryDomainService(repository), repository, ProductQmRepositoryImpl(), Clock.systemUTC(),
+        )
 
         val result = useCase.execute(AdjustInventoryUc.Cmd(color.value, -1, "DAMAGED", null, staff))
 
         // 5 delivered, 2 more by the other request, 1 damaged by this one: nothing lost, nothing counted twice.
         assertEquals(6, result.getOrNull()?.onHandAfter)
+        assertEquals(lilac.sku.value, result.getOrNull()?.sku)
         assertEquals(6, transaction(db) { inventories.get(color)?.onHand })
-        assertEquals(3, transaction(db) { EventStoreTbl.selectAll().where { EventStoreTbl.aggregateId eq color.value.toString() }.count() })
+        val stockEvents = transaction(db) {
+            EventStoreTbl.selectAll()
+                .where { (EventStoreTbl.aggregateName eq "INVENTORY") and (EventStoreTbl.aggregateId eq color.value.toString()) }
+                .count()
+        }
+        assertEquals(3, stockEvents)
     }
 }

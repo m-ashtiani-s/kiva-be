@@ -12,6 +12,8 @@ import com.kiva.domain.aggregate.product.model.valueobject.ProductId
 import com.kiva.infrastructure.TestDatabase
 import com.kiva.infrastructure.persistence.event.ProductEventSamples
 import com.kiva.infrastructure.persistence.exposed.tbl.EventStoreTbl
+import com.kiva.infrastructure.persistence.exposed.tbl.ProductQmTbl
+import com.kiva.infrastructure.persistence.exposed.tbl.ProductVariantQmTbl
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
@@ -44,7 +46,12 @@ class ProductRepositoryImplTest {
 
     @AfterEach
     fun deleteWhatWasStored() {
-        transaction(db) { EventStoreTbl.deleteWhere { aggregateId inList stored.map { it.value.toString() } } }
+        transaction(db) {
+            EventStoreTbl.deleteWhere { aggregateId inList stored.map { it.value.toString() } }
+            // Saving projects into the read model too; the next test reuses the slug.
+            ProductVariantQmTbl.deleteWhere { productId inList stored.map { it.value } }
+            ProductQmTbl.deleteWhere { productId inList stored.map { it.value } }
+        }
     }
 
     private fun priceTag(price: Long, compareAt: Long? = null) =

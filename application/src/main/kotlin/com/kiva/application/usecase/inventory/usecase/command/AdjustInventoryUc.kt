@@ -1,6 +1,7 @@
 package com.kiva.application.usecase.inventory.usecase.command
 
 import com.kiva.application.dto.InventoryAdjustmentDto
+import com.kiva.application.repository.ProductQmRepository
 import com.kiva.common.event.ConcurrentChangeException
 import com.kiva.common.logging.getLogger
 import com.kiva.common.railway.FailureKind
@@ -30,13 +31,15 @@ import java.time.Clock
  * The whole transaction then runs again from a fresh read, up to [MAX_ATTEMPTS] times in all. The rules are checked
  * again against that fresh stock, so a retry never takes away bags someone else has just reserved.
  *
- * Not checked yet: that the color exists. Only the read model can tell that cheaply, so the check comes with it
- * in step 5. Until then nothing but tests calls this.
+ * The color must be one some product has: the read model tells that cheaply, where the stock's own stream can't (a
+ * color nothing was recorded for has no stream either). A color taken out of the shop still counts: staff still
+ * count and move its bags.
  */
 class AdjustInventoryUc(
     private val transactionManager: TransactionManager,
     private val inventoryDomainService: InventoryDomainService,
     private val inventoryRepository: InventoryRepository,
+    private val productQmRepository: ProductQmRepository,
     private val clock: Clock,
 ) : CommandUseCase<AdjustInventoryUc.Cmd, InventoryAdjustmentDto, AdjustInventoryUc.Failure> {
 
@@ -87,9 +90,11 @@ class AdjustInventoryUc(
         return adjustOnce(input, command.by)
     }
 
-    /** One whole attempt in one transaction: read the stock, let the domain decide, save. */
+    /** One whole attempt in one transaction: find the color, read its stock, let the domain decide, save. */
     private suspend fun adjustOnce(input: Input, by: UserId): Result<InventoryAdjustmentDto, Failure> =
         transactionManager.inTransaction {
+            val variant = productQmRepository.findVariant(input.variantId)
+                ?: return@inTransaction Result.failure(Failure.VariantNotFound(input.variantId))
             val now = clock.instant()
             inventoryDomainService.adjustStock(input.variantId, input.delta, input.reason, input.note, by, now)
                 .mapOnFailure {
@@ -102,6 +107,7 @@ class AdjustInventoryUc(
                     inventoryRepository.save(inventory)
                     InventoryAdjustmentDto(
                         variantId = input.variantId.value,
+                        sku = variant.sku.value,
                         delta = input.delta.value,
                         reason = input.reason,
                         note = input.note?.value,
@@ -127,6 +133,10 @@ class AdjustInventoryUc(
         /** One or more fields are wrong; each cause names its field (400 VALIDATION_ERROR). */
         data class InvalidInput(val problems: List<ResultFailure>) :
             Failure("VALIDATION_ERROR", FailureKind.INVALID, causes = problems)
+
+        /** No product has this color: a wrong reference in the request, so a problem of its field (400). */
+        data class VariantNotFound(val variantId: VariantId) :
+            Failure("VARIANT_NOT_FOUND", FailureKind.INVALID, "variantId", meta = mapOf("variantId" to variantId.value))
 
         data class WrongDirection(val reason: AdjustmentReason) :
             Failure("ADJUSTMENT_DIRECTION_INVALID", FailureKind.INVALID, "delta", meta = mapOf("reason" to reason.name))

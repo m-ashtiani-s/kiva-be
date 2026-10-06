@@ -1,6 +1,7 @@
 package com.kiva.application.usecase.catalog.usecase.query
 
 import com.kiva.application.dto.CategoryDto
+import com.kiva.application.repository.ProductQmRepository
 import com.kiva.common.logging.getLogger
 import com.kiva.common.railway.FailureKind
 import com.kiva.common.railway.Result
@@ -11,10 +12,14 @@ import com.kiva.common.usecase.QueryUseCase
 import com.kiva.common.valueobject.Slug
 import com.kiva.domain.aggregate.category.repository.CategoryRepository
 
-/** One category by its slug, for the category page (`GET /categories/{slug}`). */
+/**
+ * One category by its slug, with how many products in the shop it holds, for the category page
+ * (`GET /categories/{slug}`).
+ */
 class GetCategoryUc(
     private val transactionManager: TransactionManager,
     private val categoryRepository: CategoryRepository,
+    private val productQmRepository: ProductQmRepository,
 ) : QueryUseCase<GetCategoryUc.Qry, CategoryDto, GetCategoryUc.Failure> {
 
     private val logger = getLogger()
@@ -31,8 +36,8 @@ class GetCategoryUc(
         return transactionManager.inTransaction {
             val category = categoryRepository.findBySlug(slug)
                 ?: return@inTransaction Result.failure(Failure.CategoryNotFound)
-            // No products are stored yet; the real count comes from the product read model once it exists.
-            Result.success(CategoryDto.from(category, productCount = 0))
+            val productCount = productQmRepository.countActiveByCategory()[category.slug] ?: 0
+            Result.success(CategoryDto.from(category, productCount))
         }
     }
 

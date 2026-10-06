@@ -1,5 +1,6 @@
 package com.kiva.infrastructure.di
 
+import com.kiva.application.repository.ProductQmRepository
 import com.kiva.domain.aggregate.category.repository.CategoryRepository
 import com.kiva.domain.aggregate.color.repository.ColorRepository
 import com.kiva.domain.aggregate.inventory.repository.InventoryRepository
@@ -11,10 +12,11 @@ import com.kiva.infrastructure.persistence.exposed.ColorRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.InventoryRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.MaterialRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ProductIdGeneratorImpl
+import com.kiva.infrastructure.persistence.exposed.ProductQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ProductRepositoryImpl
 import org.koin.dsl.module
 
-/** Repository implementations, bound to the ports the domain and application layers ask for. */
+/** Repository implementations, bound to the ports the domain and application layers ask for (the read model's too). */
 val daoModule = module(createdAtStart = true) {
     single<ColorRepository> { ColorRepositoryImpl() }
     single<CategoryRepository> { CategoryRepositoryImpl() }
@@ -22,4 +24,5 @@ val daoModule = module(createdAtStart = true) {
     single<ProductRepository> { ProductRepositoryImpl() }
     single<ProductIdGenerator> { ProductIdGeneratorImpl() }
     single<InventoryRepository> { InventoryRepositoryImpl() }
+    single<ProductQmRepository> { ProductQmRepositoryImpl() }
 }

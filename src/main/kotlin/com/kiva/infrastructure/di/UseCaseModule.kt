@@ -9,13 +9,19 @@ import org.koin.dsl.module
 
 val useCaseModule = module(createdAtStart = true) {
     // --- catalog: queries ---
-    single { ListColorsUc(transactionManager = get(), colorRepository = get()) }
-    single { ListMaterialsUc(transactionManager = get(), materialRepository = get()) }
-    single { ListCategoriesUc(transactionManager = get(), categoryRepository = get()) }
-    single { GetCategoryUc(transactionManager = get(), categoryRepository = get()) }
+    single { ListColorsUc(transactionManager = get(), colorRepository = get(), productQmRepository = get()) }
+    single { ListMaterialsUc(transactionManager = get(), materialRepository = get(), productQmRepository = get()) }
+    single { ListCategoriesUc(transactionManager = get(), categoryRepository = get(), productQmRepository = get()) }
+    single { GetCategoryUc(transactionManager = get(), categoryRepository = get(), productQmRepository = get()) }
 
     // --- inventory: commands ---
     single {
-        AdjustInventoryUc(transactionManager = get(), inventoryDomainService = get(), inventoryRepository = get(), clock = get())
+        AdjustInventoryUc(
+            transactionManager = get(),
+            inventoryDomainService = get(),
+            inventoryRepository = get(),
+            productQmRepository = get(),
+            clock = get(),
+        )
     }
 }

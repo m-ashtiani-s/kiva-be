@@ -1,13 +1,17 @@
 package com.kiva.application.usecase.inventory.usecase.command
 
 import com.kiva.application.dto.InventoryAdjustmentDto
+import com.kiva.application.repository.ProductQmRepository
+import com.kiva.application.repository.VariantQm
 import com.kiva.application.util.MockTransactionManager
 import com.kiva.common.event.ConcurrentChangeException
 import com.kiva.common.event.valueobject.EventAggregateId
 import com.kiva.common.railway.FailureKind
 import com.kiva.common.railway.Result
 import com.kiva.common.valueobject.Quantity
+import com.kiva.common.valueobject.Slug
 import com.kiva.common.valueobject.UserId
+import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
 import com.kiva.domain.aggregate.inventory.InventoryDomainService
 import com.kiva.domain.aggregate.inventory.entity.Inventory
 import com.kiva.domain.aggregate.inventory.entity.event.InventoryDomainEvent
@@ -15,6 +19,8 @@ import com.kiva.domain.aggregate.inventory.model.valueobject.AdjustmentReason
 import com.kiva.domain.aggregate.inventory.model.valueobject.StockDelta
 import com.kiva.domain.aggregate.inventory.repository.InventoryRepository
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
+import com.kiva.domain.aggregate.product.model.valueobject.ProductId
+import com.kiva.domain.aggregate.product.model.valueobject.Sku
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Nested
@@ -54,6 +60,19 @@ private class InMemoryInventories : InventoryRepository {
     }
 }
 
+/** The read model as far as stock needs it: which colors some product has. */
+private class KnownColors(vararg colors: VariantQm) : ProductQmRepository {
+    private val byId = colors.associateBy { it.variantId }
+
+    override fun findVariant(variantId: VariantId): VariantQm? = byId[variantId]
+
+    override fun countActiveByCategory(): Map<Slug, Int> = error("not used here")
+
+    override fun countActiveByMaterial(): Map<Slug, Int> = error("not used here")
+
+    override fun countActiveByColor(): Map<ColorKey, Int> = error("not used here")
+}
+
 class AdjustInventoryUcTest {
 
     private val now = Instant.parse("2026-10-06T08:00:00Z")
@@ -66,6 +85,9 @@ class AdjustInventoryUcTest {
         transactionManager,
         InventoryDomainService(inventories),
         inventories,
+        KnownColors(
+            VariantQm(lilac, ProductId.constructFromPersisted(1), ColorKey.constructFromPersisted("lilac"), Sku.constructFromPersisted("KV-1001-LILAC"), isActive = true),
+        ),
         Clock.fixed(now, ZoneOffset.UTC),
     )
 
@@ -87,7 +109,7 @@ class AdjustInventoryUcTest {
             val result = useCase.execute(cmd(12, "RESTOCK", note = "  بارنامه ۲۳۴ "))
 
             assertEquals(
-                Result.success(InventoryAdjustmentDto(101, 12, AdjustmentReason.RESTOCK, "بارنامه ۲۳۴", 12, 12, now, 1)),
+                Result.success(InventoryAdjustmentDto(101, "KV-1001-LILAC", 12, AdjustmentReason.RESTOCK, "بارنامه ۲۳۴", 12, 12, now, 1)),
                 result,
             )
             assertEquals(12, stored()?.onHand)
@@ -118,6 +140,17 @@ class AdjustInventoryUcTest {
                 failure.causes.map { it.code },
             )
             assertEquals(0, transactionManager.transactionsOpened)
+        }
+
+        @Test
+        fun `a color no product has is VARIANT_NOT_FOUND on variantId, and nothing is stored`() = runTest {
+            val nobodys = VariantId.constructFromPersisted(999)
+
+            val result = useCase.execute(cmd(5, "RESTOCK", variantId = 999))
+
+            assertEquals(Result.failure(AdjustInventoryUc.Failure.VariantNotFound(nobodys)), result)
+            assertEquals(listOf("variantId", FailureKind.INVALID), result.failureOrNull()?.let { listOf(it.field, it.kind) })
+            assertNull(inventories.get(nobodys))
         }
 
         @Test

@@ -1,9 +1,11 @@
 package com.kiva.application.usecase.catalog.usecase.query
 
 import com.kiva.application.dto.MaterialDto
+import com.kiva.application.repository.ProductQmRepository
 import com.kiva.application.util.MockTransactionManager
 import com.kiva.application.util.factory.MaterialFactory
 import com.kiva.common.railway.Result
+import com.kiva.common.valueobject.Slug
 import com.kiva.domain.aggregate.material.model.valueobject.MaterialFamily
 import com.kiva.domain.aggregate.material.repository.MaterialRepository
 import io.mockk.every
@@ -16,10 +18,12 @@ class ListMaterialsUcTest {
 
     private val transactionManager = MockTransactionManager()
     private val materials = mockk<MaterialRepository>()
-    private val useCase = ListMaterialsUc(transactionManager, materials)
+    private val productQm = mockk<ProductQmRepository>()
+    private val useCase = ListMaterialsUc(transactionManager, materials, productQm)
 
     @Test
-    fun `returns every material in the repository's order, in one transaction`() = runTest {
+    fun `returns every material in the repository's order, with the products in the shop made of it, in one transaction`() = runTest {
+        every { productQm.countActiveByMaterial() } returns mapOf(Slug.constructFromPersisted("satin") to 1)
         every { materials.findAll() } returns listOf(
             MaterialFactory.generate(id = 1, slug = "genuine-cow-leather", careInstructions = listOf("با دستمال نرم تمیز شود")),
             MaterialFactory.generate(id = 11, slug = "satin", name = "ساتن", family = MaterialFamily.SATIN),
@@ -34,7 +38,7 @@ class ListMaterialsUcTest {
                         1, "genuine-cow-leather", "چرم طبیعی گاوی", MaterialFamily.GENUINE_LEATHER, null,
                         careInstructions = listOf("با دستمال نرم تمیز شود"), productCount = 0,
                     ),
-                    MaterialDto(11, "satin", "ساتن", MaterialFamily.SATIN, null, careInstructions = emptyList(), productCount = 0),
+                    MaterialDto(11, "satin", "ساتن", MaterialFamily.SATIN, null, careInstructions = emptyList(), productCount = 1),
                 ),
             ),
             result,
