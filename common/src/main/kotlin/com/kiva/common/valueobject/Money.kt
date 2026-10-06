@@ -20,6 +20,12 @@ import com.kiva.common.railway.ResultFailure
 @JvmInline
 value class Money private constructor(val toman: Long) : Comparable<Money> {
 
+    // Second wall, for every way in: [makeNew] already refuses bad input with a Failure, so this only ever fails
+    // when stored data is wrong. That is a bug: stop loudly.
+    init {
+        require(toman >= 0) { "Invalid Money $toman" }
+    }
+
     operator fun plus(other: Money): Money = Money(Math.addExact(toman, other.toman))
 
     /**
@@ -49,6 +55,9 @@ value class Money private constructor(val toman: Long) : Comparable<Money> {
 
         fun makeNew(toman: Long): Result<Money, Failure> =
             if (toman >= 0) Result.success(Money(toman)) else Result.failure(Failure.Negative)
+
+        /** For values read back from storage. Still checked by `init`. */
+        fun constructFromPersisted(toman: Long): Money = Money(toman)
     }
 
     sealed class Failure(code: String) : ResultFailure(code, FailureKind.INVALID) {

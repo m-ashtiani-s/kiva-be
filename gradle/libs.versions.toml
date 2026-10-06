@@ -35,6 +35,7 @@ exposed-bom = { module = "org.jetbrains.exposed:exposed-bom", version.ref = "exp
 exposed-core = { module = "org.jetbrains.exposed:exposed-core" }
 exposed-jdbc = { module = "org.jetbrains.exposed:exposed-jdbc" }
 exposed-java-time = { module = "org.jetbrains.exposed:exposed-java-time" }
+exposed-json = { module = "org.jetbrains.exposed:exposed-json" }
 postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
 hikari = { module = "com.zaxxer:HikariCP", version.ref = "hikari" }
 flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flyway" }

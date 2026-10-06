@@ -1,0 +1,78 @@
+package com.kiva.infrastructure.persistence.event.serializer
+
+import com.kiva.common.event.valueobject.EventVersion
+import com.kiva.domain.aggregate.product.entity.event.ProductArchived
+import com.kiva.domain.aggregate.product.entity.event.ProductCreated
+import com.kiva.domain.aggregate.product.entity.event.ProductDetailsChanged
+import com.kiva.domain.aggregate.product.entity.event.ProductDomainEvent
+import com.kiva.domain.aggregate.product.entity.event.ProductPriceChanged
+import com.kiva.domain.aggregate.product.entity.event.ProductPublished
+import com.kiva.domain.aggregate.product.entity.event.ProductUnpublished
+import com.kiva.domain.aggregate.product.entity.event.VariantAdded
+import com.kiva.domain.aggregate.product.entity.event.VariantChanged
+import com.kiva.domain.aggregate.product.entity.event.VariantDeactivated
+import com.kiva.domain.aggregate.product.entity.event.VariantMediaReplaced
+import com.kiva.domain.aggregate.product.entity.event.VariantReactivated
+import com.kiva.infrastructure.persistence.event.serializer.payload.EventPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.product.ProductArchivedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.product.ProductCreatedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.product.ProductDetailsChangedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.product.ProductPriceChangedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.product.ProductPublishedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.product.ProductUnpublishedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.product.VariantAddedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.product.VariantChangedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.product.VariantDeactivatedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.product.VariantMediaReplacedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.product.VariantReactivatedPayload
+import kotlinx.serialization.json.Json
+
+/**
+ * Turns a domain event into the JSON kept in the event store's `payload` column, and back.
+ *
+ * Writing picks the payload class by the event's class. Reading picks it by the stored `eventType`, so two event
+ * classes with the same type would read back as the wrong one: every type is unique and never renamed.
+ *
+ * A type or version this code doesn't know is not a business failure but stored data it can't read (a bug or a
+ * missing reader), so it stops loudly instead of returning a Result.
+ */
+object DomainEventSerializer {
+
+    // Strict on purpose: a missing or an unknown field means the stored shape and the payload class disagree.
+    private val json = Json
+
+    fun serialize(event: ProductDomainEvent): String = when (event) {
+        is ProductCreated -> json.encodeToString(ProductCreatedPayload(event))
+        is ProductDetailsChanged -> json.encodeToString(ProductDetailsChangedPayload(event))
+        is ProductPriceChanged -> json.encodeToString(ProductPriceChangedPayload(event))
+        is ProductPublished -> json.encodeToString(ProductPublishedPayload(event))
+        is ProductUnpublished -> json.encodeToString(ProductUnpublishedPayload(event))
+        is ProductArchived -> json.encodeToString(ProductArchivedPayload(event))
+        is VariantAdded -> json.encodeToString(VariantAddedPayload(event))
+        is VariantChanged -> json.encodeToString(VariantChangedPayload(event))
+        is VariantDeactivated -> json.encodeToString(VariantDeactivatedPayload(event))
+        is VariantReactivated -> json.encodeToString(VariantReactivatedPayload(event))
+        is VariantMediaReplaced -> json.encodeToString(VariantMediaReplacedPayload(event))
+    }
+
+    fun deserializeProduct(payload: String, payloadVersion: Int, eventType: String): ProductDomainEvent {
+        // Every product event is still at its first shape. When one changes, its old version gets its own reader here.
+        check(payloadVersion == EventVersion.FIRST.value) { "No reader for version $payloadVersion of '$eventType'" }
+
+        val eventPayload: EventPayload<ProductDomainEvent> = when (eventType) {
+            ProductCreated.TYPE.value -> json.decodeFromString<ProductCreatedPayload>(payload)
+            ProductDetailsChanged.TYPE.value -> json.decodeFromString<ProductDetailsChangedPayload>(payload)
+            ProductPriceChanged.TYPE.value -> json.decodeFromString<ProductPriceChangedPayload>(payload)
+            ProductPublished.TYPE.value -> json.decodeFromString<ProductPublishedPayload>(payload)
+            ProductUnpublished.TYPE.value -> json.decodeFromString<ProductUnpublishedPayload>(payload)
+            ProductArchived.TYPE.value -> json.decodeFromString<ProductArchivedPayload>(payload)
+            VariantAdded.TYPE.value -> json.decodeFromString<VariantAddedPayload>(payload)
+            VariantChanged.TYPE.value -> json.decodeFromString<VariantChangedPayload>(payload)
+            VariantDeactivated.TYPE.value -> json.decodeFromString<VariantDeactivatedPayload>(payload)
+            VariantReactivated.TYPE.value -> json.decodeFromString<VariantReactivatedPayload>(payload)
+            VariantMediaReplaced.TYPE.value -> json.decodeFromString<VariantMediaReplacedPayload>(payload)
+            else -> error("Unknown product event type '$eventType'")
+        }
+        return eventPayload.toDomainEvent()
+    }
+}

@@ -23,6 +23,16 @@ class MoneyTest {
         fun `a negative amount is MONEY_NEGATIVE`() {
             assertEquals(Result.failure(Money.Failure.Negative), Money.makeNew(toman = -1))
         }
+
+        @Test
+        fun `a stored amount is read back as it was`() {
+            assertEquals(toman(1_890_000), Money.constructFromPersisted(1_890_000))
+        }
+
+        @Test
+        fun `a negative stored amount is a bug, so constructFromPersisted throws`() {
+            assertFailsWith<IllegalArgumentException> { Money.constructFromPersisted(-1) }
+        }
     }
 
     @Nested
