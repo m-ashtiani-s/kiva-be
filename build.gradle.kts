@@ -35,6 +35,7 @@ dependencies {
     implementation(libs.ktor.server.status.pages)
     implementation(libs.ktor.server.call.id)
     implementation(libs.ktor.server.cors)
+    implementation(libs.jsoup)
     implementation(libs.ktor.serialization.kotlinx.json)
 
     // --- Koin ---

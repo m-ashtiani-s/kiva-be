@@ -39,6 +39,7 @@ import com.kiva.domain.aggregate.product.model.valueobject.MaxPerOrder
 import com.kiva.domain.aggregate.product.model.valueobject.Occasion
 import com.kiva.domain.aggregate.product.model.valueobject.PriceTag
 import com.kiva.domain.aggregate.product.model.valueobject.ProductId
+import com.kiva.domain.aggregate.product.model.valueobject.HtmlSanitizer
 import com.kiva.domain.aggregate.product.model.valueobject.ProductStatus
 import com.kiva.domain.aggregate.product.model.valueobject.Sku
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
@@ -132,11 +133,16 @@ class CreateProductUcTest {
         override fun findByKey(key: ColorKey): Color? = palette.firstOrNull { it.key == key }
     }
 
-    private fun useCase(readModel: ReadModel = ReadModel(), repository: ProductRepository = products) = CreateProductUc(
+    private fun useCase(
+        readModel: ReadModel = ReadModel(),
+        repository: ProductRepository = products,
+        sanitizer: HtmlSanitizer = HtmlSanitizer { it },
+    ) = CreateProductUc(
         transactionManager,
         ProductDomainService(repository, ids, categories, materials, colors),
         repository,
         readModel,
+        sanitizer,
         Clock.fixed(now, ZoneOffset.UTC),
     )
 
@@ -216,6 +222,13 @@ class CreateProductUcTest {
             )
             assertEquals(listOf<Any?>(MaxPerOrder.DEFAULT, true, true, 0, null), listOf(details.maxPerOrder, details.returnable, details.reservable, details.sortPriority, details.shortDescription))
             assertEquals(PriceTag.constructFromPersisted(Money.constructFromPersisted(1_890_000), null), product.priceTag)
+        }
+
+        @Test
+        fun `the description is kept as the sanitizer made it, never as it was typed`() = runTest {
+            useCase(sanitizer = { "<p>تمیز شده</p>" }).execute(cmd())
+
+            assertEquals("<p>تمیز شده</p>", stored()!!.details.description?.value)
         }
 
         @Test

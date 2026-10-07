@@ -7,6 +7,7 @@ import com.kiva.application.usecase.product.usecase.command.CreateProductUc
 import com.kiva.domain.aggregate.inventory.InventoryDomainService
 import com.kiva.domain.aggregate.product.ProductDomainService
 import com.kiva.infrastructure.TestDatabase
+import com.kiva.infrastructure.common.html.JsoupHtmlSanitizer
 import com.kiva.infrastructure.common.persistence.ExposedTransactionManager
 import com.kiva.infrastructure.persistence.exposed.CategoryRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ColorRepositoryImpl
@@ -43,7 +44,7 @@ class SeededCatalog(clock: Clock) {
             products, ProductIdGeneratorImpl(), CategoryRepositoryImpl(), MaterialRepositoryImpl(), ColorRepositoryImpl(),
         )
         DevCatalogSeeder(
-            CreateProductUc(transactions, productDomainService, products, readModel, clock),
+            CreateProductUc(transactions, productDomainService, products, readModel, JsoupHtmlSanitizer, clock),
             AdjustInventoryUc(transactions, InventoryDomainService(inventories), inventories, readModel, clock),
             ListCategoriesUc(transactions, CategoryRepositoryImpl(), readModel),
             ListMaterialsUc(transactions, MaterialRepositoryImpl(), readModel),

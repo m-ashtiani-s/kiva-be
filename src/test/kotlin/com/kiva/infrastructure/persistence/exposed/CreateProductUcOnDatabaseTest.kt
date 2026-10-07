@@ -8,6 +8,7 @@ import com.kiva.domain.aggregate.product.ProductDomainService
 import com.kiva.domain.aggregate.product.entity.Product
 import com.kiva.domain.aggregate.product.repository.ProductRepository
 import com.kiva.infrastructure.TestDatabase
+import com.kiva.infrastructure.common.html.JsoupHtmlSanitizer
 import com.kiva.infrastructure.common.persistence.ExposedTransactionManager
 import com.kiva.infrastructure.persistence.exposed.tbl.EventStoreTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.ProductQmTbl
@@ -56,6 +57,7 @@ class CreateProductUcOnDatabaseTest {
         ProductDomainService(repository, ProductIdGeneratorImpl(), CategoryRepositoryImpl(), MaterialRepositoryImpl(), ColorRepositoryImpl()),
         repository,
         ProductQmRepositoryImpl(),
+        JsoupHtmlSanitizer,
         Clock.systemUTC(),
     )
 

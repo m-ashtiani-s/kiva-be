@@ -1,6 +1,8 @@
 package com.kiva.infrastructure.di
 
 import com.kiva.common.transaction.TransactionManager
+import com.kiva.domain.aggregate.product.model.valueobject.HtmlSanitizer
+import com.kiva.infrastructure.common.html.JsoupHtmlSanitizer
 import com.kiva.infrastructure.common.persistence.ExposedTransactionManager
 import com.kiva.infrastructure.config.AppConfig
 import org.jetbrains.exposed.v1.jdbc.Database
@@ -14,4 +16,5 @@ fun infrastructureModule(config: AppConfig, database: Database) = module {
     single<TransactionManager> { ExposedTransactionManager(get()) }
     // Use cases read "now" from this, so tests can fix the time.
     single<Clock> { Clock.systemUTC() }
+    single<HtmlSanitizer> { JsoupHtmlSanitizer }
 }

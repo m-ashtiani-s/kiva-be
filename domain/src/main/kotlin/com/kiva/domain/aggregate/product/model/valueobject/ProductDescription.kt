@@ -7,8 +7,8 @@ import com.kiva.common.railway.ResultFailure
 /**
  * The text of the product page's «توضیحات» tab. Optional.
  *
- * The contract sends it as HTML that the server has made safe (only a few tags allowed). Until the admin panel
- * exists only seed text reaches it, so it is kept as given; cleaning HTML comes with admin input.
+ * HTML, and the page puts it in as HTML: so a new one is always made safe first ([HtmlSanitizer]), and the contract
+ * promises the client exactly that. A stored one was made safe when it was new.
  */
 @JvmInline
 value class ProductDescription private constructor(val value: String) {
@@ -21,9 +21,12 @@ value class ProductDescription private constructor(val value: String) {
     companion object {
         const val MAX_LENGTH = 10_000
 
-        /** Optional text: missing or blank means "none" (null), not an error. Spaces around it are trimmed. */
-        fun makeNew(raw: String?): Result<ProductDescription?, Failure> {
-            val trimmed = raw?.trim().orEmpty()
+        /**
+         * Optional text: missing or blank means "none" (null), not an error. It is made safe first, so the length
+         * counts what is kept, and text with nothing safe in it is none as well. Spaces around it are trimmed.
+         */
+        fun makeNew(raw: String?, sanitizer: HtmlSanitizer): Result<ProductDescription?, Failure> {
+            val trimmed = raw?.takeIf { it.isNotBlank() }?.let(sanitizer::clean)?.trim().orEmpty()
             return when {
                 trimmed.isEmpty() -> Result.success(null)
                 trimmed.length > MAX_LENGTH -> Result.failure(Failure.TooLong)

@@ -72,6 +72,7 @@ val useCaseModule = module(createdAtStart = true) {
             productDomainService = get(),
             productRepository = get(),
             productQmRepository = get(),
+            htmlSanitizer = get(),
             clock = get(),
         )
     }

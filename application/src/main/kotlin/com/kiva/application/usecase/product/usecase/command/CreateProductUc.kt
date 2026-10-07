@@ -30,6 +30,7 @@ import com.kiva.domain.aggregate.product.model.valueobject.BagType
 import com.kiva.domain.aggregate.product.model.valueobject.ClosureType
 import com.kiva.domain.aggregate.product.model.valueobject.Dimensions
 import com.kiva.domain.aggregate.product.model.valueobject.Highlights
+import com.kiva.domain.aggregate.product.model.valueobject.HtmlSanitizer
 import com.kiva.domain.aggregate.product.model.valueobject.MaterialDescription
 import com.kiva.domain.aggregate.product.model.valueobject.MaxPerOrder
 import com.kiva.domain.aggregate.product.model.valueobject.Occasion
@@ -68,6 +69,7 @@ class CreateProductUc(
     private val productDomainService: ProductDomainService,
     private val productRepository: ProductRepository,
     private val productQmRepository: ProductQmRepository,
+    private val htmlSanitizer: HtmlSanitizer,
     private val clock: Clock,
 ) : CommandUseCase<CreateProductUc.Cmd, CreatedProductDto, CreateProductUc.Failure> {
 
@@ -210,7 +212,7 @@ class CreateProductUc(
         Result.zip(
             MaterialDescription.makeNew(command.materialDescription),
             ShortDescription.makeNew(command.shortDescription),
-            ProductDescription.makeNew(command.description),
+            ProductDescription.makeNew(command.description, htmlSanitizer),
             Highlights.makeNew(command.highlights),
             ::InputProblems,
         ) { materialDescription, shortDescription, description, highlights ->

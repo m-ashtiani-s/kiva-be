@@ -50,16 +50,27 @@ class OptionalTextsTest {
 
     @Nested
     inner class ProductDescriptionTests {
+        // Stands in for the real one (infrastructure, jsoup): it drops one known script, so the tests can see it ran.
+        private val sanitizer = HtmlSanitizer { it.replace("<script>alert(1)</script>", "") }
+
         @Test
         fun `missing or blank means none, anything else is trimmed`() {
-            assertEquals(Result.success(null), ProductDescription.makeNew(null))
-            assertEquals(Result.success(null), ProductDescription.makeNew("\n "))
-            assertEquals("<p>کیف دوشی ماهک</p>", ProductDescription.makeNew(" <p>کیف دوشی ماهک</p>\n").getOrNull()?.value)
+            val notCalled = HtmlSanitizer { error("nothing to clean") }
+            assertEquals(Result.success(null), ProductDescription.makeNew(null, notCalled))
+            assertEquals(Result.success(null), ProductDescription.makeNew("\n ", notCalled))
+            assertEquals("<p>کیف دوشی ماهک</p>", ProductDescription.makeNew(" <p>کیف دوشی ماهک</p>\n", sanitizer).getOrNull()?.value)
         }
 
         @Test
-        fun `more than 10000 characters is DESCRIPTION_TOO_LONG`() {
-            assertEquals(Result.failure(ProductDescription.Failure.TooLong), ProductDescription.makeNew("ک".repeat(10_001)))
+        fun `what is kept is what the sanitizer left, and nothing safe left means none`() {
+            assertEquals("<p>کیف</p>", ProductDescription.makeNew("<p>کیف</p><script>alert(1)</script>", sanitizer).getOrNull()?.value)
+            assertEquals(Result.success(null), ProductDescription.makeNew(" <script>alert(1)</script> ", sanitizer))
+        }
+
+        @Test
+        fun `more than 10000 characters is DESCRIPTION_TOO_LONG, counting what is kept`() {
+            assertEquals(Result.failure(ProductDescription.Failure.TooLong), ProductDescription.makeNew("ک".repeat(10_001), sanitizer))
+            assertEquals(10_000, ProductDescription.makeNew("ک".repeat(10_000) + "<script>alert(1)</script>", sanitizer).getOrNull()?.value?.length)
             assertEquals("description", ProductDescription.Failure.TooLong.field)
         }
     }
