@@ -18,6 +18,7 @@ object ErrorMessages {
     const val VALIDATION_ERROR = "VALIDATION_ERROR"
     const val NOT_FOUND = "NOT_FOUND"
     const val INTERNAL_ERROR = "INTERNAL_ERROR"
+    const val CHANGED_BY_SOMEONE_ELSE = "CHANGED_BY_SOMEONE_ELSE"
 
     private val byCode: Map<String, String> = mapOf(
         // --- general (contract ErrorCode) ---
@@ -29,6 +30,7 @@ object ErrorMessages {
         NOT_FOUND to "چیزی که دنبالش بودی پیدا نشد",
         "RATE_LIMITED" to "یه کم صبر کن و دوباره امتحان کن",
         INTERNAL_ERROR to "یه مشکلی پیش اومد. چند لحظه بعد دوباره امتحان کن",
+        CHANGED_BY_SOMEONE_ELSE to "این مورد همین الان توسط کس دیگه‌ای تغییر کرد. صفحه رو تازه کن و دوباره امتحان کن",
         // --- auth ---
         "PHONE_INVALID" to "موبایل معتبر وارد کن",
         "OTP_INVALID" to "کد درست نیست",

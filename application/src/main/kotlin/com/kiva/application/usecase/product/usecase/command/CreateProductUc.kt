@@ -41,6 +41,7 @@ import com.kiva.domain.aggregate.product.model.valueobject.ProductSpecs
 import com.kiva.domain.aggregate.product.model.valueobject.ProductStatus
 import com.kiva.domain.aggregate.product.model.valueobject.ShortDescription
 import com.kiva.domain.aggregate.product.model.valueobject.Sku
+import com.kiva.domain.aggregate.product.repository.ProductCodeTakenException
 import com.kiva.domain.aggregate.product.repository.ProductRepository
 import java.time.Clock
 import java.time.Instant
@@ -54,8 +55,9 @@ import java.time.Instant
  * from the id) must be free, and the contract's `status` can put it straight into the shop.
  *
  * Slug and codes are checked against the read model, which holds every saved product. Two requests with the same slug
- * at the same moment both pass that check; the read model's unique index then refuses the second, so it ends in an
- * error, never in a duplicate.
+ * at the same moment both pass that check; the read model's unique index then refuses the second, and the repository
+ * says which code it was (ProductCodeTakenException). So the second gets the same 409 as the check would have given,
+ * never a duplicate and never a 500.
  *
  * Not taken from the contract's request yet: tags and seo (nothing in the domain keeps them), and a color's
  * barcode, isActive, media (they come with uploads) and stockQuantity. Stock is its own aggregate: the starting stock is
@@ -179,9 +181,20 @@ class CreateProductUc(
             }
 
             moveTo(product, input.status, command.by, now).unwrapOr { return@inTransaction Result.failure(it) }
-            productRepository.save(product)
+            try {
+                productRepository.save(product)
+            } catch (e: ProductCodeTakenException) {
+                logger.info("CreateProductUc: ${e.message} between the check and the save")
+                return@inTransaction Result.failure(takenFailureOf(e, codes))
+            }
             Result.success(CreatedProductDto(product.id.value, product.variants.associate { it.colorKey.value to it.id.value }))
         }
+    }
+
+    /** The failure the check before the save would have answered, had the other product been saved a moment sooner. */
+    private fun takenFailureOf(taken: ProductCodeTakenException, codes: List<Pair<Sku, String>>): Failure = when (taken) {
+        is ProductCodeTakenException.SlugTaken -> Failure.DuplicateSlug(taken.slug)
+        is ProductCodeTakenException.SkuTaken -> Failure.DuplicateSku(codes.firstOrNull { it.first == taken.sku }?.second ?: "sku", taken.sku?.value)
     }
 
     // ============ checking the inputs ============

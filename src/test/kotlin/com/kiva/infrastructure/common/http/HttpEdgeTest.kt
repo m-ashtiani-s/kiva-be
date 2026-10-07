@@ -1,5 +1,8 @@
 package com.kiva.infrastructure.common.http
 
+import com.kiva.common.event.ConcurrentChangeException
+import com.kiva.common.event.valueobject.EventAggregateId
+import com.kiva.common.event.valueobject.EventAggregateName
 import com.kiva.common.railway.FailureKind
 import com.kiva.common.railway.Result
 import com.kiva.common.railway.ResultFailure
@@ -95,6 +98,9 @@ class HttpEdgeTest {
                 post("/products") {
                     val request = call.receive<CreateProductHttpRequest>()
                     call.respondResult(Result.success(request), HttpStatusCode.Created) { ProductHttpResponse(it.name, it.price) }
+                }
+                get("/raced") {
+                    throw ConcurrentChangeException(EventAggregateName("PRODUCT"), EventAggregateId.of(7))
                 }
                 get("/boom") {
                     error("connection to db.internal:5432 failed, password=s3cret")
@@ -253,6 +259,21 @@ class HttpEdgeTest {
             assertEquals(HttpStatusCode.NotFound, response.status)
             assertTrue(response.isProblemJson())
             assertEquals(json("""{"status":404,"code":"NOT_FOUND","message":"چیزی که دنبالش بودی پیدا نشد","errors":null,"meta":null}"""), response.problem())
+        }
+    }
+
+    @Nested
+    inner class Races {
+        @Test
+        fun `a change someone else saved first is a 409 CHANGED_BY_SOMEONE_ELSE problem, not a 500`() = withApp {
+            val response = client.get("/raced")
+
+            assertEquals(HttpStatusCode.Conflict, response.status)
+            assertTrue(response.isProblemJson())
+            assertEquals(
+                json("""{"status":409,"code":"CHANGED_BY_SOMEONE_ELSE","message":"این مورد همین الان توسط کس دیگه‌ای تغییر کرد. صفحه رو تازه کن و دوباره امتحان کن","errors":null,"meta":null}"""),
+                response.problem(),
+            )
         }
     }
 

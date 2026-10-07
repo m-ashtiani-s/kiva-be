@@ -2357,6 +2357,11 @@ paths:
               schema: { $ref: '#/components/schemas/AdminProduct' }
         '412':
           description: نسخه تغییر کرده (optimistic locking با ETag)
+        '409':
+          description: "`CHANGED_BY_SOMEONE_ELSE` — همزمان با این درخواست کس دیگه‌ای محصول را تغییر داد؛ هیچ‌چیز ذخیره نشد. صفحه را تازه کنید. یا `DUPLICATE_SLUG` / `DUPLICATE_SKU`"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
@@ -4001,6 +4006,7 @@ components:
         - NOT_FOUND
         - RATE_LIMITED
         - INTERNAL_ERROR
+        - CHANGED_BY_SOMEONE_ELSE
         - PHONE_INVALID
         - OTP_INVALID
         - OTP_EXPIRED

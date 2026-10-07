@@ -11,6 +11,11 @@ interface ProductRepository {
     /** The product rebuilt from its events, or null if it has none. */
     fun get(id: ProductId): Product?
 
-    /** Appends the product's new events ([Product.getRecordedEvents]) to its stream. */
+    /**
+     * Appends the product's new events ([Product.getRecordedEvents]) to its stream.
+     *
+     * Throws ConcurrentChangeException when someone else saved a change to it after it was read, and
+     * [ProductCodeTakenException] when another product took its slug or a SKU in the meantime.
+     */
     fun save(product: Product)
 }

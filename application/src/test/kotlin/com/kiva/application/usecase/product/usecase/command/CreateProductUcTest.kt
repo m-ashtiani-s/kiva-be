@@ -43,6 +43,7 @@ import com.kiva.domain.aggregate.product.model.valueobject.ProductStatus
 import com.kiva.domain.aggregate.product.model.valueobject.Sku
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
 import com.kiva.domain.aggregate.product.repository.ProductIdGenerator
+import com.kiva.domain.aggregate.product.repository.ProductCodeTakenException
 import com.kiva.domain.aggregate.product.repository.ProductRepository
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Nested
@@ -63,6 +64,12 @@ private class InMemoryProducts : ProductRepository {
     override fun save(product: Product) {
         streams[product.id] = streams[product.id].orEmpty() + product.getRecordedEvents()
     }
+}
+
+/** The save refused the way the database refuses it when another product took one of the codes a moment earlier. */
+private class TakenOnSave(products: ProductRepository, private val taken: (Product) -> ProductCodeTakenException) :
+    ProductRepository by products {
+    override fun save(product: Product) = throw taken(product)
 }
 
 /** Ids from 1, like the database sequences on an empty database. */
@@ -125,10 +132,10 @@ class CreateProductUcTest {
         override fun findByKey(key: ColorKey): Color? = palette.firstOrNull { it.key == key }
     }
 
-    private fun useCase(readModel: ReadModel = ReadModel()) = CreateProductUc(
+    private fun useCase(readModel: ReadModel = ReadModel(), repository: ProductRepository = products) = CreateProductUc(
         transactionManager,
-        ProductDomainService(products, ids, categories, materials, colors),
-        products,
+        ProductDomainService(repository, ids, categories, materials, colors),
+        repository,
         readModel,
         Clock.fixed(now, ZoneOffset.UTC),
     )
@@ -297,6 +304,19 @@ class CreateProductUcTest {
 
             assertEquals(Result.failure(CreateProductUc.Failure.DuplicateSku("variants.1.sku", "KV-1001-BLACK")), takenColorCode)
             assertEquals(Result.failure(CreateProductUc.Failure.DuplicateSku("sku", "KV-1002")), takenProductCode)
+            assertTrue(products.streams.isEmpty())
+        }
+
+        @Test
+        fun `a code another request took between the check and the save is the same 409 the check gives`() = runTest {
+            val slugTaken = useCase(repository = TakenOnSave(products) { ProductCodeTakenException.SlugTaken(it.slug, RuntimeException()) })
+                .execute(cmd())
+            val colorCodeTaken = useCase(
+                repository = TakenOnSave(products) { ProductCodeTakenException.SkuTaken(Sku.constructFromPersisted("KV-1002-BLACK"), RuntimeException()) },
+            ).execute(cmd())
+
+            assertEquals(Result.failure(CreateProductUc.Failure.DuplicateSlug(Slug.constructFromPersisted("mahak-shoulder-bag"))), slugTaken)
+            assertEquals(Result.failure(CreateProductUc.Failure.DuplicateSku("variants.1.sku", "KV-1002-BLACK")), colorCodeTaken)
             assertTrue(products.streams.isEmpty())
         }
 

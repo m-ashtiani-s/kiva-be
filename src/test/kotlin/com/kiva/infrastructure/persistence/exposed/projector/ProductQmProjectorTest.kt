@@ -10,6 +10,7 @@ import com.kiva.domain.aggregate.product.model.valueobject.ProductId
 import com.kiva.domain.aggregate.product.model.valueobject.ProductName
 import com.kiva.domain.aggregate.product.model.valueobject.ProductStatus
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
+import com.kiva.domain.aggregate.product.repository.ProductCodeTakenException
 import com.kiva.infrastructure.TestDatabase
 import com.kiva.infrastructure.persistence.event.ProductEventSamples
 import com.kiva.infrastructure.persistence.event.serializer.payload.product.ProductSpecsPayload
@@ -24,7 +25,6 @@ import com.kiva.infrastructure.persistence.exposed.tbl.ProductVariantQmTbl
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.exceptions.ExposedSQLException
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.junit.jupiter.api.AfterEach
@@ -331,11 +331,13 @@ class ProductQmProjectorTest {
     }
 
     @Test
-    fun `a slug another product has is refused by the read model, and the new product's events go with it`() {
+    fun `a slug another product has is refused by the read model as taken, and the new product's events go with it`() {
         val first = catalog.newProduct(listOf(NewColor("lilac")), slug = "mahak-shoulder-bag")
         val eventsBefore = transaction(db) { EventStoreTbl.selectAll().count() }
 
-        assertFailsWith<ExposedSQLException> { catalog.newProduct(listOf(NewColor("black")), slug = "mahak-shoulder-bag") }
+        val refused = assertFailsWith<ProductCodeTakenException.SlugTaken> { catalog.newProduct(listOf(NewColor("black")), slug = "mahak-shoulder-bag") }
+
+        assertEquals("mahak-shoulder-bag", refused.slug.value)
 
         assertEquals(eventsBefore, transaction(db) { EventStoreTbl.selectAll().count() })
         assertEquals(

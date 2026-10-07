@@ -8,10 +8,12 @@ import com.kiva.infrastructure.TestDatabase
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.yield
 import org.jetbrains.exposed.v1.core.Table
+import org.jetbrains.exposed.v1.exceptions.ExposedSQLException
 import org.jetbrains.exposed.v1.jdbc.SchemaUtils
 import org.jetbrains.exposed.v1.jdbc.deleteAll
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
@@ -88,6 +90,20 @@ class ExposedTransactionManagerTest {
                 }
             }
             assertEquals(emptyList(), committedNotes())
+        }
+
+        @Test
+        fun `a write the database refuses runs the block once, never again on its own`() = runTest {
+            var runs = 0
+            assertFailsWith<ExposedSQLException> {
+                tx.inTransaction<Unit, Rejected> {
+                    runs++
+                    // A NULL text breaks the column's NOT NULL; Exposed itself would stop it before the database.
+                    TransactionManager.current().exec("INSERT INTO tx_test_notes (text) VALUES (NULL)")
+                    Result.success(Unit)
+                }
+            }
+            assertEquals(1, runs)
         }
 
         @Test

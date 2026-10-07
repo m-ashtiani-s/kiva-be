@@ -27,6 +27,9 @@ object ProductVariantQmTbl : LongIdTable(name = "productvariantqm_tbl", columnNa
     val onHand = integer("onHand").default(0)
     val reserved = integer("reserved").default(0)
 
+    /** The unique key on [sku] as V5 named it; the database names it when it refuses a save. */
+    const val SKU_KEY = "productvariantqm_tbl_sku_key"
+
     init {
         uniqueIndex("productvariantqm_tbl_product_color_key", productId, colorKey)
     }

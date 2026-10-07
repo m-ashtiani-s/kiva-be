@@ -37,11 +37,11 @@ class ProductReadModelMigrationTest {
         rollback()
     }
 
-    private fun insertProduct(id: Long = testProduct, categorySlug: String = "shoulder") {
+    private fun insertProduct(id: Long = testProduct, categorySlug: String = "shoulder", slug: String = "bag-$id", sku: String = "KV-$id") {
         ProductQmTbl.insert {
             it[productId] = id
-            it[slug] = "bag-$id"
-            it[sku] = "KV-$id"
+            it[ProductQmTbl.slug] = slug
+            it[ProductQmTbl.sku] = sku
             it[name] = "کیف"
             it[searchText] = "کیف"
             it[ProductQmTbl.categorySlug] = categorySlug
@@ -71,6 +71,7 @@ class ProductReadModelMigrationTest {
     private fun insertColor(
         variantId: Long,
         colorKey: String = "lilac",
+        sku: String = "KV-$testProduct-${colorKey.uppercase()}-$variantId",
         isDefault: Boolean = false,
         isActive: Boolean = true,
         onHand: Int = 0,
@@ -80,7 +81,7 @@ class ProductReadModelMigrationTest {
             it[ProductVariantQmTbl.variantId] = variantId
             it[productId] = testProduct
             it[ProductVariantQmTbl.colorKey] = colorKey
-            it[sku] = "KV-$testProduct-${colorKey.uppercase()}-$variantId"
+            it[ProductVariantQmTbl.sku] = sku
             it[price] = 1_000_000
             it[compareAtPrice] = null
             it[hasOwnPrice] = false
@@ -130,6 +131,23 @@ class ProductReadModelMigrationTest {
             it[sortOrder] = 0
             it[media] = emptyList()
         }
+    }
+
+    // The repository tells these three apart by name, to answer DUPLICATE_SLUG / DUPLICATE_SKU instead of a 500.
+    @Test
+    fun `a slug is one product's`() = assertRefusedBy(ProductQmTbl.SLUG_KEY) {
+        insertProduct(id = 900_002, slug = "bag-$testProduct")
+    }
+
+    @Test
+    fun `a product code is one product's`() = assertRefusedBy(ProductQmTbl.SKU_KEY) {
+        insertProduct(id = 900_002, sku = "KV-$testProduct")
+    }
+
+    @Test
+    fun `a color code is one color's`() = assertRefusedBy(ProductVariantQmTbl.SKU_KEY) {
+        insertColor(900_001, "lilac", sku = "KV-TAKEN")
+        insertColor(900_002, "black", sku = "KV-TAKEN")
     }
 
     @Test
