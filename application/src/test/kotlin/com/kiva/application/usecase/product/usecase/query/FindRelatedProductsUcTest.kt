@@ -64,6 +64,8 @@ private class RelatedReadModel(var related: List<ProductCardQm>?) : ProductQmRep
     override fun countActiveByMaterial(): Map<Slug, Int> = error("not used here")
 
     override fun countActiveByColor(): Map<ColorKey, Int> = error("not used here")
+
+    override fun refreshSearchText(of: ProductQmRepository.NamedInSearch): Int = error("not used here")
 }
 
 class FindRelatedProductsUcTest {

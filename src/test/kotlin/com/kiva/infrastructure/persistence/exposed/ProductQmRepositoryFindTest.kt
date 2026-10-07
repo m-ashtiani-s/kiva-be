@@ -3,6 +3,7 @@ package com.kiva.infrastructure.persistence.exposed
 import com.kiva.application.repository.PriceRange
 import com.kiva.application.repository.ProductCardQm
 import com.kiva.application.repository.ProductFilter
+import com.kiva.application.repository.ProductQmRepository.NamedInSearch
 import com.kiva.application.usecase.product.usecase.query.ProductSorts
 import com.kiva.common.pagination.Page
 import com.kiva.common.pagination.Pageable
@@ -24,6 +25,11 @@ import com.kiva.infrastructure.TestDatabase
 import com.kiva.infrastructure.persistence.event.ProductEventSamples
 import com.kiva.infrastructure.persistence.exposed.StoredCatalog.Companion.priceTag
 import com.kiva.infrastructure.persistence.exposed.StoredCatalog.NewColor
+import com.kiva.infrastructure.persistence.exposed.tbl.CategoryTbl
+import com.kiva.infrastructure.persistence.exposed.tbl.ColorTbl
+import com.kiva.infrastructure.persistence.exposed.tbl.MaterialTbl
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.update
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
@@ -130,6 +136,34 @@ class ProductQmRepositoryFindTest {
         assertEquals(listOf("mahak-shoulder-bag"), search("ماه"))
         assertEquals(emptyList(), search("کیف", "سفید"))
         assertEquals(emptyList(), search("%"))
+    }
+
+    @Test
+    fun `after a category, material or color gets a new name, refreshing the search text finds its products by it`() {
+        inShop("mahak-shoulder-bag", listOf(NewColor("lilac")))
+        inShop("simple-wallet", listOf(NewColor("cream")), details = ProductEventSamples.bareDetails)
+
+        // Renamed inside one transaction that is rolled back, so the reference data stays as the migrations made it.
+        transaction(db) {
+            fun search(word: String) =
+                repository.find(ProductFilter(words = listOf(word)), pageable(ProductSorts.PRICE_DESC)).items.map { it.slug.value }
+
+            CategoryTbl.update({ CategoryTbl.slug eq "shoulder" }) { it[name] = "دوشی و هوبو" }
+            MaterialTbl.update({ MaterialTbl.slug eq "genuine-cow-leather" }) { it[name] = "چرم بزی" }
+            ColorTbl.update({ ColorTbl.colorKey eq "lilac" }) { it[name] = "بنفش روشن" }
+            // The search text is a copy: until it is written again, the new names find nothing.
+            assertEquals(listOf(emptyList<String>()), listOf("هوبو", "بزی", "بنفش").map(::search).distinct())
+
+            val refreshed = listOf(
+                NamedInSearch.Category(Slug.constructFromPersisted("shoulder")),
+                NamedInSearch.Material(Slug.constructFromPersisted("genuine-cow-leather")),
+                NamedInSearch.Color(ColorKey.constructFromPersisted("lilac")),
+            ).map { repository.refreshSearchText(it) }
+
+            assertEquals(listOf(1, 1, 1), refreshed)
+            assertEquals(listOf(listOf("mahak-shoulder-bag"), listOf("simple-wallet"), listOf("mahak-shoulder-bag")), listOf("هوبو", "بزی", "بنفش").map(::search))
+            rollback()
+        }
     }
 
     // ============ in what order ============

@@ -90,6 +90,8 @@ private class KnownColors(vararg colors: VariantQm) : ProductQmRepository {
     override fun countActiveByMaterial(): Map<Slug, Int> = error("not used here")
 
     override fun countActiveByColor(): Map<ColorKey, Int> = error("not used here")
+
+    override fun refreshSearchText(of: ProductQmRepository.NamedInSearch): Int = error("not used here")
 }
 
 class AdjustInventoryUcTest {

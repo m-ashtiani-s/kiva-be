@@ -6,6 +6,7 @@ import com.kiva.application.repository.ProductDetailQm
 import com.kiva.application.repository.ProductFacetsQm
 import com.kiva.application.repository.ProductFilter
 import com.kiva.application.repository.ProductQmRepository
+import com.kiva.application.repository.ProductQmRepository.NamedInSearch
 import com.kiva.application.repository.ProductRef
 import com.kiva.application.repository.VariantQm
 import com.kiva.application.usecase.product.usecase.query.ProductSorts
@@ -26,6 +27,7 @@ import com.kiva.domain.aggregate.product.model.valueobject.ShortDescription
 import com.kiva.domain.aggregate.product.model.valueobject.Sku
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
 import com.kiva.infrastructure.common.persistence.SortOrders
+import com.kiva.infrastructure.persistence.exposed.projector.ProductQmSummary
 import com.kiva.infrastructure.common.persistence.paginate
 import com.kiva.infrastructure.persistence.exposed.tbl.ProductQmTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.ProductVariantQmTbl
@@ -205,6 +207,24 @@ class ProductQmRepositoryImpl : ProductQmRepository {
                     isActive = it[ProductVariantQmTbl.isActive],
                 )
             }
+
+    override fun refreshSearchText(of: NamedInSearch): Int {
+        val showing = when (of) {
+            is NamedInSearch.Category -> ProductQmTbl.categorySlug eq of.slug.value
+            is NamedInSearch.Material -> ProductQmTbl.materialSlug eq of.slug.value
+            // Only active colors are in the search text, and colorKeys holds exactly those.
+            is NamedInSearch.Color -> Overlaps(ProductQmTbl.colorKeys, listOf(of.key.value))
+        }
+        // In one order, so two of these at once take the products' locks the same way round.
+        val productIds = ProductQmTbl.select(ProductQmTbl.productId).where { showing }
+            .orderBy(ProductQmTbl.productId to SortOrder.ASC)
+            .map { it[ProductQmTbl.productId] }
+        productIds.forEach {
+            ProductQmSummary.lock(it)
+            ProductQmSummary.refresh(it)
+        }
+        return productIds.size
+    }
 
     override fun isSlugTaken(slug: Slug): Boolean =
         !ProductQmTbl.select(ProductQmTbl.id).where { ProductQmTbl.slug eq slug.value }.empty()

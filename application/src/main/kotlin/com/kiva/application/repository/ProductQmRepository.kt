@@ -15,6 +15,9 @@ import java.time.Instant
  *
  * A port of the application layer, not of the domain: the read model serves queries and the use cases' checks; the
  * domain never reads it. Products in the shop are the ACTIVE ones; drafts and archived products are never counted.
+ *
+ * The one write a use case may ask for is [refreshSearchText]: categories, materials and colors are not event-sourced,
+ * so no event tells the projectors that one of their names changed.
  */
 interface ProductQmRepository {
 
@@ -56,4 +59,20 @@ interface ProductQmRepository {
 
     /** How many products in the shop offer each color among their active colors. A color with none is missing. */
     fun countActiveByColor(): Map<ColorKey, Int>
+
+    /**
+     * Writes the search text again for every product, whatever its status, that shows this category, material or
+     * color, so a search for its new name finds them. The use case that renames one calls it in the same transaction,
+     * after the rename. It goes through the projectors' own code, so the rules of the search text stay in one place.
+     *
+     * @return how many products it wrote.
+     */
+    fun refreshSearchText(of: NamedInSearch): Int
+
+    /** What a product's search text copies the name of, besides the product's own. */
+    sealed interface NamedInSearch {
+        data class Category(val slug: Slug) : NamedInSearch
+        data class Material(val slug: Slug) : NamedInSearch
+        data class Color(val key: ColorKey) : NamedInSearch
+    }
 }
