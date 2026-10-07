@@ -8,8 +8,9 @@ import kotlinx.serialization.Serializable
 /**
  * Contract schema `ProductSummary`: a product card.
  *
- * Not sent yet: `image` and `hoverImage` (no uploads yet, so the client draws the bag's illustration), `rating`
- * (no reviews yet) and `isWishlisted` (no accounts yet). The client already treats them as optional.
+ * [image] is always there and `null` until photos are uploaded (the client then draws the bag's illustration).
+ * Not sent yet: `hoverImage` (no uploads yet), `rating` (no reviews yet) and `isWishlisted` (no accounts yet); none
+ * of them is required by the contract.
  */
 @Serializable
 data class ProductSummaryHttpResponse(
@@ -25,6 +26,7 @@ data class ProductSummaryHttpResponse(
     val colorsCount: Int,
     val defaultColorKey: String,
     val displayColorKey: String,
+    val image: MediaAssetHttpResponse?,
     val badges: List<ProductBadgeHttpResponse>,
     val stock: StockInfoHttpResponse,
     val isNew: Boolean,
@@ -56,6 +58,8 @@ data class ProductSummaryHttpResponse(
             colorsCount = card.colors.size,
             defaultColorKey = card.defaultColorKey,
             displayColorKey = filterColors.firstOrNull { wanted -> card.colors.any { it.key == wanted } } ?: card.defaultColorKey,
+            // No uploads yet, so no photo of any color: always null for now.
+            image = null,
             badges = card.badges.map { ProductTexts.badge(it, card.price, card.stock) },
             stock = StockInfoHttpResponse.from(card.stock),
             isNew = card.isNew,
@@ -65,6 +69,19 @@ data class ProductSummaryHttpResponse(
         )
     }
 }
+
+/**
+ * Contract schema `MediaAsset`, as far as the card's photo needs it. Never made yet: it comes with uploads, which give
+ * each photo its id. Declared now so [ProductSummaryHttpResponse.image] already has its real type.
+ */
+@Serializable
+data class MediaAssetHttpResponse(
+    val id: String,
+    val type: String,
+    val url: String,
+    val thumbnailUrl: String?,
+    val alt: String?,
+)
 
 /** Contract schema `CategoryRef`. */
 @Serializable

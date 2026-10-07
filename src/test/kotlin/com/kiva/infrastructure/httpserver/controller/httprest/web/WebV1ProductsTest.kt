@@ -47,6 +47,7 @@ import io.mockk.slot
 import io.mockk.unmockkAll
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -167,7 +168,7 @@ class WebV1ProductsTest {
             json(
                 """
                 {"items":[],"meta":{"page":1,"size":24,"totalItems":0,"totalPages":0,"hasNext":false},
-                 "title":"فروشگاه کیوا","breadcrumbs":[{"label":"خانه","url":"/"},{"label":"فروشگاه"}],"appliedFilters":[],"sort":"newest"}
+                 "title":"فروشگاه کیوا","breadcrumbs":[{"label":"خانه","url":"/"},{"label":"فروشگاه","url":null}],"appliedFilters":[],"sort":"newest","facets":null}
                 """,
             ),
             response.json(),
@@ -216,14 +217,14 @@ class WebV1ProductsTest {
                  "category":{"id":3,"slug":"cross","name":"کراس‌بادی"},"bagType":"CROSSBODY",
                  "price":{"price":1450000,"compareAtPrice":1750000,"discountPercent":17,"discountAmount":300000,"currency":"IRT"},
                  "colors":[
-                   {"variantId":201,"color":{"key":"black","name":"مشکی","hex":"#2B2930","isLight":false,"sortOrder":1},"stockStatus":"IN_STOCK"},
-                   {"variantId":202,"color":{"key":"lilac","name":"یاسی","hex":"#C8B6E2","isLight":true,"sortOrder":4},"stockStatus":"LOW_STOCK"}],
-                 "colorsCount":2,"defaultColorKey":"black","displayColorKey":"black",
+                   {"variantId":201,"color":{"key":"black","name":"مشکی","hex":"#2B2930","isLight":false,"sortOrder":1,"productCount":null},"stockStatus":"IN_STOCK"},
+                   {"variantId":202,"color":{"key":"lilac","name":"یاسی","hex":"#C8B6E2","isLight":true,"sortOrder":4,"productCount":null},"stockStatus":"LOW_STOCK"}],
+                 "colorsCount":2,"defaultColorKey":"black","displayColorKey":"black","image":null,
                  "badges":[
-                   {"code":"NEW","label":"جدید","tone":"DEFAULT"},
-                   {"code":"SALE","label":"۱۷٪ تخفیف","tone":"SALE"},
+                   {"code":"NEW","label":"جدید","tone":"DEFAULT","icon":null},
+                   {"code":"SALE","label":"۱۷٪ تخفیف","tone":"SALE","icon":null},
                    {"code":"HAS_VIDEO","label":"ویدیو دارد","tone":"GLASS","icon":"play"},
-                   {"code":"LOW_STOCK","label":"فقط ۳ عدد","tone":"DANGER"}],
+                   {"code":"LOW_STOCK","label":"فقط ۳ عدد","tone":"DANGER","icon":null}],
                  "stock":{"status":"LOW_STOCK","availableQuantity":3,"maxOrderQuantity":3,"label":"فقط ۳ عدد در انبار باقی مونده"},
                  "isNew":true,"hasVideo":true,"soldCount":0,"freeShippingEligible":false}
                 """,
@@ -241,9 +242,9 @@ class WebV1ProductsTest {
 
         val items = client.get("$API_V1/products").json().jsonObject["items"]!!.jsonArray.map { it.jsonObject }
 
-        assertEquals(json("""{"status":"IN_STOCK","maxOrderQuantity":5,"label":"موجود در انبار"}"""), items[0]["stock"])
-        assertEquals(json("""{"status":"OUT_OF_STOCK","maxOrderQuantity":0,"label":"ناموجود"}"""), items[1]["stock"])
-        assertEquals(json("""[{"code":"SOLD_OUT","label":"تمام شد","tone":"DARK"}]"""), items[1]["badges"])
+        assertEquals(json("""{"status":"IN_STOCK","availableQuantity":null,"maxOrderQuantity":5,"label":"موجود در انبار"}"""), items[0]["stock"])
+        assertEquals(json("""{"status":"OUT_OF_STOCK","availableQuantity":null,"maxOrderQuantity":0,"label":"ناموجود"}"""), items[1]["stock"])
+        assertEquals(json("""[{"code":"SOLD_OUT","label":"تمام شد","tone":"DARK","icon":null}]"""), items[1]["badges"])
     }
 
     @Test
@@ -307,18 +308,18 @@ class WebV1ProductsTest {
         assertEquals(
             json(
                 """
-                [{"key":"MATERIAL","label":"جنس","value":"چرم مصنوعی سافت"},
-                 {"key":"DIMENSIONS","label":"ابعاد (طول × ارتفاع × عرض)","value":"۲۲ × ۱۶ × ۸٫۵ سانتی‌متر"},
-                 {"key":"WEIGHT","label":"وزن","value":"۴۲۰ گرم"},
-                 {"key":"CLOSURE","label":"نوع بسته شدن","value":"درب مگنتی"},
-                 {"key":"STRAP","label":"بند و دسته","value":"بند بلند قابل تنظیم"},
+                [{"key":"MATERIAL","label":"جنس","value":"چرم مصنوعی سافت","swatches":null,"tone":null},
+                 {"key":"DIMENSIONS","label":"ابعاد (طول × ارتفاع × عرض)","value":"۲۲ × ۱۶ × ۸٫۵ سانتی‌متر","swatches":null,"tone":null},
+                 {"key":"WEIGHT","label":"وزن","value":"۴۲۰ گرم","swatches":null,"tone":null},
+                 {"key":"CLOSURE","label":"نوع بسته شدن","value":"درب مگنتی","swatches":null,"tone":null},
+                 {"key":"STRAP","label":"بند و دسته","value":"بند بلند قابل تنظیم","swatches":null,"tone":null},
                  {"key":"COLORS","label":"رنگ‌های موجود","value":"مشکی، یاسی","swatches":[
-                   {"key":"black","name":"مشکی","hex":"#2B2930","isLight":false,"sortOrder":1},
-                   {"key":"lilac","name":"یاسی","hex":"#C8B6E2","isLight":true,"sortOrder":4}]},
-                 {"key":"OCCASIONS","label":"مناسب برای","value":"روزمره، سفر"},
-                 {"key":"CATEGORY","label":"دسته‌بندی","value":"کراس‌بادی"},
-                 {"key":"SKU","label":"کد محصول","value":"KV-1002"},
-                 {"key":"STOCK","label":"موجودی انبار","value":"فقط ۳ عدد باقی مانده","tone":"DANGER"}]
+                   {"key":"black","name":"مشکی","hex":"#2B2930","isLight":false,"sortOrder":1,"productCount":null},
+                   {"key":"lilac","name":"یاسی","hex":"#C8B6E2","isLight":true,"sortOrder":4,"productCount":null}],"tone":null},
+                 {"key":"OCCASIONS","label":"مناسب برای","value":"روزمره، سفر","swatches":null,"tone":null},
+                 {"key":"CATEGORY","label":"دسته‌بندی","value":"کراس‌بادی","swatches":null,"tone":null},
+                 {"key":"SKU","label":"کد محصول","value":"KV-1002","swatches":null,"tone":null},
+                 {"key":"STOCK","label":"موجودی انبار","value":"فقط ۳ عدد باقی مانده","tone":"DANGER","swatches":null}]
                 """,
             ),
             body["specTable"],
@@ -327,7 +328,7 @@ class WebV1ProductsTest {
             json(
                 """
                 [{"label":"خانه","url":"/"},{"label":"فروشگاه","url":"/products"},
-                 {"label":"کراس‌بادی","url":"/products?category=cross"},{"label":"کراس‌بادی نیلا"}]
+                 {"label":"کراس‌بادی","url":"/products?category=cross"},{"label":"کراس‌بادی نیلا","url":null}]
                 """,
             ),
             body["breadcrumbs"],
@@ -335,9 +336,9 @@ class WebV1ProductsTest {
         assertEquals(
             json(
                 """
-                {"id":201,"sku":"KV-1002-BLACK","color":{"key":"black","name":"مشکی","hex":"#2B2930","isLight":false,"sortOrder":1},
+                {"id":201,"sku":"KV-1002-BLACK","color":{"key":"black","name":"مشکی","hex":"#2B2930","isLight":false,"sortOrder":1,"productCount":null},
                  "isDefault":true,"price":{"price":1450000,"compareAtPrice":1750000,"discountPercent":17,"discountAmount":300000,"currency":"IRT"},
-                 "stock":{"status":"IN_STOCK","maxOrderQuantity":5,"label":"موجود در انبار"},
+                 "stock":{"status":"IN_STOCK","availableQuantity":null,"maxOrderQuantity":5,"label":"موجود در انبار"},
                  "media":[{"type":"IMAGE","url":"https://cdn.kiva.ir/p/2/black/front.webp","alt":"نمای جلو","view":"FRONT","viewLabel":"نمای جلو",
                            "sortOrder":0,"isPrimary":true}],
                  "hasVideo":false}
@@ -349,7 +350,7 @@ class WebV1ProductsTest {
             json(
                 """
                 {"dimensions":{"lengthCm":22.0,"heightCm":16.0,"widthCm":8.5},"weightGrams":420,
-                 "closure":{"type":"MAGNETIC_FLAP","label":"درب مگنتی"},"straps":[{"label":"بند بلند قابل تنظیم"}],
+                 "closure":{"type":"MAGNETIC_FLAP","label":"درب مگنتی"},"straps":[{"label":"بند بلند قابل تنظیم"}],"pockets":null,
                  "occasions":[{"code":"DAILY","label":"روزمره"},{"code":"TRAVEL","label":"سفر"}]}
                 """,
             ),
@@ -382,7 +383,7 @@ class WebV1ProductsTest {
 
         assertEquals(HttpStatusCode.NotFound, response.status)
         assertEquals(
-            json("""{"status":404,"code":"PRODUCT_NOT_FOUND","message":"این محصول پیدا نشد","instance":"/api/v1/products/a-draft"}"""),
+            json("""{"status":404,"code":"PRODUCT_NOT_FOUND","message":"این محصول پیدا نشد","instance":"/api/v1/products/a-draft","errors":null,"meta":null}"""),
             JsonObject(response.json().jsonObject - "traceId"),
         )
     }
@@ -412,23 +413,23 @@ class WebV1ProductsTest {
 
         assertEquals("کیف دوشی", body["title"]!!.jsonPrimitive.content)
         assertEquals(
-            json("""[{"label":"خانه","url":"/"},{"label":"فروشگاه","url":"/products"},{"label":"کیف دوشی"}]"""),
+            json("""[{"label":"خانه","url":"/"},{"label":"فروشگاه","url":"/products"},{"label":"کیف دوشی","url":null}]"""),
             body["breadcrumbs"],
         )
         assertEquals(
             json(
                 """
-                [{"key":"q","value":"کیف","label":"جستجو: «کیف»"},
-                 {"key":"category","value":"shoulder","label":"کیف دوشی"},
+                [{"key":"q","value":"کیف","label":"جستجو: «کیف»","swatchHex":null},
+                 {"key":"category","value":"shoulder","label":"کیف دوشی","swatchHex":null},
                  {"key":"color","value":"lilac","label":"یاسی","swatchHex":"#C8B6E2"},
-                 {"key":"price","label":"۵۰۰٬۰۰۰ تا ۲٬۵۰۰٬۰۰۰ تومان"},
-                 {"key":"onSale","label":"تخفیف‌خورده"},
-                 {"key":"inStock","label":"موجود"},
-                 {"key":"isNew","label":"جدید"},
-                 {"key":"hasVideo","label":"ویدیو دار"},
-                 {"key":"bagType","value":"HOBO","label":"دوشی هوبو"},
-                 {"key":"material","value":"satin","label":"ساتن"},
-                 {"key":"occasion","value":"PARTY","label":"مهمانی و مجالس"}]
+                 {"key":"price","value":null,"label":"۵۰۰٬۰۰۰ تا ۲٬۵۰۰٬۰۰۰ تومان","swatchHex":null},
+                 {"key":"onSale","value":null,"label":"تخفیف‌خورده","swatchHex":null},
+                 {"key":"inStock","value":null,"label":"موجود","swatchHex":null},
+                 {"key":"isNew","value":null,"label":"جدید","swatchHex":null},
+                 {"key":"hasVideo","value":null,"label":"ویدیو دار","swatchHex":null},
+                 {"key":"bagType","value":"HOBO","label":"دوشی هوبو","swatchHex":null},
+                 {"key":"material","value":"satin","label":"ساتن","swatchHex":null},
+                 {"key":"occasion","value":"PARTY","label":"مهمانی و مجالس","swatchHex":null}]
                 """,
             ),
             body["appliedFilters"],
@@ -442,7 +443,7 @@ class WebV1ProductsTest {
         val body = client.get("$API_V1/products").json().jsonObject
 
         assertEquals("تخفیف‌خورده‌ها", body["title"]!!.jsonPrimitive.content)
-        assertEquals(json("""[{"key":"price","label":"تا ۹۰۰٬۰۰۰ تومان"},{"key":"onSale","label":"تخفیف‌خورده"}]"""), body["appliedFilters"])
+        assertEquals(json("""[{"key":"price","value":null,"label":"تا ۹۰۰٬۰۰۰ تومان","swatchHex":null},{"key":"onSale","value":null,"label":"تخفیف‌خورده","swatchHex":null}]"""), body["appliedFilters"])
     }
 
     // ============ facets ============
@@ -461,10 +462,10 @@ class WebV1ProductsTest {
 
     private val facetsJson =
         """
-        {"categories":[{"value":"shoulder","label":"کیف دوشی","count":2,"selected":true}],
+        {"categories":[{"value":"shoulder","label":"کیف دوشی","count":2,"selected":true,"hex":null}],
          "colors":[{"value":"lilac","label":"یاسی","count":1,"selected":false,"hex":"#C8B6E2"}],
-         "materials":[{"value":"satin","label":"ساتن","count":0,"selected":false}],
-         "bagTypes":[{"value":"HOBO","label":"دوشی هوبو","count":2,"selected":false}],
+         "materials":[{"value":"satin","label":"ساتن","count":0,"selected":false,"hex":null}],
+         "bagTypes":[{"value":"HOBO","label":"دوشی هوبو","count":2,"selected":false,"hex":null}],
          "price":{"min":590000,"max":3160000,"step":10000},
          "onSaleCount":1,"inStockCount":2,"newCount":0,"withVideoCount":1}
         """
@@ -492,7 +493,7 @@ class WebV1ProductsTest {
         val without = client.get("$API_V1/products?color=lilac").json().jsonObject
         val with = client.get("$API_V1/products?color=lilac&includeFacets=true").json().jsonObject
 
-        assertEquals(null, without["facets"])
+        assertEquals(JsonNull, without["facets"])
         assertEquals(json(facetsJson), with["facets"])
         assertEquals(ProductFilterQuery(colors = listOf("lilac")), query.captured.filters)
         coVerify(exactly = 1) { getProductFacetsUc.execute(any()) }

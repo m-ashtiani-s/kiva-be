@@ -81,7 +81,7 @@ class PageableParamsTest {
         assertEquals(
             json(
                 """{"status":400,"code":"VALIDATION_ERROR","message":"چند تا از فیلدها رو باید درست کنی",
-                    "errors":[{"field":"page","code":"PAGE_INVALID","message":"شماره‌ی صفحه درست نیست"}]}""",
+                    "errors":[{"field":"page","code":"PAGE_INVALID","message":"شماره‌ی صفحه درست نیست"}],"meta":null}""",
             ),
             response.problem(),
         )

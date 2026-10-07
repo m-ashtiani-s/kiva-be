@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: KIVA Store API — کیوا
-  version: 1.2.0
+  version: 1.3.0
   contact:
     name: KIVA Engineering
     email: support@kiva.ir
@@ -30,6 +30,7 @@ info:
     | حروف فارسی | در جستجو `ي→ی` و `ك→ک` و حذف نیم‌فاصله‌ی اضافی انجام می‌شود. |
     | شناسه‌ها | محصول/ورینت/آدرس: `integer` — سفارش: کد عمومی `KV-218340` — رنگ: کلید رشته‌ای (`lilac`) — دسته‌بندی: `slug` (`shoulder`) |
     | صفحه‌بندی | `page` (از ۱) و `size` — پاسخ: `{ items: [], meta: { page, size, totalItems, totalPages, hasNext } }` |
+    | فیلدهای بی‌مقدار | همه‌ی فیلدهای تعریف‌شده‌ی پاسخ **همیشه** فرستاده می‌شوند؛ فیلدی که مقدار ندارد `null` است (نه حذف‌شده). فیلدی که می‌تواند بی‌مقدار باشد در این سند `nullable` است. |
     | خطا | `application/problem+json` (RFC 7807) + فیلد ماشینی `code` (لیست کامل در `ErrorCode`) + `message` فارسی قابل نمایش به کاربر + `errors[]` برای خطای فیلدها |
     | 400 در برابر 422 | `400 VALIDATION_ERROR` = ورودی از نظر شکل/فرمت غلط است. `422` = ورودی درست است ولی قانون کسب‌وکار اجازه نمی‌دهد (مثل `DISCOUNT_MIN_SUBTOTAL_NOT_MET`). |
     | Idempotency | `POST /orders`، `POST /payments/{id}/retry` و `POST /me/orders/{code}/payments` هدر `Idempotency-Key` (UUID) می‌گیرند؛ تکرار با همان کلید همان پاسخ را برمی‌گرداند. |
@@ -3975,13 +3976,16 @@ components:
         code: { $ref: '#/components/schemas/ErrorCode' }
         message: { type: string, description: پیام فارسی قابل نمایش به کاربر, example: این کد برای خرید بالای ۲٬۰۰۰٬۰۰۰ تومان فعاله }
         detail: { type: string, description: توضیح فنی (فقط در محیط‌های غیر production) }
-        instance: { type: string, example: /api/v1/cart/discount-code }
-        traceId: { type: string, example: 4bf92f3577b34da6 }
+        instance: { type: string, nullable: true, example: /api/v1/cart/discount-code }
+        traceId: { type: string, nullable: true, example: 4bf92f3577b34da6 }
         errors:
           type: array
+          nullable: true
+          description: فقط برای `VALIDATION_ERROR`؛ در بقیه‌ی خطاها `null`
           items: { $ref: '#/components/schemas/FieldError' }
         meta:
           type: object
+          nullable: true
           description: داده‌ی کمکی وابسته به خطا (`minSubtotal`, `availableQuantity`, `attemptsLeft`, `retryAfterSeconds`, `payable`, ...)
           additionalProperties: true
           example: { minSubtotal: 2000000 }
@@ -4075,7 +4079,7 @@ components:
         height: { type: integer, example: 1224 }
         durationSec: { type: integer, nullable: true, description: طول ویدیو (نمایش «ویدیو ۰:۲۴»), example: 24 }
         mimeType: { type: string, example: image/webp }
-        alt: { type: string, example: کیف دوشی ماهک رنگ یاسی — نمای جلو }
+        alt: { type: string, nullable: true, example: کیف دوشی ماهک رنگ یاسی — نمای جلو }
         blurhash: { type: string, nullable: true, description: placeholder تار برای لود تدریجی, example: 'LKO2?U%2Tw=w]~RBVZRi};RPxuwH' }
 
     # ============ CATALOG ENUMS ============
@@ -4282,7 +4286,10 @@ components:
         displayColorKey:
           allOf: [{ $ref: '#/components/schemas/ColorKey' }]
           description: رنگی که عکس کارت با آن نمایش داده شود (اگر فیلتر رنگ فعال باشد = اولین رنگ منطبق)
-        image: { $ref: '#/components/schemas/MediaAsset' }
+        image:
+          allOf: [{ $ref: '#/components/schemas/MediaAsset' }]
+          nullable: true
+          description: عکس کارت (همیشه فرستاده می‌شود)؛ تا وقتی عکسی آپلود نشده `null` است و کلاینت ایلاستریشن کیف را نشان می‌دهد
         hoverImage:
           type: object
           allOf: [{ $ref: '#/components/schemas/MediaAsset' }]
@@ -4303,8 +4310,8 @@ components:
         - $ref: '#/components/schemas/MediaAsset'
         - type: object
           properties:
-            view: { $ref: '#/components/schemas/MediaView' }
-            viewLabel: { type: string, example: نمای جلو }
+            view: { allOf: [{ $ref: '#/components/schemas/MediaView' }], nullable: true }
+            viewLabel: { type: string, nullable: true, example: نمای جلو }
             sortOrder: { type: integer, example: 0 }
             isPrimary: { type: boolean, example: true }
             isUnedited: { type: boolean, description: «عکس واقعی، بدون ادیت», default: true }
@@ -4361,17 +4368,19 @@ components:
       type: object
       description: مشخصات ساختاریافته (برای فیلتر، مقایسه و SEO). نسخه‌ی آماده‌ی نمایش در `specTable` است.
       properties:
-        dimensions: { $ref: '#/components/schemas/ProductDimensions' }
-        weightGrams: { type: integer, example: 650 }
+        dimensions: { allOf: [{ $ref: '#/components/schemas/ProductDimensions' }], nullable: true }
+        weightGrams: { type: integer, nullable: true, example: 650 }
         closure:
           type: object
+          nullable: true
           properties:
             type: { $ref: '#/components/schemas/ClosureType' }
             label: { type: string, example: زیپ فلزی }
         straps:
           type: array
+          nullable: true
           items: { $ref: '#/components/schemas/StrapInfo' }
-        pockets: { $ref: '#/components/schemas/PocketInfo' }
+        pockets: { allOf: [{ $ref: '#/components/schemas/PocketInfo' }], nullable: true }
         laptopMaxInch: { type: number, nullable: true, description: جای لپ‌تاپ تا (اینچ), example: 14 }
         capacityLiters: { type: number, nullable: true, description: '[پیشنهادی] حجم', example: 9.5 }
         waterproof: { type: boolean, example: false }
@@ -4437,7 +4446,7 @@ components:
       type: object
       properties:
         title: { type: string, example: کیف دوشی ماهک | کیوا }
-        description: { type: string, maxLength: 170 }
+        description: { type: string, nullable: true, maxLength: 170 }
         canonicalUrl: { type: string, format: uri, example: 'https://kiva.ir/product/mahak-shoulder-bag' }
         ogImageUrl: { type: string, format: uri }
         noIndex: { type: boolean, default: false }
@@ -4473,6 +4482,7 @@ components:
             shortDescription: { type: string, nullable: true }
             description:
               allOf: [{ $ref: '#/components/schemas/HtmlString' }]
+              nullable: true
               description: متن تب «توضیحات»
               example: '<p>کیف دوشی ماهک با چرم مصنوعی مات درجه یک، دوخت دقیق و یراق‌آلات مقاوم...</p>'
             highlights:
@@ -4481,7 +4491,7 @@ components:
               items: { type: string }
               example: [چرم مصنوعی مات درجه یک با دوخت دولایه و لبه‌دوزی دستی, یراق‌آلات فلزی ضدزنگ با روکش طلایی مات, آستر داخلی ضدلک با رنگ یاسی کیوا]
             material: { $ref: '#/components/schemas/MaterialRef' }
-            materialDescription: { type: string, example: چرم مصنوعی مات درجه یک }
+            materialDescription: { type: string, nullable: true, example: چرم مصنوعی مات درجه یک }
             specs: { $ref: '#/components/schemas/ProductSpecs' }
             specTable:
               type: array
@@ -4523,7 +4533,7 @@ components:
                 alertId: { type: integer, nullable: true }
             shareUrl: { type: string, format: uri, description: 'همان `seo.canonicalUrl` (مسیر `product/{slug}`)', example: 'https://kiva.ir/product/mahak-shoulder-bag' }
             seo: { $ref: '#/components/schemas/SeoMeta' }
-            publishedAt: { type: string, format: date-time }
+            publishedAt: { type: string, format: date-time, nullable: true }
             updatedAt: { type: string, format: date-time }
 
     # ============ LISTING ============
@@ -4562,6 +4572,8 @@ components:
           items: { $ref: '#/components/schemas/FacetOption' }
         price:
           type: object
+          nullable: true
+          description: null وقتی هیچ محصولی با فیلترها جور نیست
           required: [min, max, step]
           properties:
             min: { allOf: [{ $ref: '#/components/schemas/Money' }], description: کمترین قیمت فعلی (گرد به پایین), example: 590000 }

@@ -91,7 +91,7 @@ class WebV1CatalogTest {
         assertEquals(HttpStatusCode.OK, response.status)
         assertEquals(
             json(
-                """[{"id":1,"slug":"genuine-cow-leather","name":"چرم طبیعی گاوی","family":"GENUINE_LEATHER",
+                """[{"id":1,"slug":"genuine-cow-leather","name":"چرم طبیعی گاوی","family":"GENUINE_LEATHER","description":null,
                      "careInstructions":[],"productCount":0}]""",
             ),
             response.json(),
@@ -99,7 +99,7 @@ class WebV1CatalogTest {
     }
 
     @Test
-    fun `GET categories returns the contract's Category, with the icon as an object and no null description`() = withApp {
+    fun `GET categories returns the contract's Category, with the icon as an object and description as null when it has none`() = withApp {
         coEvery { listCategoriesUc.execute(ListCategoriesUc.Qry) } returns Result.success(
             listOf(shoulder, shoulder.copy(id = 3, slug = "cross", name = "کراس‌بادی", description = "برای دست‌های آزاد")),
         )
@@ -109,7 +109,7 @@ class WebV1CatalogTest {
         assertEquals(HttpStatusCode.OK, response.status)
         assertEquals(
             json(
-                """[{"id":1,"slug":"shoulder","name":"کیف دوشی","icon":{"bagType":"HOBO","colorKey":"lilac"},
+                """[{"id":1,"slug":"shoulder","name":"کیف دوشی","description":null,"icon":{"bagType":"HOBO","colorKey":"lilac"},
                      "productCount":0,"sortOrder":1,"showInMenu":true},
                     {"id":3,"slug":"cross","name":"کراس‌بادی","description":"برای دست‌های آزاد",
                      "icon":{"bagType":"HOBO","colorKey":"lilac"},"productCount":0,"sortOrder":1,"showInMenu":true}]""",
@@ -140,7 +140,7 @@ class WebV1CatalogTest {
         val problem = response.json().jsonObject
         assertNotNull(problem["traceId"])
         assertEquals(
-            json("""{"status":404,"code":"NOT_FOUND","message":"چیزی که دنبالش بودی پیدا نشد","instance":"/api/v1/categories/nope"}"""),
+            json("""{"status":404,"code":"NOT_FOUND","message":"چیزی که دنبالش بودی پیدا نشد","instance":"/api/v1/categories/nope","errors":null,"meta":null}"""),
             JsonObject(problem - "traceId"),
         )
     }

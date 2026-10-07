@@ -264,7 +264,7 @@ class CommonShowcaseTest {
             json(
                 """{"status":400,"code":"VALIDATION_ERROR","message":"چند تا از فیلدها رو باید درست کنی","errors":[
                      {"field":"name","code":"PRODUCT_NAME_BLANK","message":"این مقدار درست نیست"},
-                     {"field":"price","code":"MONEY_NEGATIVE","message":"مبلغ نمی‌تونه منفی باشه"}]}""",
+                     {"field":"price","code":"MONEY_NEGATIVE","message":"مبلغ نمی‌تونه منفی باشه"}],"meta":null}""",
             ),
             response.problem(),
         )
@@ -278,7 +278,7 @@ class CommonShowcaseTest {
 
         assertEquals(HttpStatusCode.Conflict, response.status)
         assertEquals(
-            json("""{"status":409,"code":"PRODUCT_NAME_TAKEN","message":"این مورد قبلاً ثبت شده یا در این فاصله تغییر کرده"}"""),
+            json("""{"status":409,"code":"PRODUCT_NAME_TAKEN","message":"این مورد قبلاً ثبت شده یا در این فاصله تغییر کرده","errors":null,"meta":null}"""),
             response.problem(),
         )
         assertEquals(listOf("Mug"), storedNames())

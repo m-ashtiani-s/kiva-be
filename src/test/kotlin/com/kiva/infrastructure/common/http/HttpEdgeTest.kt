@@ -163,7 +163,7 @@ class HttpEdgeTest {
 
             assertEquals(status, response.status)
             assertTrue(response.isProblemJson())
-            assertEquals(json("""{"status":${status.value},"code":"SOMETHING_WRONG"}"""), JsonObject(response.problem().jsonObject - "message"))
+            assertEquals(json("""{"status":${status.value},"code":"SOMETHING_WRONG","errors":null,"meta":null}"""), JsonObject(response.problem().jsonObject - "message"))
         }
 
         @Test
@@ -171,7 +171,7 @@ class HttpEdgeTest {
             val response = client.get("/product-not-found")
             val body = response.json().jsonObject
 
-            assertEquals(json("""{"status":404,"code":"PRODUCT_NOT_FOUND","message":"این محصول پیدا نشد"}"""), response.problem())
+            assertEquals(json("""{"status":404,"code":"PRODUCT_NOT_FOUND","message":"این محصول پیدا نشد","errors":null,"meta":null}"""), response.problem())
             assertEquals("/product-not-found", body.getValue("instance").jsonPrimitive.content)
             assertEquals(response.headers[TRACE_ID_HEADER], body.getValue("traceId").jsonPrimitive.content)
         }
@@ -179,7 +179,7 @@ class HttpEdgeTest {
         @Test
         fun `meta reaches the client and fills the message`() = withApp {
             assertEquals(
-                json("""{"status":422,"code":"QUANTITY_EXCEEDS_STOCK","message":"فقط ۳ عدد از این کالا موجوده","meta":{"availableQuantity":3}}"""),
+                json("""{"status":422,"code":"QUANTITY_EXCEEDS_STOCK","message":"فقط ۳ عدد از این کالا موجوده","meta":{"availableQuantity":3},"errors":null}"""),
                 client.get("/low-stock").problem(),
             )
         }
@@ -192,7 +192,7 @@ class HttpEdgeTest {
                 json(
                     """{"status":400,"code":"VALIDATION_ERROR","message":"چند تا از فیلدها رو باید درست کنی","errors":[
                          {"field":"newAddress.postalCode","code":"POSTAL_CODE_INVALID","message":"این مقدار درست نیست"},
-                         {"field":"newAddress.recipientPhone","code":"PHONE_INVALID","message":"موبایل معتبر وارد کن"}]}""",
+                         {"field":"newAddress.recipientPhone","code":"PHONE_INVALID","message":"موبایل معتبر وارد کن"}],"meta":null}""",
                 ),
                 response.problem(),
             )
@@ -201,7 +201,7 @@ class HttpEdgeTest {
         @Test
         fun `an invalid failure without any field keeps its own code`() = withApp {
             assertEquals(
-                json("""{"status":400,"code":"DISCOUNT_CODE_INVALID","message":"این کد تخفیف معتبر نیست"}"""),
+                json("""{"status":400,"code":"DISCOUNT_CODE_INVALID","message":"این کد تخفیف معتبر نیست","errors":null,"meta":null}"""),
                 client.get("/invalid-without-field").problem(),
             )
         }
@@ -234,7 +234,7 @@ class HttpEdgeTest {
             }
             assertEquals(HttpStatusCode.BadRequest, response.status)
             assertTrue(response.isProblemJson())
-            assertEquals(json("""{"status":400,"code":"VALIDATION_ERROR","message":"اطلاعات ارسالی قابل خوندن نیست"}"""), response.problem())
+            assertEquals(json("""{"status":400,"code":"VALIDATION_ERROR","message":"اطلاعات ارسالی قابل خوندن نیست","errors":null,"meta":null}"""), response.problem())
         }
 
         @Test
@@ -252,7 +252,7 @@ class HttpEdgeTest {
             val response = client.get("/no-such-route")
             assertEquals(HttpStatusCode.NotFound, response.status)
             assertTrue(response.isProblemJson())
-            assertEquals(json("""{"status":404,"code":"NOT_FOUND","message":"چیزی که دنبالش بودی پیدا نشد"}"""), response.problem())
+            assertEquals(json("""{"status":404,"code":"NOT_FOUND","message":"چیزی که دنبالش بودی پیدا نشد","errors":null,"meta":null}"""), response.problem())
         }
     }
 
@@ -263,7 +263,7 @@ class HttpEdgeTest {
             val response = client.get("/boom")
             assertEquals(HttpStatusCode.InternalServerError, response.status)
             assertEquals(
-                json("""{"status":500,"code":"INTERNAL_ERROR","message":"یه مشکلی پیش اومد. چند لحظه بعد دوباره امتحان کن"}"""),
+                json("""{"status":500,"code":"INTERNAL_ERROR","message":"یه مشکلی پیش اومد. چند لحظه بعد دوباره امتحان کن","errors":null,"meta":null}"""),
                 response.problem(),
             )
         }

@@ -29,6 +29,7 @@ import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -203,7 +204,7 @@ class WebV1ProductsOnDatabaseTest {
     }
 
     @Test
-    fun `the stock number is in the answer only where the status is LOW_STOCK`() = withApp {
+    fun `the stock number is given only where the status is LOW_STOCK, null elsewhere`() = withApp {
         // Plenty (Mahak, 12 a color), few of each color (Aida 3, Hasti 2) and none (Shabtab).
         val stocks = listOf("mahak-shoulder-bag", "aida-handbag", "hasti-shoulder-bag", "shabtab-clutch").flatMap { slug ->
             val body = page(slug).body()
@@ -212,7 +213,7 @@ class WebV1ProductsOnDatabaseTest {
 
         stocks.forEach { stock ->
             val lowStock = stock["status"]!!.jsonPrimitive.content == "LOW_STOCK"
-            assertEquals(lowStock, "availableQuantity" in stock, "$stock")
+            assertEquals(lowStock, stock.getValue("availableQuantity") != JsonNull, "$stock")
         }
         assertEquals(setOf("IN_STOCK", "LOW_STOCK", "OUT_OF_STOCK"), stocks.map { it["status"]!!.jsonPrimitive.content }.toSet())
         // Aida has 3 of each color: each color says so, the bag as a whole (12) doesn't.
@@ -229,7 +230,7 @@ class WebV1ProductsOnDatabaseTest {
         val body = shabtab.body()
         assertEquals("ناموجود", body["stock"]!!.jsonObject["label"]!!.jsonPrimitive.content)
         assertEquals(
-            Json.parseToJsonElement("""{"key":"STOCK","label":"موجودی انبار","value":"تمام شد","tone":"DARK"}"""),
+            Json.parseToJsonElement("""{"key":"STOCK","label":"موجودی انبار","value":"تمام شد","swatches":null,"tone":"DARK"}"""),
             body["specTable"]!!.jsonArray.last(),
         )
     }
