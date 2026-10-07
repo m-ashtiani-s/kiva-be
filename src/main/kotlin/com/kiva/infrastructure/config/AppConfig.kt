@@ -7,6 +7,7 @@ data class AppConfig(
     val datasource: DatasourceConfig,
     val shop: ShopConfig = ShopConfig.DEFAULT,
     val seed: SeedConfig = SeedConfig(enabled = false),
+    val http: HttpConfig = HttpConfig(allowedOrigins = emptyList()),
 ) {
     companion object {
         fun from(config: ApplicationConfig): AppConfig {
@@ -24,6 +25,7 @@ data class AppConfig(
                 ),
                 // Strict: a typo such as "yes" stops the boot instead of quietly meaning false.
                 seed = SeedConfig(enabled = config.property("kiva.seed.enabled").getString().toBooleanStrict()),
+                http = HttpConfig.of(config.property("kiva.http.allowedOrigins").getString()),
             )
         }
     }
@@ -38,6 +40,25 @@ data class ShopConfig(val freeShippingThreshold: Money, val siteUrl: String) {
     companion object {
         /** The contract's numbers. */
         val DEFAULT = ShopConfig(freeShippingThreshold = Money.constructFromPersisted(3_000_000), siteUrl = "https://kiva.ir")
+    }
+}
+
+/**
+ * @property allowedOrigins the frontends a browser may call the API from (CORS), e.g. `https://kiva.ir`.
+ *   Each is a full origin: scheme, host and port when not the default, no path, no trailing slash.
+ */
+data class HttpConfig(val allowedOrigins: List<String>) {
+    init {
+        allowedOrigins.forEach { origin ->
+            require(ORIGIN.matches(origin)) { "kiva.http.allowedOrigins: '$origin' is not an origin like https://kiva.ir" }
+        }
+    }
+
+    companion object {
+        private val ORIGIN = Regex("^https?://[^/*\\s]+$")
+
+        /** From the comma-separated config value; empty pieces are ignored. */
+        fun of(commaSeparated: String) = HttpConfig(commaSeparated.split(',').map { it.trim() }.filter { it.isNotEmpty() })
     }
 }
 
