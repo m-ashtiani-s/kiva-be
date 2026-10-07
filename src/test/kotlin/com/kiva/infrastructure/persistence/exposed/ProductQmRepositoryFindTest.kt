@@ -51,7 +51,7 @@ class ProductQmRepositoryFindTest {
     private fun slugsOf(filter: ProductFilter = ProductFilter(), sort: String = ProductSorts.NEWEST): List<String> =
         find(filter, pageable(sort)).items.map { it.slug.value }
 
-    /** A product saved and published, so it is in the shop. */
+    /** A product saved and published [at] that moment, so it is in the shop. */
     private fun inShop(
         slug: String,
         colors: List<NewColor> = listOf(NewColor("lilac")),
@@ -61,7 +61,7 @@ class ProductQmRepositoryFindTest {
         at: Instant = now,
     ): Product {
         val product = catalog.newProduct(colors, priceTag(price, compareAt), details, slug, at)
-        return catalog.change(product.id) { it.publish(staff, now) }
+        return catalog.change(product.id) { it.publish(staff, at) }
     }
 
     private fun Product.color(key: String): VariantId = variants.single { it.colorKey.value == key }.id
@@ -150,6 +150,25 @@ class ProductQmRepositoryFindTest {
         (ProductSorts.names - setOf(ProductSorts.PRICE_ASC, ProductSorts.PRICE_DESC)).forEach { sort ->
             assertEquals("sold-out", slugsOf(sort = sort).last(), "sort $sort")
         }
+    }
+
+    @Test
+    fun `newest is by the first time in the shop - not when it was made, and going out and back in doesn't make it new`() {
+        val monthAgo = now.minusSeconds(30 * 24 * 3600)
+        val yesterday = now.minusSeconds(24 * 3600)
+        // Made and put in the shop yesterday.
+        restock(inShop("made-yesterday", at = yesterday).color("lilac"), 4)
+        // Made a month ago, a draft until today.
+        val draft = catalog.newProduct(listOf(NewColor("lilac")), slug = "draft-until-today", at = monthAgo)
+        catalog.change(draft.id) { it.publish(staff, now) }
+        restock(draft.color("lilac"), 4)
+        // In the shop since a month ago; taken out and put back today.
+        val back = inShop("back-in-shop", at = monthAgo)
+        catalog.change(back.id) { it.unpublish(staff, now) }
+        catalog.change(back.id) { it.publish(staff, now.plusSeconds(60)) }
+        restock(back.color("lilac"), 4)
+
+        assertEquals(listOf("draft-until-today", "made-yesterday", "back-in-shop"), slugsOf(sort = ProductSorts.NEWEST))
     }
 
     @Test

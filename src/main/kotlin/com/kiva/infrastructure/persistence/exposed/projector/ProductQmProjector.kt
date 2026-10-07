@@ -26,6 +26,7 @@ import com.kiva.infrastructure.persistence.exposed.tbl.ProductQmTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.ProductVariantQmTbl
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.statements.UpdateBuilder
 import org.jetbrains.exposed.v1.core.statements.UpdateStatement
 import org.jetbrains.exposed.v1.jdbc.insert
@@ -56,9 +57,15 @@ object ProductQmProjector {
             is ProductCreated -> insertProduct(event)
             is ProductDetailsChanged -> updateProduct(productId) { it.writeDetails(event.details) }
             is ProductPriceChanged -> changePrice(productId, event.priceTag)
-            is ProductPublished -> updateProduct(productId) {
-                it[status] = ProductStatus.ACTIVE
-                it[publishedOn] = event.occurredOn.utc()
+            is ProductPublished -> {
+                updateProduct(productId) {
+                    it[status] = ProductStatus.ACTIVE
+                    it[publishedOn] = event.occurredOn.utc()
+                }
+                // Only the first time: taken out of the shop and put back, a product is not new again.
+                ProductQmTbl.update({ (ProductQmTbl.productId eq productId) and ProductQmTbl.firstPublishedOn.isNull() }) {
+                    it[firstPublishedOn] = event.occurredOn.utc()
+                }
             }
             is ProductUnpublished -> updateProduct(productId) { it[status] = ProductStatus.DRAFT }
             is ProductArchived -> updateProduct(productId) { it[status] = ProductStatus.ARCHIVED }
@@ -113,6 +120,7 @@ object ProductQmProjector {
             it[createdOn] = event.occurredOn.utc()
             it[updatedOn] = event.occurredOn.utc()
             it[publishedOn] = null
+            it[firstPublishedOn] = null
         }
     }
 

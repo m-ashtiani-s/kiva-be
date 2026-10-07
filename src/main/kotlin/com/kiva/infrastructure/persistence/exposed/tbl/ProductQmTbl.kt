@@ -50,6 +50,8 @@ object ProductQmTbl : LongIdTable(name = "productqm_tbl", columnName = "pId") {
     val createdOn = timestampWithTimeZone("createdOn")
     val updatedOn = timestampWithTimeZone("updatedOn")
     val publishedOn = timestampWithTimeZone("publishedOn").nullable()
+    /** The first time it went into the shop; «newest» is by this one, so going out and back in doesn't make it new. */
+    val firstPublishedOn = timestampWithTimeZone("firstPublishedOn").nullable()
 
     /** The unique keys on [slug] and [sku] as V5 named them; the database names one when it refuses a save. */
     const val SLUG_KEY = "productqm_tbl_slug_key"

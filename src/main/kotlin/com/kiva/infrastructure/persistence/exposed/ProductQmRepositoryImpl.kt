@@ -306,7 +306,7 @@ class ProductQmRepositoryImpl : ProductQmRepository {
          */
         val sortOrders: SortOrders = ProductSorts.names.associateWith { sort ->
             val own: Pair<Expression<*>, SortOrder> = when (sort) {
-                ProductSorts.NEWEST -> ProductQmTbl.createdOn to SortOrder.DESC
+                ProductSorts.NEWEST -> ProductQmTbl.firstPublishedOn to SortOrder.DESC
                 ProductSorts.BESTSELLING -> ProductQmTbl.soldCount to SortOrder.DESC
                 ProductSorts.PRICE_ASC -> ProductQmTbl.price to SortOrder.ASC
                 ProductSorts.PRICE_DESC -> ProductQmTbl.price to SortOrder.DESC
