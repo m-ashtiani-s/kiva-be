@@ -3968,7 +3968,12 @@ components:
       required: [field, code, message]
       properties:
         field: { type: string, description: 'مسیر فیلد (dot-notation)', example: newAddress.postalCode }
-        code: { type: string, example: PATTERN }
+        code:
+          type: string
+          description: >-
+            کد مشکل همین فیلد. فهرست ثابتی ندارد (برخلاف `ErrorCode` که `code` اصلی پاسخ است) و ممکن است کد تازه اضافه شود؛
+            برای نمایش، `field` و `message` کافی است.
+          example: PATTERN
         message: { type: string, example: کد پستی باید ۱۰ رقم باشه }
     Problem:
       type: object
@@ -4061,6 +4066,21 @@ components:
         - DUPLICATE_SLUG
         - DUPLICATE_SKU
         - RESERVATION_UNAVAILABLE
+        # --- پنل ادمین: محصول و رنگ‌هایش ---
+        - COLOR_ALREADY_ON_PRODUCT
+        - PRODUCT_ARCHIVED
+        - PRODUCT_ALREADY_ACTIVE
+        - PRODUCT_ALREADY_DRAFT
+        - PRODUCT_ALREADY_ARCHIVED
+        - VARIANT_ALREADY_ACTIVE
+        - VARIANT_ALREADY_INACTIVE
+        - INACTIVE_VARIANT_CANNOT_BE_DEFAULT
+        - LAST_ACTIVE_VARIANT
+        - NO_ACTIVE_VARIANT
+        # --- موجودی و رزرو انبار (فاز سفارش) ---
+        - ORDER_ALREADY_SHIPPED
+        - RESERVATION_QUANTITY_MISMATCH
+        - RESERVATION_NOT_FOUND
       example: DISCOUNT_MIN_SUBTOTAL_NOT_MET
 
     # ============ MEDIA ============
@@ -4071,7 +4091,7 @@ components:
         id: { type: string, example: 'med_5Hq2' }
         type: { type: string, enum: [IMAGE, VIDEO] }
         url: { type: string, format: uri, example: 'https://cdn.kiva.ir/p/1/lilac/front.webp' }
-        thumbnailUrl: { type: string, format: uri, example: 'https://cdn.kiva.ir/p/1/lilac/front_160.webp' }
+        thumbnailUrl: { type: string, format: uri, nullable: true, example: 'https://cdn.kiva.ir/p/1/lilac/front_160.webp' }
         srcSet:
           type: array
           description: نسخه‌های ریسپانسیو برای `srcset`
