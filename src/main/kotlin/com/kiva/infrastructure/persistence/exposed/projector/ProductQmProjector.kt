@@ -177,6 +177,7 @@ object ProductQmProjector {
         this[ProductQmTbl.occasions] = details.specs.occasions.sorted().map { it.name }
         this[ProductQmTbl.maxPerOrder] = details.maxPerOrder.value
         this[ProductQmTbl.returnable] = details.returnable
+        this[ProductQmTbl.reservable] = details.reservable
         this[ProductQmTbl.shortDescription] = details.shortDescription?.value
         this[ProductQmTbl.description] = details.description?.value
         this[ProductQmTbl.highlights] = details.highlights.items

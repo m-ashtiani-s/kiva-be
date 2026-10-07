@@ -93,7 +93,7 @@ data class ProductDetailHttpResponse(
                     BreadcrumbHttpResponse(detail.card.name, url = null),
                 ),
                 ratingSummary = RatingSummaryHttpResponse.NONE,
-                policies = ProductPoliciesHttpResponse(returnable = detail.returnable, maxPerOrder = detail.maxPerOrder),
+                policies = ProductPoliciesHttpResponse(returnable = detail.returnable, reservable = detail.reservable, maxPerOrder = detail.maxPerOrder),
                 shareUrl = pageUrl,
                 seo = SeoMetaHttpResponse(title = "${detail.card.name} | کیوا", description = detail.shortDescription, canonicalUrl = pageUrl),
                 publishedAt = detail.publishedAt?.toString(),
@@ -225,7 +225,7 @@ data class RatingShareHttpResponse(val stars: Int, val count: Int, val percent: 
 
 /** Contract schema `ProductPolicies`, the product's own part; the shop-wide numbers come with the settings. */
 @Serializable
-data class ProductPoliciesHttpResponse(val returnable: Boolean, val maxPerOrder: Int)
+data class ProductPoliciesHttpResponse(val returnable: Boolean, val reservable: Boolean, val maxPerOrder: Int)
 
 /** Contract schema `SeoMeta`. */
 @Serializable

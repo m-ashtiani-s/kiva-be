@@ -96,11 +96,11 @@ class ProductQmRepositoryDetailTest {
         assertEquals(
             listOf<Any?>(
                 "faux-leather-matte", details.materialDescription, details.shortDescription, details.description, details.highlights,
-                details.specs, details.returnable, now, now,
+                details.specs, details.returnable, details.reservable, now, now,
             ),
             listOf(
                 page.materialSlug.value, page.materialDescription, page.shortDescription, page.description, page.highlights,
-                page.specs, page.returnable, page.publishedOn, page.updatedOn,
+                page.specs, page.returnable, page.reservable, page.publishedOn, page.updatedOn,
             ),
         )
     }

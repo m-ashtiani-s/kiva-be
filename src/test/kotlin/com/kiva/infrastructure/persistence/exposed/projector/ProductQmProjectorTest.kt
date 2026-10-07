@@ -172,14 +172,14 @@ class ProductQmProjectorTest {
         assertEquals(listOf(now, now), listOf(row[ProductQmTbl.createdOn].toInstant(), row[ProductQmTbl.updatedOn].toInstant()))
         assertEquals(
             listOf(
-                "shoulder", "faux-leather-matte", BagType.HOBO, details.newUntil, 10, listOf("DAILY", "WORK"), 3, false,
+                "shoulder", "faux-leather-matte", BagType.HOBO, details.newUntil, 10, listOf("DAILY", "WORK"), 3, false, false,
                 details.shortDescription?.value, details.description?.value, details.highlights.items,
                 details.materialDescription?.value, ProductSpecsPayload(details.specs),
             ),
             listOf(
                 row[ProductQmTbl.categorySlug], row[ProductQmTbl.materialSlug], row[ProductQmTbl.bagType],
                 row[ProductQmTbl.newUntil]?.toInstant(), row[ProductQmTbl.sortPriority], row[ProductQmTbl.occasions],
-                row[ProductQmTbl.maxPerOrder], row[ProductQmTbl.returnable], row[ProductQmTbl.shortDescription],
+                row[ProductQmTbl.maxPerOrder], row[ProductQmTbl.returnable], row[ProductQmTbl.reservable], row[ProductQmTbl.shortDescription],
                 row[ProductQmTbl.description], row[ProductQmTbl.highlights], row[ProductQmTbl.materialDescription],
                 row[ProductQmTbl.specs],
             ),
@@ -212,11 +212,11 @@ class ProductQmProjectorTest {
         assertEquals(listOf("wallet", "genuine-cow-leather", BagType.WALLET), listOf(row[ProductQmTbl.categorySlug], row[ProductQmTbl.materialSlug], row[ProductQmTbl.bagType]))
         assertEquals("کیف پول ساده کیف پول مشکی چرم طبیعی گاوی", row[ProductQmTbl.searchText])
         assertEquals(
-            listOf(null, null, emptyList<String>(), null, ProductSpecsPayload(ProductEventSamples.bareDetails.specs), emptyList<String>(), null, true, 5),
+            listOf(null, null, emptyList<String>(), null, ProductSpecsPayload(ProductEventSamples.bareDetails.specs), emptyList<String>(), null, true, true, 5),
             listOf(
                 row[ProductQmTbl.shortDescription], row[ProductQmTbl.description], row[ProductQmTbl.highlights],
                 row[ProductQmTbl.materialDescription], row[ProductQmTbl.specs], row[ProductQmTbl.occasions],
-                row[ProductQmTbl.newUntil], row[ProductQmTbl.returnable], row[ProductQmTbl.maxPerOrder],
+                row[ProductQmTbl.newUntil], row[ProductQmTbl.returnable], row[ProductQmTbl.reservable], row[ProductQmTbl.maxPerOrder],
             ),
         )
         assertEquals(listOf(now, later), listOf(row[ProductQmTbl.createdOn].toInstant(), row[ProductQmTbl.updatedOn].toInstant()))

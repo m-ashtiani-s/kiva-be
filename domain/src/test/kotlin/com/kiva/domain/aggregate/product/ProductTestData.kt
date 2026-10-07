@@ -49,6 +49,7 @@ object ProductTestData {
         newUntil = Instant.parse("2026-10-20T00:00:00Z"),
         maxPerOrder = MaxPerOrder.constructFromPersisted(maxPerOrder),
         returnable = true,
+        reservable = true,
         sortPriority = 0,
     )
 

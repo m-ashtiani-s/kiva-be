@@ -12,6 +12,8 @@ import java.time.Instant
  *
  * @property categoryId / [materialId] only the id: a product refers to its category and material, it doesn't hold them.
  * @property newUntil the «جدید» badge shows until then (contract: instead of a hand-set isNew flag).
+ * @property reservable it may go in an order held for the 4-day reservation; one item that isn't makes the whole cart
+ *   unreservable (contract: `ITEM_NOT_RESERVABLE`).
  * @property sortPriority higher comes first where staff pin products in the list.
  */
 data class ProductDetails(
@@ -27,5 +29,6 @@ data class ProductDetails(
     val newUntil: Instant?,
     val maxPerOrder: MaxPerOrder,
     val returnable: Boolean,
+    val reservable: Boolean,
     val sortPriority: Int,
 )

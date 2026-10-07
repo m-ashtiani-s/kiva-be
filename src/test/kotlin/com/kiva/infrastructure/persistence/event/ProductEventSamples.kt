@@ -80,6 +80,7 @@ object ProductEventSamples {
         newUntil = Instant.parse("2026-10-20T00:00:00Z"),
         maxPerOrder = MaxPerOrder.constructFromPersisted(3),
         returnable = false,
+        reservable = false,
         sortPriority = 10,
     )
 
@@ -97,6 +98,7 @@ object ProductEventSamples {
         newUntil = null,
         maxPerOrder = MaxPerOrder.DEFAULT,
         returnable = true,
+        reservable = true,
         sortPriority = 0,
     )
 

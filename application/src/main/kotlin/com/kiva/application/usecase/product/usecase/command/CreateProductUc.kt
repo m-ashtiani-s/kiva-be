@@ -57,7 +57,7 @@ import java.time.Instant
  * at the same moment both pass that check; the read model's unique index then refuses the second, so it ends in an
  * error, never in a duplicate.
  *
- * Not taken from the contract's request yet: tags, seo and reservable (nothing in the domain keeps them), and a color's
+ * Not taken from the contract's request yet: tags and seo (nothing in the domain keeps them), and a color's
  * barcode, isActive, media (they come with uploads) and stockQuantity. Stock is its own aggregate: the starting stock is
  * one AdjustInventoryUc call per color, each in its own transaction.
  */
@@ -73,7 +73,7 @@ class CreateProductUc(
 
     /**
      * The contract's ProductUpsertRequest as it arrived, plus who makes the change. Optional values left out (null)
-     * take the contract's defaults: maxPerOrder 5, returnable, sortPriority 0, status DRAFT.
+     * take the contract's defaults: maxPerOrder 5, returnable, reservable, sortPriority 0, status DRAFT.
      *
      * @property sku null or blank to make one from the id (`KV-1001`).
      * @property by from the access token, or [UserId.SYSTEM] for the seeder: never typed by anyone, so not raw input.
@@ -95,6 +95,7 @@ class CreateProductUc(
         val newUntil: Instant?,
         val maxPerOrder: Int?,
         val returnable: Boolean?,
+        val reservable: Boolean?,
         val sortPriority: Int?,
         val status: String?,
         val variants: List<Variant>,
@@ -219,6 +220,7 @@ class CreateProductUc(
             newUntil = command.newUntil,
             maxPerOrder = maxPerOrder,
             returnable = command.returnable ?: true,
+            reservable = command.reservable ?: true,
             sortPriority = command.sortPriority ?: 0,
         )
     }

@@ -40,6 +40,7 @@ object ProductQmTbl : LongIdTable(name = "productqm_tbl", columnName = "pId") {
     val occasions = array<String>("occasions")
     val maxPerOrder = integer("maxPerOrder")
     val returnable = bool("returnable")
+    val reservable = bool("reservable")
     val shortDescription = varchar("shortDescription", 300).nullable()
     val description = text("description").nullable()
     val highlights = array<String>("highlights")

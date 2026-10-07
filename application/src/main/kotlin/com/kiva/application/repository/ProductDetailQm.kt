@@ -30,6 +30,7 @@ data class ProductDetailQm(
     val highlights: Highlights,
     val specs: ProductSpecs,
     val returnable: Boolean,
+    val reservable: Boolean,
     val publishedOn: Instant?,
     val updatedOn: Instant,
     val variants: List<Variant>,

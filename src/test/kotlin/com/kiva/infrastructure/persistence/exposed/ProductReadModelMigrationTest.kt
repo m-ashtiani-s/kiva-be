@@ -59,6 +59,7 @@ class ProductReadModelMigrationTest {
             it[occasions] = emptyList()
             it[maxPerOrder] = 5
             it[returnable] = true
+            it[reservable] = true
             it[highlights] = emptyList()
             it[specs] = ProductSpecsPayload(ProductSpecs.NONE)
             it[status] = ProductStatus.DRAFT

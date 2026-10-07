@@ -158,6 +158,7 @@ class CreateProductUcTest {
         newUntil = Instant.parse("2026-11-01T00:00:00Z"),
         maxPerOrder = null,
         returnable = null,
+        reservable = null,
         sortPriority = null,
         status = status,
         variants = variants,
@@ -206,7 +207,7 @@ class CreateProductUcTest {
                 listOf<Any?>(34.0, 650, ClosureType.ZIPPER, "بند دوشی ثابت", null, setOf(Occasion.DAILY, Occasion.WORK)),
                 details.specs.let { listOf(it.dimensions?.lengthCm, it.weightGrams, it.closure, it.strap, it.pockets, it.occasions) },
             )
-            assertEquals(listOf<Any?>(MaxPerOrder.DEFAULT, true, 0, null), listOf(details.maxPerOrder, details.returnable, details.sortPriority, details.shortDescription))
+            assertEquals(listOf<Any?>(MaxPerOrder.DEFAULT, true, true, 0, null), listOf(details.maxPerOrder, details.returnable, details.reservable, details.sortPriority, details.shortDescription))
             assertEquals(PriceTag.constructFromPersisted(Money.constructFromPersisted(1_890_000), null), product.priceTag)
         }
 

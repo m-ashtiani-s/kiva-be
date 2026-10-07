@@ -284,6 +284,7 @@ class WebV1ProductsTest {
             ),
         ),
         returnable = true,
+        reservable = false,
         maxPerOrder = 5,
         publishedAt = Instant.parse("2026-10-06T08:00:00Z"),
         updatedAt = Instant.parse("2026-10-06T09:30:00Z"),
@@ -368,7 +369,7 @@ class WebV1ProductsTest {
             body["ratingSummary"],
         )
         assertEquals(json("""{"id":5,"slug":"faux-leather-soft","name":"چرم مصنوعی سافت","family":"FAUX_LEATHER"}"""), body["material"])
-        assertEquals(json("""{"returnable":true,"maxPerOrder":5}"""), body["policies"])
+        assertEquals(json("""{"returnable":true,"reservable":false,"maxPerOrder":5}"""), body["policies"])
         assertEquals(
             listOf("2026-10-06T08:00:00Z", "2026-10-06T09:30:00Z"),
             listOf("publishedAt", "updatedAt").map { body[it]!!.jsonPrimitive.content },

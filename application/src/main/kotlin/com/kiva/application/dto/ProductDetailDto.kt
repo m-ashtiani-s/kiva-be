@@ -24,6 +24,7 @@ data class ProductDetailDto(
     val specs: ProductSpecs,
     val variants: List<Variant>,
     val returnable: Boolean,
+    val reservable: Boolean,
     val maxPerOrder: Int,
     val publishedAt: Instant?,
     val updatedAt: Instant,

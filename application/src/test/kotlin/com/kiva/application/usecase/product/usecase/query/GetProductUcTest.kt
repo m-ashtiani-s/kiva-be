@@ -146,6 +146,7 @@ class GetProductUcTest {
         highlights = Highlights.constructFromPersisted(listOf("یراق‌آلات فلزی ضدزنگ")),
         specs = ProductSpecs.NONE,
         returnable = true,
+        reservable = false,
         publishedOn = Instant.parse("2026-10-06T08:00:00Z"),
         updatedOn = Instant.parse("2026-10-06T09:00:00Z"),
         variants = listOf(lilac, black),
@@ -176,11 +177,11 @@ class GetProductUcTest {
         assertEquals(
             listOf<Any?>(
                 ProductDetailDto.MaterialRef(4, "faux-leather-matte", "چرم مصنوعی مات", MaterialFamily.FAUX_LEATHER), "چرم مصنوعی مات درجه یک",
-                null, "<p>کیف دوشی جادار</p>", listOf("یراق‌آلات فلزی ضدزنگ"), true, 5,
+                null, "<p>کیف دوشی جادار</p>", listOf("یراق‌آلات فلزی ضدزنگ"), true, false, 5,
                 Instant.parse("2026-10-06T08:00:00Z"), Instant.parse("2026-10-06T09:00:00Z"),
             ),
             listOf(
-                page.material, page.materialDescription, page.shortDescription, page.description, page.highlights, page.returnable,
+                page.material, page.materialDescription, page.shortDescription, page.description, page.highlights, page.returnable, page.reservable,
                 page.maxPerOrder, page.publishedAt, page.updatedAt,
             ),
         )

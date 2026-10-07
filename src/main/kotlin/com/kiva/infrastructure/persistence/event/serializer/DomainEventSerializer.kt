@@ -49,8 +49,9 @@ import kotlinx.serialization.json.Json
  */
 object DomainEventSerializer {
 
-    // Strict on purpose: a missing or an unknown field means the stored shape and the payload class disagree.
-    private val json = Json
+    // Strict on purpose: an unknown field means the stored shape and the payload class disagree. A missing field is
+    // read only where the payload gives it a default (a field added later); every field is always written, defaults too.
+    private val json = Json { encodeDefaults = true }
 
     // ============ product ============
 

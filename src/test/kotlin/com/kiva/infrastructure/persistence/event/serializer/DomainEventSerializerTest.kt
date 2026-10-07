@@ -1,5 +1,6 @@
 package com.kiva.infrastructure.persistence.event.serializer
 
+import com.kiva.domain.aggregate.product.entity.event.ProductCreated
 import com.kiva.domain.aggregate.product.entity.event.ProductDomainEvent
 import com.kiva.infrastructure.persistence.event.ProductEventSamples
 import kotlinx.serialization.SerializationException
@@ -81,6 +82,7 @@ class DomainEventSerializerTest {
                 "newUntil": "2026-10-20T00:00:00Z",
                 "maxPerOrder": 3,
                 "returnable": false,
+                "reservable": false,
                 "sortPriority": 10
               },
               "priceTag": { "price": 1750000, "compareAtPrice": 2100000 }
@@ -110,6 +112,16 @@ class DomainEventSerializerTest {
         @Test
         fun `a stored ProductCreated is read back`() {
             assertEquals(ProductEventSamples.productCreated, DomainEventSerializer.deserializeProduct(productCreatedJson, 1, "ProductCreated"))
+        }
+
+        @Test
+        fun `a ProductCreated stored before reservable existed reads as reservable, as every product was then`() {
+            val beforeReservable = productCreatedJson.lines().filterNot { "\"reservable\"" in it }.joinToString("\n")
+            check("reservable" !in beforeReservable)
+
+            val read = DomainEventSerializer.deserializeProduct(beforeReservable, 1, "ProductCreated") as ProductCreated
+
+            assertEquals(ProductEventSamples.fullDetails.copy(reservable = true), read.details)
         }
 
         @Test

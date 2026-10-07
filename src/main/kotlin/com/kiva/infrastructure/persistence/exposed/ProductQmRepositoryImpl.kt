@@ -177,6 +177,7 @@ class ProductQmRepositoryImpl : ProductQmRepository {
             highlights = Highlights.constructFromPersisted(row[ProductQmTbl.highlights]),
             specs = row[ProductQmTbl.specs].toDomain(),
             returnable = row[ProductQmTbl.returnable],
+            reservable = row[ProductQmTbl.reservable],
             publishedOn = row[ProductQmTbl.publishedOn]?.toInstant(),
             updatedOn = row[ProductQmTbl.updatedOn].toInstant(),
             variants = variants,

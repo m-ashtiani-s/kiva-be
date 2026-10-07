@@ -13,7 +13,13 @@ import com.kiva.domain.aggregate.product.model.valueobject.ShortDescription
 import kotlinx.serialization.Serializable
 import java.time.Instant
 
-/** [ProductDetails] as stored. [newUntil] is an ISO-8601 instant (`2026-10-20T00:00:00Z`). */
+/**
+ * [ProductDetails] as stored. [newUntil] is an ISO-8601 instant (`2026-10-20T00:00:00Z`).
+ *
+ * [reservable] came after the first events were stored, so those don't have it. Its default is what they meant: until
+ * then every product could be reserved. A field added with such a default keeps payload version 1; a change that
+ * makes old payloads mean something else needs a new version and a reader for the old one.
+ */
 @Serializable
 data class ProductDetailsPayload(
     val name: String,
@@ -28,6 +34,7 @@ data class ProductDetailsPayload(
     val newUntil: String?,
     val maxPerOrder: Int,
     val returnable: Boolean,
+    val reservable: Boolean = true,
     val sortPriority: Int,
 ) {
     constructor(details: ProductDetails) : this(
@@ -43,6 +50,7 @@ data class ProductDetailsPayload(
         newUntil = details.newUntil?.toString(),
         maxPerOrder = details.maxPerOrder.value,
         returnable = details.returnable,
+        reservable = details.reservable,
         sortPriority = details.sortPriority,
     )
 
@@ -59,6 +67,7 @@ data class ProductDetailsPayload(
         newUntil = newUntil?.let { Instant.parse(it) },
         maxPerOrder = MaxPerOrder.constructFromPersisted(maxPerOrder),
         returnable = returnable,
+        reservable = reservable,
         sortPriority = sortPriority,
     )
 }

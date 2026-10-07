@@ -83,6 +83,7 @@ class GetProductUc(
                     specs = product.specs,
                     variants = product.variants.map { variantOf(it, palette, product.card.maxPerOrder) },
                     returnable = product.returnable,
+                    reservable = product.reservable,
                     maxPerOrder = product.card.maxPerOrder.value,
                     publishedAt = product.publishedOn,
                     updatedAt = product.updatedOn,

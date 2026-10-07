@@ -88,6 +88,7 @@ class DevCatalogSeeder(
         newUntil = newUntil.takeIf { bag.isNew },
         maxPerOrder = null,
         returnable = null,
+        reservable = null,
         sortPriority = null,
         // The prototype shows every bag, sold-out ones included.
         status = "ACTIVE",
