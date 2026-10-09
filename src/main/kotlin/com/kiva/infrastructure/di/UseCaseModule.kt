@@ -1,6 +1,7 @@
 package com.kiva.infrastructure.di
 
 import com.kiva.application.usecase.account.usecase.query.GetMeUc
+import com.kiva.application.usecase.admin.usecase.command.CheckPanelAccessUc
 import com.kiva.application.usecase.auth.usecase.command.SendLoginCodeUc
 import com.kiva.application.usecase.auth.usecase.command.VerifyLoginCodeUc
 import com.kiva.application.usecase.catalog.usecase.query.GetCategoryUc
@@ -108,6 +109,17 @@ val useCaseModule = module(createdAtStart = true) {
 
     // --- account: queries ---
     single { GetMeUc(transactionManager = get(), userRepository = get()) }
+
+    // --- admin: the guard of every panel request ---
+    single {
+        CheckPanelAccessUc(
+            transactionManager = get(),
+            authSessionRepository = get(),
+            userRepository = get(),
+            securityEventLog = get(),
+            clock = get(),
+        )
+    }
 
     // --- inventory: commands ---
     single {

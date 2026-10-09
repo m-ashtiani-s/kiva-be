@@ -1,7 +1,9 @@
 package com.kiva.infrastructure
 
+import com.kiva.infrastructure.auth.JwtAccessTokens
 import com.kiva.infrastructure.config.AppConfig
 import com.kiva.infrastructure.di.appModules
+import com.kiva.infrastructure.httpserver.auth.configureAuthentication
 import com.kiva.infrastructure.httpserver.configureHttp
 import com.kiva.infrastructure.httpserver.configureRouting
 import com.kiva.infrastructure.persistence.DatabaseFactory
@@ -21,7 +23,7 @@ fun main(args: Array<String>): Unit =
 /**
  * Called by Ktor after [main] has read application.conf (ktor.application.modules points here).
  * Boot order, top to bottom:
- *   config -> datasource -> migrations -> Exposed -> DI -> dev seed (when on) -> HTTP plugins -> routes
+ *   config -> datasource -> migrations -> Exposed -> DI -> dev seed (when on) -> HTTP plugins -> authentication -> routes
  */
 @Suppress("unused") // referenced only from application.conf, so the IDE can't see it is used
 fun Application.start() {
@@ -41,5 +43,6 @@ fun Application.start() {
     if (config.seed.enabled) runBlocking { get<DevCatalogSeeder>().seed() }
 
     configureHttp(config.http.allowedOrigins, config.http.trustedProxyHops)
+    configureAuthentication(get<JwtAccessTokens>())
     configureRouting()
 }

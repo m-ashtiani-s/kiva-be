@@ -18,6 +18,7 @@ import com.kiva.infrastructure.common.http.configureStatusPages
 import com.kiva.infrastructure.httpserver.controller.httprest.web.OTP_SEND_RATE_LIMIT
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Auth
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Catalog
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Me
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Products
 import com.kiva.infrastructure.httpserver.route.healthRoutes
 import io.ktor.serialization.kotlinx.json.json
@@ -129,6 +130,7 @@ fun Application.configureRouting() {
         healthRoutes()
         route(API_V1) {
             webV1Auth(sendLoginCodeUc, verifyLoginCodeUc, getMeUc)
+            webV1Me(getMeUc)
             webV1Catalog(listColorsUc, listMaterialsUc, listCategoriesUc, getCategoryUc)
             webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, config.shop.siteUrl)
         }

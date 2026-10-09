@@ -14,6 +14,7 @@ import com.kiva.infrastructure.auth.JwtAccessTokens
 import com.kiva.infrastructure.auth.RandomSessionTokens
 import com.kiva.infrastructure.common.persistence.ExposedTransactionManager
 import com.kiva.infrastructure.httpserver.API_V1
+import com.kiva.infrastructure.httpserver.auth.configureAuthentication
 import com.kiva.infrastructure.httpserver.configureHttp
 import com.kiva.infrastructure.persistence.exposed.AuthSessionRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.OtpChallengeRepositoryImpl
@@ -45,7 +46,7 @@ class AuthTestStack(val clock: MutableClock, maxSmsPerHour: Int = 300) {
     val db = TestDatabase.database
     val sms = RecordingSmsSender()
     val otpCodes = HmacOtpCodes(OTP_PEPPER)
-    val accessTokens = JwtAccessTokens(JWT_SECRET)
+    val accessTokens = JwtAccessTokens(JWT_SECRET, clock)
     val sessionTokens = RandomSessionTokens()
 
     private val transactions = ExposedTransactionManager(db)
@@ -62,7 +63,13 @@ class AuthTestStack(val clock: MutableClock, maxSmsPerHour: Int = 300) {
             environment { config = MapApplicationConfig() }
             application {
                 configureHttp(allowedOrigins, trustedProxyHops)
-                routing { route(API_V1) { webV1Auth(send, verify, getMe) } }
+                configureAuthentication(accessTokens)
+                routing {
+                    route(API_V1) {
+                        webV1Auth(send, verify, getMe)
+                        webV1Me(getMe)
+                    }
+                }
             }
             block()
         }

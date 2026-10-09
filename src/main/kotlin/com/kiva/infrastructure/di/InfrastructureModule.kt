@@ -28,7 +28,7 @@ fun infrastructureModule(config: AppConfig, database: Database) = module {
     single<HtmlSanitizer> { JsoupHtmlSanitizer }
     single<OtpCodes> { HmacOtpCodes(config.auth.otpPepper) }
     // One instance: it signs tokens for the use cases and its verifier checks them for the routes.
-    single { JwtAccessTokens(config.auth.jwtSecret) }
+    single { JwtAccessTokens(config.auth.jwtSecret, clock = get()) }
     single<AccessTokens> { get<JwtAccessTokens>() }
     single<SessionTokens> { RandomSessionTokens() }
     single<SmsSender> {

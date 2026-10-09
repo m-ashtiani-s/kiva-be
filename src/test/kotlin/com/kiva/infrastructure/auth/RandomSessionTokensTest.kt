@@ -30,7 +30,8 @@ class RandomSessionTokensTest {
 
         assertEquals(TokenHash(MessageDigest.getInstance("SHA-256").digest(new.token.toByteArray())), new.hash)
         assertEquals(new.hash, tokens.hashOf(new.token))
-        assertNotEquals(new.hash, tokens.hashOf(new.token.dropLast(1) + "A"))
+        val oneCharacterOff = new.token.dropLast(1) + if (new.token.last() == 'A') "B" else "A"
+        assertNotEquals(new.hash, tokens.hashOf(oneCharacterOff))
     }
 
     @Test

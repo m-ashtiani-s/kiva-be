@@ -7,6 +7,7 @@ import com.kiva.application.port.AccessTokens
 import com.kiva.domain.aggregate.session.entity.AuthSession
 import com.kiva.domain.aggregate.session.model.policy.SessionPolicy
 import com.kiva.domain.aggregate.user.entity.User
+import java.time.Clock
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
@@ -22,8 +23,9 @@ import java.time.temporal.ChronoUnit
  * since refresh tokens don't depend on it.
  *
  * @param secret at least 32 random bytes.
+ * @param clock the app's clock, so a token runs out by the same time the use cases read (and a test can move it).
  */
-class JwtAccessTokens(secret: ByteArray) : AccessTokens {
+class JwtAccessTokens(secret: ByteArray, clock: Clock = Clock.systemUTC()) : AccessTokens {
 
     init {
         require(secret.size >= MIN_SECRET_BYTES) { "The JWT secret must be at least $MIN_SECRET_BYTES bytes, was ${secret.size}" }
@@ -31,8 +33,14 @@ class JwtAccessTokens(secret: ByteArray) : AccessTokens {
 
     private val algorithm = Algorithm.HMAC256(secret.copyOf())
 
-    /** Checks the signature with this algorithm and key only, then issuer, audience and time (5 seconds of leeway for clocks). */
-    val verifier: JWTVerifier = JWT.require(algorithm).withIssuer(ISSUER).withAudience(AUDIENCE).acceptLeeway(LEEWAY_SECONDS).build()
+    /**
+     * Checks the signature with this algorithm and key only, then issuer, audience and time (5 seconds of leeway for
+     * clocks). The signature comes first: a forged token is refused as forged even when it has also expired.
+     */
+    val verifier: JWTVerifier =
+        // build(Clock) is on the implementation only, not on the Verification interface the builder methods return.
+        (JWT.require(algorithm).withIssuer(ISSUER).withAudience(AUDIENCE).acceptLeeway(LEEWAY_SECONDS) as JWTVerifier.BaseVerification)
+            .build(clock)
 
     override fun issue(user: User, session: AuthSession, now: Instant): AccessTokens.IssuedAccessToken {
         val issuedAt = now.truncatedTo(ChronoUnit.SECONDS)
