@@ -38,6 +38,9 @@ object ErrorMessages {
         "OTP_TOO_MANY_ATTEMPTS" to "چند بار اشتباه زدی، یه کد جدید بگیر",
         "OTP_RESEND_TOO_SOON" to "{retryAfterSeconds} ثانیه دیگه می‌تونی دوباره کد بگیری",
         "PHONE_ALREADY_REGISTERED" to "این شماره مال یه حساب دیگه‌ست",
+        "PHONE_SAME_AS_CURRENT" to "این همین شماره‌ی فعلی حسابته",
+        "ACCOUNT_HAS_ACTIVE_ORDERS" to "تا وقتی سفارش جاری داری نمی‌شه حساب رو حذف کرد",
+        "ROLE_CHANGE_NOT_ALLOWED" to "نقش‌های خودت رو نمی‌تونی عوض کنی",
         // --- catalog & cart ---
         "PRODUCT_NOT_FOUND" to "این محصول پیدا نشد",
         "VARIANT_NOT_FOUND" to "این رنگ برای این محصول پیدا نشد",
