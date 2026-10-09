@@ -171,6 +171,7 @@ object ErrorMessages {
         "GENDER_INVALID" to "جنسیت باید یکی از FEMALE، MALE یا UNSPECIFIED باشه",
         "MESSENGER_CHANNEL_INVALID" to "پیام‌رسان باید یکی از RUBIKA، TELEGRAM یا BALE باشه",
         "ROLE_INVALID" to "نقش باید یکی از CUSTOMER، ADMIN، CATALOG_MANAGER، OPERATOR، CONTENT_EDITOR یا SUPPORT باشه",
+        "OTP_CODE_FORMAT_INVALID" to "کد تأیید {codeLength} رقمیه",
     )
 
     // Used when a code has no text of its own (or its placeholders can't be filled).
