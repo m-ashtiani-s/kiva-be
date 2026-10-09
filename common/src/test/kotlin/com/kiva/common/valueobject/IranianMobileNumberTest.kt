@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 
 class IranianMobileNumberTest {
 
@@ -65,5 +67,27 @@ class IranianMobileNumberTest {
     @Test
     fun `the same number typed differently is equal`() {
         assertEquals(IranianMobileNumber.makeNew("+98 912 123 4567"), IranianMobileNumber.makeNew("۰۹۱۲۱۲۳۴۵۶۷"))
+    }
+
+    @Test
+    fun `masked keeps the first and last four digits, for logs`() {
+        assertEquals("0912***4567", IranianMobileNumber.makeNew("09121234567").getOrNull()?.masked())
+    }
+
+    @Test
+    fun `a stored number is read back as it is`() {
+        assertEquals(IranianMobileNumber.makeNew("09121234567").getOrNull(), IranianMobileNumber.constructFromPersisted("09121234567"))
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["9121234567", "+989121234567", "0912123456", "08121234567", "۰۹۱۲۱۲۳۴۵۶۷"])
+    fun `a stored number not in the stored form is a bug, so constructFromPersisted throws`(stored: String) {
+        assertFailsWith<IllegalArgumentException> { IranianMobileNumber.constructFromPersisted(stored) }
+    }
+
+    @Test
+    fun `the number itself never ends up in the error of a broken stored value`() {
+        val error = assertFailsWith<IllegalArgumentException> { IranianMobileNumber.constructFromPersisted("0812123456") }
+        assertFalse("0812123456" in error.message.orEmpty())
     }
 }

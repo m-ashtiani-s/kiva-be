@@ -162,6 +162,15 @@ object ErrorMessages {
         "NUMBER_INVALID" to "اینجا باید یه عدد بدون اعشار بنویسی",
         "PRICE_RANGE_INVALID" to "حداقل قیمت نمی‌تونه از حداکثر قیمت بیشتر باشه",
         "LIMIT_INVALID" to "تعداد باید عددی بین ۱ و {max} باشه",
+        "PERSON_NAME_REQUIRED" to "اسم نمی‌تونه خالی باشه",
+        "PERSON_NAME_TOO_LONG" to "اسم حداکثر {maxLength} حرفه",
+        "PERSON_NAME_INVALID" to "اسم نمی‌تونه علامت‌هایی مثل < و > داشته باشه",
+        "EMAIL_INVALID" to "ایمیل معتبر وارد کن، مثل sara@example.com",
+        "EMAIL_TOO_LONG" to "ایمیل حداکثر {maxLength} حرفه",
+        "BIRTH_DATE_INVALID" to "تاریخ تولد درست نیست",
+        "GENDER_INVALID" to "جنسیت باید یکی از FEMALE، MALE یا UNSPECIFIED باشه",
+        "MESSENGER_CHANNEL_INVALID" to "پیام‌رسان باید یکی از RUBIKA، TELEGRAM یا BALE باشه",
+        "ROLE_INVALID" to "نقش باید یکی از CUSTOMER، ADMIN، CATALOG_MANAGER، OPERATOR، CONTENT_EDITOR یا SUPPORT باشه",
     )
 
     // Used when a code has no text of its own (or its placeholders can't be filled).
