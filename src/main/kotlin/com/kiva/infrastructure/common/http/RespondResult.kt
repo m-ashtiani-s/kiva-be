@@ -1,11 +1,14 @@
 package com.kiva.infrastructure.common.http
 
+import com.kiva.common.railway.FailureKind
 import com.kiva.common.railway.Result
 import com.kiva.common.railway.ResultFailure
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.plugins.callid.callId
 import io.ktor.server.request.path
+import io.ktor.server.response.header
 import io.ktor.server.response.respond
 
 /**
@@ -38,6 +41,16 @@ suspend fun ApplicationCall.respondResult(result: Result<Unit, ResultFailure>) {
     }
 }
 
+/**
+ * A 429 that says how long to wait (`meta.retryAfterSeconds`) says it in the Retry-After header too, as the contract
+ * asks of every 429: clients and proxies read the header, the frontend's countdown reads the meta.
+ */
 suspend fun ApplicationCall.respondFailure(failure: ResultFailure) {
+    if (failure.kind == FailureKind.RATE_LIMITED) {
+        failure.meta[RETRY_AFTER_SECONDS]?.let { response.header(HttpHeaders.RetryAfter, it.toString()) }
+    }
     respondProblem(failure.toProblem(traceId = callId, instance = request.path()))
 }
+
+/** The meta key of a 429's wait, in whole seconds (contract). */
+const val RETRY_AFTER_SECONDS = "retryAfterSeconds"

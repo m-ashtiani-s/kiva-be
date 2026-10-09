@@ -35,6 +35,22 @@ Database settings come from `src/main/resources/application.conf` and can be ove
 `KIVA_DB_URL`, `KIVA_DB_USER`, `KIVA_DB_PASSWORD` and `PORT`. Tests use `KIVA_TEST_DB_URL`,
 `KIVA_TEST_DB_USER` and `KIVA_TEST_DB_PASSWORD` (defaults: local `kiva_test`, `kiva`/`kiva`).
 
+The app doesn't start without its login secret. Make one once and keep it in *Run configuration → Environment
+variables* (it is never committed):
+
+```bash
+openssl rand -base64 32
+```
+
+| Variable | What |
+| --- | --- |
+| `KIVA_OTP_PEPPER` | Required. The key of the login codes' HMAC: base64 of at least 32 random bytes. |
+| `KIVA_SMS_PROVIDER` | `log` (the default) writes login codes to the log instead of sending them: development only. |
+| `KIVA_TRUSTED_PROXY_HOPS` | `1` only behind the shop's own nginx; `0` (the default) everywhere else. |
+
+With the `log` provider, the code of `POST /api/v1/auth/otp/send` is in the log, on a `WARN` line from `LogSmsSender`.
+Tests use their own fixed secrets and need none of these.
+
 To fill an empty local catalog with the prototype's 16 bags, start once with `KIVA_SEED_ENABLED=true`
 (in IntelliJ: *Run configuration → Environment variables*). The seeder goes through the use cases, like real
 data, and skips bags that are already there, so leaving it on is harmless. It is off by default and must stay

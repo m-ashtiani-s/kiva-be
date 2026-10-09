@@ -15,6 +15,8 @@ import org.slf4j.LoggerFactory
 
 private val logger = LoggerFactory.getLogger("com.kiva.infrastructure.common.http.StatusPages")
 
+private const val RATE_LIMITED = "RATE_LIMITED"
+
 /**
  * Safety net for everything that is not a business failure. Expected failures never get here; they travel as Result.
  * Every response is a problem (application/problem+json), same shape as business failures.
@@ -22,6 +24,7 @@ private val logger = LoggerFactory.getLogger("com.kiva.infrastructure.common.htt
  * - Body Ktor could not read (broken JSON, missing field, wrong type) -> 400 VALIDATION_ERROR
  * - Body in a format we don't read (not JSON) -> 415 VALIDATION_ERROR
  * - No route for this path -> 404 NOT_FOUND
+ * - Too many requests from one address (the RateLimit plugin) -> 429 RATE_LIMITED
  * - Someone else saved a change to the same thing between our read and our save -> 409 CHANGED_BY_SOMEONE_ELSE
  * - Anything else is a bug or an outage -> 500 INTERNAL_ERROR
  *
@@ -47,6 +50,12 @@ fun Application.configureStatusPages() {
         status(HttpStatusCode.NotFound) { _ ->
             val alreadyProblem = content.contentType?.match(ContentType.Application.ProblemJson) == true
             if (!alreadyProblem) call.respondProblem(call.problem(HttpStatusCode.NotFound, ErrorMessages.NOT_FOUND))
+        }
+        // The 429 of the limit per address (the RateLimit plugin) has no body; it gets the same problem as our own
+        // 429s, which already are problems and are left alone. The plugin's Retry-After header stays.
+        status(HttpStatusCode.TooManyRequests) { _ ->
+            val alreadyProblem = content.contentType?.match(ContentType.Application.ProblemJson) == true
+            if (!alreadyProblem) call.respondProblem(call.problem(HttpStatusCode.TooManyRequests, RATE_LIMITED))
         }
         // A race, not a bug: the user can look at the new state and try again. Nothing of the request was saved.
         exception<ConcurrentChangeException> { call, cause ->

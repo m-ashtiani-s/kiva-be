@@ -1,5 +1,6 @@
 package com.kiva.infrastructure.di
 
+import com.kiva.application.usecase.auth.usecase.command.SendLoginCodeUc
 import com.kiva.application.usecase.catalog.usecase.query.GetCategoryUc
 import com.kiva.application.usecase.catalog.usecase.query.ListCategoriesUc
 import com.kiva.application.usecase.catalog.usecase.query.ListColorsUc
@@ -74,6 +75,19 @@ val useCaseModule = module(createdAtStart = true) {
             productQmRepository = get(),
             htmlSanitizer = get(),
             clock = get(),
+        )
+    }
+
+    // --- auth: commands ---
+    single {
+        SendLoginCodeUc(
+            transactionManager = get(),
+            otpChallengeRepository = get(),
+            otpCodes = get(),
+            smsSender = get(),
+            securityEventLog = get(),
+            clock = get(),
+            maxSmsPerHour = get<AppConfig>().auth.maxSmsPerHour,
         )
     }
 

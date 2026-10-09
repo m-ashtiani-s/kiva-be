@@ -40,6 +40,6 @@ fun Application.start() {
     // Before the routes, so the first request already sees the seeded catalog.
     if (config.seed.enabled) runBlocking { get<DevCatalogSeeder>().seed() }
 
-    configureHttp(config.http.allowedOrigins)
+    configureHttp(config.http.allowedOrigins, config.http.trustedProxyHops)
     configureRouting()
 }
