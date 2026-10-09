@@ -1,10 +1,14 @@
 package com.kiva.infrastructure.di
 
+import com.kiva.application.port.AccessTokens
 import com.kiva.application.port.OtpCodes
+import com.kiva.application.port.SessionTokens
 import com.kiva.application.port.SmsSender
 import com.kiva.common.transaction.TransactionManager
 import com.kiva.domain.aggregate.product.model.valueobject.HtmlSanitizer
 import com.kiva.infrastructure.auth.HmacOtpCodes
+import com.kiva.infrastructure.auth.JwtAccessTokens
+import com.kiva.infrastructure.auth.RandomSessionTokens
 import com.kiva.infrastructure.auth.sms.LogSmsSender
 import com.kiva.infrastructure.common.html.JsoupHtmlSanitizer
 import com.kiva.infrastructure.common.persistence.ExposedTransactionManager
@@ -23,6 +27,10 @@ fun infrastructureModule(config: AppConfig, database: Database) = module {
     single<Clock> { Clock.systemUTC() }
     single<HtmlSanitizer> { JsoupHtmlSanitizer }
     single<OtpCodes> { HmacOtpCodes(config.auth.otpPepper) }
+    // One instance: it signs tokens for the use cases and its verifier checks them for the routes.
+    single { JwtAccessTokens(config.auth.jwtSecret) }
+    single<AccessTokens> { get<JwtAccessTokens>() }
+    single<SessionTokens> { RandomSessionTokens() }
     single<SmsSender> {
         when (config.sms.provider) {
             SmsProvider.LOG -> LogSmsSender()

@@ -1,6 +1,6 @@
 package com.kiva.domain.aggregate.otp.model.policy
 
-import com.kiva.domain.aggregate.otp.model.policy.OtpPolicy.SendRefusal
+import com.kiva.domain.aggregate.otp.model.policy.OtpPolicy.Refusal
 import com.kiva.domain.aggregate.otp.model.policy.OtpPolicy.SentCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpPurpose.LOGIN
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpPurpose.PHONE_CHANGE_NEW
@@ -30,7 +30,7 @@ class OtpSendLimitsTest {
     fun `the same purpose again within 120 seconds is OTP_RESEND_TOO_SOON, with the seconds left`() {
         val refused = refusal(login(Duration.ofSeconds(30)))
 
-        assertEquals(SendRefusal.ResendTooSoon(Duration.ofSeconds(90)), refused)
+        assertEquals(Refusal.ResendTooSoon(Duration.ofSeconds(90)), refused)
         assertEquals("OTP_RESEND_TOO_SOON", refused?.code)
         assertEquals(mapOf<String, Any>("retryAfterSeconds" to 90L), refused?.meta)
     }
@@ -51,7 +51,7 @@ class OtpSendLimitsTest {
 
         val refused = refusal(*fiveInAnHour)
 
-        assertEquals(SendRefusal.TooManyCodes(minutes(10)), refused)
+        assertEquals(Refusal.TooManyCodes(minutes(10)), refused)
         assertEquals("RATE_LIMITED", refused?.code)
         assertNull(refusal(*fiveInAnHour.drop(1).toTypedArray()))
     }
@@ -60,14 +60,14 @@ class OtpSendLimitsTest {
     fun `codes of every purpose count towards the hour`() {
         val sent = listOf(50L, 40, 30, 20).map { login(minutes(it)) } + SentCode(PHONE_CHANGE_NEW, ago(minutes(5)), 0)
 
-        assertEquals(SendRefusal.TooManyCodes(minutes(10)), OtpPolicy.refusalToSend(LOGIN, sent, now))
+        assertEquals(Refusal.TooManyCodes(minutes(10)), OtpPolicy.refusalToSend(LOGIN, sent, now))
     }
 
     @Test
     fun `the eleventh code in a day is refused until the oldest of them is a day old`() {
         val tenInADay = (1L..10).map { login(Duration.ofHours(it * 2)) }.toTypedArray()
 
-        assertEquals(SendRefusal.TooManyCodes(Duration.ofHours(4)), refusal(*tenInADay))
+        assertEquals(Refusal.TooManyCodes(Duration.ofHours(4)), refusal(*tenInADay))
     }
 
     @Test
@@ -82,7 +82,7 @@ class OtpSendLimitsTest {
         // 4 + 3 + 3 wrong tries: the 4 must leave the window for the count to go under 10.
         val refused = refusal(login(Duration.ofHours(20), 4), login(Duration.ofHours(10), 3), login(Duration.ofHours(5), 3))
 
-        assertEquals(SendRefusal.TooManyWrongCodes(Duration.ofHours(4)), refused)
+        assertEquals(Refusal.TooManyWrongCodes(Duration.ofHours(4)), refused)
         assertEquals("RATE_LIMITED", refused?.code)
     }
 
@@ -92,23 +92,31 @@ class OtpSendLimitsTest {
     }
 
     @Test
+    fun `ten wrong codes in a day stop every try too, however few codes were sent`() {
+        val sent = listOf(login(Duration.ofHours(20), 5), login(Duration.ofHours(10), 5))
+
+        assertEquals(Refusal.TooManyWrongCodes(Duration.ofHours(4)), OtpPolicy.refusalToVerify(sent, now))
+        assertNull(OtpPolicy.refusalToVerify(listOf(login(Duration.ofHours(20), 5), login(Duration.ofHours(10), 4)), now))
+    }
+
+    @Test
     fun `the most specific answer comes first`() {
         val fiveInAnHourLastOneJustNow = listOf(50L, 40, 30, 20).map { login(minutes(it)) } + login(Duration.ofSeconds(20))
 
-        assertEquals(SendRefusal.ResendTooSoon(Duration.ofSeconds(100)), OtpPolicy.refusalToSend(LOGIN, fiveInAnHourLastOneJustNow, now))
+        assertEquals(Refusal.ResendTooSoon(Duration.ofSeconds(100)), OtpPolicy.refusalToSend(LOGIN, fiveInAnHourLastOneJustNow, now))
     }
 
     @Test
     fun `the wait is rounded up to a whole second, and is at least one`() {
-        assertEquals(mapOf<String, Any>("retryAfterSeconds" to 2L), SendRefusal.TooManyCodes(Duration.ofMillis(1_001)).meta)
-        assertEquals(mapOf<String, Any>("retryAfterSeconds" to 1L), SendRefusal.TooManyCodes(Duration.ZERO).meta)
+        assertEquals(mapOf<String, Any>("retryAfterSeconds" to 2L), Refusal.TooManyCodes(Duration.ofMillis(1_001)).meta)
+        assertEquals(mapOf<String, Any>("retryAfterSeconds" to 1L), Refusal.TooManyCodes(Duration.ZERO).meta)
     }
 
     @Test
     fun `at the shop's hourly cap no code goes out until the oldest of the hour is an hour old`() {
         assertNull(OtpPolicy.refusalForShopCap(sentLastHour = 299, earliest = ago(minutes(50)), cap = 300, now = now))
         assertEquals(
-            SendRefusal.ShopHourlyCapReached(minutes(10)),
+            Refusal.ShopHourlyCapReached(minutes(10)),
             OtpPolicy.refusalForShopCap(sentLastHour = 300, earliest = ago(minutes(50)), cap = 300, now = now),
         )
     }

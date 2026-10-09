@@ -58,6 +58,12 @@ class CorsTest {
             listOf("content-type", "idempotency-key", "authorization").forEach { assertTrue(it in allowedHeaders, "$it not allowed: $allowedHeaders") }
         }
 
+        /** Without it the browser neither keeps the refresh token's cookie from a login nor sends it back. */
+        @Test
+        fun `an allowed frontend may send and receive cookies`() = withApp {
+            assertEquals("true", preflight(shop).headers[HttpHeaders.AccessControlAllowCredentials])
+        }
+
         @Test
         fun `the local dev server is allowed too`() = withApp {
             assertEquals(devServer, preflight(devServer).headers[HttpHeaders.AccessControlAllowOrigin])

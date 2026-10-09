@@ -49,13 +49,22 @@ class OtpChallengeRepositoryImpl : OtpChallengeRepository {
         } ?: error("nextval of otpchallenge_tbl's id sequence returned nothing")
 
     override fun findOpen(phone: IranianMobileNumber, purpose: OtpPurpose): OtpChallenge? =
+        openQuery(phone, purpose).singleOrNull()?.toChallenge()
+
+    /**
+     * `SELECT … FOR UPDATE`. A try that waits for the lock is answered by Postgres with the row as the other try left
+     * it, checked against the WHERE again: once the code was accepted it is no longer open, so the waiting try finds
+     * nothing.
+     */
+    override fun findOpenForUpdate(phone: IranianMobileNumber, purpose: OtpPurpose): OtpChallenge? =
+        openQuery(phone, purpose).forUpdate().singleOrNull()?.toChallenge()
+
+    private fun openQuery(phone: IranianMobileNumber, purpose: OtpPurpose) =
         OtpChallengeTbl.selectAll()
             .where {
                 (OtpChallengeTbl.phone eq phone.value) and (OtpChallengeTbl.purpose eq purpose) and
                     OtpChallengeTbl.consumedOn.isNull() and OtpChallengeTbl.replacedOn.isNull()
             }
-            .singleOrNull()
-            ?.toChallenge()
 
     override fun sentTo(phone: IranianMobileNumber, since: Instant): List<OtpPolicy.SentCode> =
         OtpChallengeTbl.select(OtpChallengeTbl.purpose, OtpChallengeTbl.createdOn, OtpChallengeTbl.failedAttempts)

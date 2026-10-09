@@ -2,6 +2,7 @@ package com.kiva.application.port
 
 import com.kiva.common.valueobject.IranianMobileNumber
 import com.kiva.common.valueobject.UserId
+import com.kiva.domain.aggregate.session.model.valueobject.SessionId
 import java.time.Instant
 
 /**
@@ -25,6 +26,7 @@ data class SecurityEvent(
     val occurredOn: Instant,
     val userId: UserId? = null,
     val phone: IranianMobileNumber? = null,
+    val sessionId: SessionId? = null,
     val ip: String? = null,
     val detail: Map<String, Any> = emptyMap(),
 )

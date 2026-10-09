@@ -18,7 +18,7 @@ import com.kiva.common.usecase.CommandUseCase
 import com.kiva.common.valueobject.IranianMobileNumber
 import com.kiva.domain.aggregate.otp.entity.OtpChallenge
 import com.kiva.domain.aggregate.otp.model.policy.OtpPolicy
-import com.kiva.domain.aggregate.otp.model.policy.OtpPolicy.SendRefusal
+import com.kiva.domain.aggregate.otp.model.policy.OtpPolicy.Refusal
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpPurpose
 import com.kiva.domain.aggregate.otp.repository.OtpChallengeRepository
@@ -77,7 +77,7 @@ class SendLoginCodeUc(
     private sealed interface Outcome {
         data class Issued(val code: OtpCode) : Outcome
 
-        data class Refused(val refusal: SendRefusal) : Outcome
+        data class Refused(val refusal: Refusal) : Outcome
     }
 
     override suspend fun execute(command: Cmd): Result<IranianMobileNumber, Failure> {
@@ -121,7 +121,7 @@ class SendLoginCodeUc(
     }
 
     /** The shop's hourly cap; reaching it is an ERROR in the log and a security event, so someone looks at it. */
-    private fun shopCapRefusal(now: Instant): SendRefusal? {
+    private fun shopCapRefusal(now: Instant): Refusal? {
         val sent = otpChallengeRepository.sentToAnyone(now.minus(OtpPolicy.HOUR))
         val refusal = OtpPolicy.refusalForShopCap(sent.count, sent.earliest, maxSmsPerHour, now) ?: return null
         logger.error("SendLoginCodeUc: the shop's cap of $maxSmsPerHour SMS an hour is reached; no code goes out for ${refusal.retryAfter}")
@@ -143,6 +143,6 @@ class SendLoginCodeUc(
         data class InvalidInput(val problems: List<ResultFailure>) : Failure("VALIDATION_ERROR", FailureKind.INVALID, problems)
 
         /** A limit says no code now: 429, with how long to wait. */
-        data class LimitReached(val refusal: SendRefusal) : Failure(refusal.code, refusal.kind, meta = refusal.meta)
+        data class LimitReached(val refusal: Refusal) : Failure(refusal.code, refusal.kind, meta = refusal.meta)
     }
 }

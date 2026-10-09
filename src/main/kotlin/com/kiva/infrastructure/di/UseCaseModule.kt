@@ -1,6 +1,8 @@
 package com.kiva.infrastructure.di
 
+import com.kiva.application.usecase.account.usecase.query.GetMeUc
 import com.kiva.application.usecase.auth.usecase.command.SendLoginCodeUc
+import com.kiva.application.usecase.auth.usecase.command.VerifyLoginCodeUc
 import com.kiva.application.usecase.catalog.usecase.query.GetCategoryUc
 import com.kiva.application.usecase.catalog.usecase.query.ListCategoriesUc
 import com.kiva.application.usecase.catalog.usecase.query.ListColorsUc
@@ -90,6 +92,22 @@ val useCaseModule = module(createdAtStart = true) {
             maxSmsPerHour = get<AppConfig>().auth.maxSmsPerHour,
         )
     }
+    single {
+        VerifyLoginCodeUc(
+            transactionManager = get(),
+            otpChallengeRepository = get(),
+            userRepository = get(),
+            authSessionRepository = get(),
+            otpCodes = get(),
+            sessionTokens = get(),
+            accessTokens = get(),
+            securityEventLog = get(),
+            clock = get(),
+        )
+    }
+
+    // --- account: queries ---
+    single { GetMeUc(transactionManager = get(), userRepository = get()) }
 
     // --- inventory: commands ---
     single {

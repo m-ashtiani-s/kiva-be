@@ -4,25 +4,17 @@ import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.read.ListAppender
-import com.kiva.application.port.SmsSender
 import com.kiva.application.usecase.auth.usecase.command.SendLoginCodeUc
 import com.kiva.common.valueobject.IranianMobileNumber
 import com.kiva.domain.aggregate.otp.model.valueobject.CodeHash
-import com.kiva.domain.aggregate.otp.model.valueobject.OtpCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpPurpose
 import com.kiva.domain.aggregate.otp.model.valueobject.Salt
 import com.kiva.infrastructure.MutableClock
 import com.kiva.infrastructure.TestDatabase
-import com.kiva.infrastructure.auth.HmacOtpCodes
-import com.kiva.infrastructure.common.persistence.ExposedTransactionManager
 import com.kiva.infrastructure.httpserver.API_V1
-import com.kiva.infrastructure.httpserver.configureHttp
-import com.kiva.infrastructure.persistence.exposed.OtpChallengeRepositoryImpl
-import com.kiva.infrastructure.persistence.exposed.SecurityEventLogImpl
 import com.kiva.infrastructure.persistence.exposed.UserRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.tbl.OtpChallengeTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.SecurityEventTbl
-import com.kiva.infrastructure.persistence.exposed.tbl.UserTbl
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.header
 import io.ktor.client.request.post
@@ -33,11 +25,8 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
-import io.ktor.server.config.MapApplicationConfig
 import io.ktor.server.routing.route
-import io.ktor.server.routing.routing
 import io.ktor.server.testing.ApplicationTestBuilder
-import io.ktor.server.testing.testApplication
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -46,8 +35,6 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.core.like
-import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.junit.jupiter.api.AfterEach
@@ -56,7 +43,6 @@ import org.slf4j.LoggerFactory
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
-import java.util.Collections
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -76,43 +62,15 @@ class WebV1AuthSendOnDatabaseTest {
 
     private val db = TestDatabase.database
     private val clock = MutableClock(Instant.parse("2031-03-01T08:00:00Z"))
-    private val sms = RecordingSmsSender()
-    private val otpCodes = HmacOtpCodes(ByteArray(32) { 7 })
-
-    private fun useCase(maxSmsPerHour: Int = 300) = SendLoginCodeUc(
-        ExposedTransactionManager(db), OtpChallengeRepositoryImpl(), otpCodes, sms, SecurityEventLogImpl(), clock, maxSmsPerHour,
-    )
+    private val stack = AuthTestStack(clock)
+    private val sms = stack.sms
+    private val otpCodes = stack.otpCodes
 
     @AfterEach
-    fun deleteWhatWasStored() {
-        transaction(db) {
-            OtpChallengeTbl.deleteWhere { OtpChallengeTbl.phone like "0990%" }
-            UserTbl.deleteWhere { UserTbl.phone like "0990%" }
-        }
-    }
+    fun deleteWhatWasStored() = stack.deleteTestUsers()
 
-    /** Remembers what it sent; fails when told to, like a provider that is down. */
-    private class RecordingSmsSender : SmsSender {
-        val sent: MutableList<Pair<IranianMobileNumber, OtpCode>> = Collections.synchronizedList(mutableListOf())
-
-        @Volatile
-        var down = false
-
-        override suspend fun sendCode(to: IranianMobileNumber, code: OtpCode, purpose: OtpPurpose) {
-            check(!down) { "the SMS provider is down" }
-            sent += to to code
-        }
-    }
-
-    private fun withApp(useCase: SendLoginCodeUc = useCase(), trustedProxyHops: Int = 0, block: suspend ApplicationTestBuilder.() -> Unit) =
-        testApplication {
-            environment { config = MapApplicationConfig() }
-            application {
-                configureHttp(trustedProxyHops = trustedProxyHops)
-                routing { route(API_V1) { webV1Auth(useCase) } }
-            }
-            block()
-        }
+    private fun withApp(stack: AuthTestStack = this.stack, trustedProxyHops: Int = 0, block: suspend ApplicationTestBuilder.() -> Unit) =
+        stack.app(trustedProxyHops = trustedProxyHops, block = block)
 
     private suspend fun ApplicationTestBuilder.send(phone: String, body: String = """{"phone":"$phone"}""", more: HttpRequestBuilder.() -> Unit = {}) =
         client.post("$API_V1/auth/otp/send") {
@@ -123,7 +81,7 @@ class WebV1AuthSendOnDatabaseTest {
 
     private suspend fun HttpResponse.json(): JsonObject = Json.parseToJsonElement(bodyAsText()).jsonObject
 
-    private fun phone(n: Int) = "0990" + n.toString().padStart(7, '0')
+    private fun phone(n: Int) = AuthTestStack.phone(n)
 
     private data class StoredCode(val salt: Salt, val hash: CodeHash, val open: Boolean, val requestIp: String?)
 
@@ -237,7 +195,7 @@ class WebV1AuthSendOnDatabaseTest {
 
     @Test
     fun `ten sends to one phone at the same moment send one SMS`() {
-        val useCase = useCase()
+        val useCase = stack.send
         val start = CountDownLatch(1)
         val pool = Executors.newFixedThreadPool(10)
         val results = try {
@@ -287,8 +245,9 @@ class WebV1AuthSendOnDatabaseTest {
     fun `at the shop's hourly cap no code goes out, with a 429, an ERROR in the log and a security event`() {
         val capReachedOn = Instant.parse("2032-06-01T10:00:00Z")
         clock.advance(Duration.between(clock.now, capReachedOn))
+        val capped = AuthTestStack(clock, maxSmsPerHour = 3)
         val errors = errorsLoggedBy(SendLoginCodeUc::class.java) {
-            withApp(useCase(maxSmsPerHour = 3)) {
+            withApp(capped) {
                 (1..3).forEach { assertEquals(HttpStatusCode.OK, send(phone(300 + it)).status) }
 
                 val fourth = send(phone(304))
@@ -308,7 +267,7 @@ class WebV1AuthSendOnDatabaseTest {
         }
         assertEquals("3", event[SecurityEventTbl.detail]["cap"]?.jsonPrimitive?.content)
         assertTrue(storedCodes(phone(304)).isEmpty())
-        assertEquals(3, sms.sent.size)
+        assertEquals(3, capped.sms.sent.size)
     }
 
     @Test

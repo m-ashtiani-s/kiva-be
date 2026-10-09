@@ -16,6 +16,7 @@ import kotlin.test.assertTrue
 class AppConfigTest {
 
     private val pepper = ByteArray(32) { it.toByte() }
+    private val jwtSecret = ByteArray(32) { (it + 100).toByte() }
 
     private val valid = mapOf(
         "kiva.datasource.url" to "jdbc:postgresql://localhost:5432/kiva",
@@ -23,6 +24,7 @@ class AppConfigTest {
         "kiva.datasource.password" to "kiva",
         "kiva.datasource.maxPoolSize" to "10",
         "kiva.auth.otpPepper" to Base64.getEncoder().encodeToString(pepper),
+        "kiva.auth.jwtSecret" to Base64.getEncoder().encodeToString(jwtSecret),
         "kiva.auth.maxSmsPerHour" to "300",
         "kiva.shop.freeShippingThreshold" to "3000000",
         "kiva.shop.siteUrl" to "https://kiva.ir",
@@ -46,6 +48,7 @@ class AppConfigTest {
         val config = read()
 
         assertContentEquals(pepper, config.auth.otpPepper)
+        assertContentEquals(jwtSecret, config.auth.jwtSecret)
         assertEquals(300, config.auth.maxSmsPerHour)
         assertEquals(SmsProvider.LOG, config.sms.provider)
         assertEquals(0, config.http.trustedProxyHops)
@@ -57,6 +60,17 @@ class AppConfigTest {
 
         assertTrue("KIVA_OTP_PEPPER" in message)
         assertTrue("openssl rand -base64 32" in message)
+    }
+
+    @Test
+    fun `without a JWT secret the app doesn't start either`() {
+        assertTrue("KIVA_JWT_SECRET" in refusal("kiva.auth.jwtSecret" to null))
+        assertTrue("at least 32 bytes" in refusal("kiva.auth.jwtSecret" to Base64.getEncoder().encodeToString(ByteArray(16))))
+    }
+
+    @Test
+    fun `the JWT secret can't be the pepper, so one leak doesn't give away both`() {
+        assertTrue("must be different" in refusal("kiva.auth.jwtSecret" to Base64.getEncoder().encodeToString(pepper)))
     }
 
     @Test
@@ -77,11 +91,12 @@ class AppConfigTest {
     }
 
     @Test
-    fun `the pepper never shows when the settings are printed`() {
+    fun `the secrets never show when the settings are printed`() {
         val printed = read().auth.toString()
 
         assertFalse(Base64.getEncoder().encodeToString(pepper) in printed)
-        assertTrue("<hidden>" in printed)
+        assertFalse(Base64.getEncoder().encodeToString(jwtSecret) in printed)
+        assertEquals("AuthConfig(otpPepper=<hidden>, jwtSecret=<hidden>, maxSmsPerHour=300)", printed)
     }
 
     /**
@@ -96,7 +111,11 @@ class AppConfigTest {
         val withoutPepper = HoconApplicationConfig(file.resolve(noEnvironment))
         assertTrue("KIVA_OTP_PEPPER" in assertFailsWith<IllegalArgumentException> { AppConfig.from(withoutPepper) }.message.orEmpty())
 
-        val withPepper = ConfigFactory.parseMap(mapOf("kiva.auth.otpPepper" to valid.getValue("kiva.auth.otpPepper")))
+        val secrets = mapOf(
+            "kiva.auth.otpPepper" to valid.getValue("kiva.auth.otpPepper"),
+            "kiva.auth.jwtSecret" to valid.getValue("kiva.auth.jwtSecret"),
+        )
+        val withPepper = ConfigFactory.parseMap(secrets)
             .withFallback(file)
             .resolve(noEnvironment)
         val config = AppConfig.from(HoconApplicationConfig(withPepper))

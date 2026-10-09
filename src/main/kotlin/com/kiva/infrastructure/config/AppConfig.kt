@@ -25,6 +25,7 @@ data class AppConfig(
                 ),
                 auth = AuthConfig.of(
                     otpPepperBase64 = config.propertyOrNull("kiva.auth.otpPepper")?.getString(),
+                    jwtSecretBase64 = config.propertyOrNull("kiva.auth.jwtSecret")?.getString(),
                     maxSmsPerHour = config.property("kiva.auth.maxSmsPerHour").getString().toInt(),
                 ),
                 shop = ShopConfig(
@@ -44,41 +45,57 @@ data class AppConfig(
 }
 
 /**
- * Secrets and limits of login.
+ * Secrets and limits of login. Both secrets are required, at least 32 bytes, and different from each other: one leaked
+ * secret must not give away the other.
  *
- * @property otpPepper the key of the codes' HMAC (`KIVA_OTP_PEPPER`, base64 of at least 32 random bytes). Kept outside
- *   the database, so a copy of the database can't be used to work the codes out.
+ * @property otpPepper the key of the codes' HMAC (`KIVA_OTP_PEPPER`). Kept outside the database, so a copy of the
+ *   database can't be used to work the codes out.
+ * @property jwtSecret the key access tokens are signed with (`KIVA_JWT_SECRET`).
  * @property maxSmsPerHour the shop's cap on SMS in an hour, all phones together.
  */
-class AuthConfig(otpPepper: ByteArray, val maxSmsPerHour: Int) {
+class AuthConfig(otpPepper: ByteArray, jwtSecret: ByteArray, val maxSmsPerHour: Int) {
 
     private val pepper = otpPepper.copyOf()
+    private val signingKey = jwtSecret.copyOf()
 
     val otpPepper: ByteArray get() = pepper.copyOf()
+    val jwtSecret: ByteArray get() = signingKey.copyOf()
 
     init {
         require(pepper.size >= MIN_SECRET_BYTES) {
             "kiva.auth.otpPepper (KIVA_OTP_PEPPER) must be at least $MIN_SECRET_BYTES bytes, was ${pepper.size}. $HOW_TO_MAKE_ONE"
         }
+        require(signingKey.size >= MIN_SECRET_BYTES) {
+            "kiva.auth.jwtSecret (KIVA_JWT_SECRET) must be at least $MIN_SECRET_BYTES bytes, was ${signingKey.size}. $HOW_TO_MAKE_ONE"
+        }
+        require(!pepper.contentEquals(signingKey)) {
+            "KIVA_OTP_PEPPER and KIVA_JWT_SECRET must be different secrets. $HOW_TO_MAKE_ONE"
+        }
         require(maxSmsPerHour > 0) { "kiva.auth.maxSmsPerHour must be positive, was $maxSmsPerHour" }
     }
 
-    // Never the secret itself, if this object is ever printed.
-    override fun toString() = "AuthConfig(otpPepper=<hidden>, maxSmsPerHour=$maxSmsPerHour)"
+    // Never the secrets themselves, if this object is ever printed.
+    override fun toString() = "AuthConfig(otpPepper=<hidden>, jwtSecret=<hidden>, maxSmsPerHour=$maxSmsPerHour)"
 
     companion object {
         const val MIN_SECRET_BYTES = 32
         private const val HOW_TO_MAKE_ONE = "Make one with `openssl rand -base64 32` and set it as an environment variable."
 
-        /** From the config value: base64, and required (there is no default to fall back to). */
-        fun of(otpPepperBase64: String?, maxSmsPerHour: Int): AuthConfig {
-            require(!otpPepperBase64.isNullOrBlank()) { "kiva.auth.otpPepper (KIVA_OTP_PEPPER) is not set. $HOW_TO_MAKE_ONE" }
-            val pepper = try {
-                Base64.getDecoder().decode(otpPepperBase64.trim())
+        /** From the config values: base64, and required (there are no defaults to fall back to). */
+        fun of(otpPepperBase64: String?, jwtSecretBase64: String?, maxSmsPerHour: Int): AuthConfig =
+            AuthConfig(
+                otpPepper = secretOf(otpPepperBase64, "kiva.auth.otpPepper (KIVA_OTP_PEPPER)"),
+                jwtSecret = secretOf(jwtSecretBase64, "kiva.auth.jwtSecret (KIVA_JWT_SECRET)"),
+                maxSmsPerHour = maxSmsPerHour,
+            )
+
+        private fun secretOf(base64: String?, name: String): ByteArray {
+            require(!base64.isNullOrBlank()) { "$name is not set. $HOW_TO_MAKE_ONE" }
+            return try {
+                Base64.getDecoder().decode(base64.trim())
             } catch (e: IllegalArgumentException) {
-                throw IllegalArgumentException("kiva.auth.otpPepper (KIVA_OTP_PEPPER) is not base64. $HOW_TO_MAKE_ONE", e)
+                throw IllegalArgumentException("$name is not base64. $HOW_TO_MAKE_ONE", e)
             }
-            return AuthConfig(pepper, maxSmsPerHour)
         }
     }
 }

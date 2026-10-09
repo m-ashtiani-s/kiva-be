@@ -23,6 +23,13 @@ interface OtpChallengeRepository {
     /** The open code (neither accepted nor replaced) of this phone and purpose; there is at most one. */
     fun findOpen(phone: IranianMobileNumber, purpose: OtpPurpose): OtpChallenge?
 
+    /**
+     * The open code, locked until the transaction ends: tries of one code run one after another, so fifty at the same
+     * moment can't all slip in before the count goes up, and the right code makes one session only. A try that waited
+     * for the lock finds the code as the other one left it, or no open code at all once it was accepted.
+     */
+    fun findOpenForUpdate(phone: IranianMobileNumber, purpose: OtpPurpose): OtpChallenge?
+
     /** This phone's codes, any purpose, sent after [since]: what the send limits count. */
     fun sentTo(phone: IranianMobileNumber, since: Instant): List<OtpPolicy.SentCode>
 

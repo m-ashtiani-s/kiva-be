@@ -1,6 +1,8 @@
 package com.kiva.infrastructure.di
 
+import com.kiva.application.usecase.account.usecase.query.GetMeUc
 import com.kiva.application.usecase.auth.usecase.command.SendLoginCodeUc
+import com.kiva.application.usecase.auth.usecase.command.VerifyLoginCodeUc
 import com.kiva.application.usecase.inventory.usecase.command.AdjustInventoryUc
 import com.kiva.domain.aggregate.inventory.InventoryDomainService
 import com.kiva.domain.aggregate.product.ProductDomainService
@@ -17,7 +19,7 @@ class AppModulesTest {
     // Only the database connection is used; the datasource settings are read at boot, before Koin.
     private val config = AppConfig(
         DatasourceConfig("jdbc:postgresql://localhost:5432/kiva_test", "unused", "unused", 1),
-        auth = AuthConfig(ByteArray(32) { 7 }, maxSmsPerHour = 300),
+        auth = AuthConfig(otpPepper = ByteArray(32) { 7 }, jwtSecret = ByteArray(32) { 8 }, maxSmsPerHour = 300),
     )
 
     /** Everything is created at start, so a missing binding fails here instead of when the server boots. */
@@ -29,6 +31,8 @@ class AppModulesTest {
             assertNotNull(app.koin.get<InventoryDomainService>())
             assertNotNull(app.koin.get<AdjustInventoryUc>())
             assertNotNull(app.koin.get<SendLoginCodeUc>())
+            assertNotNull(app.koin.get<VerifyLoginCodeUc>())
+            assertNotNull(app.koin.get<GetMeUc>())
         } finally {
             app.close()
         }

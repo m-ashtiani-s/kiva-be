@@ -1,6 +1,8 @@
 package com.kiva.infrastructure.httpserver
 
+import com.kiva.application.usecase.account.usecase.query.GetMeUc
 import com.kiva.application.usecase.auth.usecase.command.SendLoginCodeUc
+import com.kiva.application.usecase.auth.usecase.command.VerifyLoginCodeUc
 import com.kiva.application.usecase.catalog.usecase.query.GetCategoryUc
 import com.kiva.application.usecase.catalog.usecase.query.ListCategoriesUc
 import com.kiva.application.usecase.catalog.usecase.query.ListColorsUc
@@ -81,6 +83,9 @@ fun Application.configureHttp(allowedOrigins: List<String> = emptyList(), truste
         allowMethod(HttpMethod.Patch)
         allowMethod(HttpMethod.Delete)
         allowNonSimpleContentTypes = true // application/json bodies
+        // The refresh token's cookie: without this the browser neither keeps the cookie of a login answer nor sends
+        // it to /auth/refresh. Safe only because the origins are exact.
+        allowCredentials = true
         allowHeader(HttpHeaders.Authorization)
         allowHeader(HttpHeaders.IfMatch)
         allowHeader(IDEMPOTENCY_KEY_HEADER)
@@ -116,12 +121,14 @@ fun Application.configureRouting() {
     val getProductUc by inject<GetProductUc>()
     val findRelatedProductsUc by inject<FindRelatedProductsUc>()
     val sendLoginCodeUc by inject<SendLoginCodeUc>()
+    val verifyLoginCodeUc by inject<VerifyLoginCodeUc>()
+    val getMeUc by inject<GetMeUc>()
     val config by inject<AppConfig>()
 
     routing {
         healthRoutes()
         route(API_V1) {
-            webV1Auth(sendLoginCodeUc)
+            webV1Auth(sendLoginCodeUc, verifyLoginCodeUc, getMeUc)
             webV1Catalog(listColorsUc, listMaterialsUc, listCategoriesUc, getCategoryUc)
             webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, config.shop.siteUrl)
         }

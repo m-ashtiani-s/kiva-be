@@ -35,8 +35,8 @@ Database settings come from `src/main/resources/application.conf` and can be ove
 `KIVA_DB_URL`, `KIVA_DB_USER`, `KIVA_DB_PASSWORD` and `PORT`. Tests use `KIVA_TEST_DB_URL`,
 `KIVA_TEST_DB_USER` and `KIVA_TEST_DB_PASSWORD` (defaults: local `kiva_test`, `kiva`/`kiva`).
 
-The app doesn't start without its login secret. Make one once and keep it in *Run configuration → Environment
-variables* (it is never committed):
+The app doesn't start without its two login secrets. Make each one once (run the command twice: they must differ)
+and keep them in *Run configuration → Environment variables* (they are never committed):
 
 ```bash
 openssl rand -base64 32
@@ -45,6 +45,7 @@ openssl rand -base64 32
 | Variable | What |
 | --- | --- |
 | `KIVA_OTP_PEPPER` | Required. The key of the login codes' HMAC: base64 of at least 32 random bytes. |
+| `KIVA_JWT_SECRET` | Required. The key access tokens are signed with: base64 of at least 32 random bytes, not the pepper. |
 | `KIVA_SMS_PROVIDER` | `log` (the default) writes login codes to the log instead of sending them: development only. |
 | `KIVA_TRUSTED_PROXY_HOPS` | `1` only behind the shop's own nginx; `0` (the default) everywhere else. |
 

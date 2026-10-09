@@ -22,6 +22,7 @@ class SecurityEventLogImpl : SecurityEventLog {
             it[type] = event.type.name
             it[userId] = event.userId?.value
             it[phone] = event.phone?.value
+            it[sessionId] = event.sessionId?.value
             it[ip] = event.ip
             it[traceId] = MDC.get("traceId")
             it[detail] = JsonObject(event.detail.mapValues { (_, value) -> value.toJson() })
