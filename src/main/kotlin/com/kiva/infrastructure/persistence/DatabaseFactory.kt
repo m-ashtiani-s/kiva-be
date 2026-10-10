@@ -34,7 +34,15 @@ object DatabaseFactory {
      * Exposed's own retry is off: by default it runs a whole transaction again, up to 3 times, after any SQL error. That
      * would run a use case again without it knowing (a race it answers itself, a bug that should stop at once). A use
      * case that wants another try asks for it, like AdjustInventoryUc.
+     *
+     * The SQL log shows the statements without their values ([SqlWithoutValuesLogger]).
      */
     fun connect(dataSource: DataSource): Database =
-        Database.connect(dataSource, databaseConfig = DatabaseConfig { defaultMaxAttempts = 1 })
+        Database.connect(
+            dataSource,
+            databaseConfig = DatabaseConfig {
+                defaultMaxAttempts = 1
+                sqlLogger = SqlWithoutValuesLogger
+            },
+        )
 }

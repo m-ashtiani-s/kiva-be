@@ -10,11 +10,13 @@ import com.kiva.infrastructure.MutableClock
 import com.kiva.infrastructure.httpserver.API_V1
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AuthTestStack.Companion.ORIGIN
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AuthTestStack.Companion.phone
+import com.kiva.infrastructure.persistence.exposed.AuthSessionRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.UserRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.tbl.AuthSessionTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.RefreshTokenTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.SecurityEventTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.UserTbl
+import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
@@ -42,12 +44,14 @@ import java.time.Instant
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.test.fail
 
 /**
  * POST /auth/refresh and POST /auth/logout over the real stack on kiva_test, with sessions made by real logins. Step 7
@@ -201,6 +205,60 @@ class WebV1AuthRefreshOnDatabaseTest {
         }
     }
 
+    /**
+     * The session is read FOR UPDATE. A refresh that comes while a logout from all devices (or a role or phone change)
+     * has revoked the session but not committed yet waits for it, then sees the revoke. Read without the lock, the
+     * session would still look live, and the refresh's own save would write the revoke away.
+     */
+    @Test
+    fun `a refresh that meets a revoke not committed yet waits for it, and never brings the session back`() {
+        val phone = phone(18)
+        var cookie = ""
+        stack.app { cookie = login(phone) }
+        val userId = UserId.constructFromPersisted(userIdOf(phone))
+        val revoked = CountDownLatch(1)
+        val mayCommit = CountDownLatch(1)
+        var outcome = ""
+
+        val logoutEverywhere = thread {
+            transaction(db) {
+                AuthSessionRepositoryImpl().revokeAllOf(userId, RevokeReason.LOGOUT_ALL, clock.now)
+                revoked.countDown()
+                mayCommit.await(30, TimeUnit.SECONDS)
+            }
+        }
+        revoked.await(30, TimeUnit.SECONDS)
+        val refresh = thread {
+            outcome = runBlocking { stack.refresh.execute(RefreshSessionUc.Cmd(cookie, ip = null)) }.failureOrNull()?.code ?: "refreshed"
+        }
+        try {
+            awaitSomeoneWaitingForALock()
+        } finally {
+            mayCommit.countDown()
+            logoutEverywhere.join()
+            refresh.join()
+        }
+
+        assertEquals("REFRESH_TOKEN_INVALID", outcome)
+        assertEquals(RevokeReason.LOGOUT_ALL, sessionsOf(phone).single()[AuthSessionTbl.revokeReason])
+    }
+
+    private fun awaitSomeoneWaitingForALock() {
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
+        while (System.nanoTime() < deadline) {
+            // A new transaction each time: within one, Postgres keeps showing the activity it saw first.
+            val waiting = transaction(db) {
+                exec("SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock'") {
+                    it.next()
+                    it.getInt(1)
+                } ?: 0
+            }
+            if (waiting > 0) return
+            Thread.sleep(20)
+        }
+        fail("the refresh never waited for the revoke")
+    }
+
     @Test
     fun `a customer's session unused for 30 days and a second is gone`() = stack.app {
         val cookie = login(phone(5))
@@ -269,6 +327,23 @@ class WebV1AuthRefreshOnDatabaseTest {
         }
 
         // Nothing was rotated or ended by the refused calls.
+        assertEquals(HttpStatusCode.OK, refresh(cookie).status)
+    }
+
+    @Test
+    fun `refresh and logout take only a POST, so a link or an image on another page can't reach them`() = stack.app {
+        val cookie = login(phone(17))
+
+        listOf("/auth/refresh", "/auth/logout").forEach { path ->
+            val response = client.get("$API_V1$path") {
+                header(HttpHeaders.Origin, ORIGIN)
+                header(HttpHeaders.Cookie, "kiva_rt=$cookie")
+            }
+            assertEquals(HttpStatusCode.MethodNotAllowed, response.status, "GET $path")
+            assertNull(response.headers[HttpHeaders.SetCookie], "GET $path")
+        }
+
+        // Nothing was rotated or ended.
         assertEquals(HttpStatusCode.OK, refresh(cookie).status)
     }
 

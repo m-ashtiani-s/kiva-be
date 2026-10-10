@@ -1,5 +1,6 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
+import com.kiva.application.port.OtpCodes
 import com.kiva.application.port.SmsSender
 import com.kiva.application.usecase.account.usecase.command.ConfirmPhoneChangeUc
 import com.kiva.application.usecase.account.usecase.command.RequestPhoneChangeUc
@@ -51,13 +52,12 @@ import java.util.Collections
 /**
  * The login use cases over kiva_test, wired as the app wires them, with a test clock, an SMS sender that remembers
  * what it sent, and fixed secrets. Every test phone starts with 0990; [deleteTestUsers] removes their sessions, codes
- * and accounts.
+ * and accounts. [otpCodes] are the real ones unless a test needs to know the codes in advance.
  */
-class AuthTestStack(val clock: MutableClock, maxSmsPerHour: Int = 300) {
+class AuthTestStack(val clock: MutableClock, maxSmsPerHour: Int = 300, val otpCodes: OtpCodes = HmacOtpCodes(OTP_PEPPER)) {
 
     val db = TestDatabase.database
     val sms = RecordingSmsSender()
-    val otpCodes = HmacOtpCodes(OTP_PEPPER)
     val accessTokens = JwtAccessTokens(JWT_SECRET, clock)
     val sessionTokens = RandomSessionTokens()
 

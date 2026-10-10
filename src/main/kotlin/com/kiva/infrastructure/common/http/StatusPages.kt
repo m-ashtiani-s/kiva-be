@@ -10,7 +10,7 @@ import io.ktor.server.plugins.NotFoundException
 import io.ktor.server.plugins.ContentTransformationException
 import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.request.httpMethod
-import io.ktor.server.request.uri
+import io.ktor.server.request.path
 import org.slf4j.LoggerFactory
 
 private val logger = LoggerFactory.getLogger("com.kiva.infrastructure.common.http.StatusPages")
@@ -31,17 +31,18 @@ private const val FORBIDDEN = "FORBIDDEN"
  * - Anything else is a bug or an outage -> 500 INTERNAL_ERROR
  *
  * The client never sees exception messages or stack traces; they go to the log with the traceId,
- * because they can reveal table names, SQL or secrets.
+ * because they can reveal table names, SQL or secrets. A log line names the path without its query string, since a
+ * search like `?q=09121234567` is a customer's own data.
  */
 fun Application.configureStatusPages() {
     install(StatusPages) {
         // Thrown when there is no JSON to read at all (e.g. text/plain); broken JSON is a BadRequestException instead.
         exception<ContentTransformationException> { call, cause ->
-            logger.info("Unsupported media type {} {}: {}", call.request.httpMethod.value, call.request.uri, cause.message)
+            logger.info("Unsupported media type {} {}: {}", call.request.httpMethod.value, call.request.path(), cause.message)
             call.respondProblem(call.problem(HttpStatusCode.UnsupportedMediaType, ErrorMessages.VALIDATION_ERROR, "اطلاعات باید با فرمت JSON فرستاده بشه"))
         }
         exception<BadRequestException> { call, cause ->
-            logger.info("Unreadable request {} {}: {}", call.request.httpMethod.value, call.request.uri, cause.message)
+            logger.info("Unreadable request {} {}: {}", call.request.httpMethod.value, call.request.path(), cause.message)
             call.respondProblem(call.problem(HttpStatusCode.BadRequest, ErrorMessages.VALIDATION_ERROR, "اطلاعات ارسالی قابل خوندن نیست"))
         }
         exception<NotFoundException> { call, _ ->
@@ -66,11 +67,11 @@ fun Application.configureStatusPages() {
         }
         // A race, not a bug: the user can look at the new state and try again. Nothing of the request was saved.
         exception<ConcurrentChangeException> { call, cause ->
-            logger.info("Concurrent change on {} {}: {}", call.request.httpMethod.value, call.request.uri, cause.message)
+            logger.info("Concurrent change on {} {}: {}", call.request.httpMethod.value, call.request.path(), cause.message)
             call.respondProblem(call.problem(HttpStatusCode.Conflict, ErrorMessages.CHANGED_BY_SOMEONE_ELSE))
         }
         exception<Throwable> { call, cause ->
-            logger.error("Unhandled error on ${call.request.httpMethod.value} ${call.request.uri}", cause)
+            logger.error("Unhandled error on ${call.request.httpMethod.value} ${call.request.path()}", cause)
             call.respondProblem(call.problem(HttpStatusCode.InternalServerError, ErrorMessages.INTERNAL_ERROR))
         }
     }

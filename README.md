@@ -49,9 +49,24 @@ openssl rand -base64 32
 | `KIVA_SMS_PROVIDER` | `log` (the default) writes login codes to the log instead of sending them: development only. |
 | `KIVA_TRUSTED_PROXY_HOPS` | `1` only behind the shop's own nginx; `0` (the default) everywhere else. |
 | `KIVA_BOOTSTRAP_ADMIN_PHONE` | Optional. This phone becomes ADMIN on startup, only while there is no ADMIN at all; remove it after the first start. |
+| `KIVA_ALLOWED_ORIGINS` | Comma-separated frontends a browser may call the API from. Defaults to `localhost` and `127.0.0.1` on ports 5173 and 3000; on a server, the shop's own `https://` addresses. |
 
-With the `log` provider, the code of `POST /api/v1/auth/otp/send` is in the log, on a `WARN` line from `LogSmsSender`.
-Tests use their own fixed secrets and need none of these.
+With the `log` provider, the code of `POST /api/v1/auth/otp/send` (and the two codes of a phone change) is in the log,
+on a `WARN` line from `LogSmsSender`. Tests use their own fixed secrets and need none of these.
+
+### Logging in from a local frontend
+
+- The frontend runs on one of the allowed origins above. Another origin gets no CORS headers, and `/auth/refresh` and
+  `/auth/logout` answer it 403.
+- Every call to `/api/v1/auth/*` goes with credentials (`fetch(url, { credentials: 'include' })`), or the browser
+  neither keeps nor sends the `kiva_rt` cookie that holds the refresh token.
+- The cookie is `Secure` and still works on `http://localhost`, because browsers treat localhost as secure. On any
+  other plain-HTTP address (a phone on the LAN calling a laptop) the browser drops it, so the login doesn't stick.
+- [docs/FRONTEND_AUTH.md](docs/FRONTEND_AUTH.md) is the whole flow for the frontend. [AUTH_REVIEW.md](AUTH_REVIEW.md)
+  lists every attack the login defends against, with the test that proves each defense.
+
+The SQL log (`Exposed` at DEBUG in `logback.xml`) shows each statement with `?` where its values go, so phone
+numbers, names and emails stay out of the log.
 
 To fill an empty local catalog with the prototype's 16 bags, start once with `KIVA_SEED_ENABLED=true`
 (in IntelliJ: *Run configuration → Environment variables*). The seeder goes through the use cases, like real
