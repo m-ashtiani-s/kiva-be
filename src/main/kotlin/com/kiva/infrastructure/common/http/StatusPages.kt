@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory
 private val logger = LoggerFactory.getLogger("com.kiva.infrastructure.common.http.StatusPages")
 
 private const val RATE_LIMITED = "RATE_LIMITED"
+private const val FORBIDDEN = "FORBIDDEN"
 
 /**
  * Safety net for everything that is not a business failure. Expected failures never get here; they travel as Result.
@@ -25,6 +26,7 @@ private const val RATE_LIMITED = "RATE_LIMITED"
  * - Body in a format we don't read (not JSON) -> 415 VALIDATION_ERROR
  * - No route for this path -> 404 NOT_FOUND
  * - Too many requests from one address (the RateLimit plugin) -> 429 RATE_LIMITED
+ * - A request from a site that isn't one of our frontends (the CORS plugin) -> 403 FORBIDDEN
  * - Someone else saved a change to the same thing between our read and our save -> 409 CHANGED_BY_SOMEONE_ELSE
  * - Anything else is a bug or an outage -> 500 INTERNAL_ERROR
  *
@@ -56,6 +58,11 @@ fun Application.configureStatusPages() {
         status(HttpStatusCode.TooManyRequests) { _ ->
             val alreadyProblem = content.contentType?.match(ContentType.Application.ProblemJson) == true
             if (!alreadyProblem) call.respondProblem(call.problem(HttpStatusCode.TooManyRequests, RATE_LIMITED))
+        }
+        // The CORS plugin's 403 for a request from a site that isn't ours has no body either.
+        status(HttpStatusCode.Forbidden) { _ ->
+            val alreadyProblem = content.contentType?.match(ContentType.Application.ProblemJson) == true
+            if (!alreadyProblem) call.respondProblem(call.problem(HttpStatusCode.Forbidden, FORBIDDEN))
         }
         // A race, not a bug: the user can look at the new state and try again. Nothing of the request was saved.
         exception<ConcurrentChangeException> { call, cause ->

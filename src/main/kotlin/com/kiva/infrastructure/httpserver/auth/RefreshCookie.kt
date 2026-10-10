@@ -36,3 +36,7 @@ object RefreshCookie {
 fun ApplicationResponse.setRefreshCookie(token: String, maxAge: Duration) {
     headers.append(HttpHeaders.SetCookie, RefreshCookie.header(token, maxAge))
 }
+
+fun ApplicationResponse.clearRefreshCookie() {
+    headers.append(HttpHeaders.SetCookie, RefreshCookie.clearingHeader())
+}

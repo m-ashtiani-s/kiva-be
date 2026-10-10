@@ -7,6 +7,7 @@ import com.kiva.domain.aggregate.session.model.valueobject.SessionDevice
 import com.kiva.domain.aggregate.session.model.valueobject.SessionId
 import com.kiva.domain.aggregate.session.model.valueobject.SessionKind
 import com.kiva.domain.aggregate.user.model.valueobject.Roles
+import java.time.Duration
 import java.time.Instant
 
 /**
@@ -39,6 +40,56 @@ class AuthSession private constructor(
 
     /** Not revoked and not run out of time: its refresh token can still be used. */
     fun isActiveAt(now: Instant): Boolean = revokedOn == null && now.isBefore(idleExpiresOn) && now.isBefore(absoluteExpiresOn)
+
+    /**
+     * A browser sent back [token], one of this session's; what to do with it (section 6 of the login plan):
+     * - the session is revoked or out of time: [Refresh.Refused]
+     * - the current token: [Refresh.Rotate], with the session used now and its idle end moved forward (never past its
+     *   absolute end); the caller rotates the token and adds the next one
+     * - a token rotated at most [SessionPolicy.ROTATION_GRACE] ago: [Refresh.WithinGrace], a second tab that refreshed at
+     *   the same moment; it gets an access token, and the cookie stays as the first tab set it
+     * - a token rotated longer ago: it was copied. [Refresh.Reused], with the session revoked: the thief's token and the
+     *   owner's new one stop working alike, and the owner logs in again
+     */
+    fun refreshWith(token: RefreshToken, now: Instant): Refresh {
+        require(token.sessionId == id) { "Token of session ${token.sessionId.value} tried on session ${id.value}" }
+        if (!isActiveAt(now)) return Refresh.Refused
+        val rotatedOn = token.rotatedOn ?: return Refresh.Rotate(copy(lastUsedOn = now, idleExpiresOn = idleEndFrom(now)))
+        val sinceRotation = Duration.between(rotatedOn, now)
+        return if (sinceRotation <= SessionPolicy.ROTATION_GRACE) {
+            Refresh.WithinGrace
+        } else {
+            Refresh.Reused(revoke(RevokeReason.REUSE_DETECTED, now), sinceRotation)
+        }
+    }
+
+    /** Ends the session now. A session revoked already stays as it was, with its first reason. */
+    fun revoke(reason: RevokeReason, now: Instant): AuthSession =
+        if (revokedOn != null) this else copy(revokedOn = now, revokeReason = reason)
+
+    private fun idleEndFrom(now: Instant): Instant = minOf(now.plus(SessionPolicy.idleLifetime(kind)), absoluteExpiresOn)
+
+    private fun copy(
+        lastUsedOn: Instant = this.lastUsedOn,
+        idleExpiresOn: Instant = this.idleExpiresOn,
+        revokedOn: Instant? = this.revokedOn,
+        revokeReason: RevokeReason? = this.revokeReason,
+    ) = AuthSession(id, userId, kind, createdOn, lastUsedOn, idleExpiresOn, absoluteExpiresOn, revokedOn, revokeReason, device)
+
+    /** What a refresh token sent back leads to. */
+    sealed interface Refresh {
+        /** Revoked or out of time: log in again. */
+        data object Refused : Refresh
+
+        /** The current token: rotate it, and save [session] (used now, idle end moved). */
+        data class Rotate(val session: AuthSession) : Refresh
+
+        /** Rotated a moment ago by another tab: an access token only. */
+        data object WithinGrace : Refresh
+
+        /** Rotated [sinceRotation] ago: copied. Save [session], which is revoked. */
+        data class Reused(val session: AuthSession, val sinceRotation: Duration) : Refresh
+    }
 
     override fun equals(other: Any?): Boolean = other is AuthSession && other.id == id
 

@@ -1,6 +1,8 @@
 package com.kiva.infrastructure.httpserver
 
 import com.kiva.application.usecase.account.usecase.query.GetMeUc
+import com.kiva.application.usecase.auth.usecase.command.LogoutUc
+import com.kiva.application.usecase.auth.usecase.command.RefreshSessionUc
 import com.kiva.application.usecase.auth.usecase.command.SendLoginCodeUc
 import com.kiva.application.usecase.auth.usecase.command.VerifyLoginCodeUc
 import com.kiva.application.usecase.catalog.usecase.query.GetCategoryUc
@@ -15,6 +17,7 @@ import com.kiva.domain.aggregate.otp.model.policy.OtpPolicy
 import com.kiva.infrastructure.common.http.KivaJson
 import com.kiva.infrastructure.config.AppConfig
 import com.kiva.infrastructure.common.http.configureStatusPages
+import com.kiva.infrastructure.httpserver.controller.httprest.web.AuthUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.OTP_SEND_RATE_LIMIT
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Auth
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Catalog
@@ -123,13 +126,15 @@ fun Application.configureRouting() {
     val findRelatedProductsUc by inject<FindRelatedProductsUc>()
     val sendLoginCodeUc by inject<SendLoginCodeUc>()
     val verifyLoginCodeUc by inject<VerifyLoginCodeUc>()
+    val refreshSessionUc by inject<RefreshSessionUc>()
+    val logoutUc by inject<LogoutUc>()
     val getMeUc by inject<GetMeUc>()
     val config by inject<AppConfig>()
 
     routing {
         healthRoutes()
         route(API_V1) {
-            webV1Auth(sendLoginCodeUc, verifyLoginCodeUc, getMeUc)
+            webV1Auth(AuthUseCases(sendLoginCodeUc, verifyLoginCodeUc, getMeUc, refreshSessionUc, logoutUc), config.http.allowedOrigins)
             webV1Me(getMeUc)
             webV1Catalog(listColorsUc, listMaterialsUc, listCategoriesUc, getCategoryUc)
             webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, config.shop.siteUrl)

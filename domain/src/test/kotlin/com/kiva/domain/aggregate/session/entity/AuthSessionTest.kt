@@ -88,6 +88,68 @@ class AuthSessionTest {
         }
     }
 
+    private val hash = TokenHash(ByteArray(32) { 3 })
+
+    private fun current(session: AuthSession) = RefreshToken(session.id, hash, session.createdOn, rotatedOn = null)
+
+    private fun rotated(session: AuthSession, on: Instant) = RefreshToken(session.id, hash, session.createdOn, rotatedOn = on)
+
+    @Test
+    fun `the current token is rotated, and the session's idle end moves to 30 days from now`() {
+        val session = start()
+        val later = now.plus(Duration.ofDays(10))
+
+        val refresh = session.refreshWith(current(session), later)
+
+        val rotated = (refresh as AuthSession.Refresh.Rotate).session
+        assertEquals(later, rotated.lastUsedOn)
+        assertEquals(later.plus(Duration.ofDays(30)), rotated.idleExpiresOn)
+        assertEquals(session.absoluteExpiresOn, rotated.absoluteExpiresOn)
+    }
+
+    @Test
+    fun `the idle end never goes past the absolute end`() {
+        // In use until day 160, so still active on day 170.
+        val session = AuthSession.constructFromPersisted(
+            SessionId.constructFromPersisted(88), user, SessionKind.CUSTOMER, now, now.plus(Duration.ofDays(160)),
+            now.plus(Duration.ofDays(180)), now.plus(Duration.ofDays(180)), revokedOn = null, revokeReason = null, device = SessionDevice.UNKNOWN,
+        )
+
+        val rotated = (session.refreshWith(current(session), now.plus(Duration.ofDays(170))) as AuthSession.Refresh.Rotate).session
+
+        assertEquals(now.plus(Duration.ofDays(180)), rotated.idleExpiresOn)
+    }
+
+    @Test
+    fun `a token rotated up to 30 seconds ago is a second tab, rotated longer ago it was copied`() {
+        val session = start()
+        val rotatedOn = now.plusSeconds(60)
+
+        assertEquals(AuthSession.Refresh.WithinGrace, session.refreshWith(rotated(session, rotatedOn), rotatedOn.plusSeconds(30)))
+
+        val reused = session.refreshWith(rotated(session, rotatedOn), rotatedOn.plusSeconds(31))
+        reused as AuthSession.Refresh.Reused
+        assertEquals(Duration.ofSeconds(31), reused.sinceRotation)
+        assertEquals(RevokeReason.REUSE_DETECTED, reused.session.revokeReason)
+        assertFalse(reused.session.isActiveAt(rotatedOn.plusSeconds(31)))
+    }
+
+    @Test
+    fun `a revoked session or one out of time refuses any token`() {
+        val session = start()
+
+        assertEquals(AuthSession.Refresh.Refused, session.revoke(RevokeReason.LOGOUT, now).refreshWith(current(session), now.plusSeconds(1)))
+        assertEquals(AuthSession.Refresh.Refused, session.refreshWith(current(session), now.plus(Duration.ofDays(30))))
+    }
+
+    @Test
+    fun `a session revoked once keeps its first reason`() {
+        val revoked = start().revoke(RevokeReason.REUSE_DETECTED, now).revoke(RevokeReason.LOGOUT, now.plusSeconds(5))
+
+        assertEquals(RevokeReason.REUSE_DETECTED, revoked.revokeReason)
+        assertEquals(now, revoked.revokedOn)
+    }
+
     @Test
     fun `a token hash is 32 bytes, compared by its bytes, and never shown`() {
         assertEquals(TokenHash(ByteArray(32) { 1 }), TokenHash(ByteArray(32) { 1 }))

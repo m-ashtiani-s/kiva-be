@@ -2,6 +2,8 @@ package com.kiva.infrastructure.di
 
 import com.kiva.application.usecase.account.usecase.query.GetMeUc
 import com.kiva.application.usecase.admin.usecase.command.CheckPanelAccessUc
+import com.kiva.application.usecase.auth.usecase.command.LogoutUc
+import com.kiva.application.usecase.auth.usecase.command.RefreshSessionUc
 import com.kiva.application.usecase.auth.usecase.command.SendLoginCodeUc
 import com.kiva.application.usecase.auth.usecase.command.VerifyLoginCodeUc
 import com.kiva.application.usecase.catalog.usecase.query.GetCategoryUc
@@ -106,6 +108,19 @@ val useCaseModule = module(createdAtStart = true) {
             clock = get(),
         )
     }
+
+    single {
+        RefreshSessionUc(
+            transactionManager = get(),
+            authSessionRepository = get(),
+            userRepository = get(),
+            sessionTokens = get(),
+            accessTokens = get(),
+            securityEventLog = get(),
+            clock = get(),
+        )
+    }
+    single { LogoutUc(transactionManager = get(), authSessionRepository = get(), sessionTokens = get(), securityEventLog = get(), clock = get()) }
 
     // --- account: queries ---
     single { GetMeUc(transactionManager = get(), userRepository = get()) }

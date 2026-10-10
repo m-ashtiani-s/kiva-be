@@ -2,6 +2,8 @@ package com.kiva.infrastructure.httpserver.controller.httprest.web
 
 import com.kiva.application.port.SmsSender
 import com.kiva.application.usecase.account.usecase.query.GetMeUc
+import com.kiva.application.usecase.auth.usecase.command.LogoutUc
+import com.kiva.application.usecase.auth.usecase.command.RefreshSessionUc
 import com.kiva.application.usecase.auth.usecase.command.SendLoginCodeUc
 import com.kiva.application.usecase.auth.usecase.command.VerifyLoginCodeUc
 import com.kiva.common.valueobject.IranianMobileNumber
@@ -53,12 +55,15 @@ class AuthTestStack(val clock: MutableClock, maxSmsPerHour: Int = 300) {
     private val codes = OtpChallengeRepositoryImpl()
     private val users = UserRepositoryImpl()
     private val events = SecurityEventLogImpl()
+    private val sessions = AuthSessionRepositoryImpl()
 
     val send = SendLoginCodeUc(transactions, codes, otpCodes, sms, events, clock, maxSmsPerHour)
-    val verify = VerifyLoginCodeUc(transactions, codes, users, AuthSessionRepositoryImpl(), otpCodes, sessionTokens, accessTokens, events, clock)
+    val verify = VerifyLoginCodeUc(transactions, codes, users, sessions, otpCodes, sessionTokens, accessTokens, events, clock)
     val getMe = GetMeUc(transactions, users)
+    val refresh = RefreshSessionUc(transactions, sessions, users, sessionTokens, accessTokens, events, clock)
+    val logout = LogoutUc(transactions, sessions, sessionTokens, events, clock)
 
-    fun app(trustedProxyHops: Int = 0, allowedOrigins: List<String> = emptyList(), block: suspend ApplicationTestBuilder.() -> Unit) =
+    fun app(trustedProxyHops: Int = 0, allowedOrigins: List<String> = listOf(ORIGIN), block: suspend ApplicationTestBuilder.() -> Unit) =
         testApplication {
             environment { config = MapApplicationConfig() }
             application {
@@ -66,7 +71,7 @@ class AuthTestStack(val clock: MutableClock, maxSmsPerHour: Int = 300) {
                 configureAuthentication(accessTokens)
                 routing {
                     route(API_V1) {
-                        webV1Auth(send, verify, getMe)
+                        webV1Auth(AuthUseCases(send, verify, getMe, refresh, logout), allowedOrigins)
                         webV1Me(getMe)
                     }
                 }
@@ -90,6 +95,9 @@ class AuthTestStack(val clock: MutableClock, maxSmsPerHour: Int = 300) {
 
     companion object {
         val OTP_PEPPER = ByteArray(32) { 7 }
+
+        /** The frontend the test apps allow; refresh and logout answer only it. */
+        const val ORIGIN = "https://kiva.ir"
         val JWT_SECRET = ByteArray(32) { 8 }
         private const val TEST_PHONES = "0990%"
 
