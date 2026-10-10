@@ -48,6 +48,7 @@ openssl rand -base64 32
 | `KIVA_JWT_SECRET` | Required. The key access tokens are signed with: base64 of at least 32 random bytes, not the pepper. |
 | `KIVA_SMS_PROVIDER` | `log` (the default) writes login codes to the log instead of sending them: development only. |
 | `KIVA_TRUSTED_PROXY_HOPS` | `1` only behind the shop's own nginx; `0` (the default) everywhere else. |
+| `KIVA_BOOTSTRAP_ADMIN_PHONE` | Optional. This phone becomes ADMIN on startup, only while there is no ADMIN at all; remove it after the first start. |
 
 With the `log` provider, the code of `POST /api/v1/auth/otp/send` is in the log, on a `WARN` line from `LogSmsSender`.
 Tests use their own fixed secrets and need none of these.

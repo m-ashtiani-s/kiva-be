@@ -102,23 +102,6 @@ class UserRepositoryImpl : UserRepository {
             UserId.constructFromPersisted(rows.getLong(1))
         } ?: error("nextval of user_tbl's id sequence returned nothing")
 
-    private fun ResultRow.toUser(): User =
-        User.constructFromPersisted(
-            id = UserId.constructFromPersisted(this[UserTbl.id].value),
-            phone = IranianMobileNumber.constructFromPersisted(this[UserTbl.phone]),
-            firstName = this[UserTbl.firstName]?.let(PersonName::constructFromPersisted),
-            lastName = this[UserTbl.lastName]?.let(PersonName::constructFromPersisted),
-            email = this[UserTbl.email]?.let(Email::constructFromPersisted),
-            birthDate = this[UserTbl.birthDate]?.let(BirthDate::constructFromPersisted),
-            gender = this[UserTbl.gender],
-            defaultMessenger = this[UserTbl.defaultMessenger],
-            defaultMessengerPhone = this[UserTbl.defaultMessengerPhone]?.let(IranianMobileNumber::constructFromPersisted),
-            marketingSmsOptIn = this[UserTbl.marketingSmsOptIn],
-            roles = Roles.constructFromPersisted(this[UserTbl.roles].map(Role::valueOf)),
-            createdOn = this[UserTbl.createdOn].toInstant(),
-            version = this[UserTbl.version],
-        )
-
     /** Postgres `@>`: the array column holds every one of [values]. */
     private class Contains(column: Column<List<String>>, values: List<String>) :
         ComparisonOp(column, QueryParameter(values, column.columnType), "@>")
@@ -128,3 +111,21 @@ class UserRepositoryImpl : UserRepository {
         val AGGREGATE_NAME = EventAggregateName("USER")
     }
 }
+
+/** A row of user_tbl as the User it stores; every repository that reads users reads them through this. */
+internal fun ResultRow.toUser(): User =
+    User.constructFromPersisted(
+        id = UserId.constructFromPersisted(this[UserTbl.id].value),
+        phone = IranianMobileNumber.constructFromPersisted(this[UserTbl.phone]),
+        firstName = this[UserTbl.firstName]?.let(PersonName::constructFromPersisted),
+        lastName = this[UserTbl.lastName]?.let(PersonName::constructFromPersisted),
+        email = this[UserTbl.email]?.let(Email::constructFromPersisted),
+        birthDate = this[UserTbl.birthDate]?.let(BirthDate::constructFromPersisted),
+        gender = this[UserTbl.gender],
+        defaultMessenger = this[UserTbl.defaultMessenger],
+        defaultMessengerPhone = this[UserTbl.defaultMessengerPhone]?.let(IranianMobileNumber::constructFromPersisted),
+        marketingSmsOptIn = this[UserTbl.marketingSmsOptIn],
+        roles = Roles.constructFromPersisted(this[UserTbl.roles].map(Role::valueOf)),
+        createdOn = this[UserTbl.createdOn].toInstant(),
+        version = this[UserTbl.version],
+    )

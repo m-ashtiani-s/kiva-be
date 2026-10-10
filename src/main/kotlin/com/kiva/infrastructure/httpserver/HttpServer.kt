@@ -2,6 +2,10 @@ package com.kiva.infrastructure.httpserver
 
 import com.kiva.application.usecase.account.usecase.command.UpdateMyProfileUc
 import com.kiva.application.usecase.account.usecase.query.GetMeUc
+import com.kiva.application.usecase.admin.usecase.command.CheckPanelAccessUc
+import com.kiva.application.usecase.admin.usecase.command.SetUserRolesUc
+import com.kiva.application.usecase.admin.usecase.query.FindCustomersUc
+import com.kiva.application.usecase.admin.usecase.query.GetCustomerUc
 import com.kiva.application.usecase.auth.usecase.command.LogoutUc
 import com.kiva.application.usecase.auth.usecase.command.RefreshSessionUc
 import com.kiva.application.usecase.auth.usecase.command.SendLoginCodeUc
@@ -18,7 +22,9 @@ import com.kiva.domain.aggregate.otp.model.policy.OtpPolicy
 import com.kiva.infrastructure.common.http.KivaJson
 import com.kiva.infrastructure.config.AppConfig
 import com.kiva.infrastructure.common.http.configureStatusPages
+import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminCustomerUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AuthUseCases
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminCustomers
 import com.kiva.infrastructure.httpserver.controller.httprest.web.OTP_SEND_RATE_LIMIT
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Auth
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Catalog
@@ -131,6 +137,10 @@ fun Application.configureRouting() {
     val logoutUc by inject<LogoutUc>()
     val getMeUc by inject<GetMeUc>()
     val updateMyProfileUc by inject<UpdateMyProfileUc>()
+    val checkPanelAccessUc by inject<CheckPanelAccessUc>()
+    val findCustomersUc by inject<FindCustomersUc>()
+    val getCustomerUc by inject<GetCustomerUc>()
+    val setUserRolesUc by inject<SetUserRolesUc>()
     val config by inject<AppConfig>()
 
     routing {
@@ -138,6 +148,7 @@ fun Application.configureRouting() {
         route(API_V1) {
             webV1Auth(AuthUseCases(sendLoginCodeUc, verifyLoginCodeUc, getMeUc, refreshSessionUc, logoutUc), config.http.allowedOrigins)
             webV1Me(getMeUc, updateMyProfileUc)
+            webV1AdminCustomers(AdminCustomerUseCases(checkPanelAccessUc, findCustomersUc, getCustomerUc, setUserRolesUc))
             webV1Catalog(listColorsUc, listMaterialsUc, listCategoriesUc, getCategoryUc)
             webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, config.shop.siteUrl)
         }

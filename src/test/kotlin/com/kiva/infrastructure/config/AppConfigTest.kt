@@ -96,7 +96,23 @@ class AppConfigTest {
 
         assertFalse(Base64.getEncoder().encodeToString(pepper) in printed)
         assertFalse(Base64.getEncoder().encodeToString(jwtSecret) in printed)
-        assertEquals("AuthConfig(otpPepper=<hidden>, jwtSecret=<hidden>, maxSmsPerHour=300)", printed)
+        assertEquals("AuthConfig(otpPepper=<hidden>, jwtSecret=<hidden>, maxSmsPerHour=300, bootstrapAdminPhone=null)", printed)
+    }
+
+    @Test
+    fun `the first admin's phone is optional, read in any form, and never printed whole`() {
+        assertEquals(null, read().auth.bootstrapAdminPhone)
+        assertEquals(null, read("kiva.auth.bootstrapAdminPhone" to " ").auth.bootstrapAdminPhone)
+
+        val auth = read("kiva.auth.bootstrapAdminPhone" to "+98 912 123 4567").auth
+        assertEquals("09121234567", auth.bootstrapAdminPhone?.value)
+        assertTrue("0912***4567" in auth.toString())
+        assertFalse("09121234567" in auth.toString())
+    }
+
+    @Test
+    fun `a first admin's phone that isn't a mobile number stops the boot`() {
+        assertTrue("KIVA_BOOTSTRAP_ADMIN_PHONE" in refusal("kiva.auth.bootstrapAdminPhone" to "12345"))
     }
 
     /**

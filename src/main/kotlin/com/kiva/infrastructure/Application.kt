@@ -1,5 +1,6 @@
 package com.kiva.infrastructure
 
+import com.kiva.application.usecase.auth.usecase.command.BootstrapAdminUc
 import com.kiva.infrastructure.auth.JwtAccessTokens
 import com.kiva.infrastructure.config.AppConfig
 import com.kiva.infrastructure.di.appModules
@@ -23,7 +24,8 @@ fun main(args: Array<String>): Unit =
 /**
  * Called by Ktor after [main] has read application.conf (ktor.application.modules points here).
  * Boot order, top to bottom:
- *   config -> datasource -> migrations -> Exposed -> DI -> dev seed (when on) -> HTTP plugins -> authentication -> routes
+ *   config -> datasource -> migrations -> Exposed -> DI -> dev seed (when on) -> first admin (when set)
+ *   -> HTTP plugins -> authentication -> routes
  */
 @Suppress("unused") // referenced only from application.conf, so the IDE can't see it is used
 fun Application.start() {
@@ -41,6 +43,8 @@ fun Application.start() {
 
     // Before the routes, so the first request already sees the seeded catalog.
     if (config.seed.enabled) runBlocking { get<DevCatalogSeeder>().seed() }
+    // The very first admin, while there is none (KIVA_BOOTSTRAP_ADMIN_PHONE).
+    config.auth.bootstrapAdminPhone?.let { phone -> runBlocking { get<BootstrapAdminUc>().execute(BootstrapAdminUc.Cmd(phone)) } }
 
     configureHttp(config.http.allowedOrigins, config.http.trustedProxyHops)
     configureAuthentication(get<JwtAccessTokens>())

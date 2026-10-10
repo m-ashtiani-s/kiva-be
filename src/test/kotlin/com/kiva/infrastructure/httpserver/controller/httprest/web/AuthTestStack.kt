@@ -3,6 +3,11 @@ package com.kiva.infrastructure.httpserver.controller.httprest.web
 import com.kiva.application.port.SmsSender
 import com.kiva.application.usecase.account.usecase.command.UpdateMyProfileUc
 import com.kiva.application.usecase.account.usecase.query.GetMeUc
+import com.kiva.application.usecase.admin.usecase.command.CheckPanelAccessUc
+import com.kiva.application.usecase.admin.usecase.command.SetUserRolesUc
+import com.kiva.application.usecase.admin.usecase.query.FindCustomersUc
+import com.kiva.application.usecase.admin.usecase.query.GetCustomerUc
+import com.kiva.application.usecase.auth.usecase.command.BootstrapAdminUc
 import com.kiva.application.usecase.auth.usecase.command.LogoutUc
 import com.kiva.application.usecase.auth.usecase.command.RefreshSessionUc
 import com.kiva.application.usecase.auth.usecase.command.SendLoginCodeUc
@@ -19,6 +24,7 @@ import com.kiva.infrastructure.common.persistence.ExposedTransactionManager
 import com.kiva.infrastructure.httpserver.API_V1
 import com.kiva.infrastructure.httpserver.auth.configureAuthentication
 import com.kiva.infrastructure.httpserver.configureHttp
+import com.kiva.infrastructure.persistence.exposed.AdminCustomerRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.AuthSessionRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.OtpChallengeRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.SecurityEventLogImpl
@@ -64,6 +70,11 @@ class AuthTestStack(val clock: MutableClock, maxSmsPerHour: Int = 300) {
     val refresh = RefreshSessionUc(transactions, sessions, users, sessionTokens, accessTokens, events, clock)
     val logout = LogoutUc(transactions, sessions, sessionTokens, events, clock)
     val updateProfile = UpdateMyProfileUc(transactions, users, clock)
+    val checkPanelAccess = CheckPanelAccessUc(transactions, sessions, users, events, clock)
+    val findCustomers = FindCustomersUc(transactions, AdminCustomerRepositoryImpl())
+    val getCustomer = GetCustomerUc(transactions, AdminCustomerRepositoryImpl())
+    val setUserRoles = SetUserRolesUc(transactions, users, sessions, events, clock)
+    val bootstrapAdmin = BootstrapAdminUc(transactions, users, sessions, events, clock)
 
     fun app(trustedProxyHops: Int = 0, allowedOrigins: List<String> = listOf(ORIGIN), block: suspend ApplicationTestBuilder.() -> Unit) =
         testApplication {
@@ -75,6 +86,7 @@ class AuthTestStack(val clock: MutableClock, maxSmsPerHour: Int = 300) {
                     route(API_V1) {
                         webV1Auth(AuthUseCases(send, verify, getMe, refresh, logout), allowedOrigins)
                         webV1Me(getMe, updateProfile)
+                        webV1AdminCustomers(AdminCustomerUseCases(checkPanelAccess, findCustomers, getCustomer, setUserRoles))
                     }
                 }
             }

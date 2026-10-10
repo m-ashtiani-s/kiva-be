@@ -1,6 +1,7 @@
 package com.kiva.infrastructure.di
 
 import com.kiva.application.port.SecurityEventLog
+import com.kiva.application.repository.AdminCustomerRepository
 import com.kiva.application.repository.ProductQmRepository
 import com.kiva.domain.aggregate.otp.repository.OtpChallengeRepository
 import com.kiva.domain.aggregate.session.repository.AuthSessionRepository
@@ -11,6 +12,7 @@ import com.kiva.domain.aggregate.material.repository.MaterialRepository
 import com.kiva.domain.aggregate.product.repository.ProductIdGenerator
 import com.kiva.domain.aggregate.product.repository.ProductRepository
 import com.kiva.domain.aggregate.user.repository.UserRepository
+import com.kiva.infrastructure.persistence.exposed.AdminCustomerRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.AuthSessionRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.CategoryRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ColorRepositoryImpl
@@ -40,4 +42,5 @@ val daoModule = module(createdAtStart = true) {
     single<OtpChallengeRepository> { OtpChallengeRepositoryImpl() }
     single<AuthSessionRepository> { AuthSessionRepositoryImpl() }
     single<SecurityEventLog> { SecurityEventLogImpl() }
+    single<AdminCustomerRepository> { AdminCustomerRepositoryImpl() }
 }

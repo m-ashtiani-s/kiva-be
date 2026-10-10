@@ -3,6 +3,10 @@ package com.kiva.infrastructure.di
 import com.kiva.application.usecase.account.usecase.command.UpdateMyProfileUc
 import com.kiva.application.usecase.account.usecase.query.GetMeUc
 import com.kiva.application.usecase.admin.usecase.command.CheckPanelAccessUc
+import com.kiva.application.usecase.admin.usecase.command.SetUserRolesUc
+import com.kiva.application.usecase.admin.usecase.query.FindCustomersUc
+import com.kiva.application.usecase.admin.usecase.query.GetCustomerUc
+import com.kiva.application.usecase.auth.usecase.command.BootstrapAdminUc
 import com.kiva.application.usecase.auth.usecase.command.LogoutUc
 import com.kiva.application.usecase.auth.usecase.command.RefreshSessionUc
 import com.kiva.application.usecase.auth.usecase.command.SendLoginCodeUc
@@ -136,6 +140,16 @@ val useCaseModule = module(createdAtStart = true) {
             securityEventLog = get(),
             clock = get(),
         )
+    }
+
+    // --- admin: customers and roles ---
+    single { FindCustomersUc(transactionManager = get(), adminCustomerRepository = get()) }
+    single { GetCustomerUc(transactionManager = get(), adminCustomerRepository = get()) }
+    single {
+        SetUserRolesUc(transactionManager = get(), userRepository = get(), authSessionRepository = get(), securityEventLog = get(), clock = get())
+    }
+    single {
+        BootstrapAdminUc(transactionManager = get(), userRepository = get(), authSessionRepository = get(), securityEventLog = get(), clock = get())
     }
 
     // --- inventory: commands ---
