@@ -1,5 +1,6 @@
 package com.kiva.infrastructure.di
 
+import com.kiva.application.usecase.account.usecase.command.UpdateMyProfileUc
 import com.kiva.application.usecase.account.usecase.query.GetMeUc
 import com.kiva.application.usecase.admin.usecase.command.CheckPanelAccessUc
 import com.kiva.application.usecase.auth.usecase.command.LogoutUc
@@ -122,8 +123,9 @@ val useCaseModule = module(createdAtStart = true) {
     }
     single { LogoutUc(transactionManager = get(), authSessionRepository = get(), sessionTokens = get(), securityEventLog = get(), clock = get()) }
 
-    // --- account: queries ---
+    // --- account ---
     single { GetMeUc(transactionManager = get(), userRepository = get()) }
+    single { UpdateMyProfileUc(transactionManager = get(), userRepository = get(), clock = get()) }
 
     // --- admin: the guard of every panel request ---
     single {

@@ -1,6 +1,7 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
 import com.kiva.application.port.SmsSender
+import com.kiva.application.usecase.account.usecase.command.UpdateMyProfileUc
 import com.kiva.application.usecase.account.usecase.query.GetMeUc
 import com.kiva.application.usecase.auth.usecase.command.LogoutUc
 import com.kiva.application.usecase.auth.usecase.command.RefreshSessionUc
@@ -62,6 +63,7 @@ class AuthTestStack(val clock: MutableClock, maxSmsPerHour: Int = 300) {
     val getMe = GetMeUc(transactions, users)
     val refresh = RefreshSessionUc(transactions, sessions, users, sessionTokens, accessTokens, events, clock)
     val logout = LogoutUc(transactions, sessions, sessionTokens, events, clock)
+    val updateProfile = UpdateMyProfileUc(transactions, users, clock)
 
     fun app(trustedProxyHops: Int = 0, allowedOrigins: List<String> = listOf(ORIGIN), block: suspend ApplicationTestBuilder.() -> Unit) =
         testApplication {
@@ -72,7 +74,7 @@ class AuthTestStack(val clock: MutableClock, maxSmsPerHour: Int = 300) {
                 routing {
                     route(API_V1) {
                         webV1Auth(AuthUseCases(send, verify, getMe, refresh, logout), allowedOrigins)
-                        webV1Me(getMe)
+                        webV1Me(getMe, updateProfile)
                     }
                 }
             }

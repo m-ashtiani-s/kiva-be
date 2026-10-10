@@ -1,5 +1,6 @@
 package com.kiva.infrastructure.httpserver
 
+import com.kiva.application.usecase.account.usecase.command.UpdateMyProfileUc
 import com.kiva.application.usecase.account.usecase.query.GetMeUc
 import com.kiva.application.usecase.auth.usecase.command.LogoutUc
 import com.kiva.application.usecase.auth.usecase.command.RefreshSessionUc
@@ -129,13 +130,14 @@ fun Application.configureRouting() {
     val refreshSessionUc by inject<RefreshSessionUc>()
     val logoutUc by inject<LogoutUc>()
     val getMeUc by inject<GetMeUc>()
+    val updateMyProfileUc by inject<UpdateMyProfileUc>()
     val config by inject<AppConfig>()
 
     routing {
         healthRoutes()
         route(API_V1) {
             webV1Auth(AuthUseCases(sendLoginCodeUc, verifyLoginCodeUc, getMeUc, refreshSessionUc, logoutUc), config.http.allowedOrigins)
-            webV1Me(getMeUc)
+            webV1Me(getMeUc, updateMyProfileUc)
             webV1Catalog(listColorsUc, listMaterialsUc, listCategoriesUc, getCategoryUc)
             webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, config.shop.siteUrl)
         }
