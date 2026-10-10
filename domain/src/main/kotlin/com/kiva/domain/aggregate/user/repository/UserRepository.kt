@@ -19,8 +19,9 @@ interface UserRepository {
 
     /**
      * Saves a change to a user that was read before. Throws ConcurrentChangeException when someone else saved a change
-     * to it after it was read: nothing of this change is stored. The stored version goes up by one, so read the user
-     * again to change it again.
+     * to it after it was read, and [PhoneTakenException] when its new phone was taken by another account meanwhile:
+     * either way nothing of this change is stored. The stored version goes up by one, so read the user again to change
+     * it again.
      */
     fun save(user: User)
 

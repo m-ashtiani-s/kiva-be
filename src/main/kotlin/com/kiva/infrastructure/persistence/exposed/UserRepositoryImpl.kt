@@ -11,6 +11,7 @@ import com.kiva.domain.aggregate.user.model.valueobject.Email
 import com.kiva.domain.aggregate.user.model.valueobject.PersonName
 import com.kiva.domain.aggregate.user.model.valueobject.Role
 import com.kiva.domain.aggregate.user.model.valueobject.Roles
+import com.kiva.domain.aggregate.user.repository.PhoneTakenException
 import com.kiva.domain.aggregate.user.repository.UserRepository
 import com.kiva.domain.aggregate.user.repository.UserRepository.FoundOrRegistered
 import com.kiva.infrastructure.persistence.exposed.tbl.UserTbl
@@ -21,11 +22,13 @@ import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.statements.UpdateBuilder
+import org.jetbrains.exposed.v1.exceptions.ExposedSQLException
 import org.jetbrains.exposed.v1.jdbc.insertIgnore
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
 import org.jetbrains.exposed.v1.jdbc.update
+import org.postgresql.util.PSQLException
 import java.time.Instant
 import java.time.ZoneOffset
 
@@ -67,11 +70,20 @@ class UserRepositoryImpl : UserRepository {
         return FoundOrRegistered(registeredMeanwhile, isNew = false)
     }
 
-    /** Writes the row only if it still has the version [user] was read with, and raises that version. */
+    /**
+     * Writes the row only if it still has the version [user] was read with, and raises that version. The phone's unique
+     * key refusing it means another account took the phone meanwhile (PhoneTakenException); any other refusal is a bug.
+     */
     override fun save(user: User) {
-        val updated = UserTbl.update({ (UserTbl.id eq user.id.value) and (UserTbl.version eq user.version) }) {
-            it[version] = user.version + 1
-            it.writeChangeable(user)
+        val updated = try {
+            UserTbl.update({ (UserTbl.id eq user.id.value) and (UserTbl.version eq user.version) }) {
+                it[version] = user.version + 1
+                it.writeChangeable(user)
+            }
+        } catch (e: ExposedSQLException) {
+            val refusal = (e.cause as? PSQLException)?.serverErrorMessage
+            if (refusal?.constraint == UserTbl.PHONE_KEY) throw PhoneTakenException(user.phone, e)
+            throw e
         }
         if (updated == 0) throw ConcurrentChangeException(AGGREGATE_NAME, EventAggregateId.of(user.id.value))
     }

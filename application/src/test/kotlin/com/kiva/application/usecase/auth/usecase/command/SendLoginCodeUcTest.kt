@@ -1,10 +1,8 @@
 package com.kiva.application.usecase.auth.usecase.command
 
-import com.kiva.application.port.OtpCodes
-import com.kiva.application.port.SecurityEventLog
+import com.kiva.application.usecase.auth.OtpIssuer
 import com.kiva.application.port.SmsSender
 import com.kiva.application.util.MockTransactionManager
-import com.kiva.domain.aggregate.otp.repository.OtpChallengeRepository
 import com.kiva.domain.aggregate.user.repository.UserRepository
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
@@ -25,12 +23,9 @@ class SendLoginCodeUcTest {
     // Strict mocks: any call to them fails the test, so "refused before anything" is checked too.
     private val useCase = SendLoginCodeUc(
         transactionManager = transactions,
-        otpChallengeRepository = mockk<OtpChallengeRepository>(),
-        otpCodes = mockk<OtpCodes>(),
+        otpIssuer = mockk<OtpIssuer>(),
         smsSender = mockk<SmsSender>(),
-        securityEventLog = mockk<SecurityEventLog>(),
         clock = Clock.systemUTC(),
-        maxSmsPerHour = 300,
     )
 
     private suspend fun problemsOf(command: SendLoginCodeUc.Cmd): List<Pair<String?, String>> {

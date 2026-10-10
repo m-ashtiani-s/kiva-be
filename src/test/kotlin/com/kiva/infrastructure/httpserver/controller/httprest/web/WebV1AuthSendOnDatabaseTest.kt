@@ -4,6 +4,7 @@ import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.read.ListAppender
+import com.kiva.application.usecase.auth.OtpIssuer
 import com.kiva.application.usecase.auth.usecase.command.SendLoginCodeUc
 import com.kiva.common.valueobject.IranianMobileNumber
 import com.kiva.domain.aggregate.otp.model.valueobject.CodeHash
@@ -246,7 +247,7 @@ class WebV1AuthSendOnDatabaseTest {
         val capReachedOn = Instant.parse("2032-06-01T10:00:00Z")
         clock.advance(Duration.between(clock.now, capReachedOn))
         val capped = AuthTestStack(clock, maxSmsPerHour = 3)
-        val errors = errorsLoggedBy(SendLoginCodeUc::class.java) {
+        val errors = errorsLoggedBy(OtpIssuer::class.java) {
             withApp(capped) {
                 (1..3).forEach { assertEquals(HttpStatusCode.OK, send(phone(300 + it)).status) }
 

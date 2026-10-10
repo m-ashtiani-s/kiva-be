@@ -21,4 +21,8 @@ class LogSmsSender : SmsSender {
     override suspend fun sendCode(to: IranianMobileNumber, code: OtpCode, purpose: OtpPurpose) {
         logger.warn("SMS to ${to.masked()} ($purpose): code ${code.value}")
     }
+
+    override suspend fun sendPhoneChangedNotice(oldPhone: IranianMobileNumber, newPhoneEnding: String) {
+        logger.warn("SMS to ${oldPhone.masked()}: your Kiva account moved to the number ending in $newPhoneEnding")
+    }
 }

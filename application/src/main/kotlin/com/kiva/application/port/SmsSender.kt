@@ -17,4 +17,10 @@ interface SmsSender {
      * transaction: a slow provider must not hold a database connection.
      */
     suspend fun sendCode(to: IranianMobileNumber, code: OtpCode, purpose: OtpPurpose)
+
+    /**
+     * Tells [oldPhone] that its account moved to another number, so a change its owner didn't make is noticed at once.
+     * Only the end of the new number is in the text ([newPhoneEnding], e.g. `4567`). Throws like [sendCode].
+     */
+    suspend fun sendPhoneChangedNotice(oldPhone: IranianMobileNumber, newPhoneEnding: String)
 }

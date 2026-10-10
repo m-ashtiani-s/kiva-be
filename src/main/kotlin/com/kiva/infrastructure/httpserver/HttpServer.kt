@@ -1,5 +1,7 @@
 package com.kiva.infrastructure.httpserver
 
+import com.kiva.application.usecase.account.usecase.command.ConfirmPhoneChangeUc
+import com.kiva.application.usecase.account.usecase.command.RequestPhoneChangeUc
 import com.kiva.application.usecase.account.usecase.command.UpdateMyProfileUc
 import com.kiva.application.usecase.account.usecase.query.GetMeUc
 import com.kiva.application.usecase.admin.usecase.command.CheckPanelAccessUc
@@ -24,6 +26,7 @@ import com.kiva.infrastructure.config.AppConfig
 import com.kiva.infrastructure.common.http.configureStatusPages
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminCustomerUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AuthUseCases
+import com.kiva.infrastructure.httpserver.controller.httprest.web.MeUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminCustomers
 import com.kiva.infrastructure.httpserver.controller.httprest.web.OTP_SEND_RATE_LIMIT
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Auth
@@ -137,6 +140,8 @@ fun Application.configureRouting() {
     val logoutUc by inject<LogoutUc>()
     val getMeUc by inject<GetMeUc>()
     val updateMyProfileUc by inject<UpdateMyProfileUc>()
+    val requestPhoneChangeUc by inject<RequestPhoneChangeUc>()
+    val confirmPhoneChangeUc by inject<ConfirmPhoneChangeUc>()
     val checkPanelAccessUc by inject<CheckPanelAccessUc>()
     val findCustomersUc by inject<FindCustomersUc>()
     val getCustomerUc by inject<GetCustomerUc>()
@@ -147,7 +152,7 @@ fun Application.configureRouting() {
         healthRoutes()
         route(API_V1) {
             webV1Auth(AuthUseCases(sendLoginCodeUc, verifyLoginCodeUc, getMeUc, refreshSessionUc, logoutUc), config.http.allowedOrigins)
-            webV1Me(getMeUc, updateMyProfileUc)
+            webV1Me(MeUseCases(getMeUc, updateMyProfileUc, requestPhoneChangeUc, confirmPhoneChangeUc))
             webV1AdminCustomers(AdminCustomerUseCases(checkPanelAccessUc, findCustomersUc, getCustomerUc, setUserRolesUc))
             webV1Catalog(listColorsUc, listMaterialsUc, listCategoriesUc, getCategoryUc)
             webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, config.shop.siteUrl)

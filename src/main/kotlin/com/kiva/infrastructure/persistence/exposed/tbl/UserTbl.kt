@@ -22,6 +22,9 @@ object UserTbl : LongIdTable(name = "user_tbl", columnName = "pId") {
     val createdOn = timestampWithTimeZone("createdOn")
     val version = long("version")
 
+    /** The unique key on [phone] as V8 named it; the database names it when it refuses a save. */
+    const val PHONE_KEY = "user_tbl_phone_key"
+
     /**
      * The sequence behind [id] (the IDENTITY column), so an id can be taken before the row is written. The column name
      * is taken as written, case included, so it goes without the quotes it needs in SQL.

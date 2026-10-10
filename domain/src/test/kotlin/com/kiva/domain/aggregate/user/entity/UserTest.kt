@@ -286,6 +286,33 @@ class UserTest {
         }
     }
 
+    @Nested
+    inner class ChangingThePhone {
+        private val newPhone = IranianMobileNumber.constructFromPersisted("09351112233")
+
+        @Test
+        fun `the account moves to the new phone, and keeps everything else`() {
+            val sara = newUser().updated(ProfilePatch(firstName = Patch.Set("سارا")))
+
+            val moved = sara.changePhone(newPhone).getOrNull() ?: fail("refused")
+
+            assertEquals(newPhone, moved.phone)
+            assertEquals(sara.id, moved.id)
+            assertEquals("سارا", moved.firstName?.value)
+            assertEquals(sara.roles, moved.roles)
+            assertEquals(sara.version, moved.version)
+        }
+
+        @Test
+        fun `the same phone is PHONE_SAME_AS_CURRENT on the newPhone field`() {
+            val refused = newUser().changePhone(phone)
+
+            assertEquals(Result.failure(User.ChangePhoneFailure.SameAsCurrent), refused)
+            assertEquals("newPhone", User.ChangePhoneFailure.SameAsCurrent.field)
+            assertEquals(FailureKind.INVALID, User.ChangePhoneFailure.SameAsCurrent.kind)
+        }
+    }
+
     @Test
     fun `toString shows the id and no personal data`() {
         val user = newUser().updated(ProfilePatch(firstName = Patch.Set("سارا")))

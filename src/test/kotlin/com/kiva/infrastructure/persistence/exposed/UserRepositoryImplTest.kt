@@ -9,6 +9,7 @@ import com.kiva.domain.aggregate.user.model.ProfilePatch
 import com.kiva.domain.aggregate.user.model.valueobject.Role.ADMIN
 import com.kiva.domain.aggregate.user.model.valueobject.Role.OPERATOR
 import com.kiva.domain.aggregate.user.model.valueobject.Role.SUPPORT
+import com.kiva.domain.aggregate.user.repository.PhoneTakenException
 import com.kiva.domain.aggregate.user.repository.UserRepository.FoundOrRegistered
 import com.kiva.infrastructure.TestDatabase
 import com.kiva.infrastructure.persistence.exposed.tbl.UserTbl
@@ -243,6 +244,27 @@ class UserRepositoryImplTest {
         val stored = read(user.id) ?: fail()
         assertEquals("سارا" to "محمدی", stored.firstName?.value to stored.lastName?.value)
         assertEquals(2L, stored.version)
+    }
+
+    @Test
+    fun `a phone another account has can't be saved, and the save says whose phone it was`() {
+        val first = register(phone(12)).user
+        register(phone(13))
+
+        val refused = assertFailsWith<PhoneTakenException> { save(first.changePhone(phone(13)).getOrNull() ?: fail()) }
+
+        assertEquals(phone(13), refused.phone)
+        assertEquals(phone(12), read(first.id)?.phone)
+    }
+
+    @Test
+    fun `a new phone that is free is saved`() {
+        val user = register(phone(14)).user
+
+        save(user.changePhone(phone(15)).getOrNull() ?: fail())
+
+        assertEquals(phone(15), read(user.id)?.phone)
+        assertNull(transaction(db) { repository.findByPhone(phone(14)) })
     }
 
     @Test

@@ -1,7 +1,10 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
 import com.kiva.application.port.SmsSender
+import com.kiva.application.usecase.account.usecase.command.ConfirmPhoneChangeUc
+import com.kiva.application.usecase.account.usecase.command.RequestPhoneChangeUc
 import com.kiva.application.usecase.account.usecase.command.UpdateMyProfileUc
+import com.kiva.application.usecase.auth.OtpIssuer
 import com.kiva.application.usecase.account.usecase.query.GetMeUc
 import com.kiva.application.usecase.admin.usecase.command.CheckPanelAccessUc
 import com.kiva.application.usecase.admin.usecase.command.SetUserRolesUc
@@ -64,7 +67,8 @@ class AuthTestStack(val clock: MutableClock, maxSmsPerHour: Int = 300) {
     private val events = SecurityEventLogImpl()
     private val sessions = AuthSessionRepositoryImpl()
 
-    val send = SendLoginCodeUc(transactions, codes, otpCodes, sms, events, clock, maxSmsPerHour)
+    val otpIssuer = OtpIssuer(codes, otpCodes, events, maxSmsPerHour)
+    val send = SendLoginCodeUc(transactions, otpIssuer, sms, clock)
     val verify = VerifyLoginCodeUc(transactions, codes, users, sessions, otpCodes, sessionTokens, accessTokens, events, clock)
     val getMe = GetMeUc(transactions, users)
     val refresh = RefreshSessionUc(transactions, sessions, users, sessionTokens, accessTokens, events, clock)
@@ -75,6 +79,8 @@ class AuthTestStack(val clock: MutableClock, maxSmsPerHour: Int = 300) {
     val getCustomer = GetCustomerUc(transactions, AdminCustomerRepositoryImpl())
     val setUserRoles = SetUserRolesUc(transactions, users, sessions, events, clock)
     val bootstrapAdmin = BootstrapAdminUc(transactions, users, sessions, events, clock)
+    val requestPhoneChange = RequestPhoneChangeUc(transactions, users, sessions, otpIssuer, sms, clock)
+    val confirmPhoneChange = ConfirmPhoneChangeUc(transactions, codes, users, sessions, otpCodes, sessionTokens, accessTokens, sms, events, clock)
 
     fun app(trustedProxyHops: Int = 0, allowedOrigins: List<String> = listOf(ORIGIN), block: suspend ApplicationTestBuilder.() -> Unit) =
         testApplication {
@@ -85,7 +91,7 @@ class AuthTestStack(val clock: MutableClock, maxSmsPerHour: Int = 300) {
                 routing {
                     route(API_V1) {
                         webV1Auth(AuthUseCases(send, verify, getMe, refresh, logout), allowedOrigins)
-                        webV1Me(getMe, updateProfile)
+                        webV1Me(MeUseCases(getMe, updateProfile, requestPhoneChange, confirmPhoneChange))
                         webV1AdminCustomers(AdminCustomerUseCases(checkPanelAccess, findCustomers, getCustomer, setUserRoles))
                     }
                 }
@@ -123,11 +129,19 @@ class AuthTestStack(val clock: MutableClock, maxSmsPerHour: Int = 300) {
 class RecordingSmsSender : SmsSender {
     val sent: MutableList<Pair<IranianMobileNumber, OtpCode>> = Collections.synchronizedList(mutableListOf())
 
+    /** Warnings that an account moved, as (old phone, end of the new number). */
+    val notices: MutableList<Pair<IranianMobileNumber, String>> = Collections.synchronizedList(mutableListOf())
+
     @Volatile
     var down = false
 
     override suspend fun sendCode(to: IranianMobileNumber, code: OtpCode, purpose: OtpPurpose) {
         check(!down) { "the SMS provider is down" }
         sent += to to code
+    }
+
+    override suspend fun sendPhoneChangedNotice(oldPhone: IranianMobileNumber, newPhoneEnding: String) {
+        check(!down) { "the SMS provider is down" }
+        notices += oldPhone to newPhoneEnding
     }
 }

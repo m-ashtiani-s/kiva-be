@@ -184,6 +184,17 @@ class User private constructor(
         return Result.success(copy(roles = Roles.of(roles)))
     }
 
+    // ============ phone ============
+
+    /**
+     * Moves the account to [newPhone]. Only the phone change flow calls this, after codes from both phones were verified
+     * and the new phone was found free. The old phone is free from then on: logging in with it makes a new account.
+     */
+    fun changePhone(newPhone: IranianMobileNumber): Result<User, ChangePhoneFailure> {
+        if (newPhone == phone) return Result.failure(ChangePhoneFailure.SameAsCurrent)
+        return Result.success(User(id, newPhone, firstName, lastName, email, birthDate, gender, defaultMessenger, defaultMessengerPhone, marketingSmsOptIn, roles, createdOn, version))
+    }
+
     private fun copy(
         firstName: PersonName? = this.firstName,
         lastName: PersonName? = this.lastName,
@@ -220,6 +231,11 @@ class User private constructor(
 
     sealed class SetPanelRolesFailure(code: String, kind: FailureKind) : ResultFailure(code, kind) {
         data object OwnRoles : SetPanelRolesFailure("ROLE_CHANGE_NOT_ALLOWED", FailureKind.BUSINESS_RULE)
+    }
+
+    // Field and code from the contract's phone change endpoints.
+    sealed class ChangePhoneFailure(code: String, kind: FailureKind, field: String? = null) : ResultFailure(code, kind, field) {
+        data object SameAsCurrent : ChangePhoneFailure("PHONE_SAME_AS_CURRENT", FailureKind.INVALID, field = "newPhone")
     }
 }
 

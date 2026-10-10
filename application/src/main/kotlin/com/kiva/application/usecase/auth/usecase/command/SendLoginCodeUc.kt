@@ -1,13 +1,9 @@
 package com.kiva.application.usecase.auth.usecase.command
 
-import com.kiva.application.port.OtpCodes
-import com.kiva.application.port.SecurityEvent
-import com.kiva.application.port.SecurityEventLog
-import com.kiva.application.port.SecurityEventType
 import com.kiva.application.port.SmsSender
+import com.kiva.application.usecase.auth.OtpIssuer
 import com.kiva.common.logging.getLogger
 import com.kiva.common.railway.FailureKind
-import com.kiva.common.railway.InputProblems
 import com.kiva.common.railway.Result
 import com.kiva.common.railway.ResultFailure
 import com.kiva.common.railway.flattenGroups
@@ -16,14 +12,10 @@ import com.kiva.common.railway.zip
 import com.kiva.common.transaction.TransactionManager
 import com.kiva.common.usecase.CommandUseCase
 import com.kiva.common.valueobject.IranianMobileNumber
-import com.kiva.domain.aggregate.otp.entity.OtpChallenge
-import com.kiva.domain.aggregate.otp.model.policy.OtpPolicy
 import com.kiva.domain.aggregate.otp.model.policy.OtpPolicy.Refusal
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpPurpose
-import com.kiva.domain.aggregate.otp.repository.OtpChallengeRepository
 import java.time.Clock
-import java.time.Instant
 
 /**
  * Sends a login code (`POST /auth/otp/send`). Logging in and signing up are the same thing here.
@@ -34,34 +26,23 @@ import java.time.Instant
  *
  * In one transaction, under the phone's lock (ten sends at the same moment run one after another, so only one SMS
  * goes out): the limits are checked, the phone's open login code is replaced, and the new one is stored as a salted
- * HMAC. The SMS goes out after the commit, so the transaction never waits for the provider. If the provider fails, the
- * answer is a 500 and the stored code still counts against the limits: the safe side, so failures can't be used to
- * send without limit.
+ * HMAC ([OtpIssuer]). The SMS goes out after the commit, so the transaction never waits for the provider. If the
+ * provider fails, the answer is a 500 and the stored code still counts against the limits: the safe side, so failures
+ * can't be used to send without limit.
  *
  * A refused send is a successful outcome inside the transaction and a failure only after it: the refusal at the
  * shop's hourly cap records a security event, which a failed transaction would roll back.
  *
- * The shop's cap counts every phone's codes, but the lock is one phone's: two phones at the same moment can both see
- * the last free place. The cap is a safety valve for the SMS bill, so going over it by a few is fine.
- *
- * @param maxSmsPerHour the shop's cap on SMS in an hour, all phones together (`kiva.auth.maxSmsPerHour`).
  * @return the phone in its stored form, for the response's «sent to ...».
  */
 class SendLoginCodeUc(
     private val transactionManager: TransactionManager,
-    private val otpChallengeRepository: OtpChallengeRepository,
-    private val otpCodes: OtpCodes,
+    private val otpIssuer: OtpIssuer,
     private val smsSender: SmsSender,
-    private val securityEventLog: SecurityEventLog,
     private val clock: Clock,
-    private val maxSmsPerHour: Int,
 ) : CommandUseCase<SendLoginCodeUc.Cmd, IranianMobileNumber, SendLoginCodeUc.Failure> {
 
     private val logger = getLogger()
-
-    init {
-        require(maxSmsPerHour > 0) { "maxSmsPerHour must be positive, was $maxSmsPerHour" }
-    }
 
     /**
      * The contract's SendOtpRequest as it arrived, plus where it came from.
@@ -93,19 +74,11 @@ class SendLoginCodeUc(
         logger.info("SendLoginCodeUc.execute phone=${phone.masked()} ip=${command.ip}")
 
         val now = clock.instant()
+        val recipient = OtpIssuer.Recipient(phone, OtpPurpose.LOGIN)
         val outcome = transactionManager.inTransaction<Outcome, Nothing> {
-            otpChallengeRepository.lockPhone(phone)
-            val refusal = OtpPolicy.refusalToSend(OtpPurpose.LOGIN, otpChallengeRepository.sentTo(phone, now.minus(OtpPolicy.DAY)), now)
-                ?: shopCapRefusal(now)
+            val refusal = otpIssuer.lockAndCheck(listOf(recipient), now)
             if (refusal != null) return@inTransaction Result.success(Outcome.Refused(refusal))
-
-            otpChallengeRepository.findOpen(phone, OtpPurpose.LOGIN)?.let { otpChallengeRepository.save(it.replace(now)) }
-            val new = otpCodes.newCode(OtpPurpose.LOGIN, phone)
-            val challenge = OtpChallenge.issue(
-                otpChallengeRepository.nextId(), OtpPurpose.LOGIN, phone, null, null, new.salt, new.hash, now,
-            )
-            otpChallengeRepository.add(challenge, command.ip)
-            Result.success(Outcome.Issued(new.code))
+            Result.success(Outcome.Issued(otpIssuer.issue(recipient, userId = null, authorizesPhone = null, requestIp = command.ip, now = now)))
         }.unwrapOr { it }
 
         return when (outcome) {
@@ -118,15 +91,6 @@ class SendLoginCodeUc(
                 Result.success(phone)
             }
         }
-    }
-
-    /** The shop's hourly cap; reaching it is an ERROR in the log and a security event, so someone looks at it. */
-    private fun shopCapRefusal(now: Instant): Refusal? {
-        val sent = otpChallengeRepository.sentToAnyone(now.minus(OtpPolicy.HOUR))
-        val refusal = OtpPolicy.refusalForShopCap(sent.count, sent.earliest, maxSmsPerHour, now) ?: return null
-        logger.error("SendLoginCodeUc: the shop's cap of $maxSmsPerHour SMS an hour is reached; no code goes out for ${refusal.retryAfter}")
-        securityEventLog.record(SecurityEvent(SecurityEventType.SMS_HOURLY_CAP_REACHED, now, detail = mapOf("cap" to maxSmsPerHour)))
-        return refusal
     }
 
     /** Only LOGIN: a phone change's or an account deletion's code can't be asked for here. */

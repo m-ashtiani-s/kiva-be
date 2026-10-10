@@ -201,7 +201,7 @@ class WebV1MeUpdateOnDatabaseTest {
             application {
                 configureHttp()
                 configureAuthentication(stack.accessTokens)
-                routing { route(API_V1) { webV1Me(stack.getMe, racingEdit) } }
+                routing { route(API_V1) { webV1Me(MeUseCases(stack.getMe, racingEdit, stack.requestPhoneChange, stack.confirmPhoneChange)) } }
             }
             val answers = coroutineScope {
                 listOf("سارا", "مریم").map { name -> async { edit(token, """{"firstName": "$name"}""") } }.awaitAll()
