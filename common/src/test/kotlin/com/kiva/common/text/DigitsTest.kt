@@ -49,4 +49,11 @@ class DigitsTest {
     fun `normalizePersian keeps a correct half-space`() {
         assertEquals("می‌خوام", "می‌خوام".normalizePersian())
     }
+
+    @Test
+    fun `normalizePersianLetters cleans letters and spaces like normalizePersian but keeps the digits as typed`() {
+        assertEquals("خیابان ولیعصر، پلاک ۱۲", "  خيابان ولیعصر،   پلاک ۱۲ ".normalizePersianLetters())
+        assertEquals("کوچه ٣ و 4", "كوچه ٣ و 4".normalizePersianLetters())
+        assertEquals("پلاک 12", "پلاک ۱۲".normalizePersian())
+    }
 }

@@ -81,7 +81,7 @@
 | ۰ | کانترکت 1.6.0 و آماده‌سازی | S | ✅ |
 | ۱ | استان‌ها و شهرها | S | ✅ |
 | ۲ | تنظیمات فروشگاه | M | ✅ |
-| ۳ | دفترچه‌ی آدرس | M | ⬜ |
+| ۳ | دفترچه‌ی آدرس | M | ✅ |
 | ۴ | قانون‌های قیمت و ارسال (دامنه) | S | ⬜ |
 | ۵ | Aggregate سبد (دامنه) | M | ⬜ |
 | ۶ | سبد: دیتابیس و endpointها | L | ⬜ |
@@ -467,7 +467,7 @@ flowchart LR
 | VO | قانون | کد خطا (فیلد) |
 |---|---|---|
 | `ProvinceId`، `CityId` | عدد مثبت | `PROVINCE_ID_INVALID`، `CITY_ID_INVALID` |
-| `AddressLine` | بعد از trim و `normalizePersian`: ۱۰ تا ۳۰۰ کاراکتر، بدون کاراکتر کنترلی و `<` و `>` | `ADDRESS_LINE_TOO_SHORT`، `ADDRESS_LINE_TOO_LONG`، `ADDRESS_LINE_INVALID` |
+| `AddressLine` | بعد از trim و `normalizePersianLetters` (مثل `normalizePersian`، ولی ارقام همون‌طور که تایپ شده می‌مونن، چون متن نمایشیه): ۱۰ تا ۳۰۰ کاراکتر، بدون کاراکتر کنترلی و `<` و `>` | `ADDRESS_LINE_TOO_SHORT`، `ADDRESS_LINE_TOO_LONG`، `ADDRESS_LINE_INVALID` |
 | `PostalCode` | ارقام فارسی نرمال می‌شن، فاصله و `-` حذف می‌شن، بعد دقیقاً ۱۰ رقم (الگوی کانترکت `^\d{10}$`) | `POSTAL_CODE_INVALID` |
 | `RecipientName` | قانون `PersonName`، ولی ۳ تا ۸۰ کاراکتر | `RECIPIENT_NAME_REQUIRED`، `RECIPIENT_NAME_TOO_SHORT`، `RECIPIENT_NAME_TOO_LONG`، `RECIPIENT_NAME_INVALID` |
 | `recipientPhone` | `IranianMobileNumber` ِ کامن، با `forField("recipientPhone")` | `PHONE_INVALID` |
@@ -1417,6 +1417,7 @@ PURCHASE_REVIEW.md                             (step 21)
 | 20 | `CreateReviewRequest` | فیلد تازه‌ی `orderCode` (nullable) کنار `orderItemId` | نتیجه‌ی ردیف ۱۵: شماره‌ی ردیف فقط داخل سفارش یکتاست، پس `orderItemId` به‌تنهایی معلوم نمی‌کنه کدوم خرید. همون جفتی که `ReviewablePurchase` داره |
 | 21 | `/geo/provinces` و `/geo/provinces/{provinceId}/cities` (گام ۱) | `Province.cities` ← `nullable` (`includeCities=false` ← `null`). هدر `ETag` روی شهرهای استان هم. پاسخ `304` برای هر دو. `includeCities` غیر از true/false ← 400 | قانون «فیلدها همیشه فرستاده می‌شن»، و قانون کلی کانترکت که `/geo/*` کش می‌شه |
 | 22 | `ShippingMethod.description` و `ShippingOptionQuote.description` (گام ۲) | ساخته‌شده از `minDays` و `maxDays`؛ در `AdminSettings` فقط خوندنی و در PUT نادیده گرفته می‌شه | یه منبع برای مدت تحویل؛ متن هیچ‌وقت با عدد ناجور نمی‌شه |
+| 23 | `/me/addresses*` (گام ۳) | 404ها `ADDRESS_NOT_FOUND`. `PUT` ِ آدرس `422 CITY_NOT_IN_PROVINCE` هم داره. ترتیب لیست: پیش‌فرض، بعد قدیمی‌ترین. اولین آدرس همیشه پیش‌فرض، و `setAsDefault: false` پیش‌فرض بودن رو برنمی‌داره. استان یا شهر ناموجود ← 400 روی فیلد (`PROVINCE_NOT_FOUND`، `CITY_NOT_FOUND`). کد پستی با ارقام فارسی و «-» پذیرفته می‌شه. ارقام `addressLine` همون‌طور که تایپ شده می‌مونن. `fullText` پلاک و واحد رو هم داره | رفتار دقیق دفترچه |
 
 **پیام برای فرانت (گام ۰ و ۲۱):** ردیف‌های ۲، ۴، ۵، ۶، ۷، ۸، ۱۰، ۱۱ و ۲۰ رفتار فرانت رو عوض می‌کنن. `docs/FRONTEND_PURCHASE.md` (گام ۲۱) کل جریان رو برای فرانت توضیح می‌ده، مثل `FRONTEND_AUTH.md`.
 
@@ -1494,7 +1495,7 @@ PURCHASE_REVIEW.md                             (step 21)
 
 ---
 
-### گام ۳: دفترچه‌ی آدرس · M ⬜
+### گام ۳: دفترچه‌ی آدرس · M ✅
 
 **می‌سازی:** `V13__addresses.sql`. VOهای بخش ۸، `AddressBook` و `Address`، `AddressBookDomainService`، `AddressBookRepository` (قفل advisory و ذخیره‌ی تفاوت‌ها: insert، update، delete)، `AddressIdGenerator`. شش UseCase ِ بخش ۱۷ و `webV1Addresses.kt`. گسترش `RouteGuardsTest` به همه‌ی routeهای `bearerAuth` ِ کانترکت. متن فارسی کدهای فیلد تازه.
 
@@ -1505,15 +1506,15 @@ PURCHASE_REVIEW.md                             (step 21)
 2. `update` با `setAsDefault = false` روی آدرس پیش‌فرض: پیش‌فرض بودن برداشته بشه یا نه؟
 
 **تموم شده یعنی:**
-- [ ] اولین آدرس خودکار پیش‌فرض می‌شه. آدرس دوم با `setAsDefault=true` پیش‌فرض می‌شه و اولی نه. همیشه دقیقاً یکی پیش‌فرضه (ایندکس جزئی هم چکش می‌کنه).
-- [ ] حذف پیش‌فرض ← قدیمی‌ترین باقی‌مونده پیش‌فرض می‌شه. حذف آخرین ← دفترچه‌ی خالی.
-- [ ] آدرس بیست‌ویکم ← `422 ADDRESS_LIMIT_REACHED`. ۲۰ افزودن همزمان روی دفترچه‌ی ۱۹تایی ← فقط یکی موفق.
-- [ ] شهر ۳۹۴ با استان ۴ ← `422 CITY_NOT_IN_PROVINCE`. استان ۹۹ ← 400 روی `provinceId`.
-- [ ] کد پستی «۱۹۶۵۸-۴۳۱۱۷» پذیرفته و `1965843117` ذخیره می‌شه. ۹ رقم ← 400 روی `postalCode`. موبایل گیرنده‌ی غلط ← 400 روی `recipientPhone`. چند فیلد غلط با هم ← یه 400 با همه‌شون.
-- [ ] آدرس کاربر دیگه با هر چهار عملیات ← `404 ADDRESS_NOT_FOUND`، و هیچی عوض نشده.
-- [ ] پاسخ `provinceName`، `cityName`، `fullText` و `createdAt` داره، و لیست با پیش‌فرض شروع می‌شه.
-- [ ] `RouteGuardsTest` ِ گسترش‌یافته سبزه و با حذف `authenticate` از یکی از این routeها قرمز می‌شه.
-- [ ] متن آدرس و شماره‌ی گیرنده تو هیچ لاگی نیست.
+- [x] اولین آدرس خودکار پیش‌فرض می‌شه. آدرس دوم با `setAsDefault=true` پیش‌فرض می‌شه و اولی نه. همیشه دقیقاً یکی پیش‌فرضه (ایندکس جزئی هم چکش می‌کنه).
+- [x] حذف پیش‌فرض ← قدیمی‌ترین باقی‌مونده پیش‌فرض می‌شه. حذف آخرین ← دفترچه‌ی خالی.
+- [x] آدرس بیست‌ویکم ← `422 ADDRESS_LIMIT_REACHED`. ۲۰ افزودن همزمان روی دفترچه‌ی ۱۹تایی ← فقط یکی موفق.
+- [x] شهر ۳۹۴ با استان ۴ ← `422 CITY_NOT_IN_PROVINCE`. استان ۹۹ ← 400 روی `provinceId`.
+- [x] کد پستی «۱۹۶۵۸-۴۳۱۱۷» پذیرفته و `1965843117` ذخیره می‌شه. ۹ رقم ← 400 روی `postalCode`. موبایل گیرنده‌ی غلط ← 400 روی `recipientPhone`. چند فیلد غلط با هم ← یه 400 با همه‌شون.
+- [x] آدرس کاربر دیگه با هر چهار عملیات ← `404 ADDRESS_NOT_FOUND`، و هیچی عوض نشده.
+- [x] پاسخ `provinceName`، `cityName`، `fullText` و `createdAt` داره، و لیست با پیش‌فرض شروع می‌شه.
+- [x] `RouteGuardsTest` ِ گسترش‌یافته سبزه و با حذف `authenticate` از یکی از این routeها قرمز می‌شه.
+- [x] متن آدرس و شماره‌ی گیرنده تو هیچ لاگی نیست.
 
 ---
 
@@ -2022,6 +2023,7 @@ Route: StartPaymentUc ← 201 با order و payment، یا 422 PAYMENT_GATEWAY_U
 | ۱۹ مهر ۱۴۰۵ | ۰ | Purchase step 0 | برنچ `purchase`. کانترکت 1.6.0 با ۱۹ ردیف بخش ۲۱، به‌علاوه‌ی ردیف ۲۰ (`orderCode` در ثبت نظر). کد خطای تازه‌ای لازم نشد. `AuthResponse.cart` غیر nullable شد (حالت آخر فاز). کد فرانت ملاک طراحی نیست؛ فرانت خودش رو با کانترکت هماهنگ می‌کنه |
 | ۱۹ مهر ۱۴۰۵ | ۱ | Purchase step 1 | `V11__geo.sql` از `tools/geo/geo_to_sql.py`: ۳۱ استان و ۱۳۱۹ شهر با اصلاح‌های بخش ۵.۱. دامنه‌ی `geo`، `ListProvincesUc` و `ListCitiesOfProvinceUc`، `webV1Geo.kt`، و `Caching.kt` (ETag ضعیف از hash ِ بدنه، `304`). کانترکت: ردیف ۲۱ (`Province.cities` nullable، ETag و 304). `UNIQUE ("provinceId", name)` روی `city_tbl` |
 | ۱۹ مهر ۱۴۰۵ | ۲ | Purchase step 2 | `V12__shop_settings.sql`: یه ردیف تایپ‌دار با قید یکتایی، `shippingmethod_tbl` (تیپاکس و پست؛ پیک ردیف نداره) و `paymentgateway_tbl` (زرین‌پال فعال و پیش‌فرض، سامان و ملت خاموش). دامنه‌ی `settings` و `ShopSettingsRepository`. سه UseCase ِ کاتالوگ آستانه رو هر بار از دیتابیس می‌خونن (بدون کش) و `kiva.shop.freeShippingThreshold` حذف شد. متن مدت تحویل از روزها ساخته می‌شه (ردیف ۲۲) |
+| ۱۹ مهر ۱۴۰۵ | ۳ | Purchase step 3 | `V13__addresses.sql` (با `ON DELETE CASCADE` روی کاربر و FK ترکیبی به شهر). Aggregate ِ `AddressBook` با قفل advisory، `AddressBookDomainService` و شش UseCase. ارقام `addressLine` همون‌طور که تایپ شده می‌مونن (`normalizePersianLetters` تو کامن). استان یا شهر ناموجود ← 400 روی فیلد (`PROVINCE_NOT_FOUND`، `CITY_NOT_FOUND`)، و نبودنشون `PROVINCE_REQUIRED` و `CITY_REQUIRED`. `RouteGuardsTest` حالا همه‌ی routeهای `bearerAuth` ِ کانترکت رو چک می‌کنه. کانترکت: ردیف ۲۳ |
 
 ---
 

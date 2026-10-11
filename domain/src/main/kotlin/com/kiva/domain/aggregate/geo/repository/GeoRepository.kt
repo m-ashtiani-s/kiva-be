@@ -2,6 +2,7 @@ package com.kiva.domain.aggregate.geo.repository
 
 import com.kiva.domain.aggregate.geo.entity.City
 import com.kiva.domain.aggregate.geo.entity.Province
+import com.kiva.domain.aggregate.geo.model.valueobject.CityId
 import com.kiva.domain.aggregate.geo.model.valueobject.ProvinceId
 
 /** Reads the province and city lists. Read only: the lists change only through migrations. */
@@ -16,4 +17,9 @@ interface GeoRepository {
 
     /** The cities of one province in list order ([City.sortOrder]); empty for a province that doesn't exist. */
     fun findCitiesOf(provinceId: ProvinceId): List<City>
+
+    fun findCity(id: CityId): City?
+
+    /** The cities among [ids] that exist, in no particular order (for the names of a few saved addresses). */
+    fun findCities(ids: Set<CityId>): List<City>
 }

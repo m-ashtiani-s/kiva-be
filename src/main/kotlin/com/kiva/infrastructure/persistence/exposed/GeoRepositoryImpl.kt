@@ -10,6 +10,7 @@ import com.kiva.infrastructure.persistence.exposed.tbl.ProvinceTbl
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.jdbc.selectAll
 
 /** Runs inside the use case's transaction; it never opens one itself. */
@@ -37,6 +38,15 @@ class GeoRepositoryImpl : GeoRepository {
             .where { CityTbl.provinceId eq provinceId.value }
             .orderBy(CityTbl.sortOrder to SortOrder.ASC, CityTbl.cityId to SortOrder.ASC)
             .map { it.toCity() }
+
+    override fun findCity(id: CityId): City? =
+        CityTbl.selectAll()
+            .where { CityTbl.cityId eq id.value }
+            .singleOrNull()
+            ?.toCity()
+
+    override fun findCities(ids: Set<CityId>): List<City> =
+        if (ids.isEmpty()) emptyList() else CityTbl.selectAll().where { CityTbl.cityId inList ids.map { it.value } }.map { it.toCity() }
 
     private fun ResultRow.toProvince(): Province =
         Province.constructFromPersisted(

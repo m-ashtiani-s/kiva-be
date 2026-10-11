@@ -5,6 +5,12 @@ import com.kiva.application.usecase.account.usecase.command.RequestPhoneChangeUc
 import com.kiva.application.usecase.account.usecase.command.UpdateMyProfileUc
 import com.kiva.application.usecase.auth.OtpIssuer
 import com.kiva.application.usecase.account.usecase.query.GetMeUc
+import com.kiva.application.usecase.address.usecase.command.AddAddressUc
+import com.kiva.application.usecase.address.usecase.command.DeleteAddressUc
+import com.kiva.application.usecase.address.usecase.command.SetDefaultAddressUc
+import com.kiva.application.usecase.address.usecase.command.UpdateAddressUc
+import com.kiva.application.usecase.address.usecase.query.GetMyAddressUc
+import com.kiva.application.usecase.address.usecase.query.ListMyAddressesUc
 import com.kiva.application.usecase.admin.usecase.command.CheckPanelAccessUc
 import com.kiva.application.usecase.admin.usecase.command.SetUserRolesUc
 import com.kiva.application.usecase.admin.usecase.query.FindCustomersUc
@@ -35,6 +41,14 @@ val useCaseModule = module(createdAtStart = true) {
     single { ListMaterialsUc(transactionManager = get(), materialRepository = get(), productQmRepository = get()) }
     single { ListCategoriesUc(transactionManager = get(), categoryRepository = get(), productQmRepository = get()) }
     single { GetCategoryUc(transactionManager = get(), categoryRepository = get(), productQmRepository = get()) }
+
+    // --- address book ---
+    single { ListMyAddressesUc(transactionManager = get(), addressBookRepository = get(), geoRepository = get()) }
+    single { GetMyAddressUc(transactionManager = get(), addressBookRepository = get(), geoRepository = get()) }
+    single { AddAddressUc(transactionManager = get(), addressBookDomainService = get(), addressBookRepository = get(), clock = get()) }
+    single { UpdateAddressUc(transactionManager = get(), addressBookDomainService = get(), addressBookRepository = get(), clock = get()) }
+    single { DeleteAddressUc(transactionManager = get(), addressBookRepository = get(), clock = get()) }
+    single { SetDefaultAddressUc(transactionManager = get(), addressBookRepository = get(), clock = get()) }
 
     // --- geo: queries ---
     single { ListProvincesUc(transactionManager = get(), geoRepository = get()) }

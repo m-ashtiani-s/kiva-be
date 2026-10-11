@@ -1785,6 +1785,7 @@ paths:
       tags: [Addresses]
       operationId: listMyAddresses
       summary: "آدرس‌های من (آدرس پیش‌فرض اول)"
+      description: آدرس پیش‌فرض اول، بعد بقیه به ترتیب ثبت (قدیمی‌ترین اول). وقتی دفترچه آدرسی دارد، دقیقاً یکی از آن‌ها پیش‌فرض است.
       security: [{ bearerAuth: [] }]
       responses:
         '200':
@@ -1799,6 +1800,10 @@ paths:
       tags: [Addresses]
       operationId: createAddress
       summary: "افزودن آدرس جدید"
+      description: |
+        اولین آدرس همیشه پیش‌فرض می‌شود؛ آدرس‌های بعدی فقط با `setAsDefault: true` (و پیش‌فرض قبلی دیگر پیش‌فرض نیست).
+        همه‌ی خطاهای فیلدها با هم در یک `400` می‌آیند. استان یا شهری که در فهرست نیست `400` روی همان فیلد است
+        (`PROVINCE_NOT_FOUND`، `CITY_NOT_FOUND`)؛ شهر واقعیِ استانی دیگر `422 CITY_NOT_IN_PROVINCE`.
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -1832,13 +1837,20 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Address' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '404':
+          description: "`ADDRESS_NOT_FOUND` — این آدرس در دفترچه‌ی این کاربر نیست (آدرس کاربر دیگر هم همین جواب را می‌گیرد)"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '401': { $ref: '#/components/responses/Unauthorized' }
     put:
       tags: [Addresses]
       operationId: updateAddress
       summary: "ویرایش آدرس"
-      description: سفارش‌های قبلی تغییر نمی‌کنند چون یک snapshot از آدرس در سفارش ذخیره شده است.
+      description: |
+        همه‌ی فیلدها دوباره فرستاده می‌شوند (جایگزینی کامل). سفارش‌های قبلی تغییر نمی‌کنند چون یک snapshot از آدرس در سفارش ذخیره شده است.
+        `setAsDefault: true` این آدرس را پیش‌فرض می‌کند؛ `false` هیچ‌وقت پیش‌فرض بودن را برنمی‌دارد، چون همیشه یکی باید پیش‌فرض باشد
+        (پیش‌فرض فقط با پیش‌فرض کردن آدرسی دیگر عوض می‌شود).
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/AddressId'
@@ -1854,7 +1866,16 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Address' }
         '400': { $ref: '#/components/responses/ValidationError' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '404':
+          description: "`ADDRESS_NOT_FOUND` — این آدرس در دفترچه‌ی این کاربر نیست (آدرس کاربر دیگر هم همین جواب را می‌گیرد)"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422':
+          description: "`CITY_NOT_IN_PROVINCE`"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '401': { $ref: '#/components/responses/Unauthorized' }
     delete:
       tags: [Addresses]
@@ -1865,7 +1886,11 @@ paths:
         - $ref: '#/components/parameters/AddressId'
       responses:
         '204': { $ref: '#/components/responses/NoContent' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '404':
+          description: "`ADDRESS_NOT_FOUND` — این آدرس در دفترچه‌ی این کاربر نیست (آدرس کاربر دیگر هم همین جواب را می‌گیرد)"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '401': { $ref: '#/components/responses/Unauthorized' }
   /me/addresses/{addressId}/default:
     post:
@@ -1883,9 +1908,12 @@ paths:
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/Address' }
-
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '404':
+          description: "`ADDRESS_NOT_FOUND` — این آدرس در دفترچه‌ی این کاربر نیست (آدرس کاربر دیگر هم همین جواب را می‌گیرد)"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
   # ================================================================
   #  WISHLIST
   # ================================================================
@@ -6072,21 +6100,21 @@ components:
         title: { type: string, maxLength: 30, nullable: true, description: '[پیشنهادی] «خانه»، «محل کار»', example: خانه }
         provinceId: { type: integer, example: 8 }
         cityId: { type: integer, example: 394 }
-        addressLine: { type: string, minLength: 10, maxLength: 300, description: خیابان، کوچه، پلاک، واحد, example: 'خیابان ولیعصر، بالاتر از پارک ساعی، کوچه نسترن، پلاک ۱۲، واحد ۴' }
-        plaque: { type: string, maxLength: 10, nullable: true, description: '[پیشنهادی]', example: '12' }
-        unit: { type: string, maxLength: 10, nullable: true, description: '[پیشنهادی]', example: '4' }
-        postalCode: { $ref: '#/components/schemas/PostalCode' }
+        addressLine: { type: string, minLength: 10, maxLength: 300, description: 'خیابان، کوچه، پلاک، واحد. ارقام همان‌طور که تایپ شده‌اند می‌مانند؛ حروف عربی (ي، ك) و فاصله‌های اضافه یکدست می‌شوند.', example: 'خیابان ولیعصر، بالاتر از پارک ساعی، کوچه نسترن، پلاک ۱۲، واحد ۴' }
+        plaque: { type: string, maxLength: 10, nullable: true, description: '[پیشنهادی] خالی = null. ارقامش لاتین ذخیره می‌شود.', example: '12' }
+        unit: { type: string, maxLength: 10, nullable: true, description: '[پیشنهادی] خالی = null. ارقامش لاتین ذخیره می‌شود.', example: '4' }
+        postalCode: { allOf: [{ $ref: '#/components/schemas/PostalCode' }], description: 'ارقام فارسی، فاصله و «-» پذیرفته و حذف می‌شوند («۱۹۶۵۸-۴۳۱۱۷» ← 1965843117)؛ بعد دقیقاً ۱۰ رقم.' }
         recipientName: { type: string, minLength: 3, maxLength: 80, example: سارا محمدی }
         recipientPhone: { $ref: '#/components/schemas/PhoneNumber' }
         isSelfRecipient: { type: boolean, description: «گیرنده خودم هستم», example: true }
         location:
           type: object
           nullable: true
-          description: '[پیشنهادی] انتخاب روی نقشه برای پیک'
+          description: '[پیشنهادی] انتخاب روی نقشه برای پیک. هر دو با هم یا هیچ‌کدام؛ وگرنه `LOCATION_INVALID`.'
           properties:
             lat: { type: number, format: double, example: 35.7575 }
             lng: { type: number, format: double, example: 51.4107 }
-        setAsDefault: { type: boolean, default: false }
+        setAsDefault: { type: boolean, default: false, description: '`true` = پیش‌فرض شود. `false` پیش‌فرض بودن را برنمی‌دارد. اولین آدرس همیشه پیش‌فرض است.' }
     PlaceOrderRequest:
       type: object
       required: [shippingMethod, paymentGateway, acceptTerms]
@@ -6815,7 +6843,7 @@ components:
           properties:
             lat: { type: number, format: double }
             lng: { type: number, format: double }
-        fullText: { type: string, description: «استان، شهر، آدرس», example: 'تهران، تهران، خیابان ولیعصر، بالاتر از پارک ساعی، کوچه نسترن، پلاک ۱۲، واحد ۴' }
+        fullText: { type: string, description: '«استان، شهر، آدرس»، و اگر فرستاده شده‌اند «پلاک …» و «واحد …» (با ارقام فارسی)', example: 'تهران، تهران، خیابان ولیعصر، بالاتر از پارک ساعی، کوچه نسترن، پلاک ۱۲، واحد ۴' }
         createdAt: { type: string, format: date-time }
 
     # ============ WISHLIST ============

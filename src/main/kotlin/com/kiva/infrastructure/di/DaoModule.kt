@@ -3,6 +3,8 @@ package com.kiva.infrastructure.di
 import com.kiva.application.port.SecurityEventLog
 import com.kiva.application.repository.AdminCustomerRepository
 import com.kiva.application.repository.ProductQmRepository
+import com.kiva.domain.aggregate.address.repository.AddressBookRepository
+import com.kiva.domain.aggregate.address.repository.AddressIdGenerator
 import com.kiva.domain.aggregate.otp.repository.OtpChallengeRepository
 import com.kiva.domain.aggregate.session.repository.AuthSessionRepository
 import com.kiva.domain.aggregate.category.repository.CategoryRepository
@@ -14,6 +16,8 @@ import com.kiva.domain.aggregate.product.repository.ProductIdGenerator
 import com.kiva.domain.aggregate.product.repository.ProductRepository
 import com.kiva.domain.aggregate.settings.repository.ShopSettingsRepository
 import com.kiva.domain.aggregate.user.repository.UserRepository
+import com.kiva.infrastructure.persistence.exposed.AddressBookRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.AddressIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.AdminCustomerRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.AuthSessionRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.CategoryRepositoryImpl
@@ -49,4 +53,6 @@ val daoModule = module(createdAtStart = true) {
     single<AdminCustomerRepository> { AdminCustomerRepositoryImpl() }
     single<GeoRepository> { GeoRepositoryImpl() }
     single<ShopSettingsRepository> { ShopSettingsRepositoryImpl() }
+    single<AddressBookRepository> { AddressBookRepositoryImpl() }
+    single<AddressIdGenerator> { AddressIdGeneratorImpl() }
 }
