@@ -87,9 +87,9 @@ fun Application.configureHttp(allowedOrigins: List<String> = emptyList(), truste
             requestKey { call -> call.request.origin.remoteAddress }
         }
     }
-    // The frontend lives on another origin (localhost:5173 in development, kiva.ir in production), so the browser
-    // asks before every call that isn't "simple" (JSON body, Authorization, Idempotency-Key, ...) and blocks the
-    // answer unless these headers allow it. Exact origins only, never "*": the API takes logins and payments.
+    // The shop and the admin panel live on other origins (localhost:3100 and :3200 in development, kiva.ir and
+    // admin.kiva.ir in production), so the browser asks before every call that isn't "simple" (JSON body,
+    // Authorization, Idempotency-Key, ...) and blocks the answer unless these headers allow it. Exact origins only, never "*": the API takes logins and payments.
     install(CORS) {
         val origins = allowedOrigins.toSet()
         allowOrigins { it in origins }

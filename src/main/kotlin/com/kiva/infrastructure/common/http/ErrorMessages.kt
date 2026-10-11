@@ -84,6 +84,7 @@ object ErrorMessages {
         "PAYMENT_EXPIRED" to "مهلت پرداخت تموم شده",
         "PAYMENT_GATEWAY_UNAVAILABLE" to "درگاه پرداخت الان در دسترس نیست. چند دقیقه بعد امتحان کن",
         "TRACKING_NOT_FOUND" to "سفارشی با این شماره و موبایل پیدا نکردیم.",
+        "BALANCE_DUE" to "این سفارش هنوز {balanceDue} تومان مانده‌ی پرداخت داره و تا پرداخت نشه ارسال نمی‌شه",
         // --- reviews, alerts, wishlist, uploads, admin ---
         "REVIEW_ALREADY_EXISTS" to "برای این محصول یه نظر در انتظار تأیید داری",
         "REVIEW_NOT_EDITABLE" to "این نظر دیگه قابل ویرایش نیست",
@@ -94,6 +95,7 @@ object ErrorMessages {
         "UPLOAD_TYPE_NOT_ALLOWED" to "این نوع فایل پذیرفته نمی‌شه",
         "DUPLICATE_SLUG" to "این آدرس (slug) قبلاً استفاده شده",
         "DUPLICATE_SKU" to "این کد کالا (SKU) قبلاً استفاده شده",
+        "IN_USE" to "این مورد هنوز روی محصول یا جای دیگه‌ای استفاده شده، برای همین حذف نمی‌شه",
         // --- field-level codes produced by common and the domain value objects ---
         "PHONE_REQUIRED" to "موبایلت رو وارد کن",
         "MONEY_NEGATIVE" to "مبلغ نمی‌تونه منفی باشه",

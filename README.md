@@ -49,7 +49,7 @@ openssl rand -base64 32
 | `KIVA_SMS_PROVIDER` | `log` (the default) writes login codes to the log instead of sending them: development only. |
 | `KIVA_TRUSTED_PROXY_HOPS` | `1` only behind the shop's own nginx; `0` (the default) everywhere else. |
 | `KIVA_BOOTSTRAP_ADMIN_PHONE` | Optional. This phone becomes ADMIN on startup, only while there is no ADMIN at all; remove it after the first start. |
-| `KIVA_ALLOWED_ORIGINS` | Comma-separated frontends a browser may call the API from. Defaults to `localhost` and `127.0.0.1` on ports 5173 and 3000; on a server, the shop's own `https://` addresses. |
+| `KIVA_ALLOWED_ORIGINS` | Comma-separated frontends a browser may call the API from. Defaults to `localhost` and `127.0.0.1` on ports 3100 (kiva-fe), 3200 (the admin panel), 5173 and 3000; on a server, the shop's own `https://` addresses, the panel's (`https://admin.kiva.ir`) included. |
 
 With the `log` provider, the code of `POST /api/v1/auth/otp/send` (and the two codes of a phone change) is in the log,
 on a `WARN` line from `LogSmsSender`. Tests use their own fixed secrets and need none of these.
