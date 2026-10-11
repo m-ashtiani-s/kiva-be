@@ -1,5 +1,8 @@
 package com.kiva.infrastructure.common.http
 
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import com.kiva.common.event.ConcurrentChangeException
 import com.kiva.common.event.valueobject.EventAggregateId
 import com.kiva.common.event.valueobject.EventAggregateName
@@ -33,6 +36,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import org.slf4j.LoggerFactory
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
@@ -295,6 +299,19 @@ class HttpEdgeTest {
             assertFalse("s3cret" in body)
             assertFalse("db.internal" in body)
             assertFalse("IllegalStateException" in body)
+        }
+
+        @Test
+        fun `the log names the path without its query string, which can be a customer's phone`() {
+            val logger = LoggerFactory.getLogger("com.kiva.infrastructure.common.http.StatusPages") as Logger
+            val appender = ListAppender<ILoggingEvent>().apply { start() }
+            logger.addAppender(appender)
+            try {
+                withApp { client.get("/boom?q=09121234567") }
+            } finally {
+                logger.detachAppender(appender)
+            }
+            assertEquals(listOf("Unhandled error on GET /boom"), appender.list.map { it.formattedMessage })
         }
     }
 }

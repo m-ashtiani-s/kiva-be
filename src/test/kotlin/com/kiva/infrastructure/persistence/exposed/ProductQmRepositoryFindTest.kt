@@ -123,7 +123,7 @@ class ProductQmRepositoryFindTest {
     }
 
     @Test
-    fun `search finds every word somewhere in name, category, colors or material, and a % is just a character`() {
+    fun `search finds every word somewhere in name, category, colors or material, and a percent sign is just a character`() {
         inShop("mahak-shoulder-bag", listOf(NewColor("lilac")))
         inShop("simple-wallet", listOf(NewColor("cream")), details = ProductEventSamples.bareDetails)
 

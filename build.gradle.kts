@@ -35,6 +35,10 @@ dependencies {
     implementation(libs.ktor.server.status.pages)
     implementation(libs.ktor.server.call.id)
     implementation(libs.ktor.server.cors)
+    implementation(libs.ktor.server.rate.limit)
+    implementation(libs.ktor.server.auth)
+    implementation(libs.ktor.server.auth.jwt)
+    implementation(libs.ktor.server.forwarded.header)
     implementation(libs.jsoup)
     implementation(libs.ktor.serialization.kotlinx.json)
 

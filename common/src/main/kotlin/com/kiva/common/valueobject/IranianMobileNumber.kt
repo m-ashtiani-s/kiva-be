@@ -14,9 +14,22 @@ import com.kiva.common.text.normalizeDigits
  *
  * Because there is only one stored form, the same person can't end up with two accounts
  * just because they typed their number differently the second time.
+ *
+ * A number is personal data: write [masked] to logs, never [value].
  */
 @JvmInline
 value class IranianMobileNumber private constructor(val value: String) {
+
+    // Second wall, for every way in: [makeNew] already refuses bad input with a Failure, so this only ever fails
+    // when stored data is wrong. That is a bug: stop loudly. The number itself stays out of the message.
+    init {
+        require(value.length == 11 && value.startsWith("09") && value.all { it in '0'..'9' }) {
+            "Invalid IranianMobileNumber of length ${value.length}"
+        }
+    }
+
+    /** The number for logs: `0912***4567`. Enough to tell two numbers apart in a log, not enough to call anyone. */
+    fun masked(): String = value.take(4) + "***" + value.takeLast(4)
 
     companion object {
         fun makeNew(raw: String): Result<IranianMobileNumber, Failure> {
@@ -30,6 +43,9 @@ value class IranianMobileNumber private constructor(val value: String) {
             val valid = national.length == 10 && national[0] == '9' && national.all { it in '0'..'9' }
             return if (valid) Result.success(IranianMobileNumber("0$national")) else Result.failure(Failure.Invalid)
         }
+
+        /** For values read back from storage, always in the stored form (`09121234567`). Still checked by `init`. */
+        fun constructFromPersisted(value: String): IranianMobileNumber = IranianMobileNumber(value)
 
         private const val IGNORED = " -()\t"
 

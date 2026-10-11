@@ -38,6 +38,9 @@ object ErrorMessages {
         "OTP_TOO_MANY_ATTEMPTS" to "چند بار اشتباه زدی، یه کد جدید بگیر",
         "OTP_RESEND_TOO_SOON" to "{retryAfterSeconds} ثانیه دیگه می‌تونی دوباره کد بگیری",
         "PHONE_ALREADY_REGISTERED" to "این شماره مال یه حساب دیگه‌ست",
+        "PHONE_SAME_AS_CURRENT" to "این همین شماره‌ی فعلی حسابته",
+        "ACCOUNT_HAS_ACTIVE_ORDERS" to "تا وقتی سفارش جاری داری نمی‌شه حساب رو حذف کرد",
+        "ROLE_CHANGE_NOT_ALLOWED" to "نقش‌های خودت رو نمی‌تونی عوض کنی",
         // --- catalog & cart ---
         "PRODUCT_NOT_FOUND" to "این محصول پیدا نشد",
         "VARIANT_NOT_FOUND" to "این رنگ برای این محصول پیدا نشد",
@@ -81,6 +84,7 @@ object ErrorMessages {
         "PAYMENT_EXPIRED" to "مهلت پرداخت تموم شده",
         "PAYMENT_GATEWAY_UNAVAILABLE" to "درگاه پرداخت الان در دسترس نیست. چند دقیقه بعد امتحان کن",
         "TRACKING_NOT_FOUND" to "سفارشی با این شماره و موبایل پیدا نکردیم.",
+        "BALANCE_DUE" to "این سفارش هنوز {balanceDue} تومان مانده‌ی پرداخت داره و تا پرداخت نشه ارسال نمی‌شه",
         // --- reviews, alerts, wishlist, uploads, admin ---
         "REVIEW_ALREADY_EXISTS" to "برای این محصول یه نظر در انتظار تأیید داری",
         "REVIEW_NOT_EDITABLE" to "این نظر دیگه قابل ویرایش نیست",
@@ -91,6 +95,7 @@ object ErrorMessages {
         "UPLOAD_TYPE_NOT_ALLOWED" to "این نوع فایل پذیرفته نمی‌شه",
         "DUPLICATE_SLUG" to "این آدرس (slug) قبلاً استفاده شده",
         "DUPLICATE_SKU" to "این کد کالا (SKU) قبلاً استفاده شده",
+        "IN_USE" to "این مورد هنوز روی محصول یا جای دیگه‌ای استفاده شده، برای همین حذف نمی‌شه",
         // --- field-level codes produced by common and the domain value objects ---
         "PHONE_REQUIRED" to "موبایلت رو وارد کن",
         "MONEY_NEGATIVE" to "مبلغ نمی‌تونه منفی باشه",
@@ -159,6 +164,17 @@ object ErrorMessages {
         "NUMBER_INVALID" to "اینجا باید یه عدد بدون اعشار بنویسی",
         "PRICE_RANGE_INVALID" to "حداقل قیمت نمی‌تونه از حداکثر قیمت بیشتر باشه",
         "LIMIT_INVALID" to "تعداد باید عددی بین ۱ و {max} باشه",
+        "PERSON_NAME_REQUIRED" to "اسم نمی‌تونه خالی باشه",
+        "PERSON_NAME_TOO_LONG" to "اسم حداکثر {maxLength} حرفه",
+        "PERSON_NAME_INVALID" to "اسم نمی‌تونه علامت‌هایی مثل < و > داشته باشه",
+        "EMAIL_INVALID" to "ایمیل معتبر وارد کن، مثل sara@example.com",
+        "EMAIL_TOO_LONG" to "ایمیل حداکثر {maxLength} حرفه",
+        "BIRTH_DATE_INVALID" to "تاریخ تولد درست نیست",
+        "GENDER_INVALID" to "جنسیت باید یکی از FEMALE، MALE یا UNSPECIFIED باشه",
+        "MESSENGER_CHANNEL_INVALID" to "پیام‌رسان باید یکی از RUBIKA، TELEGRAM یا BALE باشه",
+        "ROLE_INVALID" to "نقش باید یکی از CUSTOMER، ADMIN، CATALOG_MANAGER، OPERATOR، CONTENT_EDITOR یا SUPPORT باشه",
+        "OTP_CODE_FORMAT_INVALID" to "کد تأیید {codeLength} رقمیه",
+        "OTP_PURPOSE_INVALID" to "از اینجا فقط کد ورود (LOGIN) فرستاده می‌شه",
     )
 
     // Used when a code has no text of its own (or its placeholders can't be filled).

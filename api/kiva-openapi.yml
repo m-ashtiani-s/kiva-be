@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: KIVA Store API — کیوا
-  version: 1.3.0
+  version: 1.5.0
   contact:
     name: KIVA Engineering
     email: support@kiva.ir
@@ -35,16 +35,59 @@ info:
     | 400 در برابر 422 | `400 VALIDATION_ERROR` = ورودی از نظر شکل/فرمت غلط است. `422` = ورودی درست است ولی قانون کسب‌وکار اجازه نمی‌دهد (مثل `DISCOUNT_MIN_SUBTOTAL_NOT_MET`). |
     | Idempotency | `POST /orders`، `POST /payments/{id}/retry` و `POST /me/orders/{code}/payments` هدر `Idempotency-Key` (UUID) می‌گیرند؛ تکرار با همان کلید همان پاسخ را برمی‌گرداند. |
     | کش | `GET /config`، `/home`، `/categories`، `/colors`، `/faq`، `/geo/*` و بلاگ با `ETag` + `Cache-Control: public, max-age=300` کش می‌شوند. |
-    | Rate limit | OTP: هر شماره ۱ بار در ۱۲۰ ثانیه و حداکثر ۵ بار در ساعت. پیگیری مهمان: ۱۰ بار در ۱۰ دقیقه برای هر IP. پاسخ `429` با هدر `Retry-After`. |
+    | Rate limit | ورود و کدهای تأیید: جدول «محدودیت‌ها» در بخش ۲. پیگیری مهمان: ۱۰ بار در ۱۰ دقیقه برای هر IP. پاسخ `429` همیشه با هدر `Retry-After` (ثانیه) و `meta.retryAfterSeconds`. |
 
     ## ۲. احراز هویت
 
-    * ورود و ثبت‌نام یکی است: `POST /auth/otp/send` ← `POST /auth/otp/verify` (کد ۵ رقمی، تایمر ارسال مجدد ۱۲۰ ثانیه).
-    * خروجی: `accessToken` (JWT، اعتبار ۱۵ دقیقه) + `refreshToken` (۳۰ روز، چرخشی/rotating). ارسال با `Authorization: Bearer <token>`.
+    * ورود و ثبت‌نام یکی است: `POST /auth/otp/send` ← `POST /auth/otp/verify` (کد ۵ رقمی، اعتبار ۵ دقیقه، تایمر ارسال مجدد ۱۲۰ ثانیه).
+      پاسخ `send` برای شماره‌ی ثبت‌نام‌شده و جدید دقیقاً یکی است؛ ثبت‌نام بودن فقط بعد از verify (`isNewUser`) معلوم می‌شود.
+    * **دو توکن:**
+      * `accessToken`: JWT با اعتبار ۱۵ دقیقه، در بدنه‌ی پاسخ. کلاینت آن را **فقط در حافظه** نگه می‌دارد (نه `localStorage`، نه `sessionStorage`، نه کوکی) و با `Authorization: Bearer <token>` می‌فرستد.
+      * `refreshToken`: **در بدنه نمی‌آید.** سرور آن را در کوکی `kiva_rt` می‌گذارد:
+        `HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth`. جاوااسکریپت آن را نمی‌بیند و مرورگر فقط برای `/api/v1/auth/*` می‌فرستدش.
+        با هر استفاده عوض می‌شود (چرخشی). مشتری: ۳۰ روز بعد از آخرین استفاده و حداکثر ۱۸۰ روز. کاربر پنل (هر نقشی غیر از `CUSTOMER`): ۱۲ ساعت بعد از آخرین استفاده و حداکثر ۷ روز.
+    * **باز شدن صفحه و تمدید:** کلاینت بعد از باز شدن صفحه، و هر وقت جواب `401 TOKEN_EXPIRED` گرفت، `POST /auth/refresh` را با `credentials: 'include'` صدا می‌زند.
+      اگر چند تب باز است فقط **یکی** تمدید کند (مثلاً با `navigator.locks`). سرور درخواست‌های هم‌زمان با یک توکن را تا ۳۰ ثانیه می‌پذیرد،
+      ولی استفاده از توکنی که قبلاً عوض شده بعد از این مهلت **نشانه‌ی دزدی است** و همه‌ی نشست‌های آن زنجیره باطل می‌شود (`401 REFRESH_TOKEN_INVALID`).
+    * هر درخواستی که کوکی نشست را می‌گذارد یا می‌خواند (`/auth/otp/verify`، `/auth/refresh`، `/auth/logout`، `/me/phone-change/verify`، `DELETE /me`)
+      باید با `credentials: 'include'` فرستاده شود؛ وگرنه مرورگر `Set-Cookie` پاسخ را نادیده می‌گیرد. بقیه‌ی درخواست‌ها به آن نیازی ندارند.
+    * **محل فرانت:** چون کوکی `SameSite=Strict` است، فرانت و پنل باید روی **همان سایت** API باشند (`kiva.ir`، `www.kiva.ir`، `admin.kiva.ir` در کنار `api.kiva.ir`؛ در توسعه `localhost`).
+      `/auth/refresh` و `/auth/logout` فقط از originهای مجاز پذیرفته می‌شوند (هدر `Origin`)؛ وگرنه `403 FORBIDDEN`.
     * اگر `isNewUser = true` بود، کلاینت مرحله‌ی اختیاری «دوست داری چی صدات کنیم؟» را نشان می‌دهد و با `PATCH /me` نام را ذخیره می‌کند.
     * **سبد مهمان:** افزودن به سبد بدون ورود مجاز است. سرور در اولین درخواست سبد یک `X-Cart-Token` برمی‌گرداند؛ کلاینت آن را نگه می‌دارد.
-      موقع verify، اگر `guestCartToken` ارسال شود سبد مهمان با سبد کاربر **ادغام** می‌شود.
+      موقع verify، اگر `guestCartToken` ارسال شود سبد مهمان با سبد کاربر **ادغام** می‌شود (از فاز سبد؛ تا آن موقع `cart` در پاسخ `null` است).
     * نیازمند ورود: پرداخت، علاقه‌مندی‌ها، ثبت نظر، حساب کاربری. پیگیری سفارش (track) بدون ورود است.
+    * **ورود اختیاری:** endpointهایی که `security` آن‌ها `[{}, bearerAuth]` است با و بی ورود کار می‌کنند. بدون هدر `Authorization` = مهمان.
+      ولی اگر هدر فرستاده شود و توکن منقضی یا نامعتبر باشد، جواب `401` است (`TOKEN_EXPIRED` یا `UNAUTHORIZED`) و درخواست **هرگز بی‌صدا مهمان حساب نمی‌شود**.
+    * **نقش‌ها:** هر endpoint ِ `/admin/*` نقش‌های مجازش را در `x-roles` دارد؛ نقش ناکافی = `403 FORBIDDEN`. `ADMIN` همه‌جا مجاز است.
+      در پنل، نقش‌ها و فعال بودن نشست در **هر درخواست** از سرور خوانده می‌شوند، پس گرفتن نقش یا خروج فوراً اثر می‌کند. تغییر نقش‌های یک کاربر همه‌ی نشست‌هایش را باطل می‌کند.
+
+      | بخش پنل | نقش‌ها |
+      |---|---|
+      | کاتالوگ، موجودی و صف «موجود شد خبرم کن» (`GET /admin/stock-alerts`) | `ADMIN`، `CATALOG_MANAGER` |
+      | آپلود مدیا (`POST /admin/media`) | `ADMIN`، `CATALOG_MANAGER`، `CONTENT_EDITOR`، `OPERATOR` |
+      | سفارش‌ها و مرجوعی‌ها | `ADMIN`، `OPERATOR` — به‌جز ثبت و پیگیری استرداد وجه (`POST /admin/orders/{orderCode}/refunds`، `PATCH /admin/refunds/{refundId}`): فقط `ADMIN` |
+      | کد تخفیف | فقط `ADMIN` |
+      | کمپین، بنر، نوار اطلاعیه، رضایت مشتری، بلاگ، FAQ، صفحه‌های ثابت | `ADMIN`، `CONTENT_EDITOR` |
+      | تنظیمات (`/admin/settings`) | فقط `ADMIN` |
+      | نظرات، پیام‌های تماس، مشتریان | `ADMIN`، `SUPPORT` |
+      | گزارش‌ها، تعیین نقش کاربران، لاگ تغییرات و مشترکین خبرنامه | فقط `ADMIN` |
+
+    * **لاگ تغییرات:** هر درخواست **موفقِ** نوشتنی زیر `/admin/*` (`POST`، `PUT`، `PATCH`، `DELETE`؛ به‌جز آپلود مدیا) یک ردیف در لاگ تغییرات می‌گذارد:
+      چه کسی، کِی، چه کاری، روی چه چیزی، و هر فیلد از چه به چه شد. خواندن‌ها و کارهای خودکار سیستم (مثل پایان مهلت رزرو) ثبت نمی‌شوند.
+      لاگ فقط اضافه می‌شود و ویرایش یا حذف ندارد: `GET /admin/audit-log`.
+
+    * **محدودیت‌ها** (همه با `429`، هدر `Retry-After` و `meta.retryAfterSeconds`):
+
+      | چی | حد | کد |
+      |---|---|---|
+      | ارسال کد به یک شماره | ۱ بار در ۱۲۰ ثانیه (برای هر هدف جدا: ورود، تغییر شماره، حذف حساب) | `OTP_RESEND_TOO_SOON` |
+      | ارسال کد به یک شماره | ۵ بار در ساعت و ۱۰ بار در ۲۴ ساعت | `RATE_LIMITED` |
+      | درخواست کد از یک IP | ۲۰ بار در ۱۰ دقیقه | `RATE_LIMITED` |
+      | امتحان یک کد | ۵ بار؛ بعدش کد باطل است (`422`) | `OTP_TOO_MANY_ATTEMPTS` |
+      | کد اشتباه برای یک شماره | ۱۰ بار در ۲۴ ساعت؛ بعدش تا پایان بازه کد جدید هم پذیرفته نمی‌شود | `RATE_LIMITED` |
+
+      همین حدها برای کدهای تغییر شماره و حذف حساب هم هست.
 
     ## ۳. قوانین کسب‌وکار
 
@@ -90,6 +133,29 @@ info:
     مسیر اصلی: `PENDING_PAYMENT → (RESERVED) → PROCESSING → PHOTO_SENT → SHIPPED → DELIVERED`.
     `RESERVED → PROCESSING` فقط خودکار و در پایان مهلت رزرو انجام می‌شود؛ `RESERVED → CANCELLED` با لغو مشتری یا ادمین.
     سرور برای هر سفارش آبجکت آماده‌ی `progress` (۴ مرحله با تاریخ هر مرحله) و `statusLabel`/`statusTone` را برمی‌گرداند تا کلاینت منطق نگاشت نداشته باشد.
+
+    **درخواست تغییر:** مشتری با `POST /me/orders/{orderCode}/media-feedback` (`REQUEST_CHANGE`) سفارش را `CHANGE_REQUESTED` می‌کند.
+    اپراتور آن را با `POST /admin/orders/{orderCode}/change-request/resolution` اجرا یا رد می‌کند و سفارش به `PROCESSING` برمی‌گردد
+    (`preShipmentMedia.status = WAITING`: عکس تازه، بعد ارسال). از `CHANGE_REQUESTED` فقط همین endpoint یا لغو (`CANCELLED`) بیرون می‌برد.
+    اگر رنگ/مدل تازه **ارزان‌تر** باشد، مابه‌التفاوت خودکار استرداد می‌شود؛ اگر **گران‌تر** باشد، روی سفارش `balanceDue` می‌نشیند
+    (در `OrderSummary` و `totals`) و `actions.canPay = true`؛ مشتری با `POST /me/orders/{orderCode}/payments` آن را می‌پردازد
+    و تا صفر نشود سفارش ارسال نمی‌شود (`422 BALANCE_DUE`).
+
+    **چرخه‌ی مرجوعی** (`ReturnStatus`):
+
+    | از | به | با |
+    |---|---|---|
+    | — | `REQUESTED` | مشتری: `POST /me/orders/{orderCode}/returns` |
+    | `REQUESTED` | `APPROVED` یا `REJECTED` (پایان) | `POST /admin/returns/{returnId}/decision` |
+    | `APPROVED` | `PICKUP_SCHEDULED` (اختیاری؛ وقتی کیوا مرسوله را جمع می‌کند) | `PUT /admin/returns/{returnId}/pickup` (دوباره صدا زدن = تغییر زمان/کد) |
+    | `APPROVED`، `PICKUP_SCHEDULED` | `RECEIVED` (کالا به انبار رسید و بازبینی شد) | `POST /admin/returns/{returnId}/receipt` |
+    | `RECEIVED` | `REFUNDED` (پایان) | وقتی استرداد همین مرجوعی (`POST /admin/orders/{orderCode}/refunds` با `returnId`) `COMPLETED` شود |
+    | `APPROVED`، `PICKUP_SCHEDULED`، `RECEIVED` | `CLOSED` (پایان بدون استرداد: کالا نرسید یا بازبینی رد شد) | `POST /admin/returns/{returnId}/close` |
+
+    وضعیت سفارش دنبال مرجوعی باز آن می‌رود: تا مرجوعی `REQUESTED`، `APPROVED` یا `PICKUP_SCHEDULED` است سفارش `RETURN_REQUESTED`،
+    بعد از `RECEIVED` سفارش `RETURNED` و بعد از `REFUNDED` سفارش `REFUNDED` است. اگر مرجوعی `REJECTED` یا `CLOSED` شود (یعنی بدون استرداد)،
+    سفارش به `DELIVERED` برمی‌گردد. انتقال نامجاز در همه‌ی این endpointها `422 INVALID_STATUS_TRANSITION` است و پاسخ پنل
+    (`AdminReturnRequest.allowedTransitions`) قدم‌های مجاز بعدی را می‌گوید.
 
     ## ۵. پیامک‌ها و اعلان‌ها
 
@@ -442,7 +508,8 @@ paths:
       summary: "ارسال کد تأیید ۵ رقمی به موبایل (ورود و ثبت‌نام یکی است)"
       description: |
         برای جلوگیری از شناسایی کاربران (user enumeration) در این مرحله مشخص نمی‌شود که شماره قبلاً ثبت‌نام کرده یا نه؛
-        این اطلاعات بعد از verify در `isNewUser` برمی‌گردد.
+        این اطلاعات بعد از verify در `isNewUser` برمی‌گردد. پاسخ برای هر شماره‌ی معتبری یکی است.
+        کد جدید، کد قبلی همان شماره را باطل می‌کند. حدها: جدول «محدودیت‌ها» در بخش ۲.
       requestBody:
         required: true
         content:
@@ -461,6 +528,9 @@ paths:
       tags: [Auth]
       operationId: verifyOtp
       summary: "تأیید کد و دریافت توکن (+ادغام سبد مهمان)"
+      description: |
+        اگر شماره حساب نداشت، همین‌جا ساخته می‌شود (`isNewUser = true`). هر کد فقط یک بار مصرف می‌شود.
+        refreshToken در کوکی `kiva_rt` می‌آید (هدر `Set-Cookie`)، نه در بدنه.
       requestBody:
         required: true
         content:
@@ -469,12 +539,16 @@ paths:
       responses:
         '200':
           description: ورود موفق
+          headers:
+            Set-Cookie: { $ref: '#/components/headers/SetRefreshCookie' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AuthResponse' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '422':
-          description: "`OTP_INVALID` (با `meta.attemptsLeft`) یا `OTP_EXPIRED`"
+          description: |
+            `OTP_INVALID` (با `meta.attemptsLeft`)، `OTP_EXPIRED` (کد فعالی برای این شماره نیست یا تمام شده)،
+            یا `OTP_TOO_MANY_ATTEMPTS` (این کد ۵ بار اشتباه زده شده و باطل است؛ کد جدید بگیر).
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -483,39 +557,46 @@ paths:
     post:
       tags: [Auth]
       operationId: refreshToken
-      summary: "تمدید توکن با refreshToken (چرخشی)"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/RefreshTokenRequest' }
+      summary: "تمدید توکن با کوکی refreshToken (چرخشی)"
+      description: |
+        بدنه ندارد؛ refreshToken از کوکی `kiva_rt` خوانده می‌شود (`credentials: 'include'`).
+        پاسخ یک accessToken تازه است و کوکی با توکن جدید عوض می‌شود.
+        `401 REFRESH_TOKEN_INVALID`: کوکی نیست، منقضی یا باطل شده، یا توکن قدیمی دوباره استفاده شده (در این حالت کل زنجیره باطل می‌شود).
+        `403 FORBIDDEN`: درخواست از origin مجاز نیامده.
+      security: [{ refreshCookie: [] }]
       responses:
         '200':
           description: OK
+          headers:
+            Set-Cookie: { $ref: '#/components/headers/SetRefreshCookie' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AuthTokens' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '400': { $ref: '#/components/responses/ValidationError' }
+        '403': { $ref: '#/components/responses/Forbidden' }
   /auth/logout:
     post:
       tags: [Auth]
       operationId: logout
-      summary: "خروج از حساب (ابطال refreshToken)"
-      security: [{ bearerAuth: [] }]
+      summary: "خروج از حساب (ابطال نشست)"
+      description: |
+        نشستِ کوکی `kiva_rt` را باطل و کوکی را پاک می‌کند. accessToken لازم ندارد، پس با توکن منقضی هم کار می‌کند.
+        همیشه `204` است، حتی اگر کوکی نباشد یا قبلاً باطل شده باشد. accessTokenهای صادرشده تا پایان ۱۵ دقیقه‌شان معتبر می‌مانند
+        (به‌جز در پنل، که نشست در هر درخواست چک می‌شود)؛ کلاینت باید accessToken را از حافظه پاک کند.
+      security: [{ refreshCookie: [] }]
       requestBody:
         content:
           application/json:
             schema:
               type: object
               properties:
-                refreshToken: { type: string }
-                allDevices: { type: boolean, default: false, description: "خروج از همه‌ی دستگاه‌ها [پیشنهادی]" }
+                allDevices: { type: boolean, default: false, description: "خروج از همه‌ی دستگاه‌ها: همه‌ی نشست‌های این کاربر باطل می‌شوند" }
       responses:
-        '204': { $ref: '#/components/responses/NoContent' }
-
-        '400': { $ref: '#/components/responses/ValidationError' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
+        '204':
+          description: خارج شد
+          headers:
+            Set-Cookie: { $ref: '#/components/headers/ClearRefreshCookie' }
+        '403': { $ref: '#/components/responses/Forbidden' }
   # ================================================================
   #  CATALOG
   # ================================================================
@@ -1408,7 +1489,11 @@ paths:
     delete:
       tags: [Account]
       operationId: deleteMe
-      summary: "حذف حساب کاربری (با OTP تأیید) [پیشنهادی]"
+      summary: "حذف حساب کاربری (با OTP تأیید) [پیشنهادی — بعد از فاز سفارش]"
+      description: |
+        کد را اول از `POST /me/deletion/request` بگیر. با حذف، اطلاعات شخصی (نام، ایمیل، تولد، پیام‌رسان) پاک،
+        همه‌ی نشست‌ها باطل و شماره آزاد می‌شود؛ سفارش‌های قبلی برای حسابداری بی‌نام می‌مانند.
+        کسی که سفارش جاری دارد (پرداخت‌شده و هنوز تحویل‌نشده، یا رزرو فعال) نمی‌تواند حساب را حذف کند.
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -1421,20 +1506,45 @@ paths:
                 otpCode: { type: string, pattern: '^\d{5}$' }
                 reason: { type: string, maxLength: 300 }
       responses:
-        '204': { $ref: '#/components/responses/NoContent' }
+        '204':
+          description: حساب حذف شد
+          headers:
+            Set-Cookie: { $ref: '#/components/headers/ClearRefreshCookie' }
         '422':
-          description: سفارش جاری دارد یا کد نامعتبر است
+          description: "`OTP_INVALID` (با `meta.attemptsLeft`)، `OTP_EXPIRED`، `OTP_TOO_MANY_ATTEMPTS` یا `ACCOUNT_HAS_ACTIVE_ORDERS`"
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /me/deletion/request:
+    post:
+      tags: [Account]
+      operationId: requestAccountDeletion
+      summary: "ارسال کد تأیید حذف حساب به موبایل خود کاربر [پیشنهادی — بعد از فاز سفارش]"
+      description: کد فقط برای `DELETE /me` معتبر است، نه برای ورود؛ و کد ورود هم برای حذف حساب پذیرفته نمی‌شود.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: کد ارسال شد
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SendOtpResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
   /me/phone-change/request:
     post:
       tags: [Account]
       operationId: requestPhoneChange
-      summary: "درخواست تغییر شماره موبایل — ارسال OTP به شماره جدید [پیشنهادی]"
-      description: در طرح فعلی تغییر شماره از طریق پشتیبانی است؛ این جریان سلف‌سرویس پیشنهادی است.
+      summary: "درخواست تغییر شماره موبایل — ارسال کد به شماره‌ی فعلی و شماره‌ی جدید [پیشنهادی]"
+      description: |
+        برای امنیت، مالکیت **هر دو** شماره باید ثابت شود: یک کد به شماره‌ی فعلی و یک کد به شماره‌ی جدید می‌رود.
+        (اگر فقط شماره‌ی جدید چک شود، کسی که یک accessToken را دزدیده می‌تواند حساب را برای همیشه به شماره‌ی خودش ببرد.)
+        کسی که به شماره‌ی فعلی‌اش دسترسی ندارد، تغییر شماره را از پشتیبانی می‌خواهد.
+        اینکه شماره‌ی جدید مال حساب دیگری است، عمداً اینجا گفته نمی‌شود (فقط بعد از تأیید هر دو کد، در verify)،
+        تا این endpoint راهی برای فهمیدن «این شماره در کیوا حساب دارد؟» نباشد.
+        شماره‌ی تکراری: `400 VALIDATION_ERROR` با `errors[].field = newPhone` و `code = PHONE_SAME_AS_CURRENT`.
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -1447,22 +1557,22 @@ paths:
                 newPhone: { $ref: '#/components/schemas/PhoneNumber' }
       responses:
         '200':
-          description: کد ارسال شد
+          description: هر دو کد ارسال شد (با همان تایمرها)
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/SendOtpResponse' }
-        '409':
-          description: شماره متعلق به حساب دیگری است
-          content:
-            application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
+              schema: { $ref: '#/components/schemas/PhoneChangeOtpResponse' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
   /me/phone-change/verify:
     post:
       tags: [Account]
       operationId: verifyPhoneChange
-      summary: "تأیید شماره جدید [پیشنهادی]"
+      summary: "تأیید هر دو کد و تغییر شماره [پیشنهادی]"
+      description: |
+        بعد از تغییر: همه‌ی نشست‌های قبلی (همه‌ی دستگاه‌ها) باطل می‌شوند، یک نشست تازه برای همین دستگاه ساخته می‌شود
+        (کوکی جدید + accessToken جدید در پاسخ)، و یک پیامک هشدار به شماره‌ی **قبلی** می‌رود.
+        در `422`ها، `meta.field` می‌گوید کدام کد مشکل دارد (`currentPhoneCode` یا `newPhoneCode`).
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -1470,18 +1580,32 @@ paths:
           application/json:
             schema:
               type: object
-              required: [newPhone, code]
+              required: [newPhone, currentPhoneCode, newPhoneCode]
               properties:
                 newPhone: { $ref: '#/components/schemas/PhoneNumber' }
-                code: { type: string, pattern: '^\d{5}$' }
+                currentPhoneCode: { type: string, pattern: '^\d{5}$', description: کدی که به شماره‌ی فعلی رفت }
+                newPhoneCode: { type: string, pattern: '^\d{5}$', description: کدی که به شماره‌ی جدید رفت }
       responses:
         '200':
-          description: OK
+          description: شماره عوض شد
+          headers:
+            Set-Cookie: { $ref: '#/components/headers/SetRefreshCookie' }
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/User' }
+              schema: { $ref: '#/components/schemas/PhoneChangeResponse' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '409':
+          description: "`PHONE_ALREADY_REGISTERED`: شماره‌ی جدید مال حساب دیگری است"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422':
+          description: "`OTP_INVALID` (با `meta.attemptsLeft` و `meta.field`)، `OTP_EXPIRED` یا `OTP_TOO_MANY_ATTEMPTS` (با `meta.field`)"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
   /me/dashboard:
     get:
       tags: [Account]
@@ -1804,10 +1928,11 @@ paths:
     post:
       tags: [Orders]
       operationId: payMyOrder
-      summary: "پرداخت سفارش «در انتظار پرداخت» از حساب کاربری — امکان تغییر درگاه"
+      summary: "پرداخت سفارش «در انتظار پرداخت» یا مانده‌ی پرداخت آن از حساب کاربری — امکان تغییر درگاه"
       description: |
         مثل `POST /payments/{paymentId}/retry`، ولی با کد سفارش؛ چون صفحه‌ی سفارش `paymentId` ندارد.
-        فقط وقتی مجاز است که `actions.canPay = true` باشد. یک تراکنش جدید به مبلغ `totals.payable` ساخته می‌شود.
+        فقط وقتی مجاز است که `actions.canPay = true` باشد. یک تراکنش جدید ساخته می‌شود: برای سفارش پرداخت‌نشده به مبلغ `totals.payable`،
+        و برای سفارش پرداخت‌شده‌ای که بعد از درخواست تغییر مانده‌ی پرداخت دارد به مبلغ `totals.balanceDue`.
         بازگشت از درگاه مثل تسویه است: `https://kiva.ir/checkout/result?paymentId=...`
       security: [{ bearerAuth: [] }]
       parameters:
@@ -1858,7 +1983,8 @@ paths:
       description: |
         مطابق FAQ: «تا قبل از ارسال، می‌تونی رنگ یا مدل رو عوض کنی یا سفارش رو لغو کنی».
         `APPROVE` سفارش را برای ارسال آزاد می‌کند (بدون منتظر ماندن برای پایان مهلت پاسخ).
-        `REQUEST_CHANGE` وضعیت را `CHANGE_REQUESTED` می‌کند و اپراتور با مشتری هماهنگ می‌کند؛ اختلاف قیمت از طریق لینک پرداخت/استرداد تسویه می‌شود.
+        `REQUEST_CHANGE` وضعیت را `CHANGE_REQUESTED` می‌کند و اپراتور با مشتری هماهنگ می‌کند و درخواست را اجرا یا رد می‌کند
+        (`POST /admin/orders/{orderCode}/change-request/resolution`)؛ اختلاف قیمت با استرداد یا `totals.balanceDue` تسویه می‌شود (بخش ۴).
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/OrderCode'
@@ -2269,6 +2395,7 @@ paths:
   /admin/products:
     get:
       tags: [Admin · Catalog]
+      x-roles: [ADMIN, CATALOG_MANAGER]
       operationId: adminListProducts
       summary: "لیست محصولات پنل (همه‌ی وضعیت‌ها، موجودی دقیق)"
       security: [{ bearerAuth: [] }]
@@ -2297,6 +2424,7 @@ paths:
         '400': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Admin · Catalog]
+      x-roles: [ADMIN, CATALOG_MANAGER]
       operationId: adminCreateProduct
       summary: "ساخت محصول (می‌توان ورینت‌ها را هم‌زمان فرستاد)"
       security: [{ bearerAuth: [] }]
@@ -2322,6 +2450,7 @@ paths:
   /admin/products/{productId}:
     get:
       tags: [Admin · Catalog]
+      x-roles: [ADMIN, CATALOG_MANAGER]
       operationId: adminGetProduct
       summary: "جزئیات محصول در پنل"
       security: [{ bearerAuth: [] }]
@@ -2338,6 +2467,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
     put:
       tags: [Admin · Catalog]
+      x-roles: [ADMIN, CATALOG_MANAGER]
       operationId: adminUpdateProduct
       summary: "ویرایش کامل محصول"
       security: [{ bearerAuth: [] }]
@@ -2368,6 +2498,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
     delete:
       tags: [Admin · Catalog]
+      x-roles: [ADMIN, CATALOG_MANAGER]
       operationId: adminArchiveProduct
       summary: "آرشیو محصول (حذف نرم؛ سفارش‌های قبلی سالم می‌مانند)"
       security: [{ bearerAuth: [] }]
@@ -2381,6 +2512,7 @@ paths:
   /admin/products/{productId}/status:
     patch:
       tags: [Admin · Catalog]
+      x-roles: [ADMIN, CATALOG_MANAGER]
       operationId: adminSetProductStatus
       summary: "انتشار / پیش‌نویس / آرشیو"
       security: [{ bearerAuth: [] }]
@@ -2409,6 +2541,7 @@ paths:
   /admin/products/{productId}/variants:
     post:
       tags: [Admin · Catalog]
+      x-roles: [ADMIN, CATALOG_MANAGER]
       operationId: adminCreateVariant
       summary: "افزودن ورینت رنگی"
       security: [{ bearerAuth: [] }]
@@ -2437,6 +2570,7 @@ paths:
   /admin/products/{productId}/variants/{variantId}:
     put:
       tags: [Admin · Catalog]
+      x-roles: [ADMIN, CATALOG_MANAGER]
       operationId: adminUpdateVariant
       summary: "ویرایش ورینت (قیمت اختصاصی، موجودی، مدیا، وضعیت)"
       security: [{ bearerAuth: [] }]
@@ -2460,6 +2594,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
     delete:
       tags: [Admin · Catalog]
+      x-roles: [ADMIN, CATALOG_MANAGER]
       operationId: adminDeleteVariant
       summary: "غیرفعال کردن ورینت"
       security: [{ bearerAuth: [] }]
@@ -2474,6 +2609,7 @@ paths:
   /admin/inventory/adjustments:
     post:
       tags: [Admin · Catalog]
+      x-roles: [ADMIN, CATALOG_MANAGER]
       operationId: adminAdjustInventory
       summary: "ثبت تغییر موجودی (ورود کالا، شمارش انبار، آسیب‌دیده) با لاگ"
       description: با موجود شدن ورینتی که قبلاً صفر بوده، پیامک «موجود شد» برای مشترکین صف می‌شود.
@@ -2494,6 +2630,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
     get:
       tags: [Admin · Catalog]
+      x-roles: [ADMIN, CATALOG_MANAGER]
       operationId: adminListInventoryAdjustments
       summary: "تاریخچه‌ی تغییرات موجودی"
       security: [{ bearerAuth: [] }]
@@ -2521,6 +2658,7 @@ paths:
   /admin/media:
     post:
       tags: [Admin · Catalog]
+      x-roles: [ADMIN, CATALOG_MANAGER, CONTENT_EDITOR, OPERATOR]
       operationId: adminUploadMedia
       summary: "آپلود عکس/ویدیو (محصول، بلاگ، بنر، عکس قبل از ارسال)"
       description: سرور نسخه‌های بهینه (webp/avif در چند اندازه، poster ویدیو، blurhash) را می‌سازد.
@@ -2548,8 +2686,9 @@ paths:
   /admin/categories:
     get:
       tags: [Admin · Catalog]
+      x-roles: [ADMIN, CATALOG_MANAGER]
       operationId: adminListCategories
-      summary: "دسته‌بندی‌ها"
+      summary: "دسته‌بندی‌ها (همه، با شناسه‌ی مدیای عکس برای فرم)"
       security: [{ bearerAuth: [] }]
       responses:
         '200':
@@ -2558,11 +2697,12 @@ paths:
             application/json:
               schema:
                 type: array
-                items: { $ref: '#/components/schemas/Category' }
+                items: { $ref: '#/components/schemas/AdminCategory' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
     post:
       tags: [Admin · Catalog]
+      x-roles: [ADMIN, CATALOG_MANAGER]
       operationId: adminCreateCategory
       summary: "ساخت دسته‌بندی"
       security: [{ bearerAuth: [] }]
@@ -2576,13 +2716,14 @@ paths:
           description: OK
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Category' }
+              schema: { $ref: '#/components/schemas/AdminCategory' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
   /admin/categories/{categoryId}:
     put:
       tags: [Admin · Catalog]
+      x-roles: [ADMIN, CATALOG_MANAGER]
       operationId: adminUpdateCategory
       summary: "ویرایش دسته‌بندی"
       security: [{ bearerAuth: [] }]
@@ -2601,13 +2742,14 @@ paths:
           description: OK
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Category' }
+              schema: { $ref: '#/components/schemas/AdminCategory' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
     delete:
       tags: [Admin · Catalog]
+      x-roles: [ADMIN, CATALOG_MANAGER]
       operationId: adminDeleteCategory
       summary: "حذف دسته‌بندی (فقط اگر محصولی نداشته باشد)"
       security: [{ bearerAuth: [] }]
@@ -2619,7 +2761,7 @@ paths:
       responses:
         '204': { $ref: '#/components/responses/NoContent' }
         '409':
-          description: دسته‌بندی محصول دارد
+          description: "`IN_USE` — دسته‌بندی محصول دارد (حتی پیش‌نویس یا آرشیو)؛ `meta.productCount`"
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -2629,6 +2771,7 @@ paths:
   /admin/colors:
     post:
       tags: [Admin · Catalog]
+      x-roles: [ADMIN, CATALOG_MANAGER]
       operationId: adminCreateColor
       summary: "افزودن رنگ به پالت"
       security: [{ bearerAuth: [] }]
@@ -2649,6 +2792,7 @@ paths:
   /admin/colors/{colorKey}:
     put:
       tags: [Admin · Catalog]
+      x-roles: [ADMIN, CATALOG_MANAGER]
       operationId: adminUpdateColor
       summary: "ویرایش رنگ"
       security: [{ bearerAuth: [] }]
@@ -2672,9 +2816,50 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Admin · Catalog]
+      x-roles: [ADMIN, CATALOG_MANAGER]
+      operationId: adminDeleteColor
+      summary: "حذف رنگ از پالت (فقط اگر هیچ‌جا استفاده نشده باشد)"
+      description: |
+        رنگی که روی ورینتی از هر محصولی هست (فعال یا غیرفعال، در هر وضعیت محصول) یا پیام رضایتی به آن اشاره می‌کند حذف نمی‌شود.
+        برای کنار گذاشتن چنین رنگی، ورینت‌هایش را غیرفعال کنید.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: colorKey
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/ColorKey' }
+      responses:
+        '204': { $ref: '#/components/responses/NoContent' }
+        '409':
+          description: "`IN_USE` — رنگ استفاده شده است؛ `meta.productCount`"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /admin/materials:
+    get:
+      tags: [Admin · Catalog]
+      x-roles: [ADMIN, CATALOG_MANAGER]
+      operationId: adminListMaterials
+      summary: "متریال‌ها (همه، با تعداد محصول)"
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Material' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
     post:
       tags: [Admin · Catalog]
+      x-roles: [ADMIN, CATALOG_MANAGER]
       operationId: adminCreateMaterial
       summary: "افزودن متریال"
       security: [{ bearerAuth: [] }]
@@ -2693,12 +2878,103 @@ paths:
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+  /admin/materials/{materialId}:
+    put:
+      tags: [Admin · Catalog]
+      x-roles: [ADMIN, CATALOG_MANAGER]
+      operationId: adminUpdateMaterial
+      summary: "ویرایش متریال"
+      description: نام و توضیح تازه در متن جستجوی محصولات همین متریال هم می‌نشیند.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: materialId
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MaterialUpsertRequest' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Material' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: "`DUPLICATE_SLUG`"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+    delete:
+      tags: [Admin · Catalog]
+      x-roles: [ADMIN, CATALOG_MANAGER]
+      operationId: adminDeleteMaterial
+      summary: "حذف متریال (فقط اگر هیچ محصولی از آن نباشد)"
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: materialId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '204': { $ref: '#/components/responses/NoContent' }
+        '409':
+          description: "`IN_USE` — محصولی (حتی پیش‌نویس یا آرشیو) از این متریال است؛ `meta.productCount`"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /admin/stock-alerts:
+    get:
+      tags: [Admin · Catalog]
+      x-roles: [ADMIN, CATALOG_MANAGER]
+      operationId: adminListStockAlerts
+      summary: "صف «موجود شد خبرم کن»: چند نفر منتظر کدام رنگ‌اند"
+      description: |
+        اشتراک‌های فعال (`ACTIVE`) تجمیع‌شده برای هر ورینت (یا برای محصول، وقتی مشتری رنگ خاصی نخواسته)، به ترتیب بیشترین منتظر.
+        شماره‌ی مشترکین در این لیست نمی‌آید. با موجود شدن ورینت پیامک‌ها خودکار می‌روند (`POST /admin/inventory/adjustments`).
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: productId
+          in: query
+          schema: { type: integer }
+        - name: inStock
+          in: query
+          description: فیلتر بر اساس موجودی فعلی؛ `false` = فقط آن‌هایی که هنوز ناموجودند
+          schema: { type: boolean }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, meta]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/AdminStockAlertGroup' }
+                  meta: { $ref: '#/components/schemas/PageMeta' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
   # ================================================================
   #  ADMIN — ORDERS   (roles: ADMIN, OPERATOR)
   # ================================================================
   /admin/orders:
     get:
       tags: [Admin · Orders]
+      x-roles: [ADMIN, OPERATOR]
       operationId: adminListOrders
       summary: "صف سفارش‌ها (فیلتر وضعیت، رزرو، روش ارسال، بازه‌ی تاریخ، جستجو با کد/موبایل/نام)"
       security: [{ bearerAuth: [] }]
@@ -2743,6 +3019,7 @@ paths:
   /admin/orders/{orderCode}:
     get:
       tags: [Admin · Orders]
+      x-roles: [ADMIN, OPERATOR]
       operationId: adminGetOrder
       summary: "جزئیات سفارش در پنل (+ مشتری، پرداخت‌ها، گروه ارسال رزرو، یادداشت‌های داخلی)"
       security: [{ bearerAuth: [] }]
@@ -2760,8 +3037,13 @@ paths:
   /admin/orders/{orderCode}/status:
     post:
       tags: [Admin · Orders]
+      x-roles: [ADMIN, OPERATOR]
       operationId: adminChangeOrderStatus
       summary: "تغییر وضعیت سفارش (با اعتبارسنجی state machine و ارسال پیامک اختیاری)"
+      description: |
+        فقط به وضعیت‌های `allowedTransitions` همان سفارش. وضعیت‌هایی که endpoint خودشان را دارند این‌جا پذیرفته نمی‌شوند:
+        `PHOTO_SENT` (`…/pre-shipment-media/send`)، `SHIPPED` (`…/shipment`)، خروج از `CHANGE_REQUESTED` به‌جز لغو (`…/change-request/resolution`)،
+        و وضعیت‌های مرجوعی (`/admin/returns/*`).
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/OrderCode'
@@ -2788,6 +3070,7 @@ paths:
   /admin/orders/{orderCode}/pre-shipment-media:
     put:
       tags: [Admin · Orders]
+      x-roles: [ADMIN, OPERATOR]
       operationId: adminSetPreShipmentMedia
       summary: "اتصال عکس‌ها/ویدیوهای آپلودشده به سفارش (به ازای هر قلم کالا)"
       security: [{ bearerAuth: [] }]
@@ -2811,6 +3094,7 @@ paths:
   /admin/orders/{orderCode}/pre-shipment-media/send:
     post:
       tags: [Admin · Orders]
+      x-roles: [ADMIN, OPERATOR]
       operationId: adminSendPreShipmentMedia
       summary: "ارسال عکس‌ها به پیام‌رسان مشتری و تغییر وضعیت به PHOTO_SENT"
       description: |
@@ -2838,12 +3122,60 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /admin/orders/{orderCode}/change-request/resolution:
+    post:
+      tags: [Admin · Orders]
+      x-roles: [ADMIN, OPERATOR]
+      operationId: adminResolveChangeRequest
+      summary: "اجرا یا رد درخواست تغییر مشتری (سفارش CHANGE_REQUESTED ← PROCESSING)"
+      description: |
+        درخواست همان است که مشتری فرستاده (`preShipmentMediaDetail.feedback`: `changeType`، `orderItemId`، `desiredVariantId`، `note`).
+        در هر دو حالت سفارش به `PROCESSING` برمی‌گردد و اپراتور دوباره عکس می‌گیرد و می‌فرستد: `preShipmentMedia.status` به `WAITING` برمی‌گردد
+        و پاسخ قبلی مشتری با نتیجه‌اش (`feedback.resolution`) می‌ماند تا عکس تازه برسد و مشتری دوباره جواب بدهد.
+
+        | `decision` | `changeType` | نتیجه |
+        |---|---|---|
+        | `REJECT` | هر کدام | همان کالا ارسال می‌شود. `note` (دلیل، برای مشتری) لازم است. |
+        | `APPLY` | `COLOR`، `MODEL` | قلم `orderItemId` به `variantId` (پیش‌فرض: `desiredVariantId`) عوض می‌شود: رزرو انبار ورینت قبلی آزاد و ورینت تازه رزرو می‌شود. نام، SKU و قیمت قلم از ورینت تازه با قیمت **امروزش** است. |
+        | `APPLY` | `CANCEL_ITEM` | قلم حذف و رزروش آزاد می‌شود و سهم پرداخت‌شده‌ی آن استرداد می‌شود. اگر تنها قلم سفارش بود، سفارش `CANCELLED` با استرداد کامل. |
+        | `APPLY` | `OTHER` | کار دستی انجام شده؛ فقط وضعیت برمی‌گردد. `note` لازم است. |
+
+        **اختلاف قیمت** = (قیمت ورینت تازه − قیمت پرداخت‌شده‌ی قلم) × تعداد. منفی ← یک `Refund` با وضعیت `PENDING` خودکار ساخته می‌شود.
+        مثبت ← `totals.balanceDue` و `actions.canPay`؛ مشتری با `POST /me/orders/{orderCode}/payments` می‌پردازد و تا آن موقع ارسال ممکن نیست.
+        هزینه‌ی ارسال و کد تخفیف سفارش دوباره حساب نمی‌شوند.
+        با `notifyCustomer` نتیجه (و `note`) برای مشتری پیامک می‌شود.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrderCode'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminChangeRequestResolutionRequest' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminOrder' }
+        '422':
+          description: "`INVALID_STATUS_TRANSITION` (سفارش `CHANGE_REQUESTED` نیست)، `QUANTITY_EXCEEDS_STOCK` (`meta.availableQuantity`) یا `PRODUCT_UNAVAILABLE` (ورینت تازه فعال یا قابل فروش نیست)"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /admin/orders/{orderCode}/shipment:
     put:
       tags: [Admin · Orders]
+      x-roles: [ADMIN, OPERATOR]
       operationId: adminSetShipment
       summary: "ثبت تحویل به حامل و کد رهگیری (وضعیت SHIPPED + پیامک)"
-      description: برای سفارش‌های یک گروه رزرو، همین کد روی همه‌ی سفارش‌های گروه ثبت می‌شود.
+      description: |
+        برای سفارش‌های یک گروه رزرو، همین کد روی همه‌ی سفارش‌های گروه ثبت می‌شود.
+        سفارشی که مانده‌ی پرداخت دارد (`totals.balanceDue > 0`، بعد از درخواست تغییر به رنگ/مدل گران‌تر) ارسال نمی‌شود.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/OrderCode'
@@ -2858,6 +3190,11 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AdminOrder' }
+        '422':
+          description: "`BALANCE_DUE` (`meta.balanceDue`) یا `INVALID_STATUS_TRANSITION`"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
@@ -2865,6 +3202,7 @@ paths:
   /admin/orders/{orderCode}/notes:
     post:
       tags: [Admin · Orders]
+      x-roles: [ADMIN, OPERATOR]
       operationId: adminAddOrderNote
       summary: "یادداشت داخلی روی سفارش"
       security: [{ bearerAuth: [] }]
@@ -2892,8 +3230,13 @@ paths:
   /admin/orders/{orderCode}/refunds:
     post:
       tags: [Admin · Orders]
+      x-roles: [ADMIN]
       operationId: adminCreateRefund
       summary: "ثبت استرداد وجه (کامل یا جزئی)"
+      description: |
+        استرداد با وضعیت `PENDING` ساخته می‌شود و با `PATCH /admin/refunds/{refundId}` پیش می‌رود.
+        جمع استردادهای غیر `FAILED` یک سفارش از مبلغ پرداخت‌شده‌اش بیشتر نمی‌شود (`400`، فیلد `amount`).
+        با `returnId`، مرجوعی باید `RECEIVED` باشد و مال همین سفارش؛ وقتی این استرداد `COMPLETED` شود مرجوعی `REFUNDED` می‌شود.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/OrderCode'
@@ -2908,6 +3251,49 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Refund' }
+        '422':
+          description: "`INVALID_STATUS_TRANSITION` — مرجوعی `returnId` هنوز `RECEIVED` نیست"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /admin/refunds/{refundId}:
+    patch:
+      tags: [Admin · Orders]
+      x-roles: [ADMIN]
+      operationId: adminUpdateRefund
+      summary: "پیگیری استرداد: در حال انجام، انجام شد (با شماره‌ی پیگیری بانک) یا ناموفق"
+      description: |
+        انتقال‌های مجاز: `PENDING → PROCESSING`، `PENDING|PROCESSING → COMPLETED`، `PENDING|PROCESSING → FAILED`. `COMPLETED` و `FAILED` پایانی‌اند؛
+        برای استرداد ناموفق یک استرداد تازه ثبت کنید.
+        `COMPLETED`: `completedAt` همین لحظه است و برای `ORIGINAL_PAYMENT` و `BANK_TRANSFER` فیلد `referenceId` لازم است.
+        مبلغ به `totals.refunded` سفارش اضافه می‌شود، اگر به مرجوعی وصل است آن مرجوعی `REFUNDED` می‌شود، و به مشتری پیامک می‌رود.
+        `note` به‌عنوان `statusNote` برای مشتری هم دیده می‌شود (مثلاً «شماره شبا اشتباه بود؛ با پشتیبانی تماس بگیر»).
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: refundId
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminRefundUpdateRequest' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Refund' }
+        '422':
+          description: "`INVALID_STATUS_TRANSITION`"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
@@ -2915,6 +3301,7 @@ paths:
   /admin/returns:
     get:
       tags: [Admin · Orders]
+      x-roles: [ADMIN, OPERATOR]
       operationId: adminListReturns
       summary: "درخواست‌های مرجوعی"
       security: [{ bearerAuth: [] }]
@@ -2934,7 +3321,7 @@ paths:
                 properties:
                   items:
                     type: array
-                    items: { $ref: '#/components/schemas/ReturnRequest' }
+                    items: { $ref: '#/components/schemas/AdminReturnRequest' }
                   meta: { $ref: '#/components/schemas/PageMeta' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
@@ -2942,6 +3329,7 @@ paths:
   /admin/returns/{returnId}/decision:
     post:
       tags: [Admin · Orders]
+      x-roles: [ADMIN, OPERATOR]
       operationId: adminDecideReturn
       summary: "تأیید/رد مرجوعی و تعیین پرداخت‌کننده‌ی هزینه‌ی برگشت"
       security: [{ bearerAuth: [] }]
@@ -2960,8 +3348,118 @@ paths:
           description: OK
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/ReturnRequest' }
-
+              schema: { $ref: '#/components/schemas/AdminReturnRequest' }
+        '422':
+          description: "`INVALID_STATUS_TRANSITION` — مرجوعی `REQUESTED` نیست"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /admin/returns/{returnId}/pickup:
+    put:
+      tags: [Admin · Orders]
+      x-roles: [ADMIN, OPERATOR]
+      operationId: adminScheduleReturnPickup
+      summary: "زمان‌بندی جمع‌آوری مرسوله‌ی مرجوعی (APPROVED ← PICKUP_SCHEDULED)"
+      description: |
+        وقتی کیوا مرسوله را از مشتری جمع می‌کند (معمولاً `shippingPaidBy = KIVA`). اگر مشتری خودش می‌فرستد، این قدم لازم نیست و
+        مرجوعی مستقیم از `APPROVED` به `RECEIVED` می‌رود. صدا زدن دوباره در `PICKUP_SCHEDULED` زمان یا کد رهگیری را عوض می‌کند.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: returnId
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminReturnPickupRequest' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminReturnRequest' }
+        '422':
+          description: "`INVALID_STATUS_TRANSITION`"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /admin/returns/{returnId}/receipt:
+    post:
+      tags: [Admin · Orders]
+      x-roles: [ADMIN, OPERATOR]
+      operationId: adminReceiveReturn
+      summary: "ثبت رسیدن کالای مرجوعی به انبار و نتیجه‌ی بازبینی (← RECEIVED)"
+      description: |
+        برای هر قلم: چند عدد رسید و چند عددش به موجودی برمی‌گردد (`restockQuantity`، سالم و قابل فروش). عددهای برگشتی با دلیل `RETURNED`
+        در تاریخچه‌ی موجودی ثبت می‌شوند (همان `POST /admin/inventory/adjustments`) و اگر ورینت ناموجود بوده، پیامک «موجود شد» هم می‌رود.
+        قدم بعد: استرداد با `returnId` (← `REFUNDED`) یا بستن بدون استرداد (← `CLOSED`).
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: returnId
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminReturnReceiptRequest' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminReturnRequest' }
+        '422':
+          description: "`INVALID_STATUS_TRANSITION`"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /admin/returns/{returnId}/close:
+    post:
+      tags: [Admin · Orders]
+      x-roles: [ADMIN, OPERATOR]
+      operationId: adminCloseReturn
+      summary: "بستن مرجوعی بدون استرداد (← CLOSED)"
+      description: |
+        از `APPROVED` یا `PICKUP_SCHEDULED` (کالا هیچ‌وقت نرسید) یا `RECEIVED` (بازبینی رد شد و کالا به مشتری برمی‌گردد).
+        دلیل برای مشتری پیامک و در جزئیات مرجوعی نمایش داده می‌شود. سفارش به `DELIVERED` برمی‌گردد.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: returnId
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminReturnCloseRequest' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminReturnRequest' }
+        '422':
+          description: "`INVALID_STATUS_TRANSITION`"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
@@ -2972,6 +3470,7 @@ paths:
   /admin/discount-codes:
     get:
       tags: [Admin · Marketing]
+      x-roles: [ADMIN]
       operationId: adminListDiscountCodes
       summary: "کدهای تخفیف"
       security: [{ bearerAuth: [] }]
@@ -2998,6 +3497,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
     post:
       tags: [Admin · Marketing]
+      x-roles: [ADMIN]
       operationId: adminCreateDiscountCode
       summary: "ساخت کد تخفیف"
       security: [{ bearerAuth: [] }]
@@ -3018,6 +3518,7 @@ paths:
   /admin/discount-codes/{discountId}:
     put:
       tags: [Admin · Marketing]
+      x-roles: [ADMIN]
       operationId: adminUpdateDiscountCode
       summary: "ویرایش کد تخفیف"
       security: [{ bearerAuth: [] }]
@@ -3043,6 +3544,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
     delete:
       tags: [Admin · Marketing]
+      x-roles: [ADMIN]
       operationId: adminDeleteDiscountCode
       summary: "غیرفعال کردن کد تخفیف"
       security: [{ bearerAuth: [] }]
@@ -3059,8 +3561,9 @@ paths:
   /admin/campaigns:
     get:
       tags: [Admin · Marketing]
+      x-roles: [ADMIN, CONTENT_EDITOR]
       operationId: adminListCampaigns
-      summary: "کمپین‌ها (جشنواره‌ها)"
+      summary: "کمپین‌ها (جشنواره‌ها)، همه: گذشته، فعال و آینده"
       security: [{ bearerAuth: [] }]
       responses:
         '200':
@@ -3069,11 +3572,12 @@ paths:
             application/json:
               schema:
                 type: array
-                items: { $ref: '#/components/schemas/Campaign' }
+                items: { $ref: '#/components/schemas/AdminCampaign' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
     post:
       tags: [Admin · Marketing]
+      x-roles: [ADMIN, CONTENT_EDITOR]
       operationId: adminCreateCampaign
       summary: "ساخت کمپین"
       security: [{ bearerAuth: [] }]
@@ -3087,13 +3591,14 @@ paths:
           description: OK
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Campaign' }
+              schema: { $ref: '#/components/schemas/AdminCampaign' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
   /admin/campaigns/{campaignId}:
     put:
       tags: [Admin · Marketing]
+      x-roles: [ADMIN, CONTENT_EDITOR]
       operationId: adminUpdateCampaign
       summary: "ویرایش کمپین"
       security: [{ bearerAuth: [] }]
@@ -3112,14 +3617,32 @@ paths:
           description: OK
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Campaign' }
+              schema: { $ref: '#/components/schemas/AdminCampaign' }
         '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Admin · Marketing]
+      x-roles: [ADMIN, CONTENT_EDITOR]
+      operationId: adminDeleteCampaign
+      summary: "حذف کمپین"
+      description: کمپین فقط نمایشی است (شمارنده و لیست محصولات)؛ حذفش روی قیمت‌ها و سفارش‌ها اثری ندارد. برای پنهان کردن موقت، `isActive = false`.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '204': { $ref: '#/components/responses/NoContent' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
   /admin/banners:
     get:
       tags: [Admin · Marketing]
+      x-roles: [ADMIN, CONTENT_EDITOR]
       operationId: adminListBanners
       summary: "بنرها"
       security: [{ bearerAuth: [] }]
@@ -3135,6 +3658,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
     post:
       tags: [Admin · Marketing]
+      x-roles: [ADMIN, CONTENT_EDITOR]
       operationId: adminCreateBanner
       summary: "ساخت بنر"
       security: [{ bearerAuth: [] }]
@@ -3155,6 +3679,7 @@ paths:
   /admin/banners/{bannerId}:
     put:
       tags: [Admin · Marketing]
+      x-roles: [ADMIN, CONTENT_EDITOR]
       operationId: adminUpdateBanner
       summary: "ویرایش بنر"
       security: [{ bearerAuth: [] }]
@@ -3180,6 +3705,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
     delete:
       tags: [Admin · Marketing]
+      x-roles: [ADMIN, CONTENT_EDITOR]
       operationId: adminDeleteBanner
       summary: "حذف بنر"
       security: [{ bearerAuth: [] }]
@@ -3194,10 +3720,33 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
   /admin/announcements:
+    get:
+      tags: [Admin · Marketing]
+      x-roles: [ADMIN, CONTENT_EDITOR]
+      operationId: adminListAnnouncements
+      summary: "همه‌ی پیام‌های نوار اطلاعیه، به ترتیب `sortOrder`"
+      description: |
+        برخلاف `GET /config` که فقط پیام‌های **در حال نمایش** را دارد، این‌جا پیام‌های زمان‌بندی‌شده و تمام‌شده هم هستند.
+        فرم ویرایش باید از همین پر شود؛ چون `PUT` کل لیست را جایگزین می‌کند.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Announcement' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
     put:
       tags: [Admin · Marketing]
+      x-roles: [ADMIN, CONTENT_EDITOR]
       operationId: adminReplaceAnnouncements
       summary: "پیام‌های نوار اطلاعیه‌ی بالای سایت (جایگزینی کل لیست مرتب)"
+      description: |
+        پیامی که در لیست نباشد حذف می‌شود؛ پس لیست را از `GET /admin/announcements` بخوانید، نه از `GET /config`.
+        پیام با `id` همان پیام قبلی است و بی `id` پیام تازه.
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -3218,8 +3767,38 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
   /admin/testimonials:
+    get:
+      tags: [Admin · Marketing]
+      x-roles: [ADMIN, CONTENT_EDITOR]
+      operationId: adminListTestimonials
+      summary: "پیام‌های رضایت، منتشرشده و منتشرنشده (به ترتیب `sortOrder` و بعد تازه‌ترین)"
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: published
+          in: query
+          description: بدون این پارامتر هر دو
+          schema: { type: boolean }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, meta]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/AdminTestimonial' }
+                  meta: { $ref: '#/components/schemas/PageMeta' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
     post:
       tags: [Admin · Marketing]
+      x-roles: [ADMIN, CONTENT_EDITOR]
       operationId: adminCreateTestimonial
       summary: "ثبت پیام رضایت (از اسکرین‌شات پیام‌رسان)"
       security: [{ bearerAuth: [] }]
@@ -3233,13 +3812,14 @@ paths:
           description: OK
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Testimonial' }
+              schema: { $ref: '#/components/schemas/AdminTestimonial' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
   /admin/testimonials/{testimonialId}:
     put:
       tags: [Admin · Marketing]
+      x-roles: [ADMIN, CONTENT_EDITOR]
       operationId: adminUpdateTestimonial
       summary: "ویرایش پیام رضایت"
       security: [{ bearerAuth: [] }]
@@ -3258,13 +3838,14 @@ paths:
           description: OK
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Testimonial' }
+              schema: { $ref: '#/components/schemas/AdminTestimonial' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
     delete:
       tags: [Admin · Marketing]
+      x-roles: [ADMIN, CONTENT_EDITOR]
       operationId: adminDeleteTestimonial
       summary: "حذف پیام رضایت"
       security: [{ bearerAuth: [] }]
@@ -3279,12 +3860,47 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /admin/newsletter/subscriptions:
+    get:
+      tags: [Admin · Marketing]
+      x-roles: [ADMIN]
+      operationId: adminListNewsletterSubscriptions
+      summary: "مشترکین خبرنامه (تازه‌ترین اول)"
+      description: فقط `ADMIN`، چون ایمیل‌ها اطلاعات شخصی‌اند. شمار مشترکین فعال = `meta.totalItems` با `status=ACTIVE`.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [ACTIVE, UNSUBSCRIBED] }
+        - name: q
+          in: query
+          description: بخشی از ایمیل
+          schema: { type: string, maxLength: 100 }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, meta]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/NewsletterSubscription' }
+                  meta: { $ref: '#/components/schemas/PageMeta' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
   # ================================================================
   #  ADMIN — CONTENT
   # ================================================================
   /admin/blog/posts:
     post:
       tags: [Admin · Content]
+      x-roles: [ADMIN, CONTENT_EDITOR]
       operationId: adminCreateBlogPost
       summary: "ساخت مقاله"
       security: [{ bearerAuth: [] }]
@@ -3305,6 +3921,7 @@ paths:
   /admin/blog/posts/{postId}:
     put:
       tags: [Admin · Content]
+      x-roles: [ADMIN, CONTENT_EDITOR]
       operationId: adminUpdateBlogPost
       summary: "ویرایش مقاله"
       security: [{ bearerAuth: [] }]
@@ -3330,6 +3947,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
     delete:
       tags: [Admin · Content]
+      x-roles: [ADMIN, CONTENT_EDITOR]
       operationId: adminDeleteBlogPost
       summary: "حذف مقاله"
       security: [{ bearerAuth: [] }]
@@ -3344,8 +3962,28 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
   /admin/faq/groups:
+    get:
+      tags: [Admin · Content]
+      x-roles: [ADMIN, CONTENT_EDITOR]
+      operationId: adminListFaq
+      summary: "همه‌ی گروه‌ها و سوالات متداول، به همان شکلی که `PUT` می‌گیرد"
+      description: |
+        بدون کش (برخلاف `GET /faq` که تا ۵ دقیقه کش می‌شود)، تا فرم بعد از ذخیره نسخه‌ی کهنه نبیند.
+        `questionHighlighted` و `answerHighlighted` این‌جا همیشه `null` هستند.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/FaqGroup' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
     put:
       tags: [Admin · Content]
+      x-roles: [ADMIN, CONTENT_EDITOR]
       operationId: adminReplaceFaq
       summary: "ذخیره‌ی کامل گروه‌ها و سوالات متداول (با ترتیب)"
       security: [{ bearerAuth: [] }]
@@ -3367,9 +4005,27 @@ paths:
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+  /admin/pages:
+    get:
+      tags: [Admin · Content]
+      x-roles: [ADMIN, CONTENT_EDITOR]
+      operationId: adminListPages
+      summary: "همه‌ی صفحه‌های ثابت (بدون محتوا؛ محتوای هر صفحه از `GET /pages/{slug}`)"
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AdminStaticPageSummary' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
   /admin/pages/{slug}:
     put:
       tags: [Admin · Content]
+      x-roles: [ADMIN, CONTENT_EDITOR]
       operationId: adminUpsertPage
       summary: "ساخت/ویرایش صفحه‌ی ثابت"
       security: [{ bearerAuth: [] }]
@@ -3396,6 +4052,7 @@ paths:
   /admin/settings:
     get:
       tags: [Admin · Content]
+      x-roles: [ADMIN]
       operationId: adminGetSettings
       summary: "تنظیمات قابل ویرایش (هزینه‌ی ارسال، آستانه‌ی ارسال رایگان، روزهای رزرو و بازگشت، پشتیبانی، ...)"
       security: [{ bearerAuth: [] }]
@@ -3409,6 +4066,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
     put:
       tags: [Admin · Content]
+      x-roles: [ADMIN]
       operationId: adminUpdateSettings
       summary: "ذخیره‌ی تنظیمات"
       security: [{ bearerAuth: [] }]
@@ -3433,6 +4091,7 @@ paths:
   /admin/reviews:
     get:
       tags: [Admin · Support]
+      x-roles: [ADMIN, SUPPORT]
       operationId: adminListReviews
       summary: "صف بررسی نظرات"
       security: [{ bearerAuth: [] }]
@@ -3460,6 +4119,7 @@ paths:
   /admin/reviews/{reviewId}/moderation:
     post:
       tags: [Admin · Support]
+      x-roles: [ADMIN, SUPPORT]
       operationId: adminModerateReview
       summary: "تأیید یا رد نظر"
       security: [{ bearerAuth: [] }]
@@ -3483,6 +4143,7 @@ paths:
   /admin/reviews/{reviewId}/reply:
     put:
       tags: [Admin · Support]
+      x-roles: [ADMIN, SUPPORT]
       operationId: adminReplyReview
       summary: "ثبت/ویرایش «پاسخ کیوا» زیر نظر"
       security: [{ bearerAuth: [] }]
@@ -3509,6 +4170,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
     delete:
       tags: [Admin · Support]
+      x-roles: [ADMIN, SUPPORT]
       operationId: adminDeleteReviewReply
       summary: "حذف پاسخ"
       security: [{ bearerAuth: [] }]
@@ -3522,6 +4184,7 @@ paths:
   /admin/contact-messages:
     get:
       tags: [Admin · Support]
+      x-roles: [ADMIN, SUPPORT]
       operationId: adminListContactMessages
       summary: "پیام‌های فرم تماس"
       security: [{ bearerAuth: [] }]
@@ -3552,6 +4215,7 @@ paths:
   /admin/contact-messages/{ticketCode}:
     patch:
       tags: [Admin · Support]
+      x-roles: [ADMIN, SUPPORT]
       operationId: adminUpdateContactMessage
       summary: "تغییر وضعیت/پاسخ پیام تماس (پاسخ از طریق پیامک یا ایمیل ارسال می‌شود)"
       security: [{ bearerAuth: [] }]
@@ -3584,6 +4248,7 @@ paths:
   /admin/customers:
     get:
       tags: [Admin · Support]
+      x-roles: [ADMIN, SUPPORT]
       operationId: adminListCustomers
       summary: "مشتریان (جستجو با موبایل/نام)"
       security: [{ bearerAuth: [] }]
@@ -3608,9 +4273,75 @@ paths:
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+  /admin/customers/{customerId}:
+    get:
+      tags: [Admin · Support]
+      x-roles: [ADMIN, SUPPORT]
+      operationId: adminGetCustomer
+      summary: "جزئیات یک مشتری: پروفایل، آدرس‌ها و آخرین سفارش‌ها"
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: customerId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminCustomerDetail' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /admin/customers/{customerId}/roles:
+    put:
+      tags: [Admin · Support]
+      x-roles: [ADMIN]
+      operationId: adminSetCustomerRoles
+      summary: "تعیین نقش‌های پنل یک کاربر"
+      description: |
+        لیست کامل نقش‌ها را جایگزین می‌کند (`CUSTOMER` همیشه می‌ماند و لازم نیست فرستاده شود). بعد از تغییر، همه‌ی نشست‌های آن کاربر
+        باطل می‌شوند تا با نقش‌های جدید دوباره وارد شود. هر تغییر با «چه کسی، کِی، از چه به چه» در رویدادهای امنیتی ثبت می‌شود.
+        هیچ‌کس نقش‌های **خودش** را عوض نمی‌کند (`422 ROLE_CHANGE_NOT_ALLOWED`)، تا آخرین ADMIN اشتباهی خودش را بیرون نیندازد.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: customerId
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [roles]
+              properties:
+                roles:
+                  type: array
+                  uniqueItems: true
+                  items: { $ref: '#/components/schemas/UserRole' }
+                  example: [OPERATOR]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminCustomer' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422':
+          description: "`ROLE_CHANGE_NOT_ALLOWED`: نقش‌های خودت را نمی‌توانی عوض کنی"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
   /admin/reports/overview:
     get:
       tags: [Admin · Support]
+      x-roles: [ADMIN]
       operationId: adminReportOverview
       summary: "داشبورد مدیریتی (فروش، تعداد سفارش، میانگین سبد، پرفروش‌ها، نرخ تأیید عکس)"
       security: [{ bearerAuth: [] }]
@@ -3632,6 +4363,53 @@ paths:
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+  /admin/audit-log:
+    get:
+      tags: [Admin · Support]
+      x-roles: [ADMIN]
+      operationId: adminListAuditLog
+      summary: "لاگ تغییرات پنل: چه کسی، کِی، چه کاری، روی چه چیزی (تازه‌ترین اول)"
+      description: |
+        هر درخواست موفق نوشتنی زیر `/admin/*` یک ردیف (بخش ۲). لاگ فقط اضافه می‌شود؛ ویرایش و حذف ندارد.
+        برای تاریخچه‌ی یک مورد: `entityType` + `entityId` (مثلاً `PRODUCT` و `12`، یا `ORDER` و `KV-218340`).
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: entityType
+          in: query
+          schema: { $ref: '#/components/schemas/AuditEntityType' }
+        - name: entityId
+          in: query
+          schema: { type: string, maxLength: 64 }
+        - name: actorId
+          in: query
+          description: شناسه‌ی کاربر پنلی که کار را کرده
+          schema: { type: integer }
+        - name: from
+          in: query
+          description: روز شروع (به وقت تهران، شامل)
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          description: روز پایان (به وقت تهران، شامل)
+          schema: { type: string, format: date }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, meta]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/AuditLogEntry' }
+                  meta: { $ref: '#/components/schemas/PageMeta' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 components:
   securitySchemes:
     bearerAuth:
@@ -3639,8 +4417,17 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: |
-        accessToken دریافتی از `POST /auth/otp/verify`. Claimها: `sub` (userId)، `phone`، `roles` (`CUSTOMER`، و برای پنل: `ADMIN`، `CATALOG_MANAGER`، `OPERATOR`، `CONTENT_EDITOR`، `SUPPORT`).
-        endpointهای `/admin/*` نیازمند نقش متناظر هستند و در غیر این صورت `403 FORBIDDEN`.
+        accessToken دریافتی از `POST /auth/otp/verify` یا `POST /auth/refresh`، با اعتبار ۱۵ دقیقه.
+        Claimها: `sub` (userId)، `sid` (شناسه‌ی نشست)، `phone`، `roles` (`CUSTOMER`، و برای پنل: `ADMIN`، `CATALOG_MANAGER`، `OPERATOR`، `CONTENT_EDITOR`، `SUPPORT`)، `iat`، `exp`.
+        کلاینت محتوای توکن را فقط برای نمایش می‌خواند (مثلاً منوی پنل از روی `roles`)؛ تصمیم دسترسی همیشه با سرور است.
+        endpointهای `/admin/*` نیازمند نقش‌های `x-roles` خود هستند و در غیر این صورت `403 FORBIDDEN`.
+    refreshCookie:
+      type: apiKey
+      in: cookie
+      name: kiva_rt
+      description: |
+        refreshToken در کوکی `HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth`. فقط `POST /auth/refresh` و `POST /auth/logout` آن را می‌خوانند.
+        کلاینت با `credentials: 'include'` درخواست می‌دهد و هیچ‌وقت خود توکن را نمی‌بیند.
 
   # ----------------------------------------------------------------
   parameters:
@@ -3843,6 +4630,14 @@ components:
     RetryAfter:
       description: چند ثانیه‌ی دیگر می‌توان دوباره تلاش کرد
       schema: { type: integer, example: 87 }
+    SetRefreshCookie:
+      description: |
+        نشست جدید یا چرخیده: `kiva_rt=<token>; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth; Max-Age=<ثانیه>`.
+        `Max-Age` همان `refreshExpiresIn` پاسخ است.
+      schema: { type: string, example: 'kiva_rt=Q2xhdWRlIHdhcyBoZXJl...; Max-Age=2592000; Path=/api/v1/auth; Secure; HttpOnly; SameSite=Strict' }
+    ClearRefreshCookie:
+      description: پاک کردن کوکی نشست
+      schema: { type: string, example: 'kiva_rt=; Max-Age=0; Path=/api/v1/auth; Secure; HttpOnly; SameSite=Strict' }
 
   # ----------------------------------------------------------------
   responses:
@@ -4066,6 +4861,8 @@ components:
         - DUPLICATE_SLUG
         - DUPLICATE_SKU
         - RESERVATION_UNAVAILABLE
+        - ACCOUNT_HAS_ACTIVE_ORDERS
+        - ROLE_CHANGE_NOT_ALLOWED
         # --- پنل ادمین: محصول و رنگ‌هایش ---
         - COLOR_ALREADY_ON_PRODUCT
         - PRODUCT_ARCHIVED
@@ -4077,10 +4874,14 @@ components:
         - INACTIVE_VARIANT_CANNOT_BE_DEFAULT
         - LAST_ACTIVE_VARIANT
         - NO_ACTIVE_VARIANT
+        # --- پنل ادمین: حذف دسته، رنگ یا متریالی که محصول دارد (meta.productCount) ---
+        - IN_USE
         # --- موجودی و رزرو انبار (فاز سفارش) ---
         - ORDER_ALREADY_SHIPPED
         - RESERVATION_QUANTITY_MISMATCH
         - RESERVATION_NOT_FOUND
+        # --- سفارش با مانده‌ی پرداخت بعد از درخواست تغییر (meta.balanceDue) ---
+        - BALANCE_DUE
       example: DISCOUNT_MIN_SUBTOTAL_NOT_MET
 
     # ============ MEDIA ============
@@ -5261,6 +6062,10 @@ components:
         statusLabel: { type: string, example: عکس کیف ارسال شد }
         statusTone: { $ref: '#/components/schemas/Tone' }
         payable: { $ref: '#/components/schemas/Money' }
+        balanceDue:
+          allOf: [{ $ref: '#/components/schemas/Money' }]
+          description: 'همان `totals.balanceDue`، برای کارت سفارش: مانده‌ی پرداخت بعد از درخواست تغییر به رنگ/مدل گران‌تر؛ معمولاً ۰'
+          example: 0
         shippingMethod:
           type: object
           properties:
@@ -5282,7 +6087,7 @@ components:
             canRequestChange: { type: boolean, example: true }
             canApproveMedia: { type: boolean, example: true }
             canReturn: { type: boolean, example: false }
-            canPay: { type: boolean, description: 'دکمه‌ی «پرداخت» ← `POST /me/orders/{code}/payments`', example: false }
+            canPay: { type: boolean, description: 'دکمه‌ی «پرداخت» ← `POST /me/orders/{code}/payments` (سفارش پرداخت‌نشده، یا `balanceDue > 0`)', example: false }
             canAddToReservation: { type: boolean, example: false }
             canReview: { type: boolean, example: false }
     OrderItem:
@@ -5316,6 +6121,10 @@ components:
         giftWrapCost: { allOf: [{ $ref: '#/components/schemas/Money' }], example: 0 }
         payable: { allOf: [{ $ref: '#/components/schemas/Money' }], description: «پرداخت شده», example: 3480000 }
         refunded: { allOf: [{ $ref: '#/components/schemas/Money' }], example: 0 }
+        balanceDue:
+          allOf: [{ $ref: '#/components/schemas/Money' }]
+          description: مانده‌ی پرداخت بعد از درخواست تغییر به رنگ/مدل گران‌تر؛ در بقیه‌ی موارد ۰. تا صفر نشود سفارش ارسال نمی‌شود.
+          example: 0
         currency: { $ref: '#/components/schemas/Currency' }
     AddressSnapshot:
       type: object
@@ -5338,7 +6147,10 @@ components:
     PreShipmentMedia:
       type: object
       properties:
-        status: { type: string, enum: [WAITING, SENT, APPROVED, CHANGE_REQUESTED] }
+        status:
+          type: string
+          enum: [WAITING, SENT, APPROVED, CHANGE_REQUESTED]
+          description: '`CHANGE_REQUESTED` فقط تا رسیدگی اپراتور؛ بعدش دوباره `WAITING` (عکس تازه)'
         channel: { $ref: '#/components/schemas/PhotoMessengerChannel' }
         channelName: { type: string, example: بله }
         phone: { $ref: '#/components/schemas/PhoneNumber' }
@@ -5351,10 +6163,23 @@ components:
         feedback:
           type: object
           nullable: true
+          description: آخرین پاسخ مشتری؛ برای `REQUEST_CHANGE` همان چیزی که در `PreShipmentFeedbackRequest` فرستاده
           properties:
             decision: { type: string, enum: [APPROVE, REQUEST_CHANGE] }
+            changeType: { type: string, nullable: true, enum: [COLOR, MODEL, CANCEL_ITEM, OTHER, null] }
+            orderItemId: { type: integer, nullable: true }
+            desiredVariantId: { type: integer, nullable: true, description: 'رنگ/مدل جایگزین؛ نام و رنگش از `GET /products/{productId}`' }
             note: { type: string, nullable: true }
             at: { type: string, format: date-time }
+            resolution:
+              type: object
+              nullable: true
+              description: نتیجه‌ی درخواست تغییر (`POST /admin/orders/{orderCode}/change-request/resolution`)؛ تا رسیدگی نشده `null`
+              properties:
+                decision: { type: string, enum: [APPLY, REJECT] }
+                variantId: { type: integer, nullable: true, description: ورینتی که واقعاً جایگزین شد }
+                note: { type: string, nullable: true }
+                at: { type: string, format: date-time }
         feedbackDeadline: { type: string, format: date-time, nullable: true, description: '[پیشنهادی] بعد از این زمان خودکار تأییدشده تلقی می‌شود' }
     OrderEvent:
       type: object
@@ -5443,9 +6268,12 @@ components:
         method: { type: string, enum: [ORIGINAL_PAYMENT, BANK_TRANSFER, STORE_CREDIT] }
         status: { type: string, enum: [PENDING, PROCESSING, COMPLETED, FAILED] }
         reason: { type: string, nullable: true }
+        returnId: { type: integer, nullable: true, description: مرجوعی‌ای که این استرداد برای آن است }
+        createdAt: { type: string, format: date-time }
         expectedBy: { type: string, format: date-time, nullable: true }
         completedAt: { type: string, format: date-time, nullable: true }
-        referenceId: { type: string, nullable: true }
+        referenceId: { type: string, nullable: true, description: شماره‌ی پیگیری بانک یا درگاه }
+        statusNote: { type: string, nullable: true, description: 'توضیح آخرین تغییر وضعیت (`PATCH /admin/refunds/{refundId}`)؛ به مشتری هم نشان داده می‌شود', example: شماره شبا اشتباه بود؛ با پشتیبانی تماس بگیر }
     ReturnStatus:
       type: string
       enum: [REQUESTED, APPROVED, REJECTED, PICKUP_SCHEDULED, RECEIVED, REFUNDED, CLOSED]
@@ -5499,9 +6327,24 @@ components:
           items: { $ref: '#/components/schemas/MediaAsset' }
         shippingPaidBy: { type: string, enum: [KIVA, CUSTOMER] }
         instructions: { type: string, nullable: true, example: بسته رو با تیپاکس به آدرس انبار کیوا بفرست و کد رهگیری رو این‌جا ثبت کن. }
+        refundMethod: { type: string, enum: [ORIGINAL_PAYMENT, BANK_TRANSFER, STORE_CREDIT] }
+        rejectionReason: { type: string, nullable: true, description: فقط برای `REJECTED` }
+        pickup:
+          type: object
+          nullable: true
+          description: جمع‌آوری مرسوله توسط کیوا (`PICKUP_SCHEDULED`)؛ وقتی مشتری خودش می‌فرستد `null`
+          properties:
+            carrier: { $ref: '#/components/schemas/ShippingMethodCode' }
+            carrierName: { type: string, example: تیپاکس }
+            scheduledFor: { type: string, format: date-time, nullable: true }
+            trackingCode: { type: string, nullable: true }
+            note: { type: string, nullable: true }
         refund: { type: object, allOf: [{ $ref: '#/components/schemas/Refund' }], nullable: true }
         createdAt: { type: string, format: date-time }
         decidedAt: { type: string, format: date-time, nullable: true }
+        receivedAt: { type: string, format: date-time, nullable: true }
+        closedAt: { type: string, format: date-time, nullable: true }
+        closeReason: { type: string, nullable: true, description: فقط برای `CLOSED` }
 
     # ============ TRACKING ============
     GuestTrackingRequest:
@@ -5592,7 +6435,11 @@ components:
       required: [phone]
       properties:
         phone: { $ref: '#/components/schemas/PhoneNumber' }
-        purpose: { type: string, enum: [LOGIN], default: LOGIN }
+        purpose:
+          type: string
+          enum: [LOGIN]
+          default: LOGIN
+          description: کدهای تغییر شماره و حذف حساب endpoint خودشان را دارند و با کد ورود قابل جابه‌جایی نیستند.
     SendOtpResponse:
       type: object
       required: [phone, codeLength, expiresInSeconds, resendAvailableInSeconds]
@@ -5601,45 +6448,61 @@ components:
         codeLength: { type: integer, example: 5 }
         expiresInSeconds: { type: integer, example: 300 }
         resendAvailableInSeconds: { type: integer, description: تایمر دایره‌ای ارسال مجدد, example: 120 }
+    PhoneChangeOtpResponse:
+      type: object
+      required: [currentPhone, newPhone, codeLength, expiresInSeconds, resendAvailableInSeconds]
+      properties:
+        currentPhone: { allOf: [{ $ref: '#/components/schemas/PhoneNumber' }], description: شماره‌ی فعلی حساب که یک کد به آن رفت }
+        newPhone: { allOf: [{ $ref: '#/components/schemas/PhoneNumber' }], description: شماره‌ی جدید (نرمال‌شده) که کد دوم به آن رفت }
+        codeLength: { type: integer, example: 5 }
+        expiresInSeconds: { type: integer, example: 300 }
+        resendAvailableInSeconds: { type: integer, example: 120 }
     VerifyOtpRequest:
       type: object
       required: [phone, code]
       properties:
         phone: { $ref: '#/components/schemas/PhoneNumber' }
-        code: { type: string, pattern: '^\d{5}$', example: '48213' }
-        guestCartToken: { type: string, nullable: true, description: برای ادغام سبد مهمان, example: 'gct_7f3a9c2e1b' }
+        code: { type: string, pattern: '^\d{5}$', example: '48213', description: ارقام فارسی هم پذیرفته می‌شوند }
+        guestCartToken: { type: string, nullable: true, description: برای ادغام سبد مهمان (از فاز سبد), example: 'gct_7f3a9c2e1b' }
         device:
           type: object
           nullable: true
-          description: '[پیشنهادی] برای مدیریت نشست‌ها'
+          description: نام دستگاه برای نمایش نشست‌ها؛ اگر نیاید، سرور از `User-Agent` می‌سازد. فقط برای نمایش است، نه امنیت.
           properties:
-            name: { type: string, example: Chrome on Android }
-            fingerprint: { type: string }
+            name: { type: string, maxLength: 100, example: Chrome on Android }
     AuthTokens:
       type: object
-      required: [accessToken, refreshToken, tokenType, expiresIn]
+      description: refreshToken اینجا نیست؛ در کوکی `kiva_rt` است (بخش ۲).
+      required: [accessToken, tokenType, expiresIn, refreshExpiresIn]
       properties:
         accessToken: { type: string, example: 'eyJhbGciOiJIUzI1NiIs...' }
-        refreshToken: { type: string, example: 'rt_2c7b0f...' }
         tokenType: { type: string, enum: [Bearer] }
-        expiresIn: { type: integer, description: ثانیه, example: 900 }
-        refreshExpiresIn: { type: integer, example: 2592000 }
+        expiresIn: { type: integer, description: عمر accessToken به ثانیه, example: 900 }
+        refreshExpiresIn: { type: integer, description: عمر کوکی نشست به ثانیه (مشتری ۳۰ روز، پنل ۱۲ ساعت), example: 2592000 }
     AuthResponse:
       allOf:
         - $ref: '#/components/schemas/AuthTokens'
         - type: object
-          required: [isNewUser, user]
+          required: [isNewUser, user, cart]
           properties:
             isNewUser: { type: boolean, description: true → مرحله‌ی «به کیوا خوش اومدی! دوست داری چی صدات کنیم؟» }
             user: { $ref: '#/components/schemas/User' }
-            cart: { type: object, allOf: [{ $ref: '#/components/schemas/Cart' }], nullable: true, description: سبد بعد از ادغام }
-    RefreshTokenRequest:
-      type: object
-      required: [refreshToken]
-      properties:
-        refreshToken: { type: string }
+            cart: { type: object, allOf: [{ $ref: '#/components/schemas/Cart' }], nullable: true, description: سبد بعد از ادغام (تا فاز سبد همیشه null) }
+    PhoneChangeResponse:
+      allOf:
+        - $ref: '#/components/schemas/AuthTokens'
+        - type: object
+          required: [user]
+          properties:
+            user: { $ref: '#/components/schemas/User' }
 
     # ============ USER ============
+    UserRole:
+      type: string
+      description: |
+        `CUSTOMER` را همه دارند و برداشتنی نیست. بقیه نقش‌های پنل‌اند (جدول نقش‌ها در بخش ۲):
+        `ADMIN` همه‌کار · `CATALOG_MANAGER` محصول و موجودی · `OPERATOR` سفارش و ارسال · `CONTENT_EDITOR` محتوا و بنر · `SUPPORT` نظرات، تماس و مشتریان
+      enum: [CUSTOMER, ADMIN, CATALOG_MANAGER, OPERATOR, CONTENT_EDITOR, SUPPORT]
     Gender:
       type: string
       enum: [FEMALE, MALE, UNSPECIFIED]
@@ -5662,7 +6525,7 @@ components:
         marketingSmsOptIn: { type: boolean, description: «دریافت پیامک تخفیف‌ها و کالکشن‌های جدید», example: true }
         roles:
           type: array
-          items: { type: string, enum: [CUSTOMER, ADMIN, CATALOG_MANAGER, OPERATOR, CONTENT_EDITOR, SUPPORT] }
+          items: { $ref: '#/components/schemas/UserRole' }
         createdAt: { type: string, format: date-time }
     UpdateProfileRequest:
       type: object
@@ -6167,6 +7030,17 @@ components:
       properties:
         email: { type: string, format: email, example: sara@example.com }
         source: { type: string, example: footer }
+    NewsletterSubscription:
+      type: object
+      description: یک مشترک خبرنامه در پنل (`GET /admin/newsletter/subscriptions`)
+      required: [id, email, status, source, subscribedAt, unsubscribedAt]
+      properties:
+        id: { type: integer, example: 318 }
+        email: { type: string, format: email, example: sara@example.com }
+        status: { type: string, enum: [ACTIVE, UNSUBSCRIBED] }
+        source: { type: string, nullable: true, example: footer }
+        subscribedAt: { type: string, format: date-time }
+        unsubscribedAt: { type: string, format: date-time, nullable: true }
     StaticPage:
       type: object
       properties:
@@ -6175,6 +7049,14 @@ components:
         content: { $ref: '#/components/schemas/HtmlString' }
         updatedAt: { type: string, format: date-time }
         seo: { $ref: '#/components/schemas/SeoMeta' }
+    AdminStaticPageSummary:
+      type: object
+      description: یک ردیف لیست صفحه‌های ثابت در پنل
+      required: [slug, title, updatedAt]
+      properties:
+        slug: { type: string, example: terms }
+        title: { type: string, example: قوانین و حریم خصوصی }
+        updatedAt: { type: string, format: date-time }
 
     # ============ BLOG ============
     BlogCategory:
@@ -6433,6 +7315,27 @@ components:
         careInstructions:
           type: array
           items: { type: string }
+    AdminCategory:
+      description: دسته‌بندی در پنل؛ `Category` به‌اضافه‌ی شناسه‌ی مدیای عکس تا فرم ویرایش بداند عکس فعلی کدام است
+      allOf:
+        - $ref: '#/components/schemas/Category'
+        - type: object
+          required: [imageMediaId]
+          properties:
+            imageMediaId: { type: string, nullable: true, description: 'همان `imageMediaId` ِ `CategoryUpsertRequest`؛ بدون عکس `null`', example: med_7Kx1 }
+    AdminStockAlertGroup:
+      type: object
+      description: اشتراک‌های فعال «موجود شد خبرم کن» برای یک ورینت (یا برای کل محصول، وقتی مشتری رنگ خاصی نخواسته)
+      required: [product, variantId, color, sku, waitingCount, oldestAt, stockStatus, availableQuantity]
+      properties:
+        product: { $ref: '#/components/schemas/ProductRef' }
+        variantId: { type: integer, nullable: true, description: '`null` = هر رنگی از این محصول', example: 501 }
+        color: { type: object, allOf: [{ $ref: '#/components/schemas/Color' }], nullable: true }
+        sku: { type: string, nullable: true, example: KV-1001-LILAC }
+        waitingCount: { type: integer, description: تعداد اشتراک‌های فعال, example: 6 }
+        oldestAt: { type: string, format: date-time, description: قدیمی‌ترین اشتراک فعال }
+        stockStatus: { $ref: '#/components/schemas/StockStatus' }
+        availableQuantity: { type: integer, description: 'موجودی قابل فروش دقیق (پنل)؛ برای `variantId = null` جمع همه‌ی رنگ‌ها', example: 0 }
 
     # ============ ADMIN · ORDERS ============
     AdminNote:
@@ -6504,6 +7407,7 @@ components:
               items: { $ref: '#/components/schemas/AdminNote' }
             allowedTransitions:
               type: array
+              description: 'وضعیت‌هایی که `POST /admin/orders/{orderCode}/status` الان می‌پذیرد'
               items: { $ref: '#/components/schemas/OrderStatus' }
     AdminOrderStatusChangeRequest:
       type: object
@@ -6550,6 +7454,98 @@ components:
         shippingPaidBy: { type: string, enum: [KIVA, CUSTOMER] }
         instructions: { type: string, maxLength: 1000 }
         rejectionReason: { type: string, maxLength: 500, nullable: true }
+    AdminChangeRequestResolutionRequest:
+      type: object
+      required: [decision]
+      properties:
+        decision: { type: string, enum: [APPLY, REJECT] }
+        variantId:
+          type: integer
+          nullable: true
+          description: 'فقط برای `APPLY` و `changeType` = `COLOR`/`MODEL`: ورینت جایگزین؛ اگر نیاید همان `desiredVariantId` ِ مشتری'
+        note:
+          type: string
+          maxLength: 500
+          nullable: true
+          description: 'برای مشتری (پیامک و جزئیات سفارش)؛ برای `REJECT` و `OTHER` لازم'
+          example: رنگ مشکی تموم شده بود؛ همون رنگ قبلی برات ارسال می‌شه.
+        notifyCustomer: { type: boolean, default: true }
+    AdminRefundUpdateRequest:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [PROCESSING, COMPLETED, FAILED] }
+        referenceId:
+          type: string
+          maxLength: 64
+          nullable: true
+          description: 'شماره‌ی پیگیری بانک یا درگاه؛ برای `COMPLETED` با `ORIGINAL_PAYMENT` یا `BANK_TRANSFER` لازم'
+          example: '140507181234567'
+        note: { type: string, maxLength: 300, nullable: true, description: 'می‌شود `Refund.statusNote`؛ مشتری هم می‌بیند' }
+    AdminReturnRequest:
+      description: مرجوعی در پنل؛ `ReturnRequest` به‌اضافه‌ی مشتری، شماره شبا و قدم‌های مجاز بعدی
+      allOf:
+        - $ref: '#/components/schemas/ReturnRequest'
+        - type: object
+          required: [customer, iban, receipt, allowedTransitions]
+          properties:
+            customer:
+              type: object
+              properties:
+                id: { type: integer }
+                fullName: { type: string, nullable: true }
+                phone: { $ref: '#/components/schemas/PhoneNumber' }
+            iban: { type: string, nullable: true, pattern: '^IR\d{24}$', description: 'برای `refundMethod = BANK_TRANSFER`؛ در بقیه `null`' }
+            receipt:
+              type: object
+              nullable: true
+              description: نتیجه‌ی رسیدن به انبار (`POST /admin/returns/{returnId}/receipt`)؛ تا آن موقع `null`
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      orderItemId: { type: integer }
+                      receivedQuantity: { type: integer }
+                      restockQuantity: { type: integer }
+                note: { type: string, nullable: true }
+            allowedTransitions:
+              type: array
+              description: 'قدم‌های مجاز بعدی (بخش ۴)؛ `REFUNDED` یعنی «ثبت استرداد با `returnId`»'
+              items: { $ref: '#/components/schemas/ReturnStatus' }
+              example: [REFUNDED, CLOSED]
+    AdminReturnPickupRequest:
+      type: object
+      required: [carrier]
+      properties:
+        carrier: { $ref: '#/components/schemas/ShippingMethodCode' }
+        scheduledFor: { type: string, format: date-time, nullable: true, description: زمان مراجعه‌ی مأمور }
+        trackingCode: { type: string, minLength: 6, maxLength: 40, nullable: true }
+        note: { type: string, maxLength: 500, nullable: true, description: برای مشتری }
+        notifyCustomer: { type: boolean, default: true }
+    AdminReturnReceiptRequest:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          description: 'برای هر قلم مرجوعی؛ `restockQuantity ≤ receivedQuantity ≤` تعداد درخواست‌شده'
+          items:
+            type: object
+            required: [orderItemId, receivedQuantity, restockQuantity]
+            properties:
+              orderItemId: { type: integer }
+              receivedQuantity: { type: integer, minimum: 0 }
+              restockQuantity: { type: integer, minimum: 0, description: عددهای سالم که به موجودی برمی‌گردند }
+        note: { type: string, maxLength: 1000, nullable: true, description: نتیجه‌ی بازبینی (داخلی) }
+    AdminReturnCloseRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 3, maxLength: 500, description: برای مشتری, example: مرسوله تا ۱۴ روز بعد از تأیید به انبار نرسید. }
+        notifyCustomer: { type: boolean, default: true }
 
     # ============ ADMIN · MARKETING ============
     DiscountCodeUpsertRequest:
@@ -6600,6 +7596,18 @@ components:
           description: خالی = همه‌ی محصولات تخفیف‌دار
           items: { type: integer }
         isActive: { type: boolean }
+    AdminCampaign:
+      description: کمپین در پنل؛ `Campaign` به‌اضافه‌ی انتخاب ذخیره‌شده‌ی محصولات برای فرم ویرایش
+      allOf:
+        - $ref: '#/components/schemas/Campaign'
+        - type: object
+          required: [productIds]
+          properties:
+            productIds:
+              type: array
+              description: 'همان `productIds` ِ `CampaignUpsertRequest`؛ خالی = همه‌ی محصولات تخفیف‌دار (برخلاف `products` که نتیجه‌ی محاسبه است)'
+              items: { type: integer }
+              example: [1, 4, 9]
     BannerUpsertRequest:
       type: object
       required: [placement, title]
@@ -6636,6 +7644,17 @@ components:
         screenshotMediaId: { type: string, nullable: true }
         isPublished: { type: boolean, default: true }
         sortOrder: { type: integer }
+    AdminTestimonial:
+      description: پیام رضایت در پنل؛ `Testimonial` به‌اضافه‌ی فیلدهایی که فقط فرم ویرایش لازم دارد
+      allOf:
+        - $ref: '#/components/schemas/Testimonial'
+        - type: object
+          required: [isPublished, sortOrder, screenshotMediaId, createdAt]
+          properties:
+            isPublished: { type: boolean, description: 'منتشرنشده‌ها در `GET /testimonials` و صفحه‌ی اصلی نمی‌آیند' }
+            sortOrder: { type: integer }
+            screenshotMediaId: { type: string, nullable: true, description: 'همان `screenshotMediaId` ِ `TestimonialUpsertRequest`؛ بدون اسکرین‌شات `null`' }
+            createdAt: { type: string, format: date-time }
 
     # ============ ADMIN · CONTENT ============
     BlogPostUpsertRequest:
@@ -6761,7 +7780,30 @@ components:
         lastOrderAt: { type: string, format: date-time, nullable: true }
         defaultMessenger: { type: string, allOf: [{ $ref: '#/components/schemas/PhotoMessengerChannel' }], nullable: true }
         marketingSmsOptIn: { type: boolean }
+        roles:
+          type: array
+          items: { $ref: '#/components/schemas/UserRole' }
         createdAt: { type: string, format: date-time }
+    AdminCustomerDetail:
+      description: صفحه‌ی یک مشتری در پنل (`GET /admin/customers/{customerId}`)؛ `AdminCustomer` به‌اضافه‌ی پروفایل کامل، آدرس‌ها و آخرین سفارش‌ها
+      allOf:
+        - $ref: '#/components/schemas/AdminCustomer'
+        - type: object
+          required: [firstName, lastName, birthDate, gender, defaultMessengerPhone, addresses, recentOrders]
+          properties:
+            firstName: { type: string, nullable: true }
+            lastName: { type: string, nullable: true }
+            birthDate: { type: string, format: date, nullable: true }
+            gender: { $ref: '#/components/schemas/Gender' }
+            defaultMessengerPhone: { type: string, allOf: [{ $ref: '#/components/schemas/PhoneNumber' }], nullable: true }
+            addresses:
+              type: array
+              description: همه‌ی آدرس‌های ذخیره‌شده، پیش‌فرض اول
+              items: { $ref: '#/components/schemas/Address' }
+            recentOrders:
+              type: array
+              description: 'آخرین ۵ سفارش، تازه‌ترین اول؛ برای همه: `GET /admin/orders?q=<موبایل>`'
+              items: { $ref: '#/components/schemas/AdminOrderListItem' }
     AdminReportOverview:
       type: object
       properties:
@@ -6800,3 +7842,41 @@ components:
               date: { type: string, format: date }
               revenue: { $ref: '#/components/schemas/Money' }
               orders: { type: integer }
+    AuditEntityType:
+      type: string
+      description: نوع چیزی که در پنل تغییر کرد
+      enum: [PRODUCT, VARIANT, INVENTORY, MEDIA, CATEGORY, COLOR, MATERIAL, ORDER, RETURN, REFUND, DISCOUNT_CODE, CAMPAIGN, BANNER, ANNOUNCEMENT, TESTIMONIAL, FAQ, PAGE, SETTINGS, REVIEW, CONTACT_MESSAGE, USER]
+    AuditLogEntry:
+      type: object
+      description: یک ردیف لاگ تغییرات پنل
+      required: [id, at, actor, action, entityType, entityId, entityLabel, summary, changes, ip]
+      properties:
+        id: { type: integer, example: 90412 }
+        at: { type: string, format: date-time }
+        actor:
+          type: object
+          required: [id, fullName, phone]
+          properties:
+            id: { type: integer, example: 7 }
+            fullName: { type: string, nullable: true, example: لیلا احمدی }
+            phone: { $ref: '#/components/schemas/PhoneNumber' }
+        action:
+          type: string
+          description: کد ماشینی کار (فهرست باز است و ممکن است کد تازه اضافه شود؛ برای نمایش `summary` کافی است)
+          example: PRODUCT_PRICE_CHANGED
+        entityType: { $ref: '#/components/schemas/AuditEntityType' }
+        entityId: { type: string, description: 'شناسه یا کد همان چیز (`12`، `KV-218340`، `lilac`، `terms`)', example: '12' }
+        entityLabel: { type: string, nullable: true, description: نام آماده‌ی نمایش در لحظه‌ی تغییر, example: کیف دوشی ماهک }
+        summary: { type: string, description: جمله‌ی فارسی آماده‌ی نمایش, example: قیمت از ۱٬۸۹۰٬۰۰۰ به ۱٬۷۹۰٬۰۰۰ تومان تغییر کرد }
+        changes:
+          type: array
+          nullable: true
+          description: 'فیلدهایی که عوض شدند؛ برای کارهایی که «از چه به چه» ندارند (مثل حذف یا ارسال پیامک) `null`'
+          items:
+            type: object
+            required: [field, from, to]
+            properties:
+              field: { type: string, example: price }
+              from: { type: string, nullable: true, example: '1890000' }
+              to: { type: string, nullable: true, example: '1790000' }
+        ip: { type: string, nullable: true, example: 5.160.12.34 }

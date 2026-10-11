@@ -1,5 +1,19 @@
 package com.kiva.infrastructure.di
 
+import com.kiva.application.usecase.account.usecase.command.ConfirmPhoneChangeUc
+import com.kiva.application.usecase.account.usecase.command.RequestPhoneChangeUc
+import com.kiva.application.usecase.account.usecase.command.UpdateMyProfileUc
+import com.kiva.application.usecase.auth.OtpIssuer
+import com.kiva.application.usecase.account.usecase.query.GetMeUc
+import com.kiva.application.usecase.admin.usecase.command.CheckPanelAccessUc
+import com.kiva.application.usecase.admin.usecase.command.SetUserRolesUc
+import com.kiva.application.usecase.admin.usecase.query.FindCustomersUc
+import com.kiva.application.usecase.admin.usecase.query.GetCustomerUc
+import com.kiva.application.usecase.auth.usecase.command.BootstrapAdminUc
+import com.kiva.application.usecase.auth.usecase.command.LogoutUc
+import com.kiva.application.usecase.auth.usecase.command.RefreshSessionUc
+import com.kiva.application.usecase.auth.usecase.command.SendLoginCodeUc
+import com.kiva.application.usecase.auth.usecase.command.VerifyLoginCodeUc
 import com.kiva.application.usecase.catalog.usecase.query.GetCategoryUc
 import com.kiva.application.usecase.catalog.usecase.query.ListCategoriesUc
 import com.kiva.application.usecase.catalog.usecase.query.ListColorsUc
@@ -75,6 +89,92 @@ val useCaseModule = module(createdAtStart = true) {
             htmlSanitizer = get(),
             clock = get(),
         )
+    }
+
+    // --- auth: commands ---
+    single {
+        OtpIssuer(
+            otpChallengeRepository = get(),
+            otpCodes = get(),
+            securityEventLog = get(),
+            maxSmsPerHour = get<AppConfig>().auth.maxSmsPerHour,
+        )
+    }
+    single { SendLoginCodeUc(transactionManager = get(), otpIssuer = get(), smsSender = get(), clock = get()) }
+    single {
+        VerifyLoginCodeUc(
+            transactionManager = get(),
+            otpChallengeRepository = get(),
+            userRepository = get(),
+            authSessionRepository = get(),
+            otpCodes = get(),
+            sessionTokens = get(),
+            accessTokens = get(),
+            securityEventLog = get(),
+            clock = get(),
+        )
+    }
+
+    single {
+        RefreshSessionUc(
+            transactionManager = get(),
+            authSessionRepository = get(),
+            userRepository = get(),
+            sessionTokens = get(),
+            accessTokens = get(),
+            securityEventLog = get(),
+            clock = get(),
+        )
+    }
+    single { LogoutUc(transactionManager = get(), authSessionRepository = get(), sessionTokens = get(), securityEventLog = get(), clock = get()) }
+
+    // --- account ---
+    single { GetMeUc(transactionManager = get(), userRepository = get()) }
+    single { UpdateMyProfileUc(transactionManager = get(), userRepository = get(), clock = get()) }
+    single {
+        RequestPhoneChangeUc(
+            transactionManager = get(),
+            userRepository = get(),
+            authSessionRepository = get(),
+            otpIssuer = get(),
+            smsSender = get(),
+            clock = get(),
+        )
+    }
+    single {
+        ConfirmPhoneChangeUc(
+            transactionManager = get(),
+            otpChallengeRepository = get(),
+            userRepository = get(),
+            authSessionRepository = get(),
+            otpCodes = get(),
+            sessionTokens = get(),
+            accessTokens = get(),
+            smsSender = get(),
+            securityEventLog = get(),
+            clock = get(),
+        )
+    }
+
+    // --- admin: the guard of every panel request ---
+    single {
+        CheckPanelAccessUc(
+            transactionManager = get(),
+            authSessionRepository = get(),
+            userRepository = get(),
+            securityEventLog = get(),
+            clock = get(),
+        )
+    }
+
+    // --- admin: customers and roles ---
+    single { FindCustomersUc(transactionManager = get(), adminCustomerRepository = get()) }
+    single { GetCustomerUc(transactionManager = get(), adminCustomerRepository = get()) }
+    single {
+        SetUserRolesUc(transactionManager = get(), userRepository = get(), authSessionRepository = get(), securityEventLog = get(), clock = get())
+    }
+    single {
+        BootstrapAdminUc(transactionManager = get(), userRepository = get(), authSessionRepository = get(), securityEventLog = get(), clock = get())
     }
 
     // --- inventory: commands ---
