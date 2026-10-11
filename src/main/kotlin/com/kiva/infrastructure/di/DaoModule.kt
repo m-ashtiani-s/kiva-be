@@ -7,6 +7,7 @@ import com.kiva.domain.aggregate.otp.repository.OtpChallengeRepository
 import com.kiva.domain.aggregate.session.repository.AuthSessionRepository
 import com.kiva.domain.aggregate.category.repository.CategoryRepository
 import com.kiva.domain.aggregate.color.repository.ColorRepository
+import com.kiva.domain.aggregate.geo.repository.GeoRepository
 import com.kiva.domain.aggregate.inventory.repository.InventoryRepository
 import com.kiva.domain.aggregate.material.repository.MaterialRepository
 import com.kiva.domain.aggregate.product.repository.ProductIdGenerator
@@ -16,6 +17,7 @@ import com.kiva.infrastructure.persistence.exposed.AdminCustomerRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.AuthSessionRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.CategoryRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ColorRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.GeoRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.InventoryRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.MaterialRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.OtpChallengeRepositoryImpl
@@ -43,4 +45,5 @@ val daoModule = module(createdAtStart = true) {
     single<AuthSessionRepository> { AuthSessionRepositoryImpl() }
     single<SecurityEventLog> { SecurityEventLogImpl() }
     single<AdminCustomerRepository> { AdminCustomerRepositoryImpl() }
+    single<GeoRepository> { GeoRepositoryImpl() }
 }

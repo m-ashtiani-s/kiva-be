@@ -79,7 +79,7 @@
 | گام | عنوان | اندازه | وضعیت |
 |---|---|---|---|
 | ۰ | کانترکت 1.6.0 و آماده‌سازی | S | ✅ |
-| ۱ | استان‌ها و شهرها | S | ⬜ |
+| ۱ | استان‌ها و شهرها | S | ✅ |
 | ۲ | تنظیمات فروشگاه | M | ⬜ |
 | ۳ | دفترچه‌ی آدرس | M | ⬜ |
 | ۴ | قانون‌های قیمت و ارسال (دامنه) | S | ⬜ |
@@ -1413,6 +1413,7 @@ PURCHASE_REVIEW.md                             (step 21)
 | 18 | مثال‌ها | `cityId: 301` ← `394` (تهران)، هر جا که با `provinceId: 8` اومده | داده‌ی واقعی |
 | 19 | بخش ۳ «قوانین کسب‌وکار» | سقف `maxPerOrder` برای هر محصول و بین همه‌ی رنگ‌هاش؛ سقف ۳ سفارش پرداخت‌نشده؛ نگه‌داری موجودی تا پایان پرداخت در جریان (حداکثر ۲۰ دقیقه بعد از `holdUntil`) | قانون‌های تازه‌ی بیزنس باید تو سند باشن |
 | 20 | `CreateReviewRequest` | فیلد تازه‌ی `orderCode` (nullable) کنار `orderItemId` | نتیجه‌ی ردیف ۱۵: شماره‌ی ردیف فقط داخل سفارش یکتاست، پس `orderItemId` به‌تنهایی معلوم نمی‌کنه کدوم خرید. همون جفتی که `ReviewablePurchase` داره |
+| 21 | `/geo/provinces` و `/geo/provinces/{provinceId}/cities` (گام ۱) | `Province.cities` ← `nullable` (`includeCities=false` ← `null`). هدر `ETag` روی شهرهای استان هم. پاسخ `304` برای هر دو. `includeCities` غیر از true/false ← 400 | قانون «فیلدها همیشه فرستاده می‌شن»، و قانون کلی کانترکت که `/geo/*` کش می‌شه |
 
 **پیام برای فرانت (گام ۰ و ۲۱):** ردیف‌های ۲، ۴، ۵، ۶، ۷، ۸، ۱۰، ۱۱ و ۲۰ رفتار فرانت رو عوض می‌کنن. `docs/FRONTEND_PURCHASE.md` (گام ۲۱) کل جریان رو برای فرانت توضیح می‌ده، مثل `FRONTEND_AUTH.md`.
 
@@ -1452,7 +1453,7 @@ PURCHASE_REVIEW.md                             (step 21)
 
 ---
 
-### گام ۱: استان‌ها و شهرها · S ⬜
+### گام ۱: استان‌ها و شهرها · S ✅
 
 **می‌سازی:** `tools/geo/geo_to_sql.py` و کپی دو JSON. `V11__geo.sql` با اصلاح‌های بخش ۵.۱. دامنه‌ی `geo` (`Province`، `City`، `ProvinceId`، `CityId`، `GeoRepository`)، `ListProvincesUc` (با `includeCities`)، `ListCitiesOfProvinceUc`، `webV1Geo.kt`، و یه helper ِ `ETag` (`common/http/Caching.kt`) که بعداً کاتالوگ هم ازش استفاده می‌کنه.
 
@@ -1463,12 +1464,12 @@ PURCHASE_REVIEW.md                             (step 21)
 2. وقتی `includeCities=false` ـه، `cities` نیومده باشه یا `null`؟ (قانون «فیلدها همیشه فرستاده می‌شن» رو ببین.)
 
 **تموم شده یعنی:**
-- [ ] `GET /api/v1/geo/provinces`: ۳۱ استان به ترتیب الفبا، هر کدوم با شهرهاش. جمع شهرها ۱۳۱۹.
-- [ ] `includeCities=false` ← `cities: null`.
-- [ ] `/geo/provinces/8/cities` «تهران» رو با id ۳۹۴ داره. `/geo/provinces/99/cities` و `/geo/provinces/abc/cities` ← `404 NOT_FOUND`.
-- [ ] «چهارمحال و بختیاری»، «سیستان و بلوچستان» و «کهگیلویه و بویراحمد» با فاصله‌ان. «تبریز1-» و «گلوگاه» ِ دوم نیستن. «علی آباد» با «آ» ـه.
-- [ ] درخواست دوم با `If-None-Match` ← `304` بدون بدنه. `Cache-Control: public, max-age=300`.
-- [ ] INSERT ِ شهر با استان ناموجود، یا دو شهر هم‌اسم در یه استان، توسط دیتابیس رد می‌شه.
+- [x] `GET /api/v1/geo/provinces`: ۳۱ استان به ترتیب الفبا، هر کدوم با شهرهاش. جمع شهرها ۱۳۱۹.
+- [x] `includeCities=false` ← `cities: null`.
+- [x] `/geo/provinces/8/cities` «تهران» رو با id ۳۹۴ داره. `/geo/provinces/99/cities` و `/geo/provinces/abc/cities` ← `404 NOT_FOUND`.
+- [x] «چهارمحال و بختیاری»، «سیستان و بلوچستان» و «کهگیلویه و بویراحمد» با فاصله‌ان. «تبریز1-» و «گلوگاه» ِ دوم نیستن. «علی آباد» با «آ» ـه.
+- [x] درخواست دوم با `If-None-Match` ← `304` بدون بدنه. `Cache-Control: public, max-age=300`.
+- [x] INSERT ِ شهر با استان ناموجود، یا دو شهر هم‌اسم در یه استان، توسط دیتابیس رد می‌شه.
 
 ---
 
@@ -2016,6 +2017,7 @@ Route: StartPaymentUc ← 201 با order و payment، یا 422 PAYMENT_GATEWAY_U
 |---|---|---|---|
 | ۱۹ مهر ۱۴۰۵ | — | — | سند نوشته شد. تصمیم‌های بخش ۱ (ردیف‌های ۱ تا ۵) پذیرفته شدن |
 | ۱۹ مهر ۱۴۰۵ | ۰ | Purchase step 0 | برنچ `purchase`. کانترکت 1.6.0 با ۱۹ ردیف بخش ۲۱، به‌علاوه‌ی ردیف ۲۰ (`orderCode` در ثبت نظر). کد خطای تازه‌ای لازم نشد. `AuthResponse.cart` غیر nullable شد (حالت آخر فاز). کد فرانت ملاک طراحی نیست؛ فرانت خودش رو با کانترکت هماهنگ می‌کنه |
+| ۱۹ مهر ۱۴۰۵ | ۱ | Purchase step 1 | `V11__geo.sql` از `tools/geo/geo_to_sql.py`: ۳۱ استان و ۱۳۱۹ شهر با اصلاح‌های بخش ۵.۱. دامنه‌ی `geo`، `ListProvincesUc` و `ListCitiesOfProvinceUc`، `webV1Geo.kt`، و `Caching.kt` (ETag ضعیف از hash ِ بدنه، `304`). کانترکت: ردیف ۲۱ (`Province.cities` nullable، ETag و 304). `UNIQUE ("provinceId", name)` روی `city_tbl` |
 
 ---
 

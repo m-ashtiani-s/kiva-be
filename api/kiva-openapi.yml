@@ -363,9 +363,13 @@ paths:
       tags: [Addresses]
       operationId: listProvinces
       summary: "لیست استان‌ها (به‌همراه شهرها)"
+      description: |
+        ۳۱ استان به ترتیب الفبا، هر کدام با شهرهایش به ترتیب الفبا. فهرست فقط با به‌روزرسانی سرور عوض می‌شود،
+        پس با `ETag` و `Cache-Control: public, max-age=300` کش می‌شود؛ درخواست با `If-None-Match` برابر `304` بدون بدنه می‌گیرد.
       parameters:
         - name: includeCities
           in: query
+          description: '`false` = فقط استان‌ها (`cities: null`). مقداری غیر از `true` و `false` ← `400` روی همین فیلد.'
           schema: { type: boolean, default: true }
       responses:
         '200':
@@ -377,12 +381,17 @@ paths:
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/Province' }
+        '304':
+          description: تغییری نکرده (`If-None-Match` همان `ETag` فعلی است)؛ بدون بدنه
         '400': { $ref: '#/components/responses/ValidationError' }
   /geo/provinces/{provinceId}/cities:
     get:
       tags: [Addresses]
       operationId: listCitiesOfProvince
       summary: "شهرهای یک استان"
+      description: |
+        شهرهای استان به ترتیب الفبا. مثل `GET /geo/provinces` با `ETag` و `Cache-Control: public, max-age=300` کش می‌شود.
+        استانی که وجود ندارد، یا شناسه‌ای که عدد مثبت نیست، `404 NOT_FOUND` می‌گیرد.
       parameters:
         - name: provinceId
           in: path
@@ -391,11 +400,15 @@ paths:
       responses:
         '200':
           description: OK
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
           content:
             application/json:
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/City' }
+        '304':
+          description: تغییری نکرده (`If-None-Match` همان `ETag` فعلی است)؛ بدون بدنه
         '404': { $ref: '#/components/responses/NotFound' }
 
   # ================================================================
@@ -6775,6 +6788,8 @@ components:
         name: { type: string, example: تهران }
         cities:
           type: array
+          nullable: true
+          description: شهرهای استان به ترتیب الفبا؛ `null` وقتی با `includeCities=false` خواسته شده
           items: { $ref: '#/components/schemas/City' }
     Address:
       type: object

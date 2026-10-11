@@ -16,6 +16,8 @@ import com.kiva.application.usecase.catalog.usecase.query.GetCategoryUc
 import com.kiva.application.usecase.catalog.usecase.query.ListCategoriesUc
 import com.kiva.application.usecase.catalog.usecase.query.ListColorsUc
 import com.kiva.application.usecase.catalog.usecase.query.ListMaterialsUc
+import com.kiva.application.usecase.geo.usecase.query.ListCitiesOfProvinceUc
+import com.kiva.application.usecase.geo.usecase.query.ListProvincesUc
 import com.kiva.application.usecase.product.usecase.query.FindProductsUc
 import com.kiva.application.usecase.product.usecase.query.FindRelatedProductsUc
 import com.kiva.application.usecase.product.usecase.query.GetProductFacetsUc
@@ -31,6 +33,7 @@ import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminCust
 import com.kiva.infrastructure.httpserver.controller.httprest.web.OTP_SEND_RATE_LIMIT
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Auth
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Catalog
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Geo
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Me
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Products
 import com.kiva.infrastructure.httpserver.route.healthRoutes
@@ -134,6 +137,8 @@ fun Application.configureRouting() {
     val getProductFacetsUc by inject<GetProductFacetsUc>()
     val getProductUc by inject<GetProductUc>()
     val findRelatedProductsUc by inject<FindRelatedProductsUc>()
+    val listProvincesUc by inject<ListProvincesUc>()
+    val listCitiesOfProvinceUc by inject<ListCitiesOfProvinceUc>()
     val sendLoginCodeUc by inject<SendLoginCodeUc>()
     val verifyLoginCodeUc by inject<VerifyLoginCodeUc>()
     val refreshSessionUc by inject<RefreshSessionUc>()
@@ -156,6 +161,7 @@ fun Application.configureRouting() {
             webV1AdminCustomers(AdminCustomerUseCases(checkPanelAccessUc, findCustomersUc, getCustomerUc, setUserRolesUc))
             webV1Catalog(listColorsUc, listMaterialsUc, listCategoriesUc, getCategoryUc)
             webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, config.shop.siteUrl)
+            webV1Geo(listProvincesUc, listCitiesOfProvinceUc)
         }
     }
 }
