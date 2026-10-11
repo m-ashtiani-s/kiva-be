@@ -26,7 +26,6 @@ class AppConfigTest {
         "kiva.auth.otpPepper" to Base64.getEncoder().encodeToString(pepper),
         "kiva.auth.jwtSecret" to Base64.getEncoder().encodeToString(jwtSecret),
         "kiva.auth.maxSmsPerHour" to "300",
-        "kiva.shop.freeShippingThreshold" to "3000000",
         "kiva.shop.siteUrl" to "https://kiva.ir",
         "kiva.seed.enabled" to "false",
         "kiva.http.allowedOrigins" to "http://localhost:5173",

@@ -15,7 +15,6 @@ import com.kiva.common.railway.ResultFailure
 import com.kiva.common.railway.unwrapOr
 import com.kiva.common.transaction.TransactionManager
 import com.kiva.common.usecase.QueryUseCase
-import com.kiva.common.valueobject.Money
 import com.kiva.common.valueobject.Slug
 import com.kiva.domain.aggregate.category.entity.Category
 import com.kiva.domain.aggregate.category.repository.CategoryRepository
@@ -24,6 +23,7 @@ import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
 import com.kiva.domain.aggregate.color.repository.ColorRepository
 import com.kiva.domain.aggregate.material.entity.Material
 import com.kiva.domain.aggregate.material.repository.MaterialRepository
+import com.kiva.domain.aggregate.settings.repository.ShopSettingsRepository
 import java.time.Clock
 
 /**
@@ -40,7 +40,7 @@ class FindProductsUc(
     private val colorRepository: ColorRepository,
     private val materialRepository: MaterialRepository,
     private val clock: Clock,
-    private val freeShippingThreshold: Money,
+    private val shopSettingsRepository: ShopSettingsRepository,
 ) : QueryUseCase<FindProductsUc.Qry, ProductListDto, FindProductsUc.Failure> {
 
     private val logger = getLogger()
@@ -64,6 +64,8 @@ class FindProductsUc(
             val categories = categoryRepository.findAll().associateBy { it.slug }
             val palette = colorRepository.findAll().associateBy { it.key }
             val materials = materialRepository.findAll().associateBy { it.slug }
+            // Read on every request, so a change in the settings shows at once.
+            val freeShippingThreshold = shopSettingsRepository.get().freeShippingThreshold
 
             Result.success(
                 ProductListDto(

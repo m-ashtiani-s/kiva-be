@@ -5819,7 +5819,7 @@ components:
       properties:
         method: { $ref: '#/components/schemas/ShippingMethodCode' }
         name: { type: string, example: پست معمولی }
-        description: { type: string, example: تحویل ۳ تا ۵ روز کاری }
+        description: { type: string, description: 'ساخته‌شده از `estimatedDelivery.minDays` و `maxDays`', example: تحویل ۳ تا ۵ روز کاری }
         icon: { $ref: '#/components/schemas/IconName' }
         baseCost: { allOf: [{ $ref: '#/components/schemas/Money' }], description: قیمت پایه (برای نمایش خط‌خورده وقتی رایگان است), example: 75000 }
         cost: { allOf: [{ $ref: '#/components/schemas/Money' }], example: 0 }
@@ -6886,7 +6886,7 @@ components:
       properties:
         code: { $ref: '#/components/schemas/ShippingMethodCode' }
         name: { type: string, example: تیپاکس }
-        description: { type: string, example: تحویل ۱ تا ۲ روز کاری }
+        description: { type: string, description: 'ساخته‌شده از `minDays` و `maxDays`، پس همیشه با آن‌ها جور است. فقط خواندنی: در PUT نادیده گرفته می‌شود.', example: تحویل ۱ تا ۲ روز کاری }
         baseCost: { allOf: [{ $ref: '#/components/schemas/Money' }], example: 145000 }
         minDays: { type: integer, example: 1 }
         maxDays: { type: integer, example: 2 }

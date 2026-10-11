@@ -14,7 +14,6 @@ import com.kiva.common.railway.forField
 import com.kiva.common.railway.unwrapOr
 import com.kiva.common.transaction.TransactionManager
 import com.kiva.common.usecase.QueryUseCase
-import com.kiva.common.valueobject.Money
 import com.kiva.domain.aggregate.category.repository.CategoryRepository
 import com.kiva.domain.aggregate.color.entity.Color
 import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
@@ -23,6 +22,7 @@ import com.kiva.domain.aggregate.material.repository.MaterialRepository
 import com.kiva.domain.aggregate.product.model.policy.StockPolicy
 import com.kiva.domain.aggregate.product.model.valueobject.MaxPerOrder
 import com.kiva.domain.aggregate.product.model.valueobject.MediaType
+import com.kiva.domain.aggregate.settings.repository.ShopSettingsRepository
 import java.time.Clock
 
 /**
@@ -43,7 +43,7 @@ class GetProductUc(
     private val materialRepository: MaterialRepository,
     private val colorRepository: ColorRepository,
     private val clock: Clock,
-    private val freeShippingThreshold: Money,
+    private val shopSettingsRepository: ShopSettingsRepository,
 ) : QueryUseCase<GetProductUc.Qry, ProductDetailDto, GetProductUc.Failure> {
 
     private val logger = getLogger()
@@ -69,7 +69,7 @@ class GetProductUc(
             val category = categoryRepository.findBySlug(product.card.categorySlug) ?: error("No category ${product.card.categorySlug.value}")
             val material = materialRepository.findAll().first { it.slug == product.materialSlug }
             val palette = colorRepository.findAll().associateBy { it.key }
-            val card = ProductCards.cardOf(product.card, category, palette, now, freeShippingThreshold)
+            val card = ProductCards.cardOf(product.card, category, palette, now, shopSettingsRepository.get().freeShippingThreshold)
 
             Result.success(
                 ProductDetailDto(

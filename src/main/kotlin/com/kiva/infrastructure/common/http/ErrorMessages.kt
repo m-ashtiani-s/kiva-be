@@ -163,6 +163,8 @@ object ErrorMessages {
         "IDS_TOO_MANY" to "حداکثر {maxItems} محصول رو می‌شه با هم خواست",
         "NUMBER_INVALID" to "اینجا باید یه عدد بدون اعشار بنویسی",
         "BOOLEAN_INVALID" to "اینجا فقط true یا false قبول می‌شه",
+        "SHIPPING_METHOD_INVALID" to "روش ارسال باید یکی از TIPAX، POST یا COURIER باشه",
+        "PAYMENT_GATEWAY_INVALID" to "درگاه پرداخت باید یکی از ZARINPAL، SAMAN یا MELLAT باشه",
         "PROVINCE_ID_INVALID" to "استان انتخاب‌شده درست نیست",
         "CITY_ID_INVALID" to "شهر انتخاب‌شده درست نیست",
         "PRICE_RANGE_INVALID" to "حداقل قیمت نمی‌تونه از حداکثر قیمت بیشتر باشه",

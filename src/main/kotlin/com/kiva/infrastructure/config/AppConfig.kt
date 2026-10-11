@@ -1,7 +1,6 @@
 package com.kiva.infrastructure.config
 
 import com.kiva.common.valueobject.IranianMobileNumber
-import com.kiva.common.valueobject.Money
 import io.ktor.server.config.ApplicationConfig
 import java.util.Base64
 
@@ -30,10 +29,7 @@ data class AppConfig(
                     maxSmsPerHour = config.property("kiva.auth.maxSmsPerHour").getString().toInt(),
                     bootstrapAdminPhoneRaw = config.propertyOrNull("kiva.auth.bootstrapAdminPhone")?.getString(),
                 ),
-                shop = ShopConfig(
-                    freeShippingThreshold = Money.constructFromPersisted(config.property("kiva.shop.freeShippingThreshold").getString().toLong()),
-                    siteUrl = config.property("kiva.shop.siteUrl").getString(),
-                ),
+                shop = ShopConfig(siteUrl = config.property("kiva.shop.siteUrl").getString()),
                 // Strict: a typo such as "yes" stops the boot instead of quietly meaning false.
                 seed = SeedConfig(enabled = config.property("kiva.seed.enabled").getString().toBooleanStrict()),
                 http = HttpConfig.of(
@@ -134,14 +130,13 @@ enum class SmsProvider {
 }
 
 /**
- * Shop rules from config, until the admin settings keep them.
+ * The shop's own address. Its rules (shipping costs, free shipping, ...) are in the database, not here: see ShopSettings.
  *
  * @property siteUrl the shop's own address (`https://kiva.ir`), for the canonical and share links of pages.
  */
-data class ShopConfig(val freeShippingThreshold: Money, val siteUrl: String) {
+data class ShopConfig(val siteUrl: String) {
     companion object {
-        /** The contract's numbers. */
-        val DEFAULT = ShopConfig(freeShippingThreshold = Money.constructFromPersisted(3_000_000), siteUrl = "https://kiva.ir")
+        val DEFAULT = ShopConfig(siteUrl = "https://kiva.ir")
     }
 }
 

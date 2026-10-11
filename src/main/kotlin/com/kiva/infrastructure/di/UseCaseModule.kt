@@ -49,7 +49,7 @@ val useCaseModule = module(createdAtStart = true) {
             colorRepository = get(),
             materialRepository = get(),
             clock = get(),
-            freeShippingThreshold = get<AppConfig>().shop.freeShippingThreshold,
+            shopSettingsRepository = get(),
         )
     }
     single {
@@ -69,7 +69,7 @@ val useCaseModule = module(createdAtStart = true) {
             categoryRepository = get(),
             colorRepository = get(),
             clock = get(),
-            freeShippingThreshold = get<AppConfig>().shop.freeShippingThreshold,
+            shopSettingsRepository = get(),
         )
     }
 
@@ -81,7 +81,7 @@ val useCaseModule = module(createdAtStart = true) {
             materialRepository = get(),
             colorRepository = get(),
             clock = get(),
-            freeShippingThreshold = get<AppConfig>().shop.freeShippingThreshold,
+            shopSettingsRepository = get(),
         )
     }
 

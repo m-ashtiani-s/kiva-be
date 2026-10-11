@@ -12,6 +12,7 @@ import com.kiva.domain.aggregate.inventory.repository.InventoryRepository
 import com.kiva.domain.aggregate.material.repository.MaterialRepository
 import com.kiva.domain.aggregate.product.repository.ProductIdGenerator
 import com.kiva.domain.aggregate.product.repository.ProductRepository
+import com.kiva.domain.aggregate.settings.repository.ShopSettingsRepository
 import com.kiva.domain.aggregate.user.repository.UserRepository
 import com.kiva.infrastructure.persistence.exposed.AdminCustomerRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.AuthSessionRepositoryImpl
@@ -25,6 +26,7 @@ import com.kiva.infrastructure.persistence.exposed.SecurityEventLogImpl
 import com.kiva.infrastructure.persistence.exposed.ProductIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.ProductQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ProductRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.ShopSettingsRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.UserRepositoryImpl
 import org.koin.dsl.module
 
@@ -46,4 +48,5 @@ val daoModule = module(createdAtStart = true) {
     single<SecurityEventLog> { SecurityEventLogImpl() }
     single<AdminCustomerRepository> { AdminCustomerRepositoryImpl() }
     single<GeoRepository> { GeoRepositoryImpl() }
+    single<ShopSettingsRepository> { ShopSettingsRepositoryImpl() }
 }
