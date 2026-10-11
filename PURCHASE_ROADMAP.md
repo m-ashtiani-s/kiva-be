@@ -78,7 +78,7 @@
 
 | گام | عنوان | اندازه | وضعیت |
 |---|---|---|---|
-| ۰ | کانترکت 1.6.0 و آماده‌سازی | S | ⬜ |
+| ۰ | کانترکت 1.6.0 و آماده‌سازی | S | ✅ |
 | ۱ | استان‌ها و شهرها | S | ⬜ |
 | ۲ | تنظیمات فروشگاه | M | ⬜ |
 | ۳ | دفترچه‌ی آدرس | M | ⬜ |
@@ -1398,13 +1398,13 @@ PURCHASE_REVIEW.md                             (step 21)
 | 3 | `CartItem.maxQuantity` | تعریف: `min(موجودی، maxPerOrder − بقیه‌ی رنگ‌های همون محصول)`، نه «موجودی ورینت» | عدد دقیق موجودی لو نره |
 | 4 | `CartItem` | فیلد تازه‌ی `purchasable: boolean` (required). ردیف غیرقابل خرید تو جمع پول نیست. `itemsCount` و `linesCount` همه‌ی ردیف‌ها رو می‌شمرن | فرانت باید بدونه کدوم ردیف تو جمع نیست |
 | 5 | `GET /cart` | سبد تازه فقط برای درخواست بدون توکن یا با توکن ناشناخته. فقط از مرورگر صدا زده بشه | جلوگیری از سبدهای خالی |
-| 6 | `AuthResponse.cart` | دیگه همیشه null نیست: سبد کاربر بعد از ادغام | فاز سبد اومد |
-| 7 | `POST /orders` | 422: `PRODUCT_UNAVAILABLE`، و `OUT_OF_STOCK` با `meta.itemIds`. 429 `RATE_LIMITED` (بیشتر از ۳ سفارش پرداخت‌نشده، با `Retry-After`). `PAYMENT_GATEWAY_UNAVAILABLE` در دو حالت: قبل از ثبت (بدون سفارش)، و بعد از ثبت (سفارش ساخته شده، با `meta.orderCode` و `meta.paymentId`، و ادامه با `POST /payments/{paymentId}/retry`). `Idempotency-Key` نیومده ← 400. نگه‌داری کلید ۲۴ ساعت. تکرار همون سفارش و پرداخت رو برمی‌گردونه، با وضعیت فعلی | بخش‌های ۱۰ تا ۱۲ |
-| 8 | `PlaceOrderRequest` | توضیح: `preShipmentMessenger` نیومده یا بدون `channel` ← 422 `MESSENGER_REQUIRED` (نه 400). خطاهای `newAddress` با پیشوند `newAddress.` در `errors[].field`. اگه دفترچه پر باشه، سفارش ثبت می‌شه و آدرس ذخیره نمی‌شه. `expectedPayable` به‌شدت توصیه می‌شه و اگه نیاد، مقایسه انجام نمی‌شه. `gift.wrap` تا `giftWrap.available = false` ـه نادیده گرفته می‌شه | ترتیب و رفتار دقیق |
+| 6 | `AuthResponse.cart` | دیگه null نیست (`nullable` برداشته شد): سبد کاربر بعد از ادغام. بک‌اند تا گام ۷ هنوز null برمی‌گردونه | فاز سبد اومد |
+| 7 | `POST /orders` | 422: `PRODUCT_UNAVAILABLE`، و `OUT_OF_STOCK` با `meta.itemIds`. 429 `RATE_LIMITED` (بیشتر از ۳ سفارش پرداخت‌نشده، با `Retry-After` = تا پایان مهلت پرداخت زودترین‌شون). ترتیب کامل قانون‌ها (گام ۱۳) تو توضیح endpoint. `PAYMENT_GATEWAY_UNAVAILABLE` در دو حالت: قبل از ثبت (بدون سفارش)، و بعد از ثبت (سفارش ساخته شده، با `meta.orderCode` و `meta.paymentId`، و ادامه با `POST /payments/{paymentId}/retry`). `Idempotency-Key` نیومده ← 400. نگه‌داری کلید ۲۴ ساعت. تکرار همون سفارش و پرداخت رو برمی‌گردونه، با وضعیت فعلی | بخش‌های ۱۰ تا ۱۲ |
+| 8 | `PlaceOrderRequest` | توضیح: `preShipmentMessenger` نیومده یا بدون `channel` ← 422 `MESSENGER_REQUIRED` (نه 400). برای همین `preShipmentMessenger` از `required` ِ شِما و `channel` و `phone` از `required` ِ خودش بیرون اومدن، وگرنه شِما و قانون 400/422 با هم نمی‌خوندن. خطاهای `newAddress` با پیشوند `newAddress.` در `errors[].field`. اگه دفترچه پر باشه، سفارش ثبت می‌شه و آدرس ذخیره نمی‌شه. `expectedPayable` به‌شدت توصیه می‌شه و اگه نیاد، مقایسه انجام نمی‌شه. `gift.wrap` تا `giftWrap.available = false` ـه نادیده گرفته می‌شه | ترتیب و رفتار دقیق |
 | 9 | `AddressSnapshot` | فیلدهای `plaque` و `unit` (nullable) | پیک لازمشون داره |
 | 10 | `GET /payments/{paymentId}` | `PENDING` یعنی «verify در جریانه». کلاینت هر ۳ ثانیه و حداکثر ۳۰ ثانیه دوباره می‌پرسه | verify ِ بی‌جواب |
 | 11 | `/payment-callbacks/{gateway}` | پرداخت پیدا نشد ← redirect به صفحه‌ی نتیجه بدون `paymentId` | callback هیچ‌وقت خطا نشون نمی‌ده |
-| 12 | `POST /payments/{paymentId}/retry` | 422: `PAYMENT_GATEWAY_UNAVAILABLE`. 409: `IDEMPOTENCY_KEY_REUSED`. 429: بیشتر از ۱۰ تلاش. `PaymentInit.expiresAt` همون `holdUntil` ِ سفارشه و تمدید نمی‌شه | |
+| 12 | `POST /payments/{paymentId}/retry` | 422: `PAYMENT_GATEWAY_UNAVAILABLE`. 409: `IDEMPOTENCY_KEY_REUSED`. 429: بیشتر از ۱۰ تلاش (`Retry-After` = تا پایان مهلت پرداخت سفارش، چون این سقف با زمان باز نمی‌شه و بعدش فقط «خرید دوباره» می‌مونه). `PaymentInit.expiresAt` همون `holdUntil` ِ سفارشه و تمدید نمی‌شه | |
 | 13 | `POST /me/orders/{orderCode}/payments` | 409: `IDEMPOTENCY_KEY_REUSED`. 429 مثل بالا | |
 | 14 | `GET /checkout` | `addressId` که مال کاربر نیست ← 400 روی `addressId`. `cart.issues` همگام‌سازی شده | |
 | 15 | `OrderItem.id` | توضیح: شماره‌ی ردیف در همون سفارش (۱ تا n) | |
@@ -1412,8 +1412,9 @@ PURCHASE_REVIEW.md                             (step 21)
 | 17 | `ReservationConsolidation` | ادغام فقط به همون آدرس، و فقط اگه از شروع گروه ویرایش نشده باشه | |
 | 18 | مثال‌ها | `cityId: 301` ← `394` (تهران)، هر جا که با `provinceId: 8` اومده | داده‌ی واقعی |
 | 19 | بخش ۳ «قوانین کسب‌وکار» | سقف `maxPerOrder` برای هر محصول و بین همه‌ی رنگ‌هاش؛ سقف ۳ سفارش پرداخت‌نشده؛ نگه‌داری موجودی تا پایان پرداخت در جریان (حداکثر ۲۰ دقیقه بعد از `holdUntil`) | قانون‌های تازه‌ی بیزنس باید تو سند باشن |
+| 20 | `CreateReviewRequest` | فیلد تازه‌ی `orderCode` (nullable) کنار `orderItemId` | نتیجه‌ی ردیف ۱۵: شماره‌ی ردیف فقط داخل سفارش یکتاست، پس `orderItemId` به‌تنهایی معلوم نمی‌کنه کدوم خرید. همون جفتی که `ReviewablePurchase` داره |
 
-**پیام برای فرانت (گام ۰ و ۲۱):** ردیف‌های ۲، ۴، ۵، ۶، ۷، ۸، ۱۰ و ۱۱ رفتار فرانت رو عوض می‌کنن. `docs/FRONTEND_PURCHASE.md` (گام ۲۱) کل جریان رو برای فرانت توضیح می‌ده، مثل `FRONTEND_AUTH.md`.
+**پیام برای فرانت (گام ۰ و ۲۱):** ردیف‌های ۲، ۴، ۵، ۶، ۷، ۸، ۱۰، ۱۱ و ۲۰ رفتار فرانت رو عوض می‌کنن. `docs/FRONTEND_PURCHASE.md` (گام ۲۱) کل جریان رو برای فرانت توضیح می‌ده، مثل `FRONTEND_AUTH.md`.
 
 ---
 
@@ -1433,7 +1434,7 @@ PURCHASE_REVIEW.md                             (step 21)
 
 ---
 
-### گام ۰: کانترکت 1.6.0 و آماده‌سازی · S ⬜
+### گام ۰: کانترکت 1.6.0 و آماده‌سازی · S ✅
 
 **می‌سازی:**
 - برنچ `purchase` از `main`.
@@ -1445,9 +1446,9 @@ PURCHASE_REVIEW.md                             (step 21)
 2. چرا `PAYMENT_GATEWAY_UNAVAILABLE` ِ بعد از ثبت سفارش، 422 با `meta.orderCode` ـه و نه 201؟
 
 **تموم شده یعنی:**
-- [ ] YAML معتبره (snakeyaml از کش Gradle، مثل قبل)، و `ErrorMessagesTest` و `RouteGuardsTest` سبزن.
-- [ ] هر ردیف بخش ۲۱ تو کانترکت هست.
-- [ ] پیام تغییرات برای فرانت آماده‌ست.
+- [x] YAML معتبره (snakeyaml از کش Gradle، مثل قبل)، و `ErrorMessagesTest` و `RouteGuardsTest` سبزن.
+- [x] هر ردیف بخش ۲۱ تو کانترکت هست.
+- [x] پیام تغییرات برای فرانت آماده‌ست.
 
 ---
 
@@ -2014,6 +2015,7 @@ Route: StartPaymentUc ← 201 با order و payment، یا 422 PAYMENT_GATEWAY_U
 | تاریخ | گام | کامیت | یادداشت |
 |---|---|---|---|
 | ۱۹ مهر ۱۴۰۵ | — | — | سند نوشته شد. تصمیم‌های بخش ۱ (ردیف‌های ۱ تا ۵) پذیرفته شدن |
+| ۱۹ مهر ۱۴۰۵ | ۰ | Purchase step 0 | برنچ `purchase`. کانترکت 1.6.0 با ۱۹ ردیف بخش ۲۱، به‌علاوه‌ی ردیف ۲۰ (`orderCode` در ثبت نظر). کد خطای تازه‌ای لازم نشد. `AuthResponse.cart` غیر nullable شد (حالت آخر فاز). کد فرانت ملاک طراحی نیست؛ فرانت خودش رو با کانترکت هماهنگ می‌کنه |
 
 ---
 
