@@ -124,7 +124,8 @@ info:
         ارسال رایگان سفارش‌های پیوسته حفظ می‌شود. هزینه‌ی ارسال سفارش اصلی بعد از پیوستن سفارش‌های دیگر دوباره محاسبه نمی‌شود.
     * **عکس قبل از ارسال (امضای کیوا):** انتخاب پیام‌رسان (روبیکا/تلگرام/بله) و شماره‌ی آن در تسویه **اجباری** است. اپراتور قبل از بسته‌بندی عکس/ویدیو را آپلود و ارسال می‌کند؛ یک نسخه برای همیشه در جزئیات سفارش می‌ماند. تا قبل از `SHIPPED` مشتری می‌تواند تأیید کند، تغییر رنگ/مدل بخواهد یا لغو کند (بازگشت کامل وجه).
     * **بازگشت کالا:** تا ۷ روز بعد از تحویل. اگر مشکل از کیوا باشد (`NOT_AS_PICTURED`، `MANUFACTURING_DEFECT`، ...) هزینه‌ی برگشت با کیواست؛ در `CHANGED_MIND` با مشتری.
-    * **جمعه‌ها** ارسال نداریم (`nonShippingWeekdays`).
+    * **جمعه‌ها** ارسال نداریم (`nonShippingWeekdays`). سفارشی که جمعه (به وقت تهران) ثبت می‌شود شنبه ارسال می‌شود، و `estimatedDelivery`
+      از روز ارسال شمرده می‌شود: `minDays` تا `maxDays` روز کاری بعد از آن، بدون جمعه‌ها. پس سفارش جمعه یک روز دیرتر از سفارش پنجشنبه می‌رسد.
 
     ## ۴. چرخه‌ی وضعیت سفارش
 
@@ -5948,7 +5949,10 @@ components:
         method: { $ref: '#/components/schemas/ShippingMethodCode' }
         eligible: { type: boolean, example: false }
         remaining: { allOf: [{ $ref: '#/components/schemas/Money' }], description: «فقط ۱٬۵۵۰٬۰۰۰ تومان تا ارسال رایگان با پست», example: 1550000 }
-        progressPercent: { type: number, example: 48.3 }
+        progressPercent:
+          type: number
+          description: '`subtotal` نسبت به `threshold`، با یک رقم اعشار (نیمه به بالا). `100` فقط وقتی `eligible`: تا وقتی حتی ۱ تومان مانده، حداکثر `99.9`'
+          example: 48.3
         message: { type: string, example: فقط ۱٬۵۵۰٬۰۰۰ تومان تا ارسال رایگان با پست }
     AppliedDiscount:
       type: object
@@ -6011,7 +6015,11 @@ components:
         shippingOptions:
           type: array
           items: { $ref: '#/components/schemas/ShippingOptionQuote' }
-        freeShipping: { $ref: '#/components/schemas/FreeShippingProgress' }
+        freeShipping:
+          type: object
+          allOf: [{ $ref: '#/components/schemas/FreeShippingProgress' }]
+          nullable: true
+          description: نوار «تا ارسال رایگان». `null` وقتی فروشگاه هیچ روش ارسال فعالی با ارسال رایگان ندارد
         reservation: { $ref: '#/components/schemas/CartReservation' }
         consolidation: { type: object, allOf: [{ $ref: '#/components/schemas/ReservationConsolidation' }], nullable: true }
         discount: { type: object, allOf: [{ $ref: '#/components/schemas/AppliedDiscount' }], nullable: true }

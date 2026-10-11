@@ -82,7 +82,7 @@
 | ۱ | استان‌ها و شهرها | S | ✅ |
 | ۲ | تنظیمات فروشگاه | M | ✅ |
 | ۳ | دفترچه‌ی آدرس | M | ✅ |
-| ۴ | قانون‌های قیمت و ارسال (دامنه) | S | ⬜ |
+| ۴ | قانون‌های قیمت و ارسال (دامنه) | S | ✅ |
 | ۵ | Aggregate سبد (دامنه) | M | ⬜ |
 | ۶ | سبد: دیتابیس و endpointها | L | ⬜ |
 | ۷ | ادغام سبد مهمان | S | ⬜ |
@@ -397,6 +397,8 @@ flowchart LR
 
 تابع‌های خالص دامنه، بدون دیتابیس و بدون ساعت (ساعت ورودیه). جاشون: `domain/…/order/model/policy/`. سبد هم همین‌ها رو صدا می‌زنه، تا عددهای سبد، تسویه و سفارش دقیقاً یکی باشن.
 
+**یک نقطه‌ی ورود:** سبد، تسویه و ثبت سفارش فقط `OrderPricing.quote(lines, settings, chosenMethod, now, reserve, codeDiscount?, consolidation?)` رو صدا می‌زنن. خروجیش `PurchaseQuote` ـه: مبلغ‌های هر ردیف، `OrderTotals`، گزینه‌های ارسال، گزینه‌ی انتخاب‌شده و نوار ارسال رایگان. ترتیب محاسبه خودش قانونه (ردیف‌ها ← `subtotal` ← ارسال ← کد تخفیف ← `payable`) و هیچ UseCase ای اون رو جدا نمی‌سازه. UseCase ساعت رو یه بار می‌خونه و `now: Instant` می‌ده.
+
 ### ۷.۱ `OrderPricing`: جمع‌ها (کانترکت بخش ۳)
 
 فقط ردیف‌های **قابل خرید** تو جمع پول حساب می‌شن. `itemsCount` و `linesCount` همه‌ی ردیف‌ها رو می‌شمرن، چون بج سبد باید همون چیزی رو نشون بده که تو سبد می‌بینی.
@@ -429,18 +431,26 @@ flowchart LR
 
 `baseCost` همیشه فرستاده می‌شه، تا قیمت خط‌خورده نشون داده بشه. `PROMO` تو این فاز استفاده نمی‌شه.
 
+**روش مؤثر (`ShippingPolicy.selectedOption`):** روش انتخاب‌شده، اگه هنوز قابل انتخابه؛ وگرنه روش پیش‌فرض فروشگاه؛ وگرنه اولین روش قابل انتخاب. جمع‌ها همیشه با همین حساب می‌شن، و `sync` ِ سبد با مقایسه‌ی همین با روش ذخیره‌شده `SHIPPING_METHOD_CHANGED` می‌ده. اگه فروشگاه همه‌ی روش‌ها رو خاموش کرده باشه، چیزی انتخاب نمی‌شه، هزینه‌ی ارسال ۰ می‌مونه و ثبت سفارش `SHIPPING_METHOD_UNAVAILABLE` می‌گیره.
+
 ### ۷.۳ `DeliveryWindowPolicy` و `ShopCalendar`: تاریخ تحویل
 
-- «امروز» یعنی امروز به وقت تهران: `LocalDate.now(clock.withZone(Asia/Tehran))`. فقط `ShopCalendar` منطقه‌ی زمانی رو می‌شناسه.
-- روز ارسال = امروز. با رزرو روشن: `shipAfterDate = امروز + holdDays`.
+- «امروز» یعنی تاریخ تهران در لحظه‌ی `now`: `ShopCalendar.dateOf(now)`. `now` رو UseCase یه بار از `Clock` می‌خونه و به policy می‌ده. فقط `ShopCalendar` منطقه‌ی زمانی رو می‌شناسه.
+- روز ارسال = امروز، و اگه امروز روز ارسال نیست (جمعه)، اولین روز ارسال بعدش. با رزرو روشن: `shipAfterDate = امروز + holdDays` (روز تقویمی)، و روز ارسال اولین روز ارسال از `shipAfterDate` به بعد.
 - `fromDate` = روز ارسال + `minDays` روز کاری. `toDate` = روز ارسال + `maxDays` روز کاری. روزهای `nonShippingWeekdays` (جمعه) شمرده نمی‌شن.
 - تعطیلات رسمی فعلاً حساب نمی‌شن (سؤال‌های باز).
 
 **مثال:** پنجشنبه ۲۳ مهر ۱۴۰۵ (2026-10-15)، پست (۳ تا ۵ روز). جمعه شمرده نمی‌شه، پس: شنبه (۱)، یکشنبه (۲)، دوشنبه (۳) ← `fromDate = 2026-10-19`؛ سه‌شنبه (۴)، چهارشنبه (۵) ← `toDate = 2026-10-21`. تیپاکس از همون روز: ۲۵ و ۲۶ مهر (2026-10-17 و 2026-10-18).
 
+**سفارش جمعه** (۲۴ مهر) شنبه ارسال می‌شه و از شنبه شمرده می‌شه: پست ۲۸ تا ۳۰ مهر (2026-10-20 تا 2026-10-22)، تیپاکس ۲۶ و ۲۷ مهر. یعنی یه روز دیرتر از سفارش پنجشنبه، که با ارسال واقعی جوره. اگه روز ارسال همیشه «امروز» بود، سفارش جمعه همون تاریخ پنجشنبه رو می‌گرفت و یه روز زودتر از واقعیت قول می‌داد (کانترکت، بخش ۳).
+
 ### ۷.۴ `FreeShippingProgress`
 
-`threshold` از تنظیمات، `method` اولین روش `freeShippingMethods` (`POST`)، `eligible = subtotal ≥ threshold`، `remaining = max(0, threshold − subtotal)`، و `progressPercent = min(100, subtotal × 100 / threshold)` با یک رقم اعشار و گرد کردن نیمه به بالا. این تنها عدد غیرصحیح پاسخه و پول نیست. در حالت ادغام با رزرو: `eligible = true`، `remaining = 0` و `100`.
+`threshold` از تنظیمات، `method` اولین روش **فعال** (به ترتیب `sortOrder`) که تو `freeShippingMethods` ـه (`POST`)، `eligible = subtotal ≥ threshold`، `remaining = max(0, threshold − subtotal)`، و `progressPercent = min(100, subtotal × 100 / threshold)` با یک رقم اعشار و گرد کردن نیمه به بالا. این تنها عدد غیرصحیح پاسخه و پول نیست. در حالت ادغام با رزرو: `eligible = true`، `remaining = 0`، `100` و `method` = روش گروه.
+
+- **بدون Double:** دامنه درصد رو به دهم درصد و با عدد صحیح نگه می‌داره (`progressPerMille`، ۰ تا ۱۰۰۰): `(subtotal × 2000 + threshold) / (2 × threshold)`، مثل `PricePolicy.discountPercent`. ۱٬۴۵۰٬۰۰۰ از ۳٬۰۰۰٬۰۰۰ ← `483`. لایه‌ی HTTP اون رو با یه رقم اعشار می‌نویسه (`48.3`).
+- **۱۰۰ فقط وقتی `eligible`:** ۲٬۹۹۹٬۹۹۹ گرد می‌شه به ۱۰۰، ولی هنوز ۱ تومان مونده. پس تا وقتی `eligible` نیست، حداکثر `99.9`. نواری که پر به نظر بیاد و پیامش بگه «۱ تومان مونده» با خودش تناقض داره.
+- **بدون نوار:** اگه فروشگاه هیچ روش فعالی با ارسال رایگان نداره، `freeShipping = null` (چیزی برای قول دادن نیست). آستانه‌ی ۰ یعنی همه‌چی رایگانه: `eligible` و `100`.
 
 ### ۷.۵ مثال‌های طلایی (تست‌های گام ۴ از همین‌ها ساخته می‌شن)
 
@@ -1344,8 +1354,11 @@ domain/src/main/kotlin/com/kiva/domain/aggregate/
     entity/Order.kt, OrderLine.kt
     entity/event/OrderDomainEvent.kt, OrderPlaced.kt, OrderPaymentFailed.kt, OrderPaid.kt, OrderExpired.kt, OrderReleasedFromReservation.kt
     OrderDomainService.kt
-    model/policy/OrderPricing.kt, ShippingPolicy.kt, DeliveryWindowPolicy.kt, ShopCalendar.kt, OrderCodePolicy.kt, OrderActionsPolicy.kt, PaymentPolicy.kt
-    model/valueobject/OrderCode.kt (exists), OrderId.kt, OrderStatus.kt, AddressSnapshot.kt, PreShipmentMessenger.kt, OrderTotals.kt, ShippingQuote.kt, CustomerNote.kt, GiftNote.kt
+    model/PricedLine.kt, PurchaseQuote.kt                                                    (step 4)
+    model/policy/OrderPricing.kt, ShippingPolicy.kt, DeliveryWindowPolicy.kt, ShopCalendar.kt (step 4), OrderCodePolicy.kt, OrderActionsPolicy.kt, PaymentPolicy.kt
+    model/valueobject/OrderTotals.kt, LineTotals.kt, ShippingQuote.kt, ShippingFreeReason.kt, ShippingUnavailableReason.kt,
+                      ShippingConsolidation.kt, DeliveryWindow.kt, FreeShippingProgress.kt  (step 4)
+    model/valueobject/OrderCode.kt (exists), OrderId.kt, OrderStatus.kt, AddressSnapshot.kt, PreShipmentMessenger.kt, CustomerNote.kt, GiftNote.kt
     repository/OrderRepository.kt, OrderIdGenerator.kt
   payment/
     entity/Payment.kt
@@ -1418,8 +1431,9 @@ PURCHASE_REVIEW.md                             (step 21)
 | 21 | `/geo/provinces` و `/geo/provinces/{provinceId}/cities` (گام ۱) | `Province.cities` ← `nullable` (`includeCities=false` ← `null`). هدر `ETag` روی شهرهای استان هم. پاسخ `304` برای هر دو. `includeCities` غیر از true/false ← 400 | قانون «فیلدها همیشه فرستاده می‌شن»، و قانون کلی کانترکت که `/geo/*` کش می‌شه |
 | 22 | `ShippingMethod.description` و `ShippingOptionQuote.description` (گام ۲) | ساخته‌شده از `minDays` و `maxDays`؛ در `AdminSettings` فقط خوندنی و در PUT نادیده گرفته می‌شه | یه منبع برای مدت تحویل؛ متن هیچ‌وقت با عدد ناجور نمی‌شه |
 | 23 | `/me/addresses*` (گام ۳) | 404ها `ADDRESS_NOT_FOUND`. `PUT` ِ آدرس `422 CITY_NOT_IN_PROVINCE` هم داره. ترتیب لیست: پیش‌فرض، بعد قدیمی‌ترین. اولین آدرس همیشه پیش‌فرض، و `setAsDefault: false` پیش‌فرض بودن رو برنمی‌داره. استان یا شهر ناموجود ← 400 روی فیلد (`PROVINCE_NOT_FOUND`، `CITY_NOT_FOUND`). کد پستی با ارقام فارسی و «-» پذیرفته می‌شه. ارقام `addressLine` همون‌طور که تایپ شده می‌مونن. `fullText` پلاک و واحد رو هم داره | رفتار دقیق دفترچه |
+| 24 | بخش ۳ «قوانین کسب‌وکار»، `FreeShippingProgress.progressPercent`، `Cart.freeShipping` (گام ۴) | سفارش جمعه شنبه ارسال می‌شه و `estimatedDelivery` از روز ارسال شمرده می‌شه. `progressPercent` با یک رقم اعشار (نیمه به بالا) و `100` فقط وقتی `eligible` (وگرنه حداکثر `99.9`). `freeShipping` ← `nullable` (فروشگاه روش فعالی با ارسال رایگان نداره) | «جمعه‌ها ارسال نداریم» یعنی تاریخ تحویل سفارش جمعه یه روز دیرتره؛ نوار پر با «۱ تومان مونده» نمی‌خونه؛ بدون روش رایگان چیزی برای نوار نیست |
 
-**پیام برای فرانت (گام ۰ و ۲۱):** ردیف‌های ۲، ۴، ۵، ۶، ۷، ۸، ۱۰، ۱۱ و ۲۰ رفتار فرانت رو عوض می‌کنن. `docs/FRONTEND_PURCHASE.md` (گام ۲۱) کل جریان رو برای فرانت توضیح می‌ده، مثل `FRONTEND_AUTH.md`.
+**پیام برای فرانت (گام ۰ و ۲۱):** ردیف‌های ۲، ۴، ۵، ۶، ۷، ۸، ۱۰، ۱۱، ۲۰ و ۲۴ رفتار فرانت رو عوض می‌کنن. `docs/FRONTEND_PURCHASE.md` (گام ۲۱) کل جریان رو برای فرانت توضیح می‌ده، مثل `FRONTEND_AUTH.md`.
 
 ---
 
@@ -1518,7 +1532,7 @@ PURCHASE_REVIEW.md                             (step 21)
 
 ---
 
-### گام ۴: قانون‌های قیمت و ارسال (دامنه) · S ⬜
+### گام ۴: قانون‌های قیمت و ارسال (دامنه) · S ✅
 
 **می‌سازی:** `OrderPricing`، `ShippingPolicy`، `DeliveryWindowPolicy`، `ShopCalendar`، `FreeShippingProgress`، `OrderTotals`، `ShippingQuote` و ورودی‌شون (`PricedLine`). تخفیف و ادغام ورودی‌های اختیاری‌ان و فعلاً null. فقط ماژول `domain`، با `./gradlew :domain:test`.
 
@@ -1529,12 +1543,12 @@ PURCHASE_REVIEW.md                             (step 21)
 2. «امروز» رو کی تعیین کنه: policy (با `Clock`) یا کسی که صداش می‌زنه؟
 
 **تموم شده یعنی:**
-- [ ] هر چهار ردیف جدول ۷.۵ دقیقاً همون عددها رو می‌دن.
-- [ ] `subtotal` دقیقاً ۳٬۰۰۰٬۰۰۰ ← پست رایگان. ۲٬۹۹۹٬۰۰۰ ← نه. تیپاکس هیچ‌وقت رایگان نیست.
-- [ ] سبد بدون ردیف قابل خرید: همه‌ی مبلغ‌ها ۰ و `shippingIsFree = false`.
-- [ ] تاریخ‌ها: پنجشنبه 2026-10-15، ساعت ۲۳:۵۹ تهران، پست ← `2026-10-19` تا `2026-10-21`. ساعت 2026-10-15T21:00Z (۰۰:۳۰ جمعه در تهران) بر اساس جمعه‌ی تهران حساب می‌شه.
-- [ ] با رزرو (امروز 2026-10-11، ۴ روز) ← `shipAfterDate = 2026-10-15` و تاریخ‌های تحویل از همون روز.
-- [ ] هیچ Double ای در محاسبه‌ی پول نیست.
+- [x] هر چهار ردیف جدول ۷.۵ دقیقاً همون عددها رو می‌دن.
+- [x] `subtotal` دقیقاً ۳٬۰۰۰٬۰۰۰ ← پست رایگان. ۲٬۹۹۹٬۰۰۰ ← نه. تیپاکس هیچ‌وقت رایگان نیست.
+- [x] سبد بدون ردیف قابل خرید: همه‌ی مبلغ‌ها ۰ و `shippingIsFree = false`.
+- [x] تاریخ‌ها: پنجشنبه 2026-10-15، ساعت ۲۳:۵۹ تهران، پست ← `2026-10-19` تا `2026-10-21`. ساعت 2026-10-15T21:00Z (۰۰:۳۰ جمعه در تهران) بر اساس جمعه‌ی تهران حساب می‌شه: ارسال شنبه، پست ← `2026-10-20` تا `2026-10-22`.
+- [x] با رزرو (امروز 2026-10-11، ۴ روز) ← `shipAfterDate = 2026-10-15` و تاریخ‌های تحویل از همون روز.
+- [x] هیچ Double ای در محاسبه‌ی پول نیست (`NoFloatingPointMoneyTest` کد پکیج‌های `order` و `settings` رو می‌گرده).
 
 ---
 
@@ -2024,6 +2038,7 @@ Route: StartPaymentUc ← 201 با order و payment، یا 422 PAYMENT_GATEWAY_U
 | ۱۹ مهر ۱۴۰۵ | ۱ | Purchase step 1 | `V11__geo.sql` از `tools/geo/geo_to_sql.py`: ۳۱ استان و ۱۳۱۹ شهر با اصلاح‌های بخش ۵.۱. دامنه‌ی `geo`، `ListProvincesUc` و `ListCitiesOfProvinceUc`، `webV1Geo.kt`، و `Caching.kt` (ETag ضعیف از hash ِ بدنه، `304`). کانترکت: ردیف ۲۱ (`Province.cities` nullable، ETag و 304). `UNIQUE ("provinceId", name)` روی `city_tbl` |
 | ۱۹ مهر ۱۴۰۵ | ۲ | Purchase step 2 | `V12__shop_settings.sql`: یه ردیف تایپ‌دار با قید یکتایی، `shippingmethod_tbl` (تیپاکس و پست؛ پیک ردیف نداره) و `paymentgateway_tbl` (زرین‌پال فعال و پیش‌فرض، سامان و ملت خاموش). دامنه‌ی `settings` و `ShopSettingsRepository`. سه UseCase ِ کاتالوگ آستانه رو هر بار از دیتابیس می‌خونن (بدون کش) و `kiva.shop.freeShippingThreshold` حذف شد. متن مدت تحویل از روزها ساخته می‌شه (ردیف ۲۲) |
 | ۱۹ مهر ۱۴۰۵ | ۳ | Purchase step 3 | `V13__addresses.sql` (با `ON DELETE CASCADE` روی کاربر و FK ترکیبی به شهر). Aggregate ِ `AddressBook` با قفل advisory، `AddressBookDomainService` و شش UseCase. ارقام `addressLine` همون‌طور که تایپ شده می‌مونن (`normalizePersianLetters` تو کامن). استان یا شهر ناموجود ← 400 روی فیلد (`PROVINCE_NOT_FOUND`، `CITY_NOT_FOUND`)، و نبودنشون `PROVINCE_REQUIRED` و `CITY_REQUIRED`. `RouteGuardsTest` حالا همه‌ی routeهای `bearerAuth` ِ کانترکت رو چک می‌کنه. کانترکت: ردیف ۲۳ |
+| ۱۹ مهر ۱۴۰۵ | ۴ | Purchase step 4 | فقط دامنه. یک نقطه‌ی ورود: `OrderPricing.quote` ← `PurchaseQuote` (مبلغ ردیف‌ها، `OrderTotals`، گزینه‌های ارسال، روش مؤثر، نوار ارسال رایگان). `now: Instant` از UseCase و فقط `ShopCalendar` تهران رو می‌شناسه. سفارش جمعه شنبه ارسال می‌شه. `progressPerMille` عدد صحیح، و ۱۰۰٪ فقط وقتی `eligible`. `OrderTotals` با سازنده‌ی `internal` و قانون‌های جمع در `init`. تخفیف (`codeDiscount`) و ادغام (`ShippingConsolidation`) ورودی‌های اختیاری‌ان. ۷۷ تست تازه، ۱۴۶۷ کل. کانترکت: ردیف ۲۴ |
 
 ---
 
