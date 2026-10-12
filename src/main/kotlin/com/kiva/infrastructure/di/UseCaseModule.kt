@@ -35,14 +35,17 @@ import com.kiva.application.usecase.catalog.usecase.query.GetCategoryUc
 import com.kiva.application.usecase.catalog.usecase.query.ListCategoriesUc
 import com.kiva.application.usecase.catalog.usecase.query.ListColorsUc
 import com.kiva.application.usecase.catalog.usecase.query.ListMaterialsUc
+import com.kiva.application.usecase.checkout.usecase.command.HandleGatewayCallbackUc
 import com.kiva.application.usecase.checkout.usecase.command.PlaceOrderUc
 import com.kiva.application.usecase.checkout.usecase.command.StartPaymentUc
 import com.kiva.application.usecase.checkout.usecase.query.GetCheckoutContextUc
 import com.kiva.application.usecase.checkout.usecase.query.GetPaymentInitUc
+import com.kiva.application.usecase.checkout.usecase.query.GetPaymentResultUc
 import com.kiva.application.usecase.geo.usecase.query.ListCitiesOfProvinceUc
 import com.kiva.application.usecase.geo.usecase.query.ListProvincesUc
 import com.kiva.application.usecase.inventory.usecase.command.AdjustInventoryUc
 import com.kiva.application.usecase.order.usecase.query.GetOrderSummaryUc
+import com.kiva.application.usecase.payment.PaymentConfirmation
 import com.kiva.application.usecase.product.usecase.command.CreateProductUc
 import com.kiva.application.usecase.product.usecase.query.FindProductsUc
 import com.kiva.application.usecase.product.usecase.query.FindRelatedProductsUc
@@ -106,6 +109,23 @@ val useCaseModule = module(createdAtStart = true) {
     }
     single { StartPaymentUc(transactionManager = get(), paymentRepository = get(), paymentGateways = get(), clock = get()) }
     single { GetPaymentInitUc(transactionManager = get(), paymentRepository = get(), orderQmRepository = get()) }
+
+    // --- payments: back from the gateway, and the result page ---
+    single {
+        PaymentConfirmation(
+            transactionManager = get(), paymentRepository = get(), orderRepository = get(), userRepository = get(), paymentDomainService = get(),
+            paymentGateways = get(), smsSender = get(), clock = get(),
+        )
+    }
+    single {
+        HandleGatewayCallbackUc(
+            transactionManager = get(), paymentRepository = get(), orderRepository = get(), paymentDomainService = get(), paymentGateways = get(),
+            paymentConfirmation = get(), clock = get(),
+        )
+    }
+    single {
+        GetPaymentResultUc(transactionManager = get(), paymentRepository = get(), orderQmRepository = get(), shopSettingsRepository = get(), clock = get())
+    }
 
     // --- orders ---
     single { GetOrderSummaryUc(transactionManager = get(), orderQmRepository = get(), shopSettingsRepository = get(), clock = get()) }

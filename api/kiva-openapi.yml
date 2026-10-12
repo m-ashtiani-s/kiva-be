@@ -1449,8 +1449,10 @@ paths:
         * تراکنش از روی شناسه‌ای که خود درگاه داده (زرین‌پال: `Authority`) پیدا می‌شود، و verify سرور به سرور با مبلغی انجام می‌شود که سرور خودش ذخیره کرده، نه با چیزی از این درخواست.
         * verify فقط وقتی انجام می‌شود که سفارش هنوز در انتظار پرداخت باشد. اگر سفارش منقضی شده یا با تلاش دیگری پرداخت شده، verify **نمی‌شود**،
           تراکنش `FAILED` می‌شود و درگاه مبلغ را خودش به کارت برمی‌گرداند.
-        * این مسیر هیچ‌وقت JSON یا صفحه‌ی خطا نشان نمی‌دهد و **همیشه** `302` است. تراکنش پیدا نشد (یا پارامترها مال این درگاه نیست) ←
-          هدایت به همان صفحه‌ی نتیجه **بدون** `paymentId`.
+        * اگر تلاش دیگری از **همین سفارش** همان لحظه در حال verify است، این تلاش فعلاً verify نمی‌شود و `PENDING` می‌ماند (هیچ‌وقت دو تلاش یک سفارش با هم verify نمی‌شوند).
+          سرور بعداً خودش تمامش می‌کند: اگر آن تلاش موفق شد این یکی `FAILED` می‌شود و درگاه مبلغش را برمی‌گرداند، وگرنه همین یکی verify می‌شود.
+        * این مسیر هیچ‌وقت JSON یا صفحه‌ی خطا نشان نمی‌دهد و **همیشه** `302` است. تراکنش پیدا نشد (یا پارامترها مال این درگاه نیست، یا درگاهی است که هنوز
+          پیاده‌سازی نشده مثل `saman` و `mellat`، یا خطای داخلی پیش آمد) ← هدایت به همان صفحه‌ی نتیجه **بدون** `paymentId`؛ وضعیت سفارش در «سفارش‌های من» دیده می‌شود.
         * صدا زدن دوباره (refresh، یا GET و POST با هم) چیزی را عوض نمی‌کند و همان هدایت را تکرار می‌کند.
         * مقصد هدایت ثابت است و از تنظیمات سرور می‌آید؛ فقط `paymentId` به آن اضافه می‌شود.
       parameters:
@@ -1484,7 +1486,7 @@ paths:
       description: |
         `status = PENDING` روی صفحه‌ی نتیجه یعنی «verify در جریان است» (مثلاً درگاه دیر جواب داده). کلاینت هر ۳ ثانیه و حداکثر ۳۰ ثانیه دوباره می‌پرسد.
         اگر بعد از آن هم `PENDING` بود، سرور خودش پرداخت را با درگاه پیگیری و تمام می‌کند و نتیجه در «سفارش‌های من» دیده می‌شود.
-        تراکنش کاربر دیگر `404 PAYMENT_NOT_FOUND` می‌گیرد، مثل تراکنشی که وجود ندارد.
+        تراکنش کاربر دیگر `404 PAYMENT_NOT_FOUND` می‌گیرد، مثل تراکنشی که وجود ندارد، و همین‌طور شناسه‌ای که شکل `pay_…` ندارد.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/PaymentId'
@@ -6245,8 +6247,8 @@ components:
         referenceId: { type: string, nullable: true, description: شماره پیگیری بانکی, example: '201843917' }
         cardMask: { type: string, nullable: true, example: '6037-99**-****-1234' }
         paidAt: { type: string, format: date-time, nullable: true }
-        failureReason: { type: string, nullable: true, example: تراکنش توسط کاربر لغو شد }
-        canRetry: { type: boolean, description: 'پرداخت موفق نیست و سفارش هنوز در مهلت پرداخت است (`POST /payments/{paymentId}/retry`)', example: false }
+        failureReason: { type: string, nullable: true, description: 'فقط برای تلاش ناموفق؛ برای `SUCCEEDED` و `PENDING` همیشه `null`', example: تراکنش توسط کاربر لغو شد }
+        canRetry: { type: boolean, description: 'پرداخت موفق نیست، در حال verify هم نیست (صفحه منتظر نتیجه‌اش می‌ماند)، و سفارش هنوز در مهلت پرداخت است (`POST /payments/{paymentId}/retry`)', example: false }
         order:
           type: object
           properties:
@@ -6256,7 +6258,7 @@ components:
             consolidatedInto: { type: string, allOf: [{ $ref: '#/components/schemas/OrderCode' }], nullable: true }
         nextSteps:
           type: array
-          description: سه قدم صفحه‌ی موفقیت
+          description: سه قدم صفحه‌ی موفقیت؛ فقط برای `SUCCEEDED`، وگرنه خالی
           items: { type: string }
           example:
             - سفارشت در حال آماده‌سازیه.

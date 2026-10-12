@@ -31,10 +31,12 @@ import com.kiva.application.usecase.catalog.usecase.query.GetCategoryUc
 import com.kiva.application.usecase.catalog.usecase.query.ListCategoriesUc
 import com.kiva.application.usecase.catalog.usecase.query.ListColorsUc
 import com.kiva.application.usecase.catalog.usecase.query.ListMaterialsUc
+import com.kiva.application.usecase.checkout.usecase.command.HandleGatewayCallbackUc
 import com.kiva.application.usecase.checkout.usecase.command.PlaceOrderUc
 import com.kiva.application.usecase.checkout.usecase.command.StartPaymentUc
 import com.kiva.application.usecase.checkout.usecase.query.GetCheckoutContextUc
 import com.kiva.application.usecase.checkout.usecase.query.GetPaymentInitUc
+import com.kiva.application.usecase.checkout.usecase.query.GetPaymentResultUc
 import com.kiva.application.usecase.geo.usecase.query.ListCitiesOfProvinceUc
 import com.kiva.application.usecase.geo.usecase.query.ListProvincesUc
 import com.kiva.application.usecase.order.usecase.query.GetOrderSummaryUc
@@ -54,6 +56,7 @@ import com.kiva.infrastructure.httpserver.controller.httprest.web.AuthUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.CartUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.CheckoutUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.MeUseCases
+import com.kiva.infrastructure.httpserver.controller.httprest.web.PaymentUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Addresses
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminCustomers
 import com.kiva.infrastructure.httpserver.controller.httprest.web.OTP_SEND_RATE_LIMIT
@@ -64,6 +67,7 @@ import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Catalog
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Checkout
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Geo
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Me
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Payments
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Products
 import com.kiva.infrastructure.httpserver.route.healthRoutes
 import io.ktor.serialization.kotlinx.json.json
@@ -189,6 +193,8 @@ fun Application.configureRouting() {
     val startPaymentUc by inject<StartPaymentUc>()
     val getOrderSummaryUc by inject<GetOrderSummaryUc>()
     val getPaymentInitUc by inject<GetPaymentInitUc>()
+    val handleGatewayCallbackUc by inject<HandleGatewayCallbackUc>()
+    val getPaymentResultUc by inject<GetPaymentResultUc>()
     val sendLoginCodeUc by inject<SendLoginCodeUc>()
     val verifyLoginCodeUc by inject<VerifyLoginCodeUc>()
     val refreshSessionUc by inject<RefreshSessionUc>()
@@ -225,6 +231,7 @@ fun Application.configureRouting() {
                 ),
             )
             webV1Checkout(CheckoutUseCases(openCartUc, getCheckoutContextUc, placeOrderUc, startPaymentUc, getOrderSummaryUc, getPaymentInitUc))
+            webV1Payments(PaymentUseCases(handleGatewayCallbackUc, getPaymentResultUc), config.payment.resultUrl)
         }
     }
 }

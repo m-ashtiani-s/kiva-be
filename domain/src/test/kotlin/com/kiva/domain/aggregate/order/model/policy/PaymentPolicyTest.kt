@@ -4,6 +4,7 @@ import com.kiva.domain.aggregate.order.OrderFixtures.at
 import com.kiva.domain.aggregate.order.OrderFixtures.now
 import com.kiva.domain.aggregate.order.model.valueobject.OrderActions
 import com.kiva.domain.aggregate.order.model.valueobject.OrderStatus
+import com.kiva.domain.aggregate.payment.model.valueobject.PaymentStatus
 import org.junit.jupiter.api.Test
 import java.time.Duration
 import kotlin.test.assertEquals
@@ -23,6 +24,17 @@ class PaymentPolicyTest {
         listOf(OrderStatus.EXPIRED, OrderStatus.PROCESSING, OrderStatus.RESERVED).forEach {
             assertFalse(PaymentPolicy.canStartPayment(it, holdUntil, now), "$it")
         }
+    }
+
+    @Test
+    fun `the result page offers a retry for an attempt that didn't succeed, while the order may still be paid`() {
+        listOf(PaymentStatus.CANCELLED, PaymentStatus.FAILED, PaymentStatus.START_FAILED, PaymentStatus.REDIRECTED).forEach {
+            assertTrue(PaymentPolicy.canRetry(it, OrderStatus.PAYMENT_FAILED, holdUntil, at(14)), "$it")
+        }
+        assertFalse(PaymentPolicy.canRetry(PaymentStatus.CANCELLED, OrderStatus.PAYMENT_FAILED, holdUntil, holdUntil), "after the time to pay")
+        assertFalse(PaymentPolicy.canRetry(PaymentStatus.FAILED, OrderStatus.PROCESSING, holdUntil, at(14)), "paid by another attempt")
+        assertFalse(PaymentPolicy.canRetry(PaymentStatus.SUCCEEDED, OrderStatus.PROCESSING, holdUntil, at(14)))
+        assertFalse(PaymentPolicy.canRetry(PaymentStatus.VERIFYING, OrderStatus.PENDING_PAYMENT, holdUntil, at(14)), "being confirmed: the page waits")
     }
 
     @Test

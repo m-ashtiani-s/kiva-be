@@ -18,12 +18,15 @@ import com.kiva.application.usecase.cart.usecase.command.OpenCartUc
 import com.kiva.application.usecase.cart.usecase.command.RemoveCartItemUc
 import com.kiva.application.usecase.cart.usecase.command.SetCartReservationUc
 import com.kiva.application.usecase.cart.usecase.query.GetCartUc
+import com.kiva.application.usecase.checkout.usecase.command.HandleGatewayCallbackUc
 import com.kiva.application.usecase.checkout.usecase.command.PlaceOrderUc
 import com.kiva.application.usecase.checkout.usecase.command.StartPaymentUc
 import com.kiva.application.usecase.checkout.usecase.query.GetCheckoutContextUc
 import com.kiva.application.usecase.checkout.usecase.query.GetPaymentInitUc
+import com.kiva.application.usecase.checkout.usecase.query.GetPaymentResultUc
 import com.kiva.application.usecase.idempotency.IdempotencyGuard
 import com.kiva.application.usecase.order.usecase.query.GetOrderSummaryUc
+import com.kiva.application.usecase.payment.PaymentConfirmation
 import com.kiva.common.valueobject.IranianMobileNumber
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.address.AddressBookDomainService
@@ -31,6 +34,7 @@ import com.kiva.domain.aggregate.cart.CartDomainService
 import com.kiva.domain.aggregate.cart.repository.CartRepository
 import com.kiva.domain.aggregate.inventory.InventoryDomainService
 import com.kiva.domain.aggregate.order.OrderDomainService
+import com.kiva.domain.aggregate.payment.PaymentDomainService
 import com.kiva.infrastructure.MutableClock
 import com.kiva.infrastructure.cart.RandomCartIds
 import com.kiva.infrastructure.common.persistence.ExposedTransactionManager
@@ -77,8 +81,8 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 /**
- * Everything a purchase walks through, over the real stack on kiva_test: logins, the cart, the address book, checkout
- * and placing orders, with the pretend gateway as Zarinpal and the SMS recorded. Built as the app builds it, minus Koin.
+ * Everything a purchase walks through, over the real stack on kiva_test: logins, the cart, the address book, checkout,
+ * placing orders and coming back from the gateway, with the pretend gateway as Zarinpal and the SMS recorded. Built as the app builds it, minus Koin.
  * [deleteWhatWasStored] removes the test customers and everything of theirs (orders included), and belongs in an
  * @AfterEach; the catalog is the test's own business.
  */
@@ -91,7 +95,7 @@ class PurchaseTestStack(val clock: MutableClock) {
 
     val carts = CartRepositoryImpl()
     private val offers: OfferQmRepository = OfferQmRepositoryImpl()
-    private val settings = ShopSettingsRepositoryImpl()
+    val settings = ShopSettingsRepositoryImpl()
     private val books = AddressBookRepositoryImpl()
     private val geo = GeoRepositoryImpl()
     val users = UserRepositoryImpl()
@@ -99,7 +103,7 @@ class PurchaseTestStack(val clock: MutableClock) {
     val orderQm = OrderQmRepositoryImpl()
     val payments = PaymentRepositoryImpl()
     private val inventories = InventoryRepositoryImpl()
-    private val gateways = PaymentGateways(listOf(gateway))
+    val gateways = PaymentGateways(listOf(gateway))
     private val cartDomain = CartDomainService(RandomCartIds())
     private val cartCommands = CartCommands(transactions, carts, cartDomain, offers, settings, clock)
     private val addressService = AddressBookDomainService(geo, AddressIdGeneratorImpl())
@@ -117,6 +121,11 @@ class PurchaseTestStack(val clock: MutableClock) {
         RandomPaymentIds(), gateways, auth.sms, clock,
     )
     val startPayment = StartPaymentUc(transactions, payments, gateways, clock)
+
+    val paymentDomain = PaymentDomainService()
+    val paymentConfirmation = PaymentConfirmation(transactions, payments, orders, users, paymentDomain, gateways, auth.sms, clock)
+    val handleCallback = HandleGatewayCallbackUc(transactions, payments, orders, paymentDomain, gateways, paymentConfirmation, clock)
+    val paymentUseCases = PaymentUseCases(handleCallback, GetPaymentResultUc(transactions, payments, orderQm, settings, clock))
 
     val cartUseCases = CartUseCases(
         openCart,
@@ -159,6 +168,7 @@ class PurchaseTestStack(val clock: MutableClock) {
                     webV1Cart(cartUseCases)
                     webV1Addresses(addressUseCases)
                     webV1Checkout(checkoutUseCases)
+                    webV1Payments(paymentUseCases, PaymentConfig.DEFAULT.resultUrl)
                 }
             }
         }

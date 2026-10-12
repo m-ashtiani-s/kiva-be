@@ -1,5 +1,6 @@
 package com.kiva.domain.aggregate.payment.repository
 
+import com.kiva.domain.aggregate.order.model.valueobject.OrderId
 import com.kiva.domain.aggregate.payment.entity.Payment
 import com.kiva.domain.aggregate.payment.model.PaymentLogEntry
 import com.kiva.domain.aggregate.payment.model.valueobject.GatewayAuthority
@@ -7,9 +8,10 @@ import com.kiva.domain.aggregate.payment.model.valueobject.PaymentPublicId
 import com.kiva.domain.aggregate.settings.model.valueobject.PaymentGatewayCode
 
 /**
- * Payment attempts, kept as rows. A change goes through a lock on the attempt's row ([lock], [lockByAuthority]) until
- * the transaction ends: a callback and the reconciliation job on the same attempt run one after the other, and each
- * sees what the other did. [save] checks the row's version too, the last wall.
+ * Payment attempts, kept as rows. A change goes through a lock on the attempt's row until the transaction ends: on the
+ * attempt alone ([lock]) to open its session, or on every attempt of its order together ([lockAttemptsOf]) to settle it,
+ * so a callback, another attempt's callback and the jobs on one order run one after the other, and each sees what the
+ * others did. [save] checks the row's version too, the last wall.
  */
 interface PaymentRepository {
 
@@ -20,10 +22,19 @@ interface PaymentRepository {
     fun lock(publicId: PaymentPublicId): Payment?
 
     /**
-     * Locks the attempt the gateway knows by [authority] and reads it: how a callback finds its payment, never by an id
-     * in the callback's address. Null when this gateway opened no session with it for us.
+     * Locks every attempt of [orderId], always in the same order (oldest first), and reads them all. Settling an attempt
+     * (a callback, the jobs) takes this lock, not the attempt's alone: whether an attempt may be confirmed depends on
+     * the order's other attempts (PaymentDomainService), and one order of locking keeps two callbacks of one order from
+     * waiting on each other.
      */
-    fun lockByAuthority(gateway: PaymentGatewayCode, authority: GatewayAuthority): Payment?
+    fun lockAttemptsOf(orderId: OrderId): List<Payment>
+
+    /**
+     * The attempt the gateway knows by [authority], for reading only: how a callback finds its payment, never by an id
+     * in the callback's address. Null when this gateway opened no session with it for us. To change it, lock its
+     * order's attempts ([lockAttemptsOf]).
+     */
+    fun findByAuthority(gateway: PaymentGatewayCode, authority: GatewayAuthority): Payment?
 
     /** The attempt as it is, for reading only: nothing is locked. */
     fun find(publicId: PaymentPublicId): Payment?

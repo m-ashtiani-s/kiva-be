@@ -26,6 +26,9 @@ import org.junit.jupiter.api.Test
 import java.security.SecureRandom
 import java.time.Duration
 import java.time.Instant
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.atomic.AtomicLong
+import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
@@ -104,9 +107,46 @@ class PaymentRepositoryImplTest {
         val authority = newAuthority()
         change(payment) { it.redirected(authority, redirectOf(authority), now) }
 
-        assertEquals(payment.publicId, transaction(db) { repository.lockByAuthority(PaymentGatewayCode.ZARINPAL, authority) }?.publicId)
-        assertNull(transaction(db) { repository.lockByAuthority(PaymentGatewayCode.SAMAN, authority) })
-        assertNull(transaction(db) { repository.lockByAuthority(PaymentGatewayCode.ZARINPAL, newAuthority()) })
+        assertEquals(payment.publicId, transaction(db) { repository.findByAuthority(PaymentGatewayCode.ZARINPAL, authority) }?.publicId)
+        assertNull(transaction(db) { repository.findByAuthority(PaymentGatewayCode.SAMAN, authority) })
+        assertNull(transaction(db) { repository.findByAuthority(PaymentGatewayCode.ZARINPAL, newAuthority()) })
+    }
+
+    @Test
+    fun `an order's attempts are locked together, oldest first, and only that order's`() {
+        val order = newOrder()
+        val attempts = List(3) { stored(newPayment(order)) }
+        stored()
+
+        assertEquals(attempts.map { it.publicId }, transaction(db) { repository.lockAttemptsOf(order) }.map { it.publicId })
+        assertEquals(emptyList(), transaction(db) { repository.lockAttemptsOf(newOrder()) })
+    }
+
+    @Test
+    fun `while one transaction holds an order's attempts, another waits for them and then sees what the first did`() {
+        val order = newOrder()
+        val first = stored(newPayment(order))
+        stored(newPayment(order))
+        val locked = CountDownLatch(1)
+        val waited = AtomicLong()
+
+        val holder = thread {
+            transaction(db) {
+                repository.lockAttemptsOf(order)
+                locked.countDown()
+                Thread.sleep(500)
+                repository.lock(first.publicId)!!.also { it.expire(now.plusSeconds(900)) }.let(repository::save)
+            }
+        }
+        locked.await()
+        val seen = transaction(db) {
+            val started = System.nanoTime()
+            repository.lockAttemptsOf(order).also { waited.set((System.nanoTime() - started) / 1_000_000) }
+        }
+        holder.join()
+
+        assertTrue(waited.get() >= 300, "waited only ${waited.get()} ms")
+        assertEquals(PaymentStatus.EXPIRED, seen.first().status)
     }
 
     @Test
@@ -146,6 +186,23 @@ class PaymentRepositoryImplTest {
         confirmed(order)
 
         assertFailsWith<ExposedSQLException> { confirmed(order) }
+    }
+
+    @Test
+    fun `an order is confirmed one attempt at a time - a second attempt of the same order being confirmed is refused`() {
+        val order = newOrder()
+        fun verifying(): Payment {
+            val payment = stored(newPayment(order))
+            val authority = newAuthority()
+            change(payment) { it.redirected(authority, redirectOf(authority), now) }
+            return change(payment) { it.startVerifying(now.plusSeconds(60)) }
+        }
+        val first = verifying()
+
+        assertFailsWith<ExposedSQLException> { verifying() }
+        // Once the first is settled, another may be confirmed.
+        change(first) { it.fail(PaymentFailureReason.GATEWAY_DECLINED, now.plusSeconds(61)) }
+        assertEquals(PaymentStatus.VERIFYING, verifying().status)
     }
 
     @Test

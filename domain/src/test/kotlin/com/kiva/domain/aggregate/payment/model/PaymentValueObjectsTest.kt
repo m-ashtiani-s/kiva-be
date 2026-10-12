@@ -25,6 +25,8 @@ class PaymentValueObjectsTest {
     fun `a public payment id is pay_ and 12 capital letters and digits`() {
         assertEquals("pay_01J9X2K7AB3C", PaymentPublicId.constructFromPersisted("pay_01J9X2K7AB3C").value)
         listOf("pay_01j9x2k7ab3c", "pay_123", "cart_01J9X2K7AB").forEach { assertFailsWith<IllegalArgumentException>(it) { PaymentPublicId.constructFromPersisted(it) } }
+        assertEquals("pay_01J9X2K7AB3C", PaymentPublicId.of("pay_01J9X2K7AB3C")?.value)
+        listOf("pay_01j9x2k7ab3c", "pay_123", "", " pay_01J9X2K7AB3C", null).forEach { assertNull(PaymentPublicId.of(it), "$it") }
     }
 
     @Test

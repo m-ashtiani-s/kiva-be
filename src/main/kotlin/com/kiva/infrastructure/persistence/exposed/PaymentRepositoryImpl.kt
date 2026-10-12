@@ -48,8 +48,12 @@ class PaymentRepositoryImpl : PaymentRepository {
 
     override fun lock(publicId: PaymentPublicId): Payment? = lockAndRead(PaymentTbl.publicId eq publicId.value)
 
-    override fun lockByAuthority(gateway: PaymentGatewayCode, authority: GatewayAuthority): Payment? =
-        lockAndRead((PaymentTbl.gateway eq gateway) and (PaymentTbl.authority eq authority.value))
+    /** ORDER BY before FOR UPDATE: Postgres locks the rows as they come out of the sort, so always in this order. */
+    override fun lockAttemptsOf(orderId: OrderId): List<Payment> =
+        PaymentTbl.selectAll().where { PaymentTbl.orderId eq orderId.value }.orderBy(PaymentTbl.id).forUpdate().map { it.toPayment() }
+
+    override fun findByAuthority(gateway: PaymentGatewayCode, authority: GatewayAuthority): Payment? =
+        PaymentTbl.selectAll().where { (PaymentTbl.gateway eq gateway) and (PaymentTbl.authority eq authority.value) }.singleOrNull()?.toPayment()
 
     override fun find(publicId: PaymentPublicId): Payment? =
         PaymentTbl.selectAll().where { PaymentTbl.publicId eq publicId.value }.singleOrNull()?.toPayment()

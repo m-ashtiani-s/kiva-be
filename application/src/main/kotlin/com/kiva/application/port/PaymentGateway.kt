@@ -71,17 +71,24 @@ enum class GatewayInquiry {
     REVERSED,
 }
 
-/** Why a gateway call didn't do what was asked. Logged and acted on; never shown to the shopper as such. */
-sealed class GatewayFailure(code: String) : ResultFailure(code, FailureKind.BUSINESS_RULE) {
+/**
+ * Why a gateway call didn't do what was asked. Logged and acted on; never shown to the shopper as such.
+ *
+ * @property logOutcome how the exchange went, as the payment log's outcome.
+ */
+sealed class GatewayFailure(code: String, val logOutcome: String) : ResultFailure(code, FailureKind.BUSINESS_RULE) {
+    /** The gateway's own result code, when it gave one. */
+    open val gatewayCode: Int? get() = null
+
     /** No answer (network, timeout): the outcome is unknown, so the payment stays as it is and is checked again later. */
-    data object Unreachable : GatewayFailure("GATEWAY_UNREACHABLE")
+    data object Unreachable : GatewayFailure("GATEWAY_UNREACHABLE", "UNREACHABLE")
 
     /** The gateway refused our request (merchant, domain, amount limit): our configuration is wrong. Logged as ERROR. */
-    data class Rejected(val gatewayCode: Int) : GatewayFailure("GATEWAY_REJECTED")
+    data class Rejected(override val gatewayCode: Int) : GatewayFailure("GATEWAY_REJECTED", "REJECTED")
 
     /** The payment itself didn't go through. */
-    data class Declined(val gatewayCode: Int) : GatewayFailure("GATEWAY_DECLINED")
+    data class Declined(override val gatewayCode: Int) : GatewayFailure("GATEWAY_DECLINED", "DECLINED")
 
     /** What was paid is not what we asked for: a bug. Logged as ERROR, never a payment. */
-    data object AmountMismatch : GatewayFailure("GATEWAY_AMOUNT_MISMATCH")
+    data object AmountMismatch : GatewayFailure("GATEWAY_AMOUNT_MISMATCH", "AMOUNT_MISMATCH")
 }

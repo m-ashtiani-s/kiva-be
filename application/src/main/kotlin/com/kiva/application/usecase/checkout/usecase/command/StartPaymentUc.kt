@@ -93,7 +93,7 @@ class StartPaymentUc(
                 }
                 is Answer.Refused -> {
                     current.startFailed(reasonOf(answer.failure, current), now).unwrapOr { error("INITIATED can't fail to start: ${it.code}") }
-                    PaymentLogEntry(PaymentLogEntry.Kind.REQUEST, outcomeCodeOf(answer.failure), now, gatewayCodeOf(answer.failure), duration = took)
+                    PaymentLogEntry(PaymentLogEntry.Kind.REQUEST, answer.failure.logOutcome, now, answer.failure.gatewayCode, duration = took)
                 }
                 Answer.NoAdapter -> {
                     logger.error("StartPaymentUc: no adapter for gateway ${current.gateway} of payment ${current.publicId.value}; the configuration is wrong")
@@ -128,19 +128,6 @@ class StartPaymentUc(
             logger.error("StartPaymentUc: gateway ${payment.gateway} refused to open a session for payment ${payment.publicId.value}: ${failure.code}")
             PaymentFailureReason.GATEWAY_REJECTED
         }
-    }
-
-    private fun outcomeCodeOf(failure: GatewayFailure): String = when (failure) {
-        GatewayFailure.Unreachable -> "UNREACHABLE"
-        is GatewayFailure.Rejected -> "REJECTED"
-        is GatewayFailure.Declined -> "DECLINED"
-        GatewayFailure.AmountMismatch -> "AMOUNT_MISMATCH"
-    }
-
-    private fun gatewayCodeOf(failure: GatewayFailure): Int? = when (failure) {
-        is GatewayFailure.Rejected -> failure.gatewayCode
-        is GatewayFailure.Declined -> failure.gatewayCode
-        else -> null
     }
 
     sealed class Failure(code: String, kind: FailureKind, meta: Map<String, Any> = emptyMap()) : ResultFailure(code, kind, meta = meta) {

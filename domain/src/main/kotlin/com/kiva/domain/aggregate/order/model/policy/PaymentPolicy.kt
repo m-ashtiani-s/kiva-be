@@ -3,6 +3,8 @@ package com.kiva.domain.aggregate.order.model.policy
 import com.kiva.common.railway.FailureKind
 import com.kiva.common.railway.ResultFailure
 import com.kiva.domain.aggregate.order.model.valueobject.OrderStatus
+import com.kiva.domain.aggregate.payment.model.valueobject.PaymentOutcome
+import com.kiva.domain.aggregate.payment.model.valueobject.PaymentStatus
 import java.time.Duration
 import java.time.Instant
 
@@ -30,6 +32,14 @@ object PaymentPolicy {
      * that started in time is still taken after `holdUntil` (until the order expires); only new attempts stop then.
      */
     fun canStartPayment(status: OrderStatus, holdUntil: Instant, now: Instant): Boolean = status.isAwaitingPayment && now.isBefore(holdUntil)
+
+    /**
+     * The result page of an attempt offers «تلاش دوباره» (`PaymentResult.canRetry`): the attempt didn't succeed, it isn't
+     * being confirmed right now (the page waits for that instead: a new attempt then could be paid twice over), and a
+     * new attempt may start ([canStartPayment]).
+     */
+    fun canRetry(payment: PaymentStatus, order: OrderStatus, holdUntil: Instant, now: Instant): Boolean =
+        payment.outcome != PaymentOutcome.SUCCEEDED && payment != PaymentStatus.VERIFYING && canStartPayment(order, holdUntil, now)
 
     /**
      * Why the customer may not place another order now, or null if they may: [MAX_UNPAID_ORDERS] of their unpaid
