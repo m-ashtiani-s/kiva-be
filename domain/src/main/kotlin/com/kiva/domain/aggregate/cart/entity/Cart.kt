@@ -6,6 +6,7 @@ import com.kiva.common.railway.ResultFailure
 import com.kiva.domain.aggregate.cart.model.CartIssue
 import com.kiva.domain.aggregate.cart.model.PurchaseOffer
 import com.kiva.domain.aggregate.cart.model.policy.CartLimitsPolicy
+import com.kiva.domain.aggregate.cart.model.policy.ReservationPolicy
 import com.kiva.domain.aggregate.cart.model.valueobject.CartItemId
 import com.kiva.domain.aggregate.cart.model.valueobject.CartOwner
 import com.kiva.domain.aggregate.cart.model.valueobject.CartPublicId
@@ -92,13 +93,8 @@ class Cart private constructor(
         offers: Map<VariantId, PurchaseOffer>,
         settings: ShopSettings,
         hasActiveReservation: Boolean = false,
-    ): ReservationUnavailableReason? = when {
-        !settings.reservationEnabled -> ReservationUnavailableReason.RESERVATION_DISABLED
-        hasActiveReservation -> ReservationUnavailableReason.HAS_ACTIVE_RESERVATION
-        entries.any { line -> offers[line.variantId]?.let { it.isPurchasable && !it.reservable } == true } ->
-            ReservationUnavailableReason.ITEM_NOT_RESERVABLE
-        else -> null
-    }
+    ): ReservationUnavailableReason? =
+        ReservationPolicy.unavailableReason(settings, entries.mapNotNull { offers[it.variantId] }, hasActiveReservation)
 
     // ============ looking at the cart ============
 

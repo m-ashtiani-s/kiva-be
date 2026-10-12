@@ -56,6 +56,7 @@ object CartFixtures {
         maxPerOrder: Int = 5,
         inShop: Boolean = true,
         reservable: Boolean = true,
+        returnable: Boolean = true,
     ): PurchaseOffer = PurchaseOffer(
         variantId = variant(variantId),
         productId = ProductId.constructFromPersisted(productId),
@@ -65,6 +66,7 @@ object CartFixtures {
         maxPerOrder = MaxPerOrder.constructFromPersisted(maxPerOrder),
         inShop = inShop,
         reservable = reservable,
+        returnable = returnable,
     )
 
     fun aida(color: Long, available: Int = 3, maxPerOrder: Int = 5, price: Long = 2_790_000, inShop: Boolean = true, reservable: Boolean = true) =

@@ -86,7 +86,7 @@
 | ۵ | Aggregate سبد (دامنه) | M | ✅ |
 | ۶ | سبد: دیتابیس و endpointها | L | ✅ |
 | ۷ | ادغام سبد مهمان | S | ✅ |
-| ۸ | Aggregate سفارش (دامنه) | L | ⬜ |
+| ۸ | Aggregate سفارش (دامنه) | L | ✅ |
 | ۹ | سفارش: event store و read model | M | ⬜ |
 | ۱۰ | پرداخت: مدل، جدول و درگاه آزمایشی | M | ⬜ |
 | ۱۱ | Idempotency | S | ⬜ |
@@ -521,7 +521,7 @@ UseCaseها `CartCaller` می‌گیرن: `Customer(userId)` یا `Guest(token �
 
 ### Snapshot برای سفارش
 
-سفارش `AddressSnapshot` نگه می‌داره: `provinceName`، `cityName`، `addressLine`، `plaque`، `unit`، `postalCode`، `recipientName`، `recipientPhone` و `fullText`، به‌علاوه‌ی `addressId` اگه آدرس ذخیره‌شده بوده. `plaque` و `unit` تو کانترکت فعلی snapshot نیستن، ولی پیک و اپراتور لازمشون دارن، پس به `AddressSnapshot` اضافه می‌شن (کانترکت 1.6.0).
+سفارش `AddressSnapshot` نگه می‌داره: `provinceName`، `cityName`، `addressLine`، `plaque`، `unit`، `postalCode`، `recipientName` و `recipientPhone`، به‌علاوه‌ی `addressId` اگه آدرس ذخیره‌شده بوده. `fullText` ذخیره نمی‌شه: لایه‌ی HTTP از همین تیکه‌ها و با همون تابع دفترچه‌ی آدرس می‌سازدش (قانون ۱۷؛ گام ۸). `plaque` و `unit` تو کانترکت فعلی snapshot نیستن، ولی پیک و اپراتور لازمشون دارن، پس به `AddressSnapshot` اضافه می‌شن (کانترکت 1.6.0).
 
 ---
 
@@ -540,23 +540,23 @@ UseCaseها `CartCaller` می‌گیرن: `Customer(userId)` یا `Guest(token �
 | `status` | `OrderStatus` | ۱۳ مقدار کانترکت. تو این فاز فقط `PENDING_PAYMENT`، `PAYMENT_FAILED`، `EXPIRED`، `RESERVED` و `PROCESSING` |
 | `lines` | `List<OrderLine>` | snapshot: `lineId` (۱ تا n در همین سفارش، همون `OrderItem.id`)، `productId`، `variantId`، `sku` ِ رنگ، اسم و slug محصول، رنگ (`key`، `name`، `hex`)، آدرس عکس، `quantity`، `unitPrice`، `unitCompareAtPrice`، و `reservable` و `returnable` (برای فاز بعد) |
 | `address` | `AddressSnapshot` | بخش ۸ |
-| `messenger` | `PreShipmentMessenger` | `channel`، `phone`، `username?` ‏(≤ ۵۰)، `note?` ‏(≤ ۲۰۰) |
+| `messenger` | `PreShipmentMessenger` | `channel`، `phone`، `username?` ‏(≤ ۵۰)، `note?` ‏(≤ ۲۰۰). متن‌های آزاد سفارش (این دو، `customerNote` و پیام هدیه) یه قانون دارن (`OptionalText`): خالی یعنی هیچی، حروف نرمال و خط تازه فاصله می‌شه، ارقام همون‌طور می‌مونن، کاراکتر کنترلی رد می‌شه، و `<` و `>` مجازن |
 | `shippingMethod` | `ShippingMethodCode` | اسمش موقع نمایش از تنظیمات میاد |
 | `totals` | `OrderTotals` | همه‌ی جمع‌های بخش ۷، `discountCode`، `shippingFreeReason`، `giftWrapCost = 0` |
-| `reserveRequested`، `reservationGroupId` | `Boolean`، `ReservationGroupId?` | دور ۲ |
+| `reserveRequested`، `reservationGroupId` | `Boolean`، `ReservationGroupId?` | دور ۲. `reserveRequested` از گام ۸ هست؛ `reservationGroupId` با گام ۱۹ به `OrderPlaced` و `OrderPaid` اضافه می‌شه (null برای رویدادهای قدیمی)، مثل کد تخفیف سبد |
 | `holdUntil` | `Instant` | `placedOn + paymentPendingMinutes`. همون `PaymentInit.expiresAt` |
 | `placedOn`، `paidOn` | `Instant`، `Instant?` | |
 | `paidByPaymentId` | `PaymentId?` | پرداخت برنده |
 | `customerNote` [پیشنهادی] | `CustomerNote?` | حداکثر ۳۰۰ |
-| `gift` [پیشنهادی] | `GiftNote?` | `message` ‏(≤ ۲۰۰) و `hidePrices`. تا وقتی `giftWrap.available = false` ـه، `wrap` همیشه false ذخیره می‌شه و هزینه‌ای اضافه نمی‌شه |
+| `gift` [پیشنهادی] | `GiftNote?` | `message?` ‏(≤ ۲۰۰) و `hidePrices`. تا وقتی `giftWrap.available = false` ـه، `wrap` اصلاً ذخیره نمی‌شه (همیشه false، بدون هزینه) و وقتی بسته‌بندی ساخته شد فیلد خودش رو می‌گیره |
 
 ### رویدادهای این فاز
 
 | رویداد | کِی | وضعیت بعدش |
 |---|---|---|
 | `OrderPlaced` | ثبت سفارش. همه‌ی snapshot بالا رو داره | `PENDING_PAYMENT` |
-| `OrderPaymentFailed(paymentId, reason)` | درگاه NOK برگردوند یا verify رد شد، و سفارش هنوز پرداخت‌نشده‌ست | `PAYMENT_FAILED` |
-| `OrderPaid(paymentId?, amount, paidOn, heldForReservation, reservationGroupId?)` | verify موفق، یا ثبت سفارشی که `payable = 0` داره (`paymentId = null`) | `RESERVED` یا `PROCESSING` |
+| `OrderPaymentFailed(paymentId, reason)` | درگاه NOK برگردوند یا verify رد شد، و سفارش هنوز پرداخت‌نشده‌ست. **یکی برای هر تلاش** (تایم‌لاین هر شکست رو با زمانش نشون می‌ده)؛ همون تلاش دوباره بی‌اثره (گام ۸) | `PAYMENT_FAILED` |
+| `OrderPaid(paymentId?, amount, paidOn, heldForReservation, reservationGroupId?)` | verify موفق، یا ثبت سفارشی که `payable = 0` داره (`paymentId = null`). **وضعیت بعدی رو خود رویداد می‌گه** (`heldForReservation`): تصمیم موقع پرداخت و با چیزی که اون لحظه درسته گرفته می‌شه، و replay هیچ‌وقت دوباره تصمیم نمی‌گیره (گام ۸) | `RESERVED` یا `PROCESSING` |
 | `OrderExpired` | job، بعد از `holdUntil` و وقتی هیچ پرداختی در جریان نیست | `EXPIRED` |
 | `OrderReleasedFromReservation` (دور ۲) | پایان مهلت گروه رزرو | `RESERVED → PROCESSING` |
 
@@ -589,7 +589,7 @@ stateDiagram-v2
 
 ### `OrderDomainService`
 
-- `placeOrder(spec)`: ردیف‌ها رو از روی `PurchaseOffer`ها می‌سازه و قابل خرید بودن و سقف‌ها رو چک می‌کنه. جمع‌ها رو با `OrderPricing` حساب می‌کنه و با `expectedPayable` مقایسه می‌کنه (`PriceChanged(payable)`). شناسه رو از `OrderIdGenerator` می‌گیره و کد رو با `OrderCodePolicy` می‌سازه. هیچ‌وقت ذخیره نمی‌کنه و تراکنش باز نمی‌کنه.
+- `placeOrder(OrderPlacement, now)`: **ترتیب قانون‌های ثبت سفارش مال همین‌جاست** (گام ۸)، از قدم ۴ تا ۱۱ ِ کانترکت: روش ارسال، درگاه (با `payable > 0`)، قوانین، رزرو، سقف ۳ سفارش پرداخت‌نشده، ردیف‌ها (`PRODUCT_UNAVAILABLE`، بعد `OUT_OF_STOCK`، بعد `QUANTITY_EXCEEDS_LIMIT`، هر سه با `itemIds` ِ سبد)، و `expectedPayable` (`PriceChanged(payable)`). UseCase فقط چیزهایی رو می‌ده که دامنه نمی‌تونه بدونه: درگاه آداپتر داره یا نه، و تا کِی سفارش‌های پرداخت‌نشده‌ی کاربر موجودی نگه می‌دارن. جمع‌ها یه بار با `OrderPricing.quote` حساب می‌شن. شناسه فقط بعد از همه‌ی قانون‌ها از `OrderIdGenerator` گرفته می‌شه، و کد با `OrderCodePolicy`. قانون «در دسترس بودن رزرو» با سبد مشترکه (`ReservationPolicy`). هیچ‌وقت ذخیره نمی‌کنه و تراکنش باز نمی‌کنه.
 - بقیه‌ی عملیات (`markPaid`، `expire`، …) رو UseCaseها مستقیم روی Aggregate صدا می‌زنن (Rule 1).
 
 ### `OrderCodePolicy`: کد سفارش بدون تکرار و بدون الگو
@@ -599,7 +599,7 @@ n    = orderId − 1                                  (0, 1, 2, …)
 code = "KV-" + (100000 + (n × A + B) mod 900000)    A نسبت به 900000 = 2⁵·3²·5⁵ اول است
 ```
 
-این یه جایگشت روی فضای ۶ رقمیه: هر `orderId` یه کد یکتا می‌ده، بدون هیچ چک یا تلاش دوباره‌ای، و دو سفارش پشت‌سرهم کدهای نزدیک به هم نمی‌گیرن. `A` باید بر ۲، ۳ و ۵ بخش‌پذیر نباشه (یه عدد اول بزرگ). `A` و `B` ثابت‌های کدن و هیچ‌وقت عوض نمی‌شن. بعد از ۹۰۰٬۰۰۰ سفارش، همین فرمول روی فضای ۷ رقمی ادامه پیدا می‌کنه (کانترکت ۴ تا ۸ رقم رو مجاز می‌دونه). `OrderCode` ِ موجود در دامنه همینه.
+این یه جایگشت روی فضای ۶ رقمیه: هر `orderId` یه کد یکتا می‌ده، بدون هیچ چک یا تلاش دوباره‌ای، و دو سفارش پشت‌سرهم کدهای نزدیک به هم نمی‌گیرن. `A` باید بر ۲، ۳ و ۵ بخش‌پذیر نباشه (یه عدد اول بزرگ). `A` و `B` ثابت‌های کدن و هیچ‌وقت عوض نمی‌شن: **`A = 556243`** (عدد اول، حدود ۰٫۶۱۸ ِ فضا) و **`B = 118340`**، تا اولین سفارش `KV-218340` بشه، همون مثال کانترکت (گام ۸). بعد از ۹۰۰٬۰۰۰ سفارش، همین فرمول روی فضای ۷ رقمی ادامه پیدا می‌کنه (کانترکت ۴ تا ۸ رقم رو مجاز می‌دونه). `OrderCode` ِ موجود در دامنه همینه.
 
 ### نمایش وضعیت (برای `OrderSummary`)
 
@@ -1380,11 +1380,13 @@ domain/src/main/kotlin/com/kiva/domain/aggregate/
     model/policy/OrderPricing.kt, ShippingPolicy.kt, DeliveryWindowPolicy.kt, ShopCalendar.kt (step 4), OrderCodePolicy.kt, OrderActionsPolicy.kt, PaymentPolicy.kt
     model/valueobject/OrderTotals.kt, LineTotals.kt, ShippingQuote.kt, ShippingFreeReason.kt, ShippingUnavailableReason.kt,
                       ShippingConsolidation.kt, DeliveryWindow.kt, FreeShippingProgress.kt  (step 4)
-    model/valueobject/OrderCode.kt (exists), OrderId.kt, OrderStatus.kt, AddressSnapshot.kt, PreShipmentMessenger.kt, CustomerNote.kt, GiftNote.kt
+    model/valueobject/OrderCode.kt (exists), OrderId.kt, OrderStatus.kt, AddressSnapshot.kt, PreShipmentMessenger.kt, CustomerNote.kt, GiftNote.kt,
+                      OrderItemSnapshot.kt, OrderActions.kt, OptionalText.kt                                    (step 8)
+    model/OrderPlacement.kt                                                                   (step 8: placeOrder's input)
     repository/OrderRepository.kt, OrderIdGenerator.kt
   payment/
     entity/Payment.kt
-    model/valueobject/PaymentId.kt, PaymentPublicId.kt, PaymentStatus.kt, GatewayAuthority.kt, GatewayRefId.kt, CardMask.kt, PaymentFailureReason.kt
+    model/valueobject/PaymentId.kt, PaymentPublicId.kt (step 8), PaymentStatus.kt, GatewayAuthority.kt, GatewayRefId.kt, CardMask.kt, PaymentFailureReason.kt (step 8)
     repository/PaymentRepository.kt
   inventory/InventoryDomainService.kt         + reserveForOrder, releaseForOrder
   reservation/   (round 2) entity/ReservationGroup.kt, ReservationDomainService.kt, model/valueobject/…, repository/…
@@ -1459,8 +1461,9 @@ PURCHASE_REVIEW.md                             (step 21)
 | 25 | `CartItem.maxQuantity`، `CartIssue`، `GET /cart`، `POST /cart/merge`، `PATCH /cart/items/{itemId}` (گام ۵) | هر ردیف، قابل خرید یا نه، از سقف محصول سهم می‌گیره، و هیچ ردیفی بیشتر از ۲۰ نداره. وقتی سقف کم بیاد، ردیف قدیمی‌تر سهمش رو نگه می‌داره و ردیف بی‌جا حذف می‌شه (`QUANTITY_REDUCED` با `currentValue = 0`). در ادغام، رنگی که فقط مهمان داشت با همون `id` منتقل می‌شه. رنگ محصول دیگه ← `400 VARIANT_ID_INVALID` | برگشتن موجودی یه رنگ نباید رنگی رو که مشتری داره می‌خره کم کنه؛ تعداد ردیف نمی‌تونه صفر باشه؛ صفحه‌ی سبد بعد از ورود ردیف‌هاش رو گم نکنه |
 | 26 | `CartItem.image`، `CartReservation.timeline`، `Cart.items`، `PATCH /cart/items/{itemId}`، `CartMutationResponse.message`، هدر `X-Cart-Token` (گام ۶) | `image` ← `nullable` (تا آپلود مدیا `null`، مثل کارت محصول). `timeline` وقتی رزرو در تنظیمات خاموشه خالیه. ردیف‌ها به ترتیب افزودن، قدیمی‌ترین اول. `PATCH` بدون هر دو ← 400 روی `quantity` (`QUANTITY_OR_VARIANT_REQUIRED`)، با هر دو اول رنگ، و `itemId` ِ بدشکل ← 404. `message` برای تغییر ردیف و افزودنی که چیزی اضافه نکرد `null` ـه. توکن تازه روی پاسخ خطا هیچ‌وقت نمیاد | هنوز مدیایی با `id` نداریم؛ تایم‌لاین تاریخ شمسی لازم داره و تا گام ۱۹ کسی نمی‌بینه‌ش؛ سبدِ درخواستِ شکست‌خورده نگه داشته نمی‌شه |
 | 27 | `POST /cart/merge`، `AuthResponse.cart`، `VerifyOtpRequest.guestCartToken` (گام ۷) | سبد مهمان خالی روش ارسال و سوییچ رزرو کاربر رو عوض نمی‌کنه و فقط حذف می‌شه. توکن بدشکل هم مثل ناشناخته‌ست (`200` بدون ادغام)، و `400` فقط وقتی `guestCartToken` نیومده یا رشته نیست. سبد پاسخ (هم merge و هم verify) مثل `GET /cart` همگام‌سازی می‌شه و `issues` داره. ادغام فقط بعد از کد درست | هر بازدید یه سبد مهمان خالی می‌سازه، و اون نباید `TIPAX` ِ کاربر رو بی‌صدا به `POST` برگردونه؛ ادغام دوباره باید بی‌خطر باشه؛ سبد پاسخ ورود همونیه که مشتری می‌بینه |
+| 28 | `POST /orders`، `OrderDetail.timeline` (گام ۸) | قدم ۹ ِ ترتیب قانون‌ها: بعد از `PRODUCT_UNAVAILABLE` و `OUT_OF_STOCK`، `422 QUANTITY_EXCEEDS_LIMIT` (`meta.itemIds`) وقتی رنگ‌های یه محصول با هم بیشتر از سقف خریدشن (سقف بعد از افزودن کم شده). تایم‌لاین برای هر تلاش پرداخت ناموفق یه ردیف `PAYMENT_FAILED` داره | سفارش سقف محصول رو خودش هم نگه می‌داره، پس این حالت یه جواب لازم داشت؛ هر شکست یه واقعه‌ست |
 
-**پیام برای فرانت (گام ۰ و ۲۱):** ردیف‌های ۲، ۴، ۵، ۶، ۷، ۸، ۱۰، ۱۱، ۲۰، ۲۴، ۲۵، ۲۶ و ۲۷ رفتار فرانت رو عوض می‌کنن. `docs/FRONTEND_PURCHASE.md` (گام ۲۱) کل جریان رو برای فرانت توضیح می‌ده، مثل `FRONTEND_AUTH.md`.
+**پیام برای فرانت (گام ۰ و ۲۱):** ردیف‌های ۲، ۴، ۵، ۶، ۷، ۸، ۱۰، ۱۱، ۲۰، ۲۴، ۲۵، ۲۶، ۲۷ و ۲۸ رفتار فرانت رو عوض می‌کنن. `docs/FRONTEND_PURCHASE.md` (گام ۲۱) کل جریان رو برای فرانت توضیح می‌ده، مثل `FRONTEND_AUTH.md`.
 
 ---
 
@@ -1648,7 +1651,7 @@ PURCHASE_REVIEW.md                             (step 21)
 
 ---
 
-### گام ۸: Aggregate سفارش (دامنه) · L ⬜
+### گام ۸: Aggregate سفارش (دامنه) · L ✅
 
 **می‌سازی:** `Order` و `OrderLine`، رویدادهای بخش ۹، VOها (`OrderId`، `OrderStatus`، `AddressSnapshot`، `PreShipmentMessenger`، `CustomerNote`، `GiftNote`، …)، `OrderDomainService`، `OrderCodePolicy`، `OrderActionsPolicy` و `PaymentPolicy` (پنجره‌ی ۲۰ دقیقه، سقف ۳ سفارش، سقف ۱۰ تلاش).
 
@@ -1659,14 +1662,16 @@ PURCHASE_REVIEW.md                             (step 21)
 2. `PAYMENT_FAILED` ِ دوم روی سفارشی که از قبل `PAYMENT_FAILED` ـه رویداد بسازه یا نه؟ تایم‌لاین چی لازم داره؟
 
 **تموم شده یعنی:**
-- [ ] `place` ← `OrderPlaced` با همه‌ی snapshot، `PENDING_PAYMENT` و `holdUntil = placedOn + ۱۵ دقیقه`.
-- [ ] `payable = 0` ← `OrderPlaced` و `OrderPaid` با شماره‌ی ۱ و ۲، و وضعیت `PROCESSING`.
-- [ ] `markPaid` از `PENDING_PAYMENT` و `PAYMENT_FAILED` کار می‌کنه. از `EXPIRED` ← `NotPayable`. دو بار ← `AlreadyPaid`. مبلغ متفاوت ← `AmountMismatch`.
-- [ ] `expire` قبل از `holdUntil` ← `TooEarly`. بعد از پرداخت ← `NotPayable`. دو بار ← بی‌اثر.
-- [ ] replay: ثبت، شکست و پرداخت ← دقیقاً همون وضعیت.
-- [ ] ۶ عدد از یه محصول با `maxPerOrder = 5` ← Failure.
-- [ ] `OrderCodePolicy`: ۹۰۰٬۰۰۰ شناسه‌ی پشت‌سرهم ← ۹۰۰٬۰۰۰ کد یکتای ۶ رقمی، و دو شناسه‌ی پشت‌سرهم کد پشت‌سرهم نمی‌دن.
-- [ ] `OrderActionsPolicy`: `canPay` فقط برای پرداخت‌نشده و قبل از `holdUntil`. بقیه‌ی گزینه‌ها تو این فاز false.
+- [x] `place` ← `OrderPlaced` با همه‌ی snapshot، `PENDING_PAYMENT` و `holdUntil = placedOn + ۱۵ دقیقه`.
+- [x] `payable = 0` ← `OrderPlaced` و `OrderPaid` با شماره‌ی ۱ و ۲، و وضعیت `PROCESSING`.
+- [x] `markPaid` از `PENDING_PAYMENT` و `PAYMENT_FAILED` کار می‌کنه. از `EXPIRED` ← `NotPayable`. دو بار ← `AlreadyPaid`. مبلغ متفاوت ← `AmountMismatch`.
+- [x] `expire` قبل از `holdUntil` ← `TooEarly`. بعد از پرداخت ← `NotAwaitingPayment`. دو بار ← بی‌اثر.
+- [x] replay: ثبت، شکست و پرداخت ← دقیقاً همون وضعیت.
+- [x] ۶ عدد از یه محصول با `maxPerOrder = 5` ← Failure.
+- [x] `OrderCodePolicy`: ۹۰۰٬۰۰۰ شناسه‌ی پشت‌سرهم ← ۹۰۰٬۰۰۰ کد یکتای ۶ رقمی، و دو شناسه‌ی پشت‌سرهم کد پشت‌سرهم نمی‌دن.
+- [x] `OrderActionsPolicy`: `canPay` فقط برای پرداخت‌نشده و قبل از `holdUntil`. بقیه‌ی گزینه‌ها تو این فاز false.
+- [x] `placeOrder`: ترتیب قانون‌ها دقیقاً ترتیب کانترکته، و هیچ شکستی شناسه‌ی سفارش مصرف نمی‌کنه. سفارش طلایی ۳٬۴۸۰٬۰۰۰ با کد `KV-218340`.
+- [x] هر تلاش ناموفق یه `OrderPaymentFailed`، همون تلاش دوباره بی‌اثر، و روی سفارش پرداخت‌شده یا منقضی هیچی.
 
 ---
 
@@ -2072,6 +2077,7 @@ Route: StartPaymentUc ← 201 با order و payment، یا 422 PAYMENT_GATEWAY_U
 | ۲۰ مهر ۱۴۰۵ | ۵ | Purchase step 5 | فقط دامنه. `Cart` و `CartLine`، `PurchaseOffer` (`inShop` و `isPurchasable`)، `CartIssue`، `CartLimitsPolicy`، VOها، `CartIdGenerator` (پورت؛ `SecureRandom` در گام ۶) و `CartDomainService` (ترتیب sync و تغییر). سقف محصول بین همه‌ی ردیف‌ها، قدیمی‌ترین اول؛ ردیف بی‌جا حذف با `QUANTITY_REDUCED` به ۰؛ هر ردیف حداکثر ۲۰. issueها روی خود سبد جمع می‌شن. ردیف مهمان با همون `itemId` منتقل می‌شه. `ShippingPolicy.offeredMethods` و `methodFor`: قانون «روش مؤثر» یه جا. `CartId` لازم نشد. ۹۳ تست تازه، ۱۵۶۰ کل. کانترکت: ردیف ۲۵ |
 | ۲۰ مهر ۱۴۰۵ | ۶ | Purchase step 6 | `V14__carts.sql` (مالک: کاربر یا hash ِ توکن، هرگز هر دو؛ هر رنگ یه ردیف؛ ۱ تا ۲۰). `CartRepositoryImpl` با `FOR UPDATE` و `ON CONFLICT DO NOTHING`، `OfferQmRepositoryImpl` (یه کوئری با join)، `RandomCartIds` (`SecureRandom`). سرویس `CartCommands` و هفت Command + `GetCartUc`، `CartAccess` (Bearer بر توکن مقدمه)، `webV1Cart.kt` با ورود اختیاری، `CartTexts`. `progressPercent` با serializer ِ دقیق (بدون Double). `image` null و `timeline` خالی تا گام ۱۹. ۳۷ تست تازه، ۱۵۹۷ کل. کانترکت: ردیف ۲۶ |
 | ۲۰ مهر ۱۴۰۵ | ۷ | Purchase step 7 | `MergeGuestCartUc` با `CartCommands.runMerge`: قفل سبد کاربر (اگه نباشه ساخته می‌شه)، بعد سبد مهمان، و حذف سبد مهمان **قبل** از ذخیره‌ی سبد کاربر (`CartRepository.delete`). ادغام تو تراکنش خودش و بعد از commit ِ verify؛ Route: verify ← merge ← `GetCartUc` و `GetMeUc`. `AuthHttpResponse.cart` دیگه null نیست. `POST /cart/merge` با ورود اجباری. تصمیم‌های کاربر: توکن بدشکل مثل ناشناخته (200)، سبد مهمان خالی انتخاب‌های کاربر رو عوض نمی‌کنه (`Cart.absorb`)، و بدون سبد مهمان هم سبد کاربر sync می‌شه. `FRONTEND_AUTH.md` به‌روز شد. ۱۹ تست تازه، ۱۶۱۶ کل. کانترکت: ردیف ۲۷ |
+| ۲۰ مهر ۱۴۰۵ | ۸ | Purchase step 8 | فقط دامنه (به‌علاوه‌ی `returnable` در `PurchaseOffer` و متن کدهای فیلد تازه). `Order` با Event Sourcing و چهار رویداد (`OrderPlaced`، `OrderPaymentFailed`، `OrderPaid`، `OrderExpired`)؛ سفارش بدون مبلغ همون لحظه پرداخت‌شده‌ست. تصمیم‌های کاربر: `OrderPaid` خودش وضعیت بعدی رو می‌گه (`heldForReservation`)، یه `OrderPaymentFailed` برای هر تلاش (تکرار همون تلاش بی‌اثر)، ترتیب قانون‌های ثبت سفارش در `OrderDomainService.placeOrder`، و `fullText` در لایه‌ی HTTP. `OrderCodePolicy` با `A = 556243` و `B = 118340` (اولین کد `KV-218340`). `PaymentPolicy` (پنجره‌ی ۲۰ دقیقه، سقف ۳ سفارش و ۱۰ تلاش)، `OrderActionsPolicy`، `ReservationPolicy` (مشترک با سبد)، `PaymentPublicId` و `PaymentFailureReason` زودتر از گام ۱۰. ۵۴ تست تازه، ۱۶۷۰ کل. کانترکت: ردیف ۲۸ |
 
 ---
 

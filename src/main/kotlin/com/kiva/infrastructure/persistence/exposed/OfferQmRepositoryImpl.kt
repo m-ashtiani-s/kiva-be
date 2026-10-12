@@ -51,6 +51,7 @@ class OfferQmRepositoryImpl : OfferQmRepository {
             maxPerOrder = MaxPerOrder.constructFromPersisted(this[ProductQmTbl.maxPerOrder]),
             inShop = this[ProductQmTbl.status] == ProductStatus.ACTIVE && this[ProductVariantQmTbl.isActive],
             reservable = this[ProductQmTbl.reservable],
+            returnable = this[ProductQmTbl.returnable],
         ),
         product = OfferQm.Product(this[ProductQmTbl.slug], this[ProductQmTbl.sku], this[ProductQmTbl.name]),
         category = OfferQm.Category(this[CategoryTbl.id].value, this[CategoryTbl.slug], this[CategoryTbl.name]),

@@ -1375,7 +1375,8 @@ paths:
         6. `acceptTerms` نیست ← `422 TERMS_NOT_ACCEPTED`
         7. `reserve = true` ولی رزرو در دسترس نیست ← `422 RESERVATION_UNAVAILABLE` (`meta.reason`)
         8. کاربر ۳ سفارش پرداخت‌نشده دارد که هنوز موجودی نگه داشته‌اند ← `429 RATE_LIMITED`
-        9. ردیفی از فروشگاه خارج شده ← `422 PRODUCT_UNAVAILABLE`؛ ردیفی موجودی کافی ندارد ← `422 OUT_OF_STOCK`. هر دو با `meta.itemIds` (شناسه‌ی ردیف‌های سبد).
+        9. ردیفی از فروشگاه خارج شده ← `422 PRODUCT_UNAVAILABLE`؛ ردیفی موجودی کافی ندارد ← `422 OUT_OF_STOCK`؛ رنگ‌های یک محصول با هم بیشتر از سقف خرید آن محصول‌اند
+           (سقف بعد از افزودن به سبد کم شده) ← `422 QUANTITY_EXCEEDS_LIMIT`. هر سه با `meta.itemIds` (شناسه‌ی ردیف‌های سبد)، و به همین ترتیب.
         10. کد تخفیف سبد دیگر معتبر نیست ← سفارش بدون کد حساب می‌شود (و چون مبلغ عوض شده، قدم بعد `PRICE_CHANGED` می‌دهد)
         11. `expectedPayable` با مبلغ سرور فرق دارد ← `409 PRICE_CHANGED` (`meta.payable` = مبلغ تازه)
 
@@ -1414,7 +1415,7 @@ paths:
         '422':
           description: |
             `CART_EMPTY`، `ADDRESS_NOT_FOUND`، `MESSENGER_REQUIRED`، `MESSENGER_PHONE_INVALID`، `SHIPPING_METHOD_UNAVAILABLE`، `TERMS_NOT_ACCEPTED`،
-            `RESERVATION_UNAVAILABLE` (`meta.reason`)، `PRODUCT_UNAVAILABLE` و `OUT_OF_STOCK` (`meta.itemIds`)،
+            `RESERVATION_UNAVAILABLE` (`meta.reason`)، `PRODUCT_UNAVAILABLE`، `OUT_OF_STOCK` و `QUANTITY_EXCEEDS_LIMIT` (`meta.itemIds`)،
             `PAYMENT_GATEWAY_UNAVAILABLE` (قبل از ثبت بدون meta؛ بعد از ثبت با `meta.orderCode` و `meta.paymentId`)
           content:
             application/problem+json:
@@ -6477,6 +6478,7 @@ components:
             preShipmentMediaDetail: { $ref: '#/components/schemas/PreShipmentMedia' }
             timeline:
               type: array
+              description: رویدادهای سفارش، قدیمی‌ترین اول. هر تلاش پرداخت ناموفق یک ردیف `PAYMENT_FAILED` ِ خودش را دارد.
               items: { $ref: '#/components/schemas/OrderEvent' }
             customerNote: { type: string, nullable: true }
             gift:

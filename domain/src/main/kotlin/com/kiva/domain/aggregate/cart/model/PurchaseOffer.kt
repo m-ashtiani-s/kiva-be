@@ -16,6 +16,7 @@ import com.kiva.domain.aggregate.product.model.valueobject.VariantId
  * @property inShop the product is published (ACTIVE) and this color is switched on. Whether any is left is
  *   [available]'s business; see [isPurchasable].
  * @property reservable can be held by «رزرو ۴ روزه».
+ * @property returnable can be returned after delivery; a placed order keeps what it was then.
  */
 data class PurchaseOffer(
     val variantId: VariantId,
@@ -26,6 +27,7 @@ data class PurchaseOffer(
     val maxPerOrder: MaxPerOrder,
     val inShop: Boolean,
     val reservable: Boolean,
+    val returnable: Boolean,
 ) {
     init {
         require(available >= 0) { "Available stock can't be negative: $available (variant ${variantId.value})" }

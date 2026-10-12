@@ -14,13 +14,14 @@ class NoFloatingPointMoneyTest {
     private val moneyPackages = listOf(
         "src/main/kotlin/com/kiva/domain/aggregate/order",
         "src/main/kotlin/com/kiva/domain/aggregate/settings",
+        "src/main/kotlin/com/kiva/domain/aggregate/payment",
     )
 
     private val floatingPoint = Regex("""\b(Double|Float)\b|\.to(Double|Float)\(""")
     private val comments = Regex("""/\*.*?\*/|//[^\n]*""", RegexOption.DOT_MATCHES_ALL)
 
     @Test
-    fun `no Double or Float in the order and settings code`() {
+    fun `no Double or Float in the order, settings and payment code`() {
         val files = moneyPackages.flatMap { File(it).walk().filter { file -> file.extension == "kt" }.toList() }
         assertTrue(files.isNotEmpty(), "no source found under $moneyPackages; is the working directory the domain module?")
 

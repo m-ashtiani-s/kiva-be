@@ -1,0 +1,34 @@
+package com.kiva.domain.aggregate.order.model.valueobject
+
+import com.kiva.common.valueobject.Slug
+import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
+import com.kiva.domain.aggregate.product.model.valueobject.ProductName
+import com.kiva.domain.aggregate.product.model.valueobject.Sku
+
+/**
+ * What a bag was called and looked like when it was bought, copied from the catalog when the order is placed: a
+ * renamed product or a recolored palette never changes an order (the contract's `OrderItem.name`, «snapshot نام در
+ * زمان خرید»).
+ *
+ * @property sku the color's SKU (`KV-1004-CARAMEL`), which the warehouse picks by.
+ * @property imageUrl the color's first picture; null while the catalog has no uploaded media.
+ */
+data class OrderItemSnapshot(
+    val name: ProductName,
+    val slug: Slug,
+    val sku: Sku,
+    val color: Color,
+    val imageUrl: String?,
+) {
+    /** The color as the palette named and painted it then. */
+    data class Color(val key: ColorKey, val name: String, val hex: String) {
+        init {
+            require(name.isNotBlank()) { "A color needs its name: ${key.value}" }
+            require(HEX.matches(hex)) { "Invalid color hex '$hex' of ${key.value}" }
+        }
+
+        private companion object {
+            val HEX = Regex("#[0-9A-Fa-f]{6}")
+        }
+    }
+}

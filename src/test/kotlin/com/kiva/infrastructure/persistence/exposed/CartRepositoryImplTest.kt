@@ -255,6 +255,7 @@ class CartRepositoryImplTest {
                 maxPerOrder = MaxPerOrder.DEFAULT,
                 inShop = true,
                 reservable = true,
+                returnable = true,
             )
         }
     }
