@@ -6,6 +6,7 @@ import com.kiva.domain.aggregate.payment.model.PaymentLogEntry
 import com.kiva.domain.aggregate.payment.model.valueobject.GatewayAuthority
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentPublicId
 import com.kiva.domain.aggregate.settings.model.valueobject.PaymentGatewayCode
+import java.time.Instant
 
 /**
  * Payment attempts, kept as rows. A change goes through a lock on the attempt's row until the transaction ends: on the
@@ -36,6 +37,13 @@ interface PaymentRepository {
      * order's attempts ([lockAttemptsOf]).
      */
     fun findByAuthority(gateway: PaymentGatewayCode, authority: GatewayAuthority): Payment?
+
+    /**
+     * The reconciliation job's candidates: attempts being confirmed since [verifyingSince] or before, and attempts sent
+     * to the gateway at [redirectedSince] or before whose shopper never came back; the oldest first, at most [limit].
+     * Only candidates: each is settled with its order's attempts locked.
+     */
+    fun findToReconcile(verifyingSince: Instant, redirectedSince: Instant, limit: Int): List<PaymentPublicId>
 
     /** The attempt as it is, for reading only: nothing is locked. */
     fun find(publicId: PaymentPublicId): Payment?

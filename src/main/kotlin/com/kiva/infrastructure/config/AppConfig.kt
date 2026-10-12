@@ -16,6 +16,7 @@ data class AppConfig(
     val http: HttpConfig = HttpConfig(allowedOrigins = emptyList()),
     val sms: SmsConfig = SmsConfig(SmsProvider.LOG),
     val payment: PaymentConfig = PaymentConfig.DEFAULT,
+    val jobs: JobsConfig = JobsConfig(enabled = false),
 ) {
     companion object {
         fun from(config: ApplicationConfig): AppConfig {
@@ -51,6 +52,8 @@ data class AppConfig(
                         sandbox = config.property("kiva.payment.zarinpal.sandbox").getString().toBooleanStrict(),
                     ),
                 ),
+                // Strict too: a typo must not quietly stop expiring orders.
+                jobs = JobsConfig(enabled = config.property("kiva.jobs.enabled").getString().toBooleanStrict()),
             )
         }
     }
@@ -180,6 +183,13 @@ data class HttpConfig(val allowedOrigins: List<String>, val trustedProxyHops: In
 
 /** @property enabled run DevCatalogSeeder on startup. Local development only. */
 data class SeedConfig(val enabled: Boolean)
+
+/**
+ * The scheduled jobs (`kiva.jobs`, roadmap section 15): expiring unpaid orders, reconciling payments and the clean-ups.
+ * On in the app; off where the app is built without boot (tests call the jobs' use cases themselves, with a clock of
+ * their own).
+ */
+data class JobsConfig(val enabled: Boolean)
 
 data class DatasourceConfig(
     val url: String,

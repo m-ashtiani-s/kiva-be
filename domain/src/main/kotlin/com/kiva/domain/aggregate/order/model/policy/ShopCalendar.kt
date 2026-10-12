@@ -14,7 +14,8 @@ import java.time.ZoneId
  */
 object ShopCalendar {
 
-    private val ZONE: ZoneId = ZoneId.of("Asia/Tehran")
+    /** Tehran: also when the shop's daily jobs run (the clean-up at 04:00). */
+    val ZONE: ZoneId = ZoneId.of("Asia/Tehran")
 
     /** The date in Tehran at [instant]. 2026-10-15T21:00Z is still Thursday in UTC, but already Friday 00:30 in Tehran. */
     fun dateOf(instant: Instant): LocalDate = LocalDate.ofInstant(instant, ZONE)

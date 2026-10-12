@@ -18,8 +18,12 @@ import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.exists
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.core.less
+import org.jetbrains.exposed.v1.core.not
+import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.core.statements.UpdateBuilder
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
@@ -94,6 +98,19 @@ class CartRepositoryImpl : CartRepository {
     // The lines go with it: cartitem_tbl's foreign key is ON DELETE CASCADE.
     override fun delete(cart: Cart) {
         CartTbl.deleteWhere { publicId eq cart.publicId.value }
+    }
+
+    /**
+     * One DELETE; the lines go with their cart (ON DELETE CASCADE). A cart a command holds (FOR UPDATE) is waited for,
+     * and its row is checked again once that command commits, with the newer `updatedOn`, so a cart in use is kept.
+     */
+    override fun deleteStaleGuestCarts(emptyUntouchedSince: Instant, untouchedSince: Instant): Int {
+        val emptyBefore = emptyUntouchedSince.atOffset(ZoneOffset.UTC)
+        val anyBefore = untouchedSince.atOffset(ZoneOffset.UTC)
+        val hasLines = exists(CartItemTbl.select(CartItemTbl.id).where { CartItemTbl.cartId eq CartTbl.id })
+        return CartTbl.deleteWhere {
+            CartTbl.userId.isNull() and ((CartTbl.updatedOn less anyBefore) or ((CartTbl.updatedOn less emptyBefore) and not(hasLines)))
+        }
     }
 
     private fun lockAndRead(which: Op<Boolean>): Cart? {

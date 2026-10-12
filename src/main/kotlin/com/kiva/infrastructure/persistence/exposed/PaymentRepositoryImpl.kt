@@ -13,6 +13,7 @@ import com.kiva.domain.aggregate.payment.model.valueobject.GatewayAuthority
 import com.kiva.domain.aggregate.payment.model.valueobject.GatewayRefId
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentPublicId
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentRedirect
+import com.kiva.domain.aggregate.payment.model.valueobject.PaymentStatus
 import com.kiva.domain.aggregate.payment.repository.PaymentRepository
 import com.kiva.domain.aggregate.settings.model.valueobject.PaymentGatewayCode
 import com.kiva.infrastructure.persistence.exposed.tbl.PaymentLogTbl
@@ -21,6 +22,8 @@ import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.lessEq
+import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.core.statements.UpdateBuilder
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.select
@@ -66,6 +69,16 @@ class PaymentRepositoryImpl : PaymentRepository {
 
     override fun findByAuthority(gateway: PaymentGatewayCode, authority: GatewayAuthority): Payment? =
         PaymentTbl.selectAll().where { (PaymentTbl.gateway eq gateway) and (PaymentTbl.authority eq authority.value) }.singleOrNull()?.toPayment()
+
+    override fun findToReconcile(verifyingSince: Instant, redirectedSince: Instant, limit: Int): List<PaymentPublicId> =
+        PaymentTbl.select(PaymentTbl.publicId)
+            .where {
+                ((PaymentTbl.status eq PaymentStatus.VERIFYING) and (PaymentTbl.verifyingSince lessEq verifyingSince.utc())) or
+                    ((PaymentTbl.status eq PaymentStatus.REDIRECTED) and (PaymentTbl.redirectedOn lessEq redirectedSince.utc()))
+            }
+            .orderBy(PaymentTbl.id)
+            .limit(limit)
+            .map { PaymentPublicId.constructFromPersisted(it[PaymentTbl.publicId]) }
 
     override fun find(publicId: PaymentPublicId): Payment? =
         PaymentTbl.selectAll().where { PaymentTbl.publicId eq publicId.value }.singleOrNull()?.toPayment()

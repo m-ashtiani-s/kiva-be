@@ -7,6 +7,8 @@ import com.kiva.infrastructure.persistence.exposed.tbl.IdempotencyKeyTbl
 import org.jetbrains.exposed.v1.core.TextColumnType
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.less
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
@@ -36,6 +38,8 @@ class IdempotencyStoreImpl : IdempotencyStore {
             IdempotencyStore.Earlier.OtherRequest
         }
     }
+
+    override fun deleteRecordedBefore(before: Instant): Int = IdempotencyKeyTbl.deleteWhere { createdOn less before.atOffset(ZoneOffset.UTC) }
 
     override fun record(request: IdempotentRequest, outcome: Map<String, String>, now: Instant) {
         IdempotencyKeyTbl.insert {

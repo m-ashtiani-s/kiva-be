@@ -7,19 +7,21 @@ import com.kiva.common.railway.ResultFailure
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.order.entity.Order
 import com.kiva.domain.aggregate.order.model.policy.PaymentPolicy
+import com.kiva.domain.aggregate.order.model.valueobject.OrderStatus
 import com.kiva.domain.aggregate.payment.entity.Payment
 import com.kiva.domain.aggregate.payment.model.valueobject.CardMask
 import com.kiva.domain.aggregate.payment.model.valueobject.GatewayRefId
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentFailureReason
+import com.kiva.domain.aggregate.payment.model.valueobject.PaymentPublicId
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentStatus
 import com.kiva.domain.aggregate.payment.repository.PaymentIdGenerator
 import com.kiva.domain.aggregate.settings.model.valueobject.PaymentGatewayCode
 import java.time.Instant
 
 /**
- * The rules between an attempt to pay and its order (roadmap sections 3, row 3, 10.6 and 10.8): when a new attempt may
- * start, what a shopper back from the gateway changes, when an attempt may be confirmed, and what the gateway's answer
- * to confirming it does to both.
+ * The rules between an attempt to pay and its order (roadmap sections 3, rows 3 and 4, 10.6, 10.8 and 15): when a new
+ * attempt may start, what a shopper back from the gateway changes, when an attempt may be confirmed, what the gateway's
+ * answer to confirming it does to both, and when an unpaid order may expire.
  *
  * **An attempt is confirmed only while its order still waits for its money, and while no other attempt of the order is
  * being confirmed.** Both are checked on every attempt of the order, which the caller has locked together, so two
@@ -149,6 +151,52 @@ class PaymentDomainService(private val paymentIdGenerator: PaymentIdGenerator) {
     // Every change here is made only from the state checked just before it.
     private fun Result<Payment, Payment.Failure>.orBug(): Payment =
         getOrNull() ?: error("A payment change checked beforehand was refused: ${failureOrNull()?.code}")
+
+    /**
+     * The job's expiry of an unpaid order whose time to pay is over (roadmap section 15): it expires, and so does every
+     * attempt of it still open. Returns those attempts, to be saved; the order's stock is given back by the caller.
+     *
+     * Not while one of its attempts may still pay it: one being confirmed, or one whose shopper may still be on the
+     * bank's page (sent there less than PaymentPolicy.GATEWAY_WINDOW ago). Otherwise a shopper who paid at the last
+     * minute would come back to an order that let its bag go. [attempts] are every attempt of the order, locked by the
+     * caller, so a callback can't start confirming one in between.
+     */
+    fun expireUnpaid(order: Order, attempts: List<Payment>, by: UserId, now: Instant): Result<List<Payment>, ExpireRefusal> {
+        logger.info("expireUnpaid order=${order.code.value} status=${order.status} attempts=${attempts.map { it.status }}")
+        require(attempts.all { it.orderId == order.id }) { "The attempts are not those of order ${order.id.value}" }
+        if (!order.isAwaitingPayment) return Result.failure(ExpireRefusal.NotAwaitingPayment(order.status))
+        if (now.isBefore(order.holdUntil)) return Result.failure(ExpireRefusal.TooEarly(order.holdUntil))
+        val inProgress = attempts.firstOrNull {
+            it.status == PaymentStatus.VERIFYING || (it.status == PaymentStatus.REDIRECTED && !PaymentPolicy.isAbandoned(checkNotNull(it.redirectedOn), now))
+        }
+        if (inProgress != null) return Result.failure(ExpireRefusal.PaymentInProgress(inProgress.publicId))
+
+        order.expire(by, now).getOrNull() ?: error("Order ${order.code.value} awaiting payment past its time refused to expire")
+        val open = attempts.filter { it.status == PaymentStatus.INITIATED || it.status == PaymentStatus.REDIRECTED }
+        open.forEach { it.expire(now).orBug() }
+        return Result.success(open)
+    }
+
+    /**
+     * The gateway says an attempt the shopper never came back from isn't paid, and it is past the window a shopper may
+     * still be on the bank's page (PaymentPolicy.isAbandoned): it is closed as EXPIRED, so it is never asked about
+     * again. Its order is untouched; whether that one expires is [expireUnpaid]'s. True when it was closed.
+     */
+    fun abandon(payment: Payment, now: Instant): Boolean {
+        if (payment.status != PaymentStatus.REDIRECTED || !PaymentPolicy.isAbandoned(checkNotNull(payment.redirectedOn), now)) return false
+        payment.expire(now).orBug()
+        return true
+    }
+
+    sealed class ExpireRefusal(code: String, meta: Map<String, Any> = emptyMap()) : ResultFailure(code, FailureKind.CONFLICT, meta = meta) {
+        /** Paid, or expired already: nothing to expire. */
+        data class NotAwaitingPayment(val status: OrderStatus) : ExpireRefusal("ORDER_NOT_AWAITING_PAYMENT", mapOf("status" to status.name))
+
+        data class TooEarly(val holdUntil: Instant) : ExpireRefusal("ORDER_NOT_DUE", mapOf("holdUntil" to holdUntil.toString()))
+
+        /** An attempt is being confirmed, or its shopper may still be on the bank's page: the next run looks again. */
+        data class PaymentInProgress(val paymentId: PaymentPublicId) : ExpireRefusal("PAYMENT_IN_PROGRESS", mapOf("paymentId" to paymentId.value))
+    }
 
     sealed class StartAttemptFailure(code: String, kind: FailureKind, meta: Map<String, Any> = emptyMap()) : ResultFailure(code, kind, meta = meta) {
         data object AlreadyPaid : StartAttemptFailure("ORDER_ALREADY_PAID", FailureKind.BUSINESS_RULE)

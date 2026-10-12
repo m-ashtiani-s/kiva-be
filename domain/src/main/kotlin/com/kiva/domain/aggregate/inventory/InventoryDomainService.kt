@@ -81,6 +81,20 @@ class InventoryDomainService(
         return if (short.isEmpty()) Result.success(reserved) else Result.failure(ReserveForOrderFailure.OutOfStock(short))
     }
 
+    /**
+     * Gives back what an order held (it expired; later, it was cancelled), every line of it, **in lock order** like
+     * [reserveForOrder]: the stocks come back sorted by (product, color) and must be saved in that order. A color that
+     * holds nothing for the order any more (given back already, or shipped) changes nothing, so running twice is harmless.
+     */
+    fun releaseForOrder(orderCode: OrderCode, lines: List<OrderLine>, by: UserId, now: Instant): List<Inventory> {
+        logger.info("releaseForOrder orderCode=${orderCode.value} variants=${lines.map { it.variantId.value }}")
+        return lines.sortedWith(compareBy({ it.productId.value }, { it.variantId.value })).mapNotNull { line ->
+            val inventory = inventoryRepository.get(line.variantId) ?: return@mapNotNull null
+            inventory.releaseReservation(orderCode, by, now)
+            inventory.takeIf { it.getRecordedEvents().isNotEmpty() }
+        }
+    }
+
     // ============ failures ============
 
     sealed class AdjustStockFailure(code: String, kind: FailureKind, meta: Map<String, Any>) :

@@ -6,6 +6,7 @@ import com.kiva.common.railway.ResultFailure
 import com.kiva.common.railway.mapOnSuccess
 import com.kiva.common.valueobject.UserId
 import java.security.MessageDigest
+import java.time.Duration
 import java.time.Instant
 import java.util.UUID
 
@@ -28,6 +29,14 @@ interface IdempotencyStore {
 
     /** Records that [request] was done and what it made ([outcome]), in the same transaction as the work. */
     fun record(request: IdempotentRequest, outcome: Map<String, String>, now: Instant)
+
+    /** Forgets the keys recorded before [before]; a request repeated after that runs again. Returns how many went. */
+    fun deleteRecordedBefore(before: Instant): Int
+
+    companion object {
+        /** How long a key is kept (contract): a repeat after this is a new request. */
+        val KEPT_FOR: Duration = Duration.ofHours(24)
+    }
 
     /** What a key was used for before. */
     sealed interface Earlier {

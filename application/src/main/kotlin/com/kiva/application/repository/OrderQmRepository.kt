@@ -2,6 +2,7 @@ package com.kiva.application.repository
 
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
+import com.kiva.domain.aggregate.order.model.valueobject.OrderId
 import java.time.Instant
 
 /**
@@ -23,4 +24,10 @@ interface OrderQmRepository {
      * not over at [now]. What the limit of unpaid orders counts (PaymentPolicy.refusalToPlace).
      */
     fun unpaidHoldingUntil(userId: UserId, now: Instant): List<Instant>
+
+    /**
+     * The expiry job's candidates: unpaid orders whose time to pay is over at [now], the longest over first, at most
+     * [limit]. Only candidates: the order itself decides, with its attempts locked (ExpireUnpaidOrderUc).
+     */
+    fun findExpirable(now: Instant, limit: Int): List<OrderId>
 }

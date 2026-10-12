@@ -14,6 +14,7 @@ import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greater
 import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.lessEq
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import java.time.Instant
@@ -36,6 +37,13 @@ class OrderQmRepositoryImpl : OrderQmRepository {
                     (OrderQmTbl.holdUntil greater now.atOffset(ZoneOffset.UTC))
             }
             .map { it[OrderQmTbl.holdUntil].toInstant() }
+
+    override fun findExpirable(now: Instant, limit: Int): List<OrderId> =
+        OrderQmTbl.select(OrderQmTbl.orderId)
+            .where { (OrderQmTbl.status inList OrderStatus.entries.filter { it.isAwaitingPayment }) and (OrderQmTbl.holdUntil lessEq now.atOffset(ZoneOffset.UTC)) }
+            .orderBy(OrderQmTbl.holdUntil)
+            .limit(limit)
+            .map { OrderId.constructFromPersisted(it[OrderQmTbl.orderId]) }
 
     private fun ResultRow.toOrderQm(): OrderQm = OrderQm(
         orderId = OrderId.constructFromPersisted(this[OrderQmTbl.orderId]),

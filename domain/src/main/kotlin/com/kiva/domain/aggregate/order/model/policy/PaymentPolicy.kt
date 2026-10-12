@@ -21,6 +21,13 @@ object PaymentPolicy {
      */
     val GATEWAY_WINDOW: Duration = Duration.ofMinutes(20)
 
+    /**
+     * An attempt sent to the gateway at [redirectedOn] whose shopper never came back is abandoned from [GATEWAY_WINDOW]
+     * on: nobody is on the bank's page any more, so it no longer holds its order's stock, and once the gateway says it
+     * wasn't paid it is closed (EXPIRED).
+     */
+    fun isAbandoned(redirectedOn: Instant, now: Instant): Boolean = !now.isBefore(redirectedOn.plus(GATEWAY_WINDOW))
+
     /** Unpaid orders a customer may have holding stock at once; one more is 429. */
     const val MAX_UNPAID_ORDERS = 3
 

@@ -8,6 +8,7 @@ import com.kiva.domain.aggregate.inventory.InventoryTestData.now
 import com.kiva.domain.aggregate.inventory.InventoryTestData.staff
 import com.kiva.domain.aggregate.inventory.InventoryTestData.stocked
 import com.kiva.domain.aggregate.inventory.entity.Inventory
+import com.kiva.domain.aggregate.inventory.entity.event.InventoryDomainEvent
 import com.kiva.domain.aggregate.inventory.model.valueobject.AdjustmentReason.DAMAGED
 import com.kiva.domain.aggregate.inventory.model.valueobject.AdjustmentReason.RESTOCK
 import com.kiva.domain.aggregate.inventory.repository.InventoryRepository
@@ -21,12 +22,16 @@ import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/** An in-memory stand-in for the port: what was saved, as loaded objects. */
+/** An in-memory stand-in for the port: each color's whole stream, as the event store keeps it, and the last object saved. */
 private class InMemoryInventories : InventoryRepository {
     val saved = mutableMapOf<VariantId, Inventory>()
-    override fun get(variantId: VariantId): Inventory? = saved[variantId]?.let { Inventory(it.getRecordedEvents()) }
+    private val streams = mutableMapOf<VariantId, MutableList<InventoryDomainEvent>>()
+
+    override fun get(variantId: VariantId): Inventory? = streams[variantId]?.let { Inventory(it.toList()) }
+
     override fun save(inventory: Inventory) {
         saved[inventory.variantId] = inventory
+        streams.getOrPut(inventory.variantId) { mutableListOf() } += inventory.getRecordedEvents()
     }
 }
 
@@ -143,6 +148,33 @@ class InventoryDomainServiceTest {
             service.reserveForOrder(order, listOf(line(1, 20, 201, 2)), staff, now)
 
             assertEquals(before, inventories.saved.getValue(VariantId.constructFromPersisted(201)).getRecordedEvents().size)
+        }
+
+        @Test
+        fun `releasing gives every line back, in lock order, and a second release gives nothing back twice`() {
+            stock(301, 5)
+            stock(202, 5)
+            stock(201, 5)
+            val lines = listOf(line(1, 30, 301, 2), line(2, 20, 202, 1), line(3, 20, 201, 3))
+            service.reserveForOrder(order, lines, staff, now).getOrNull()!!.forEach(inventories::save)
+
+            val released = service.releaseForOrder(order, lines, staff, now)
+            released.forEach(inventories::save)
+
+            assertEquals(listOf(201L, 202L, 301L), released.map { it.variantId.value })
+            assertEquals(listOf(5, 5, 5), listOf(201L, 202L, 301L).map { service.getInventory(VariantId.constructFromPersisted(it)).getOrNull()!!.available })
+            assertEquals(emptyList(), service.releaseForOrder(order, lines, staff, now), "nothing is held for it any more")
+        }
+
+        @Test
+        fun `releasing leaves out a color that holds nothing for the order, and one never stocked`() {
+            stock(201, 5)
+            stock(202, 5)
+            service.reserveForOrder(order, listOf(line(1, 20, 201, 2)), staff, now).getOrNull()!!.forEach(inventories::save)
+
+            val released = service.releaseForOrder(order, listOf(line(1, 20, 201, 2), line(2, 20, 202, 1), line(3, 30, 301, 1)), staff, now)
+
+            assertEquals(listOf(201L), released.map { it.variantId.value })
         }
     }
 }

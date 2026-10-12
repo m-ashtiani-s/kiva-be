@@ -27,6 +27,13 @@ class PaymentPolicyTest {
     }
 
     @Test
+    fun `an attempt whose shopper never came back is abandoned 20 minutes after it was sent to the gateway`() {
+        assertFalse(PaymentPolicy.isAbandoned(at(14), at(33)))
+        assertTrue(PaymentPolicy.isAbandoned(at(14), at(34)))
+        assertTrue(PaymentPolicy.isAbandoned(at(14), at(60)))
+    }
+
+    @Test
     fun `the result page offers a retry for an attempt that didn't succeed, while the order may still be paid`() {
         listOf(PaymentStatus.CANCELLED, PaymentStatus.FAILED, PaymentStatus.START_FAILED, PaymentStatus.REDIRECTED).forEach {
             assertTrue(PaymentPolicy.canRetry(it, OrderStatus.PAYMENT_FAILED, holdUntil, at(14)), "$it")

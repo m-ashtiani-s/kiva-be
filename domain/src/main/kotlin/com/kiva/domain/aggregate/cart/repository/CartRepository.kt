@@ -4,6 +4,7 @@ import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.cart.entity.Cart
 import com.kiva.domain.aggregate.cart.model.valueobject.CartPublicId
 import com.kiva.domain.aggregate.session.model.valueobject.TokenHash
+import java.time.Instant
 
 /**
  * Carts, stored as rows. Every change goes through a lock on the cart's row ([lockForUser], [lockForGuest]) until the
@@ -37,4 +38,11 @@ interface CartRepository {
      * customer's cart is saved: its lines moved over with their ids, and a line id is the shop's, unique in every cart.
      */
     fun delete(cart: Cart)
+
+    /**
+     * Removes the guests' carts untouched since [untouchedSince], and the empty ones untouched since
+     * [emptyUntouchedSince]; never a customer's. A cart in use at that moment is locked and touched by its command, so
+     * it is no longer untouched once the removal gets to it. Returns how many went.
+     */
+    fun deleteStaleGuestCarts(emptyUntouchedSince: Instant, untouchedSince: Instant): Int
 }

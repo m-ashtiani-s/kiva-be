@@ -25,7 +25,8 @@ object PaymentTexts {
             }
         PaymentFailureReason.GATEWAY_UNREACHABLE -> "درگاه پرداخت جواب نداد. چند دقیقه بعد دوباره امتحان کن"
         PaymentFailureReason.GATEWAY_REJECTED -> "درگاه پرداخت درخواست رو قبول نکرد. چند دقیقه بعد دوباره امتحان کن یا درگاه دیگه‌ای رو انتخاب کن"
-        PaymentFailureReason.EXPIRED -> "مهلت پرداخت این سفارش تموم شد"
+        // Expired with its order, or left on the bank's page while another attempt paid the order (the reconciliation job).
+        PaymentFailureReason.EXPIRED -> if (orderStatus.isPaid) "این سفارش با یه پرداخت دیگه پرداخت شده" else "مهلت پرداخت این سفارش تموم شد"
     }
 
     /**

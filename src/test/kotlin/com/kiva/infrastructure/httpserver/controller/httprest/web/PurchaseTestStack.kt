@@ -13,6 +13,7 @@ import com.kiva.application.usecase.cart.usecase.command.AddCartItemUc
 import com.kiva.application.usecase.cart.usecase.command.ChangeCartItemUc
 import com.kiva.application.usecase.cart.usecase.command.ChooseShippingMethodUc
 import com.kiva.application.usecase.cart.usecase.command.ClearCartUc
+import com.kiva.application.usecase.cart.usecase.command.DeleteStaleGuestCartsUc
 import com.kiva.application.usecase.cart.usecase.command.MergeGuestCartUc
 import com.kiva.application.usecase.cart.usecase.command.OpenCartUc
 import com.kiva.application.usecase.cart.usecase.command.RemoveCartItemUc
@@ -26,8 +27,13 @@ import com.kiva.application.usecase.checkout.usecase.query.GetCheckoutContextUc
 import com.kiva.application.usecase.checkout.usecase.query.GetPaymentInitUc
 import com.kiva.application.usecase.checkout.usecase.query.GetPaymentResultUc
 import com.kiva.application.usecase.idempotency.IdempotencyGuard
+import com.kiva.application.usecase.idempotency.usecase.command.DeleteOldIdempotencyKeysUc
+import com.kiva.application.usecase.order.usecase.command.ExpireUnpaidOrderUc
+import com.kiva.application.usecase.order.usecase.query.FindExpirableOrdersUc
 import com.kiva.application.usecase.order.usecase.query.GetOrderSummaryUc
 import com.kiva.application.usecase.payment.PaymentConfirmation
+import com.kiva.application.usecase.payment.usecase.command.ReconcilePaymentUc
+import com.kiva.application.usecase.payment.usecase.query.FindStalePaymentsUc
 import com.kiva.common.valueobject.IranianMobileNumber
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.address.AddressBookDomainService
@@ -43,6 +49,7 @@ import com.kiva.infrastructure.httpserver.API_V1
 import com.kiva.infrastructure.httpserver.auth.configureAuthentication
 import com.kiva.infrastructure.httpserver.configureHttp
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AuthTestStack.Companion.ORIGIN
+import com.kiva.infrastructure.job.PurchaseJobs
 import com.kiva.infrastructure.payment.FakePaymentGateway
 import com.kiva.infrastructure.payment.PaymentConfig
 import com.kiva.infrastructure.payment.RandomPaymentIds
@@ -128,6 +135,19 @@ class PurchaseTestStack(val clock: MutableClock) {
     val handleCallback = HandleGatewayCallbackUc(transactions, payments, orders, paymentDomain, gateways, paymentConfirmation, clock)
     val startPaymentAttempt =
         StartPaymentAttemptUc(transactions, IdempotencyGuard(IdempotencyStoreImpl(), clock), payments, orders, orderQm, settings, paymentDomain, gateways, clock)
+    val stock = InventoryDomainService(inventories)
+    val expireUnpaidOrder = ExpireUnpaidOrderUc(transactions, payments, orders, paymentDomain, stock, inventories, clock)
+    val reconcilePayment = ReconcilePaymentUc(transactions, payments, orders, paymentDomain, gateways, paymentConfirmation, clock)
+    val idempotencyStore = IdempotencyStoreImpl()
+    val deleteStaleGuestCarts = DeleteStaleGuestCartsUc(transactions, carts, clock)
+    val deleteOldIdempotencyKeys = DeleteOldIdempotencyKeysUc(transactions, idempotencyStore, clock)
+
+    /** The jobs as the scheduler runs them; a test calls one run of each, with its own clock. */
+    val jobs = PurchaseJobs(
+        FindExpirableOrdersUc(transactions, orderQm, clock), expireUnpaidOrder, FindStalePaymentsUc(transactions, payments, clock), reconcilePayment,
+        deleteStaleGuestCarts, deleteOldIdempotencyKeys,
+    )
+
     val paymentUseCases = PaymentUseCases(
         handleCallback, GetPaymentResultUc(transactions, payments, orderQm, settings, clock), startPaymentAttempt, startPayment,
         GetPaymentInitUc(transactions, payments, orderQm),

@@ -157,7 +157,10 @@ class Payment private constructor(
 
     // ============ the order's time ============
 
-    /** The order's time to pay ran out while this attempt was still open; one being confirmed is never expired. */
+    /**
+     * The attempt's time is over while it was still open: its order's time to pay ran out, or its shopper left its
+     * session on the gateway's page (abandoned, PaymentPolicy.isAbandoned). One being confirmed is never expired.
+     */
     fun expire(now: Instant): Result<Payment, Failure> =
         move(from = setOf(INITIATED, REDIRECTED), to = EXPIRED) { settle(PaymentFailureReason.EXPIRED, now) }
 

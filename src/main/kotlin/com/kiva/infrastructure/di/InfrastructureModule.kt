@@ -18,6 +18,8 @@ import com.kiva.infrastructure.config.SmsProvider
 import com.kiva.infrastructure.payment.FakePaymentGateway
 import com.kiva.infrastructure.payment.PaymentProvider
 import org.jetbrains.exposed.v1.jdbc.Database
+import com.kiva.infrastructure.job.JobScheduler
+import com.kiva.infrastructure.job.PurchaseJobs
 import org.koin.dsl.module
 import java.time.Clock
 
@@ -39,6 +41,14 @@ fun infrastructureModule(config: AppConfig, database: Database) = module {
             SmsProvider.LOG -> LogSmsSender()
         }
     }
+    // The scheduled jobs; started by Application.start once the app has started, when kiva.jobs.enabled.
+    single {
+        PurchaseJobs(
+            findExpirableOrders = get(), expireUnpaidOrder = get(), findStalePayments = get(), reconcilePayment = get(),
+            deleteStaleGuestCarts = get(), deleteOldIdempotencyKeys = get(),
+        )
+    }
+    single { JobScheduler(get<PurchaseJobs>().all(), clock = get()) }
     // The adapters behind the gateways. A gateway without one here is never available, whatever the settings say.
     when (config.payment.provider) {
         PaymentProvider.FAKE -> {

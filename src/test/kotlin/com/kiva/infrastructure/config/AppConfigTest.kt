@@ -37,6 +37,7 @@ class AppConfigTest {
         "kiva.payment.callbackBaseUrl" to "http://localhost:8080",
         "kiva.payment.resultUrl" to "http://localhost:3100/checkout/result",
         "kiva.payment.zarinpal.sandbox" to "true",
+        "kiva.jobs.enabled" to "true",
     )
 
     private fun read(vararg changes: Pair<String, String?>): AppConfig {
@@ -145,6 +146,13 @@ class AppConfigTest {
         assertEquals(PaymentProvider.FAKE, config.payment.provider)
         assertEquals("http://localhost:8080", config.payment.callbackBaseUrl)
         assertTrue(config.payment.zarinpal.sandbox)
+        assertTrue(config.jobs.enabled, "the jobs are on unless turned off: without them an unpaid order holds its stock for good")
+    }
+
+    @Test
+    fun `the jobs switch is strict - a typo stops the boot instead of quietly turning them off`() {
+        assertTrue("yes" in assertFailsWith<IllegalArgumentException> { read("kiva.jobs.enabled" to "yes") }.message.orEmpty())
+        assertEquals(false, read("kiva.jobs.enabled" to "false").jobs.enabled)
     }
 
     // ============ payments ============

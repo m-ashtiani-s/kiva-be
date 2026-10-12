@@ -12,6 +12,7 @@ import com.kiva.domain.aggregate.order.model.policy.PaymentPolicy
 import com.kiva.domain.aggregate.order.model.valueobject.OrderId
 import com.kiva.domain.aggregate.order.model.valueobject.OrderStatus
 import com.kiva.domain.aggregate.payment.PaymentDomainService.Confirmed
+import com.kiva.domain.aggregate.payment.PaymentDomainService.ExpireRefusal
 import com.kiva.domain.aggregate.payment.PaymentDomainService.Return
 import com.kiva.domain.aggregate.payment.PaymentDomainService.StartAttemptFailure
 import com.kiva.domain.aggregate.payment.entity.Payment
@@ -28,8 +29,10 @@ import org.junit.jupiter.api.Test
 import java.time.Duration
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class PaymentDomainServiceTest {
 
@@ -86,6 +89,58 @@ class PaymentDomainServiceTest {
         assertEquals(mapOf("retryAfterSeconds" to 660L), tooMany?.meta)
         assertEquals(0, ids.handedOut)
         assertEquals("pay_N00000000001", service.startAttempt(open, tenAttempts(open).take(9), PaymentGatewayCode.ZARINPAL, true, sara, at(4)).getOrNull()?.publicId?.value)
+    }
+
+    // ============ the expiry job ============
+
+    @Test
+    fun `past its time to pay, with no attempt going on, the order expires and so do its attempts still open`() {
+        val order = order()
+        val cancelled = redirected(order, 1).also { it.cancel(at(2)) }
+        val abandoned = redirected(order, 2)
+        val neverSent = Payment.start(
+            PaymentPublicId.constructFromPersisted("pay_000000000003"), order.id, sara, PaymentGatewayCode.ZARINPAL, order.totals.payable, at(1),
+        )
+
+        val expired = service.expireUnpaid(order, listOf(cancelled, abandoned, neverSent), sara, at(21)).getOrNull()!!
+
+        assertEquals(listOf(abandoned, neverSent), expired)
+        assertEquals(listOf(PaymentStatus.CANCELLED, PaymentStatus.EXPIRED, PaymentStatus.EXPIRED), listOf(cancelled, abandoned, neverSent).map { it.status })
+        assertEquals(OrderStatus.EXPIRED, order.status)
+    }
+
+    @Test
+    fun `no expiry before the time to pay ends, of an order paid or expired, nor while an attempt may still pay it`() {
+        val early = order()
+        assertEquals(ExpireRefusal.TooEarly(at(15)), service.expireUnpaid(early, emptyList(), sara, at(14)).failureOrNull())
+
+        val paid = order().also { o -> redirected(o).let { p -> service.shopperReturned(p, true, o, listOf(p), sara, at(1)); service.confirmed(p, o, refId, card, sara, at(1)) } }
+        assertEquals(ExpireRefusal.NotAwaitingPayment(OrderStatus.PROCESSING), service.expireUnpaid(paid, emptyList(), sara, at(30)).failureOrNull())
+
+        val onTheBankPage = order()
+        val sentLate = redirected(onTheBankPage)
+        assertEquals(ExpireRefusal.PaymentInProgress(sentLate.publicId), service.expireUnpaid(onTheBankPage, listOf(sentLate), sara, at(20)).failureOrNull())
+
+        val beingConfirmed = order()
+        val verifying = redirected(beingConfirmed).also { service.beginConfirming(it, beingConfirmed, listOf(it), at(14)) }
+        assertEquals(ExpireRefusal.PaymentInProgress(verifying.publicId), service.expireUnpaid(beingConfirmed, listOf(verifying), sara, at(90)).failureOrNull())
+
+        val expired = order().also { service.expireUnpaid(it, emptyList(), sara, at(16)) }
+        assertEquals(ExpireRefusal.NotAwaitingPayment(OrderStatus.EXPIRED), service.expireUnpaid(expired, emptyList(), sara, at(17)).failureOrNull())
+        assertEquals(listOf(OrderStatus.PENDING_PAYMENT, OrderStatus.PENDING_PAYMENT, OrderStatus.PENDING_PAYMENT), listOf(early, onTheBankPage, beingConfirmed).map { it.status })
+    }
+
+    @Test
+    fun `an attempt still at the bank is closed only once abandoned, and only from its open session`() {
+        val order = order()
+        val payment = redirected(order)
+
+        assertFalse(service.abandon(payment, at(20)))
+        assertEquals(PaymentStatus.REDIRECTED, payment.status)
+        assertTrue(service.abandon(payment, at(21)))
+        assertEquals(PaymentStatus.EXPIRED to PaymentFailureReason.EXPIRED, payment.status to payment.failureReason)
+        assertFalse(service.abandon(payment, at(40)), "closed already")
+        assertEquals(OrderStatus.PENDING_PAYMENT, order.status, "its order is the expiry's business")
     }
 
     // ============ back from the gateway ============

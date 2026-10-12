@@ -94,7 +94,7 @@
 | ۱۳ | ثبت سفارش: `POST /orders` | L | ✅ |
 | ۱۴ | برگشت از درگاه و نتیجه‌ی پرداخت | L | ✅ |
 | ۱۵ | پرداخت دوباره | M | ✅ |
-| ۱۶ | کارهای زمان‌بندی‌شده | M | ⬜ |
+| ۱۶ | کارهای زمان‌بندی‌شده | M | ✅ |
 | ۱۷ | سفارش‌های من و خرید دوباره | M | ⬜ |
 | ۱۸ | درگاه واقعی زرین‌پال | M | ⬜ |
 | ۱۹ | رزرو ۴ روزه و ادغام سفارش‌ها | L | ⬜ |
@@ -651,7 +651,7 @@ code = "KV-" + (100000 + (n × A + B) mod 900000)    A نسبت به 900000 = 2�
 | `VERIFYING` | `FAILED` | verify رد شد | `FAILED` |
 | `VERIFYING` | `VERIFYING` | verify جواب نداد. job تطبیق دوباره امتحان می‌کنه | `PENDING` |
 | `REDIRECTED` | `FAILED` | job تطبیق: inquiry گفت پرداخت ناموفق بوده (`GATEWAY_DECLINED`؛ گام ۱۰) | `FAILED` |
-| `INITIATED`، `REDIRECTED` | `EXPIRED` | job، وقتی سفارش منقضی شد | `EXPIRED` |
+| `INITIATED`، `REDIRECTED` | `EXPIRED` | job، وقتی سفارش منقضی شد؛ یا job تطبیق، وقتی `REDIRECTED` رها شده (۲۰ دقیقه) و درگاه می‌گه `IN_BANK` (گام ۱۶) | `EXPIRED` |
 | `SUCCEEDED` | `REFUNDED` | فاز بعد | `REFUNDED` |
 
 اثر روی سفارش: `CANCELLED` و `FAILED` (به‌جز `ORDER_NOT_PAYABLE`) ← `OrderPaymentFailed`، اگه سفارش هنوز پرداخت‌نشده باشه. `START_FAILED` سفارش رو `PENDING_PAYMENT` نگه می‌داره، چون مشتری کاری نکرده.
@@ -951,6 +951,8 @@ callback هیچ‌وقت JSON یا خطا نشون نمی‌ده و همیشه r
 | یادآوری رزرو (دور ۲، اختیاری) | ۱۵ دقیقه | `RemindReservationEndUc` | ۱۲ ساعت مونده، یک بار |
 | پاک‌سازی سبد مهمان | روزی یک بار، ۴ صبح تهران | `DeleteStaleGuestCartsUc` | سبد مهمان خالی که یک روز دست نخورده، و هر سبد مهمانی که ۳۰ روز دست نخورده. سبد کاربر هیچ‌وقت پاک نمی‌شه |
 | پاک‌سازی Idempotency | ساعتی | `DeleteOldIdempotencyKeysUc` | قدیمی‌تر از ۲۴ ساعت |
+
+**پیاده‌سازی (گام ۱۶):** `JobScheduler` (هر کار یه coroutine زیر یه `SupervisorJob`، بعد از `ApplicationStarted` و تا `ApplicationStopping`) و `PurchaseJobs` (هر اجرا: کوئری کاندیداها، و برای هر کاندیدا یه Command که شکستش بقیه رو متوقف نمی‌کنه). تصمیم‌ها در دامنه‌ان: `PaymentDomainService.expireUnpaid` (فقط پرداخت‌نشده، از `holdUntil` به بعد، و نه وقتی تلاشی `VERIFYING` ـه یا `REDIRECTED` ـِ جوان‌تر از پنجره)، `PaymentDomainService.abandon` و `InventoryDomainService.releaseForOrder` (به ترتیب قفل، و بی‌اثر بار دوم). `ExpireUnpaidOrderUc` اول همه‌ی تلاش‌های سفارش رو قفل می‌کنه (قفل ۶)، پس با callback یکی‌یکی می‌شه، و با `ConcurrentChangeException` تا ۳ بار از اول اجرا می‌شه. `ReconcilePaymentUc`: `VERIFYING` ← `PaymentConfirmation` (هشدار WARN بعد از ۱۰ دقیقه)؛ `REDIRECTED` ← inquiry بیرون تراکنش و بعد: `PAID`/`VERIFIED` با همون قانون‌های callback (`beginConfirming`)، `FAILED`/`REVERSED` ← `FAILED(GATEWAY_DECLINED)`، `IN_BANK` ← صبر، **مگه اینکه رها شده باشه** (پنجره‌ی ۲۰ دقیقه گذشته) که `EXPIRED` می‌شه و دیگه پرسیده نمی‌شه؛ وگرنه تلاش ِ رهاشده‌ی سفارشی که با تلاش دیگه پرداخت شده تا ابد هر ۲ دقیقه پرسیده می‌شد. ساعت ۴ صبح تهران از `ShopCalendar.ZONE` میاد. `kiva.jobs.enabled` سخت‌گیره (`yes` برنامه رو بالا نمیاره).
 
 **پنجره‌ی درگاه (۲۰ دقیقه):** مدتیه که فرض می‌کنیم مشتری ممکنه هنوز روی صفحه‌ی بانک باشه. چون تلاش تازه فقط تا `holdUntil` مجازه، طولانی‌ترین زمانی که یه سفارش موجودی رو نگه می‌داره حدود ۳۵ دقیقه‌ست (`holdUntil` + ۲۰). این عدد ثابت `PaymentPolicy.GATEWAY_WINDOW` ـه و تو سؤال‌های باز اومده.
 
@@ -1498,8 +1500,9 @@ PURCHASE_REVIEW.md                             (step 21)
 | 30 | `POST /orders`، `PlaceOrderRequest`، `OrderItemPreview` (گام ۱۳) | کدهای فیلد ِ ۴۰۰: `ADDRESS_REQUIRED` و `ADDRESS_AMBIGUOUS` روی `addressId`، `SHIPPING_METHOD_REQUIRED`، `PAYMENT_GATEWAY_REQUIRED`، `preShipmentMessenger.channel` با `MESSENGER_CHANNEL_INVALID`، `expectedPayable` با `MONEY_NEGATIVE`. `acceptTerms` از `required` بیرون اومد: نیامده یعنی نپذیرفته (`422 TERMS_NOT_ACCEPTED`). `newAddress` با استان یا شهر ناموجود ← ۴۰۰ روی `newAddress.provinceId`/`cityId`، شهر استان دیگه ← `422 CITY_NOT_IN_PROVINCE`، هر دو در قدم ۲. سقف ۳ سفارش فقط سفارش‌هایی رو می‌شمره که مهلت پرداختشون تموم نشده. تکرار با همون کلید جلسه‌ی تازه‌ی درگاه باز نمی‌کنه؛ درخواست ردشده کلید رو مصرف نمی‌کنه؛ دو سفارش همزمان از یه سبد ← یکی و `CART_EMPTY`. `OrderItemPreview.imageUrl` ← `nullable` (تا آپلود مدیا) | هر فیلد غلط اسم خودش رو داشته باشه؛ «قوانین رو پذیرفتم» ِ نیامده همون نپذیرفتنه؛ رفتار تکرار و دو تب باید معلوم باشه |
 | 31 | `/payment-callbacks/{gateway}`، `GET /payments/{paymentId}`، `PaymentResult` (گام ۱۴) | callback: اگه تلاش دیگه‌ای از همون سفارش در حال verify ـه، این یکی فعلاً verify نمی‌شه و `PENDING` می‌مونه تا سرور تمومش کنه؛ `saman`، `mellat` و خطای داخلی هم redirect بدون `paymentId`. شناسه‌ی بدشکل ← `404 PAYMENT_NOT_FOUND`. `failureReason` فقط برای تلاش ناموفق؛ `canRetry` موقع verify ـِ در جریان `false`؛ `nextSteps` فقط برای `SUCCEEDED` و وگرنه خالی | دو تلاش یه سفارش هیچ‌وقت با هم verify نمی‌شن؛ «همیشه 302»؛ دکمه‌ی «تلاش دوباره» وسط verify یعنی احتمال دو بار پول |
 | 32 | `POST /payments/{paymentId}/retry`، `POST /me/orders/{orderCode}/payments` (گام ۱۵) | بدنه اختیاری (بدون بدنه = `{}`)؛ `gateway` نیومده = درگاه همون تلاش، یا با کد سفارش درگاه آخرین تلاش؛ `gateway` نامعتبر ← `400` روی `gateway`. ترتیب: `404` (شناسه یا کد بدشکل هم) ← `ORDER_ALREADY_PAID` ← `PAYMENT_EXPIRED` ← `PAYMENT_GATEWAY_UNAVAILABLE` بدون `meta` ← `429`؛ و درگاهی که بعد از ساختن تلاش جواب نده `422 PAYMENT_GATEWAY_UNAVAILABLE` با `meta.orderCode` و `meta.paymentId`. کلید `Idempotency-Key` مال همون نوع درخواسته. سفارش پرداخت‌شده تا فاز درخواست تغییر `ORDER_ALREADY_PAID` می‌گیره | فرانت باید دو حالت ۴۲۲ رو از هم جدا کنه؛ هیچ پاسخی نگه سفارش یا پرداخت کس دیگه‌ای هست |
+| 33 | `PaymentStatus` (گام ۱۶) | `EXPIRED` برای تلاشی هم هست که مشتری بیش از ۲۰ دقیقه در درگاه رها کرد و درگاه می‌گه پرداخت نشده؛ `failureReason` ـش اگه سفارش با تلاش دیگه پرداخت شده همین رو می‌گه | تلاش رهاشده باید یه جا تموم بشه |
 
-**پیام برای فرانت (گام ۰ و ۲۱):** ردیف‌های ۲، ۴، ۵، ۶، ۷، ۸، ۱۰، ۱۱، ۲۰، ۲۴، ۲۵، ۲۶، ۲۷، ۲۸، ۲۹، ۳۰، ۳۱ و ۳۲ رفتار فرانت رو عوض می‌کنن. `docs/FRONTEND_PURCHASE.md` (گام ۲۱) کل جریان رو برای فرانت توضیح می‌ده، مثل `FRONTEND_AUTH.md`.
+**پیام برای فرانت (گام ۰ و ۲۱):** ردیف‌های ۲، ۴، ۵، ۶، ۷، ۸، ۱۰، ۱۱، ۲۰، ۲۴، ۲۵، ۲۶، ۲۷، ۲۸، ۲۹، ۳۰، ۳۱، ۳۲ و ۳۳ رفتار فرانت رو عوض می‌کنن. `docs/FRONTEND_PURCHASE.md` (گام ۲۱) کل جریان رو برای فرانت توضیح می‌ده، مثل `FRONTEND_AUTH.md`.
 
 ---
 
@@ -1900,7 +1903,7 @@ Route: StartPaymentUc ← 201 با order و payment، یا 422 PAYMENT_GATEWAY_U
 
 ---
 
-### گام ۱۶: کارهای زمان‌بندی‌شده · M ⬜
+### گام ۱۶: کارهای زمان‌بندی‌شده · M ✅
 
 **می‌سازی:** `JobScheduler`، و کارها و UseCaseهای بخش ۱۵: انقضای سفارش، تطبیق پرداخت، پاک‌سازی سبد مهمان و Idempotency. `InventoryDomainService.releaseForOrder`.
 
@@ -1911,13 +1914,13 @@ Route: StartPaymentUc ← 201 با order و payment، یا 422 PAYMENT_GATEWAY_U
 2. چرا قفل جدا برای اجرای همزمان دو نمونه لازم نیست؟
 
 **تموم شده یعنی:**
-- [ ] با `MutableClock`: ۱۵ دقیقه و یک ثانیه بعد، سفارشی که پرداخت در جریان نداره ← `EXPIRED`، موجودی آزاد، و پرداخت‌هاش `EXPIRED`.
-- [ ] پرداخت `REDIRECTED` ِ کمتر از ۲۰ دقیقه، یا `VERIFYING` ← سفارش منقضی نمی‌شه تا وقتی تموم بشه.
-- [ ] اجرای دوباره یا همزمان دو job ← هیچ اثر دوباره‌ای ندارن (رویداد تکراری یا آزادسازی دوباره پیش نمیاد).
-- [ ] تطبیق: پرداخت `VERIFYING` با verify ِ شکست‌خورده ← دوباره verify و `SUCCEEDED`. پرداخت `REDIRECTED` که مشتری پرداخت کرده ولی تب رو بسته (inquiry: `PAID`) ← verify، و سفارش `PROCESSING`.
-- [ ] سبد مهمان خالی ِ ۲۵ ساعته پاک می‌شه. سبد کاربر هیچ‌وقت.
-- [ ] کلید idempotency ِ ۲۵ ساعته پاک می‌شه.
-- [ ] تو تست‌ها `kiva.jobs.enabled = false` ـه، و خطای یه کار بقیه رو متوقف نمی‌کنه.
+- [x] با `MutableClock`: ۱۵ دقیقه و یک ثانیه بعد، سفارشی که پرداخت در جریان نداره ← `EXPIRED`، موجودی آزاد، و پرداخت‌هاش `EXPIRED`.
+- [x] پرداخت `REDIRECTED` ِ کمتر از ۲۰ دقیقه، یا `VERIFYING` ← سفارش منقضی نمی‌شه تا وقتی تموم بشه.
+- [x] اجرای دوباره یا همزمان دو job ← هیچ اثر دوباره‌ای ندارن (رویداد تکراری یا آزادسازی دوباره پیش نمیاد).
+- [x] تطبیق: پرداخت `VERIFYING` با verify ِ شکست‌خورده ← دوباره verify و `SUCCEEDED`. پرداخت `REDIRECTED` که مشتری پرداخت کرده ولی تب رو بسته (inquiry: `PAID`) ← verify، و سفارش `PROCESSING`.
+- [x] سبد مهمان خالی ِ ۲۵ ساعته پاک می‌شه. سبد کاربر هیچ‌وقت.
+- [x] کلید idempotency ِ ۲۵ ساعته پاک می‌شه.
+- [x] تو تست‌ها `kiva.jobs.enabled = false` ـه، و خطای یه کار بقیه رو متوقف نمی‌کنه.
 
 ---
 
@@ -2127,6 +2130,7 @@ Route: StartPaymentUc ← 201 با order و payment، یا 422 PAYMENT_GATEWAY_U
 | ۲۰ مهر ۱۴۰۵ | ۱۳ | Purchase step 13 | `PlaceOrderUc` (شکل ورودی بیرون تراکنش با همه‌ی خطاها با هم؛ بعد یه تراکنش با `IdempotencyGuard` به ترتیب کانترکت؛ تا ۳ بار با `ConcurrentChangeException`)، `StartPaymentUc` (دو تراکنش کوتاه، درگاه بینشون، و ثبت هر تماس در `paymentlog_tbl`)، `GetOrderSummaryUc` و `GetPaymentInitUc`، و `POST /orders` در `webV1Checkout.kt`. دامنه: `InventoryDomainService.reserveForOrder` (همه یا هیچ، به ترتیب قفل)، `PreShipmentMessenger.checkTexts` (۴۰۰ ِ متن‌ها قبل از ۴۲۲ ِ پیام‌رسان)، `User.keepMessenger`، `AddressBookDomainService.placeOf`. `OfferQm.Color.sku` برای snapshot ِ ردیف سفارش، `OrderQmRepository.unpaidHoldingUntil`، و `SmsSender.sendOrderPaid` (زودتر از گام ۱۴). `OrderSummaryHttpResponse` و `OrderTexts` (برچسب، رنگ، progress و پیام‌های انتظار). سؤال‌ها با پیشنهاد خودم: سبد موقع ثبت خالی می‌شه (اگه پرداخت شکست بخوره، مشتری با «پرداخت دوباره» ِ همون سفارش ادامه می‌ده)؛ `CART_EMPTY` اول چون بدون سبد هیچ چیز دیگه‌ای معنی نداره، و موجودی و قیمت آخر چون فقط اونا از دیتابیس تازه خونده می‌شن؛ رزرو بعد از چک قیمت، تا `PRICE_CHANGED` هیچ نوشتنی نداشته باشه. دو باگ پیدا و درست شد: ۴۲۲ ِ «درگاه جواب نداد» داخل تراکنش برگردونده می‌شد و `START_FAILED` رو rollback می‌کرد؛ و `InventoryRepositoryImpl` اول stream ِ موجودی و بعد ردیف محصول رو قفل می‌کرد، که برای دو رنگ ِ یه محصول بن‌بست می‌ساخت (حالا اول ردیف محصول، بخش ۱۱). خرابکاری عمدی همه‌ی نگهبان‌ها رو قرمز کرد، و `FOR UPDATE` ِ سبد که اول هیچ تستی رو قرمز نکرد با یه تست قطعی‌تر (دو تب) پوشش داده شد. کانترکت: ردیف ۳۰. ۲۱ تست تازه، ۱۷۸۵ کل |
 | ۲۰ مهر ۱۴۰۵ | ۱۴ | Purchase step 14 | `HandleGatewayCallbackUc` (GET و POST ِ `/payment-callbacks/{gateway}`، همیشه 302، حتی وقتی چیزی داخلش می‌شکنه)، `GetPaymentResultUc` و `GET /payments/{paymentId}`، `PaymentTexts`. دامنه: `PaymentDomainService` (قانون‌های بین تلاش و سفارش: برگشت مشتری، شروع verify، تأیید و رد) و `PaymentPolicy.canRetry`. سرویس application ِ `PaymentConfirmation` (verify بیرون تراکنش و تسویه در تراکنش دوم، و پیامک بعد از commit) که job تطبیق گام ۱۶ هم ازش استفاده می‌کنه. **یه خطر تازه پیدا و بسته شد:** قفل ردیف یه پرداخت جلوی دو تلاش ِ یه سفارش رو نمی‌گرفت که در یک لحظه برگردن و هر دو verify بشن (پول دو بار گرفته می‌شد و ایندکس «یک موفق» فقط ثبت دومی رو رد می‌کرد، بعد از گرفتن پول). حالا تسویه همه‌ی تلاش‌های سفارش رو با هم قفل می‌کنه (`PaymentRepository.lockAttemptsOf`، به جای `lockByAuthority`)، تلاشی که همزمان با verify ـِ تلاش دیگه برمی‌گرده منتظر می‌مونه (job تمومش می‌کنه)، و `V18__payment_one_verifying.sql` دیوار دومه؛ پس رزرو گروهی و کد تخفیف V19 و V20 شدن. سؤال‌ها با پیشنهاد خودم: پرداخت از روی authority پیدا می‌شه چون اون شناسه رو درگاه داده و ما ذخیره کردیم؛ اگه از `paymentId` ِ آدرس پیدا می‌شد، کسی می‌تونست جلسه‌ی پرداخت‌شده‌ی سفارش ارزون خودش رو با شناسه‌ی پرداخت سفارش گرون بفرسته و رابطه‌ی «این جلسه مال کدوم پرداخته» رو درخواست تعیین می‌کرد، نه ما. برای سفارش منقضی verify نمی‌کنیم چون پولی که گرفته نشه خودکار برمی‌گرده؛ verify و بعد reverse فقط تا ۳۰ دقیقه و از IP ِ ثبت‌شده کار می‌کنه و اگه شکست بخوره پول مشتری برای سفارشی که موجودیش آزاد شده پیش ما می‌مونه. تصمیم‌های دیگه: `saman` و `mellat` (بی‌آداپتر) به جای `404` همون redirect ِ بدون `paymentId` رو می‌گیرن (کانترکت: همیشه 302)؛ callback ِ دوباره روی تلاش `VERIFYING` هیچ کاری نمی‌کنه؛ `canRetry` وسط verify `false` ـه؛ `nextSteps` فقط برای موفق. کانترکت: ردیف ۳۱. ۲۸ تست تازه، ۱۸۱۳ کل |
 | ۲۰ مهر ۱۴۰۵ | ۱۵ | Purchase step 15 | `StartPaymentAttemptUc` و دو route ـش (`POST /payments/{paymentId}/retry` و `POST /me/orders/{orderCode}/payments`): شکل اول (کلید و `gateway`، ۴۰۰)، بعد یه تراکنش با `IdempotencyGuard`، مالکیت (۴۰۴ برای بدشکل هم)، قفل همه‌ی تلاش‌های سفارش و قانون‌های `PaymentDomainService.startAttempt` به ترتیب کانترکت (پرداخت‌شده، مهلت، درگاه، سقف ۱۰ با `Retry-After` تا پایان مهلت)؛ شناسه‌ی تلاش آخر از همه. Route مثل `POST /orders`: تلاش، `StartPaymentUc`، `GetPaymentInitUc`. بدنه اختیاریه. **یه خطای همزمانی پیدا و درست شد:** `lockAttemptsOf` بعد از انتظار، تلاشی رو که نگه‌دارنده‌ی قفل اضافه کرده بود نمی‌دید، پس دو retry ِ همزمان سقف ۱۰ رو رد می‌کردن؛ حالا بعد از گرفتن قفل دوباره می‌خونه. سؤال‌ها با پیشنهاد خودم: `expiresAt` تمدید نمی‌شه چون اگه می‌شد یه ربات با retry ِ هر ۱۴ دقیقه موجودی رو برای همیشه از فروشگاه بیرون نگه می‌داشت؛ تلاش‌های قدیمی لغو نمی‌شن چون مشتری شاید همون لحظه تو تب دیگه داره پرداختش می‌کنه، و قانون‌های گام ۱۴ (یک verify در هر لحظه و فقط برای سفارش در انتظار) نمی‌ذارن پول دو بار گرفته بشه. کانترکت: ردیف ۳۲. ۱۱ تست تازه، ۱۸۲۴ کل |
+| ۲۰ مهر ۱۴۰۵ | ۱۶ | Purchase step 16 | `JobScheduler` (یه coroutine برای هر کار زیر `SupervisorJob`، از `ApplicationStarted` تا `ApplicationStopping`، با `kiva.jobs.enabled` ِ سخت‌گیر) و `PurchaseJobs`: انقضای سفارش (هر دقیقه، `FindExpirableOrdersUc` ← `ExpireUnpaidOrderUc`)، تطبیق پرداخت (هر ۲ دقیقه، `FindStalePaymentsUc` ← `ReconcilePaymentUc`)، پاک‌سازی سبد مهمان (۴ صبح تهران) و کلیدهای Idempotency (ساعتی). قانون‌ها در دامنه: `PaymentDomainService.expireUnpaid` و `abandon`، `PaymentPolicy.isAbandoned`، `InventoryDomainService.releaseForOrder`، `CartRetentionPolicy`. انقضا اول همه‌ی تلاش‌های سفارش رو قفل می‌کنه، پس با callback یکی‌یکی می‌شه. تطبیق ِ `REDIRECTED` با inquiry و همون قانون‌های callback. **یه چیز تازه:** تلاش رهاشده (۲۰ دقیقه، و درگاه می‌گه `IN_BANK`) حالا `EXPIRED` می‌شه؛ وگرنه تلاش اضافه‌ی سفارشی که با تلاش دیگه پرداخت شده تا ابد هر ۲ دقیقه از درگاه پرسیده می‌شد. سؤال‌ها با پیشنهاد خودم: کاندیدا از read model میاد ولی تصمیم با Aggregate ـه، چون `UPDATE … WHERE holdUntil < now` نه پرداخت ِ در جریان رو می‌دید، نه موجودی رو آزاد می‌کرد، نه رویداد و تایم‌لاین می‌ساخت، و وضعیتی رو که همون لحظه عوض شده بود بازنویسی می‌کرد؛ قفل جدا برای دو نمونه لازم نیست چون هر کاندیدا در تراکنش خودش و با قفل‌های خودش تصمیم گرفته می‌شه و Aggregate دوباره‌کاری رو رد می‌کنه (دو اجرای همزمان ← یه `OrderExpired`، یه آزادسازی، یه `OrderPaid`). برنامه یه بار روی پورت ۸۰۸۱ بالا اومد و کارها سر وقت اجرا شدن. ۲۱ تست تازه، ۱۸۴۵ کل. کانترکت: ردیف ۳۳ |
 
 ---
 
