@@ -40,6 +40,8 @@ import com.kiva.application.usecase.product.usecase.query.GetProductUc
 import com.kiva.domain.aggregate.otp.model.policy.OtpPolicy
 import com.kiva.infrastructure.common.http.KivaJson
 import com.kiva.infrastructure.config.AppConfig
+import com.kiva.infrastructure.payment.FakePaymentGateway
+import com.kiva.infrastructure.payment.PaymentProvider
 import com.kiva.infrastructure.common.http.configureStatusPages
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AddressUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminCustomerUseCases
@@ -50,6 +52,7 @@ import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Addresses
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminCustomers
 import com.kiva.infrastructure.httpserver.controller.httprest.web.OTP_SEND_RATE_LIMIT
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Auth
+import com.kiva.infrastructure.httpserver.controller.httprest.web.devFakeGateway
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Cart
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Catalog
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Geo
@@ -71,6 +74,7 @@ import io.ktor.server.plugins.origin
 import io.ktor.server.plugins.ratelimit.RateLimit
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
+import org.koin.ktor.ext.get
 import org.koin.ktor.ext.inject
 import org.slf4j.event.Level
 import java.util.UUID
@@ -189,6 +193,8 @@ fun Application.configureRouting() {
 
     routing {
         healthRoutes()
+        // Outside /api/v1: the pretend bank's page is not the shop's, and exists only with the fake gateway.
+        if (config.payment.provider == PaymentProvider.FAKE) devFakeGateway(get<FakePaymentGateway>())
         route(API_V1) {
             webV1Auth(
                 AuthUseCases(sendLoginCodeUc, verifyLoginCodeUc, getMeUc, refreshSessionUc, logoutUc, mergeGuestCartUc, getCartUc),

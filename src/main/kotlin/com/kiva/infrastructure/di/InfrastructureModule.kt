@@ -2,6 +2,7 @@ package com.kiva.infrastructure.di
 
 import com.kiva.application.port.AccessTokens
 import com.kiva.application.port.OtpCodes
+import com.kiva.application.port.PaymentGateways
 import com.kiva.application.port.SessionTokens
 import com.kiva.application.port.SmsSender
 import com.kiva.common.transaction.TransactionManager
@@ -14,6 +15,8 @@ import com.kiva.infrastructure.common.html.JsoupHtmlSanitizer
 import com.kiva.infrastructure.common.persistence.ExposedTransactionManager
 import com.kiva.infrastructure.config.AppConfig
 import com.kiva.infrastructure.config.SmsProvider
+import com.kiva.infrastructure.payment.FakePaymentGateway
+import com.kiva.infrastructure.payment.PaymentProvider
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.koin.dsl.module
 import java.time.Clock
@@ -35,5 +38,13 @@ fun infrastructureModule(config: AppConfig, database: Database) = module {
         when (config.sms.provider) {
             SmsProvider.LOG -> LogSmsSender()
         }
+    }
+    // The adapters behind the gateways. A gateway without one here is never available, whatever the settings say.
+    when (config.payment.provider) {
+        PaymentProvider.FAKE -> {
+            single { FakePaymentGateway(config.payment) }
+            single { PaymentGateways(listOf(get<FakePaymentGateway>())) }
+        }
+        PaymentProvider.ZARINPAL -> error("kiva.payment.provider = zarinpal: the Zarinpal adapter comes in purchase step 18; use fake until then")
     }
 }

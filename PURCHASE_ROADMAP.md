@@ -88,7 +88,7 @@
 | ۷ | ادغام سبد مهمان | S | ✅ |
 | ۸ | Aggregate سفارش (دامنه) | L | ✅ |
 | ۹ | سفارش: event store و read model | M | ✅ |
-| ۱۰ | پرداخت: مدل، جدول و درگاه آزمایشی | M | ⬜ |
+| ۱۰ | پرداخت: مدل، جدول و درگاه آزمایشی | M | ✅ |
 | ۱۱ | Idempotency | S | ⬜ |
 | ۱۲ | صفحه‌ی تسویه: `GET /checkout` | M | ⬜ |
 | ۱۳ | ثبت سفارش: `POST /orders` | L | ⬜ |
@@ -650,10 +650,13 @@ code = "KV-" + (100000 + (n × A + B) mod 900000)    A نسبت به 900000 = 2�
 | `VERIFYING` | `SUCCEEDED` | verify با کد ۱۰۰ یا ۱۰۱ | `SUCCEEDED` |
 | `VERIFYING` | `FAILED` | verify رد شد | `FAILED` |
 | `VERIFYING` | `VERIFYING` | verify جواب نداد. job تطبیق دوباره امتحان می‌کنه | `PENDING` |
+| `REDIRECTED` | `FAILED` | job تطبیق: inquiry گفت پرداخت ناموفق بوده (`GATEWAY_DECLINED`؛ گام ۱۰) | `FAILED` |
 | `INITIATED`، `REDIRECTED` | `EXPIRED` | job، وقتی سفارش منقضی شد | `EXPIRED` |
 | `SUCCEEDED` | `REFUNDED` | فاز بعد | `REFUNDED` |
 
 اثر روی سفارش: `CANCELLED` و `FAILED` (به‌جز `ORDER_NOT_PAYABLE`) ← `OrderPaymentFailed`، اگه سفارش هنوز پرداخت‌نشده باشه. `START_FAILED` سفارش رو `PENDING_PAYMENT` نگه می‌داره، چون مشتری کاری نکرده.
+
+**پیاده‌سازی (گام ۱۰):** هویت Aggregate همون `publicId` ـه و `PaymentId` ِ جدا لازم نشد (مثل سبد؛ `pId` فقط مال persistence و FK ِ لاگه). هر انتقال بیرون از این جدول `Failure.NotAllowed` می‌گیره. `PaymentStatus.outcome` نگاشت به وضعیت کانترکته و `isSettled` یعنی دیگه چیزی عوض نمی‌شه (`START_FAILED` هم پایانیه). `refId` دقیقاً با `SUCCEEDED`/`REFUNDED`، `failureReason` دقیقاً با چهار وضعیت شکست، و `settledOn` دقیقاً با وضعیت پایانی؛ همین‌ها CHECK ِ جدول هم هستن. `CardMask` حداقل ۶ رقم وسط رو ستاره می‌خواد (شکل درگاه‌ها). `save` نسخه‌ی ردیف رو چک می‌کنه (`ConcurrentChangeException`). پرداخت سند مالیه: `userId` و `orderId` هیچ FK ای ندارن و ردیف هیچ‌وقت حذف نمی‌شه (حذف حساب، فاز بعد، بی‌نام می‌کنه، پاک نمی‌کنه). ایندکس «یک پرداخت موفق» `REFUNDED` رو هم می‌شمره.
 
 ### ۱۰.۲ پورت درگاه
 
@@ -708,7 +711,7 @@ sealed class GatewayFailure {
 `FakePaymentGateway` خودش رو جای `ZARINPAL` جا می‌زنه، تا مسیرها و callback دقیقاً مثل سرور واقعی باشن:
 
 - `requestPayment` یه authority مثل `FAKE-…` می‌سازه و redirect رو به `{callbackBaseUrl}/dev/fake-gateway/{authority}` می‌فرسته.
-- اون صفحه یه HTML ساده‌ست با مبلغ، کد سفارش و دو دکمه: «پرداخت موفق» و «انصراف» (مثل mock ِ فرانت). هر دکمه به `/api/v1/payment-callbacks/zarinpal?Authority=…&Status=OK|NOK` برمی‌گرده.
+- اون صفحه یه HTML ساده‌ست با مبلغ، کد سفارش و دو دکمه: «پرداخت موفق» و «انصراف» (مثل mock ِ فرانت). هر دکمه یه فرم POST به `/dev/fake-gateway/{authority}/pay` یا `/cancel` ـه که کار مشتری رو ثبت می‌کنه و با `302` به `/api/v1/payment-callbacks/zarinpal?Authority=…&Status=OK|NOK` برمی‌گرده. پرداخت بعد از انصراف `409` می‌گیره (گام ۱۰).
 - `verify` فقط برای authorityای موفقه که دکمه‌ی موفقش زده شده. بار دوم «قبلاً verify شده» برمی‌گردونه.
 - تو تست‌ها: می‌شه بهش گفت جواب نده (`Unreachable`)، رد کنه، یا کند باشه. تعداد تماس‌هاش رو هم می‌شمره.
 - **تست معماری:** هر بار صدا زده می‌شه، چک می‌کنه داخل تراکنش Exposed نباشه (`TransactionManager.currentOrNull() == null`) و اگه بود، خطا می‌ده. پس کسی که تماس درگاه رو داخل تراکنش بذاره، build ـش قرمز می‌شه.
@@ -1048,7 +1051,7 @@ erDiagram
     bigint pId PK
     varchar publicId UK
     bigint orderId
-    bigint userId FK
+    bigint userId
     varchar gateway
     bigint amount
     varchar status
@@ -1323,7 +1326,7 @@ kiva {
 | متغیر | چی |
 |---|---|
 | `KIVA_PAYMENT_PROVIDER` | `fake` (پیش‌فرض، فقط توسعه) یا `zarinpal` |
-| `KIVA_ZARINPAL_MERCHANT_ID` | با `zarinpal` اجباریه. اگه نباشه یا UUID نباشه، برنامه با یه پیام روشن بالا نمیاد |
+| `KIVA_ZARINPAL_MERCHANT_ID` | با `zarinpal` اجباریه. اگه نباشه یا UUID نباشه، برنامه با یه پیام روشن بالا نمیاد. تا گام ۱۸ خود `zarinpal` هم برنامه رو بالا نمیاره (آداپترش هنوز نیست) |
 | `KIVA_ZARINPAL_SANDBOX` | `true` تو توسعه، `false` روی سرور |
 | `KIVA_API_PUBLIC_URL` | روی سرور `https://api.kiva.ir`. دامنه‌ش باید همون دامنه‌ی ثبت‌شده در زرین‌پال باشه (خطای ‎`-14`) |
 | `KIVA_PAYMENT_RESULT_URL` | روی سرور `https://kiva.ir/checkout/result` |
@@ -1385,8 +1388,10 @@ domain/src/main/kotlin/com/kiva/domain/aggregate/
     repository/OrderRepository.kt, OrderIdGenerator.kt
   payment/
     entity/Payment.kt
-    model/valueobject/PaymentId.kt, PaymentPublicId.kt (step 8), PaymentStatus.kt, GatewayAuthority.kt, GatewayRefId.kt, CardMask.kt, PaymentFailureReason.kt (step 8)
-    repository/PaymentRepository.kt
+    model/valueobject/PaymentPublicId.kt (step 8), PaymentStatus.kt (+ PaymentOutcome), GatewayAuthority.kt, GatewayRefId.kt, CardMask.kt, PaymentRedirect.kt,
+                      PaymentFailureReason.kt (step 8)
+    model/PaymentLogEntry.kt
+    repository/PaymentRepository.kt, PaymentIdGenerator.kt
   inventory/InventoryDomainService.kt         + reserveForOrder, releaseForOrder
   reservation/   (round 2) entity/ReservationGroup.kt, ReservationDomainService.kt, model/valueobject/…, repository/…
   discount/      (round 2) entity/DiscountCode.kt, DiscountRedemption.kt, DiscountDomainService.kt, model/policy/DiscountPolicy.kt, …
@@ -1405,7 +1410,7 @@ application/src/main/kotlin/com/kiva/application/
 
 src/main/kotlin/com/kiva/infrastructure/
   cart/RandomCartIds.kt                        CartIdGenerator with SecureRandom (step 6)
-  payment/ZarinpalGateway.kt, FakePaymentGateway.kt, PaymentConfig.kt
+  payment/ZarinpalGateway.kt, FakePaymentGateway.kt, PaymentConfig.kt, RandomPaymentIds.kt
   job/JobScheduler.kt, Jobs.kt
   common/text/JalaliDates.kt                   Persian calendar dates for the HTTP texts
   common/http/Caching.kt                       ETag + Cache-Control
@@ -1695,7 +1700,7 @@ PURCHASE_REVIEW.md                             (step 21)
 
 ---
 
-### گام ۱۰: پرداخت: مدل، جدول و درگاه آزمایشی · M ⬜
+### گام ۱۰: پرداخت: مدل، جدول و درگاه آزمایشی · M ✅
 
 **می‌سازی:** `Payment` و VOهاش، `PaymentRepository` و پیاده‌سازیش، `V16__payments.sql` (با trigger ِ فقط‌اضافه برای لاگ)، پورت `PaymentGateway` و رجیستری `PaymentGateways`، `FakePaymentGateway`، صفحه‌ی `/dev/fake-gateway/{authority}`، پیکربندی `kiva.payment` و تست معماری «تماس درگاه بیرون از تراکنش».
 
@@ -1706,12 +1711,14 @@ PURCHASE_REVIEW.md                             (step 21)
 2. درگاه آزمایشی چطور بفهمه داخل تراکنشه، بدون اینکه application به Exposed وابسته بشه؟
 
 **تموم شده یعنی:**
-- [ ] هر انتقال جدول ۱۰.۱ موفقه و هر انتقال دیگه Failure می‌ده.
-- [ ] دیتابیس رد می‌کنه: authority تکراری، `refId` تکراری، دومین `SUCCEEDED` برای یه سفارش، و `REDIRECTED` بدون authority.
-- [ ] `UPDATE` یا `DELETE` روی `paymentlog_tbl` رد می‌شه.
-- [ ] درگاه آزمایشی: `requestPayment` ← redirect به صفحه‌ی آزمایشی. صفحه دو دکمه داره و به callback برمی‌گرده. `verify` فقط برای OK موفقه و بار دوم «قبلاً verify شده» برمی‌گردونه. `inquire` کار می‌کنه.
-- [ ] صدا زدن درگاه آزمایشی داخل `inTransaction` تو تست‌ها خطا می‌ده.
-- [ ] با `provider = fake` موقع بالا اومدن یه WARN نوشته می‌شه، و `provider = zarinpal` بدون merchant id برنامه رو بالا نمیاره.
+- [x] هر انتقال جدول ۱۰.۱ موفقه و هر انتقال دیگه Failure می‌ده.
+- [x] دیتابیس رد می‌کنه: authority تکراری، `refId` تکراری، دومین `SUCCEEDED` برای یه سفارش، و `REDIRECTED` بدون authority.
+- [x] `UPDATE` یا `DELETE` روی `paymentlog_tbl` رد می‌شه.
+- [x] درگاه آزمایشی: `requestPayment` ← redirect به صفحه‌ی آزمایشی. صفحه دو دکمه داره و به callback برمی‌گرده. `verify` فقط برای OK موفقه و بار دوم «قبلاً verify شده» برمی‌گردونه. `inquire` کار می‌کنه.
+- [x] صدا زدن درگاه آزمایشی داخل `inTransaction` تو تست‌ها خطا می‌ده.
+- [x] با `provider = fake` موقع بالا اومدن یه WARN نوشته می‌شه، و `provider = zarinpal` بدون merchant id برنامه رو بالا نمیاره.
+- [x] نسخه‌ی ردیف: save ِ دوم بعد از save ِ یکی دیگه `ConcurrentChangeException` می‌گیره و هیچی ازش نمی‌مونه.
+- [x] درگاه در دسترس یعنی ردیفش فعال **و** آداپتر داره: سامان با فعال شدن ردیفش در دسترس نمی‌شه.
 
 ---
 
@@ -2080,6 +2087,7 @@ Route: StartPaymentUc ← 201 با order و payment، یا 422 PAYMENT_GATEWAY_U
 | ۲۰ مهر ۱۴۰۵ | ۷ | Purchase step 7 | `MergeGuestCartUc` با `CartCommands.runMerge`: قفل سبد کاربر (اگه نباشه ساخته می‌شه)، بعد سبد مهمان، و حذف سبد مهمان **قبل** از ذخیره‌ی سبد کاربر (`CartRepository.delete`). ادغام تو تراکنش خودش و بعد از commit ِ verify؛ Route: verify ← merge ← `GetCartUc` و `GetMeUc`. `AuthHttpResponse.cart` دیگه null نیست. `POST /cart/merge` با ورود اجباری. تصمیم‌های کاربر: توکن بدشکل مثل ناشناخته (200)، سبد مهمان خالی انتخاب‌های کاربر رو عوض نمی‌کنه (`Cart.absorb`)، و بدون سبد مهمان هم سبد کاربر sync می‌شه. `FRONTEND_AUTH.md` به‌روز شد. ۱۹ تست تازه، ۱۶۱۶ کل. کانترکت: ردیف ۲۷ |
 | ۲۰ مهر ۱۴۰۵ | ۸ | Purchase step 8 | فقط دامنه (به‌علاوه‌ی `returnable` در `PurchaseOffer` و متن کدهای فیلد تازه). `Order` با Event Sourcing و چهار رویداد (`OrderPlaced`، `OrderPaymentFailed`، `OrderPaid`، `OrderExpired`)؛ سفارش بدون مبلغ همون لحظه پرداخت‌شده‌ست. تصمیم‌های کاربر: `OrderPaid` خودش وضعیت بعدی رو می‌گه (`heldForReservation`)، یه `OrderPaymentFailed` برای هر تلاش (تکرار همون تلاش بی‌اثر)، ترتیب قانون‌های ثبت سفارش در `OrderDomainService.placeOrder`، و `fullText` در لایه‌ی HTTP. `OrderCodePolicy` با `A = 556243` و `B = 118340` (اولین کد `KV-218340`). `PaymentPolicy` (پنجره‌ی ۲۰ دقیقه، سقف ۳ سفارش و ۱۰ تلاش)، `OrderActionsPolicy`، `ReservationPolicy` (مشترک با سبد)، `PaymentPublicId` و `PaymentFailureReason` زودتر از گام ۱۰. ۵۴ تست تازه، ۱۶۷۰ کل. کانترکت: ردیف ۲۸ |
 | ۲۰ مهر ۱۴۰۵ | ۹ | Purchase step 9 | `V15__orders.sql` (`orderid_seq` و `orderqm_tbl`، بدون FK، با قید «پرداخت‌شده دقیقاً با `paidOn`»). چهار payload ِ رویداد و پنج payload ِ تیکه‌ها (همون شکل در read model)، با JSON ِ طلایی برای هر رویداد. `OrderRepositoryImpl`، `OrderIdGeneratorImpl`، `OrderQmProjector` (ردیف، تایم‌لاین، `soldCount`)، `OrderQmRepository.findOfCustomer`. کاربر گفت سؤال‌ها رو با پیشنهاد خودم جواب بدم: تایم‌لاین رو Projector می‌سازه؛ `soldCount` رو Projector ِ سفارش عوض می‌کنه و قفل محصول‌ها قبل از stream ِ سفارش گرفته می‌شه (تست «پرداخت و انقضا در یه لحظه، بدون بن‌بست»). `OrderTotals.constructFromPersisted`. ستون `reserveRequested` به‌جای `reserved`؛ `reservationGroupId` با گام ۱۹. ۲۴ تست تازه، ۱۶۹۴ کل |
+| ۲۰ مهر ۱۴۰۵ | ۱۰ | Purchase step 10 | `V16__payments.sql` (`payment_tbl` با یکتایی authority و `refId`، «یک پرداخت موفق برای هر سفارش»، CHECK ِ قانون‌های `Payment`، بدون FK؛ `paymentlog_tbl` فقط‌اضافه با trigger). Aggregate ِ `Payment` با جدول انتقال‌های ۱۰.۱ (به‌علاوه‌ی `REDIRECTED → FAILED` برای inquiry ِ job تطبیق)، `PaymentLogEntry`، `PaymentRepositoryImpl` (`FOR UPDATE` و نسخه)، `RandomPaymentIds`. پورت `PaymentGateway` و رجیستری `PaymentGateways` (فعال **و** آداپتر دار). `FakePaymentGateway` با صفحه‌ی `/dev/fake-gateway/{authority}` (دو فرم POST و `302` به callback)، حالت‌های «جواب نده/رد کن/کند باش» و شمارنده؛ هر تماسش داخل تراکنش خطا می‌ده. `kiva.payment` در `application.conf` و `PaymentConfig` (merchant id ِ پنهان؛ `zarinpal` تا گام ۱۸ برنامه رو بالا نمیاره). سؤال‌ها با پیشنهاد خودم: پرداخت جدا از سفارش و بدون ES، و درگاه آزمایشی خودش از Exposed می‌پرسه که داخل تراکنشه یا نه. ۴۴ تست تازه، ۱۷۳۸ کل |
 
 ---
 

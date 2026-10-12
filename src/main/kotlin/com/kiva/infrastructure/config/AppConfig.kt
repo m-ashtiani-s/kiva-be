@@ -1,6 +1,9 @@
 package com.kiva.infrastructure.config
 
 import com.kiva.common.valueobject.IranianMobileNumber
+import com.kiva.infrastructure.payment.PaymentConfig
+import com.kiva.infrastructure.payment.PaymentProvider
+import com.kiva.infrastructure.payment.ZarinpalConfig
 import io.ktor.server.config.ApplicationConfig
 import java.util.Base64
 
@@ -12,6 +15,7 @@ data class AppConfig(
     val seed: SeedConfig = SeedConfig(enabled = false),
     val http: HttpConfig = HttpConfig(allowedOrigins = emptyList()),
     val sms: SmsConfig = SmsConfig(SmsProvider.LOG),
+    val payment: PaymentConfig = PaymentConfig.DEFAULT,
 ) {
     companion object {
         fun from(config: ApplicationConfig): AppConfig {
@@ -37,6 +41,16 @@ data class AppConfig(
                     trustedProxyHops = config.property("kiva.http.trustedProxyHops").getString().toInt(),
                 ),
                 sms = SmsConfig(SmsProvider.of(config.property("kiva.sms.provider").getString())),
+                payment = PaymentConfig(
+                    provider = PaymentProvider.of(config.property("kiva.payment.provider").getString()),
+                    callbackBaseUrl = config.property("kiva.payment.callbackBaseUrl").getString(),
+                    resultUrl = config.property("kiva.payment.resultUrl").getString(),
+                    zarinpal = ZarinpalConfig(
+                        merchantId = config.propertyOrNull("kiva.payment.zarinpal.merchantId")?.getString()?.trim()?.takeUnless { it.isEmpty() },
+                        // Strict, like the seed switch: a typo stops the boot instead of quietly meaning the real host.
+                        sandbox = config.property("kiva.payment.zarinpal.sandbox").getString().toBooleanStrict(),
+                    ),
+                ),
             )
         }
     }

@@ -1,5 +1,7 @@
 package com.kiva.infrastructure.config
 
+import com.kiva.domain.aggregate.settings.model.valueobject.PaymentGatewayCode
+import com.kiva.infrastructure.payment.PaymentProvider
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigResolveOptions
 import io.ktor.server.config.HoconApplicationConfig
@@ -31,6 +33,10 @@ class AppConfigTest {
         "kiva.http.allowedOrigins" to "http://localhost:5173",
         "kiva.http.trustedProxyHops" to "0",
         "kiva.sms.provider" to "log",
+        "kiva.payment.provider" to "fake",
+        "kiva.payment.callbackBaseUrl" to "http://localhost:8080",
+        "kiva.payment.resultUrl" to "http://localhost:3100/checkout/result",
+        "kiva.payment.zarinpal.sandbox" to "true",
     )
 
     private fun read(vararg changes: Pair<String, String?>): AppConfig {
@@ -136,5 +142,49 @@ class AppConfigTest {
         val config = AppConfig.from(HoconApplicationConfig(withPepper))
         assertEquals(SmsProvider.LOG, config.sms.provider)
         assertEquals(300, config.auth.maxSmsPerHour)
+        assertEquals(PaymentProvider.FAKE, config.payment.provider)
+        assertEquals("http://localhost:8080", config.payment.callbackBaseUrl)
+        assertTrue(config.payment.zarinpal.sandbox)
+    }
+
+    // ============ payments ============
+
+    private val merchantId = "1344b5d4-0048-11e8-94db-005056a205be"
+
+    @Test
+    fun `payments are taken by the fake gateway in development, and come back to this API's callback`() {
+        val payment = read().payment
+
+        assertEquals(PaymentProvider.FAKE, payment.provider)
+        assertEquals("http://localhost:8080/api/v1/payment-callbacks/zarinpal", payment.callbackUrlOf(PaymentGatewayCode.ZARINPAL))
+        assertEquals("http://localhost:3100/checkout/result", payment.resultUrl)
+        assertEquals(null, payment.zarinpal.merchantId)
+    }
+
+    @Test
+    fun `zarinpal without its merchant id, or with one that isn't a UUID, stops the boot`() {
+        assertTrue("KIVA_ZARINPAL_MERCHANT_ID" in refusal("kiva.payment.provider" to "zarinpal"))
+        assertTrue("KIVA_ZARINPAL_MERCHANT_ID" in refusal("kiva.payment.provider" to "zarinpal", "kiva.payment.zarinpal.merchantId" to "12345"))
+
+        val zarinpal = read("kiva.payment.provider" to "zarinpal", "kiva.payment.zarinpal.merchantId" to merchantId).payment
+        assertEquals(merchantId, zarinpal.zarinpal.merchantId)
+    }
+
+    @Test
+    fun `an unknown payment provider, an address with a path or a slash at the end, or a sandbox typo stops the boot`() {
+        assertTrue("paypal" in refusal("kiva.payment.provider" to "paypal"))
+        assertTrue("KIVA_API_PUBLIC_URL" in refusal("kiva.payment.callbackBaseUrl" to "https://api.kiva.ir/"))
+        assertTrue("KIVA_API_PUBLIC_URL" in refusal("kiva.payment.callbackBaseUrl" to "https://api.kiva.ir/api"))
+        assertTrue("KIVA_PAYMENT_RESULT_URL" in refusal("kiva.payment.resultUrl" to "https://kiva.ir/checkout/result/"))
+        assertTrue("KIVA_PAYMENT_RESULT_URL" in refusal("kiva.payment.resultUrl" to "kiva.ir/checkout/result"))
+        assertFailsWith<IllegalArgumentException> { read("kiva.payment.zarinpal.sandbox" to "yes") }
+    }
+
+    @Test
+    fun `the merchant id never shows when the settings are printed`() {
+        val printed = read("kiva.payment.provider" to "zarinpal", "kiva.payment.zarinpal.merchantId" to merchantId).payment.toString()
+
+        assertFalse(merchantId in printed)
+        assertTrue("merchantId=<hidden>" in printed)
     }
 }
