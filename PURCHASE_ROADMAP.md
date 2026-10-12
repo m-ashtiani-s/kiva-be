@@ -89,7 +89,7 @@
 | ۸ | Aggregate سفارش (دامنه) | L | ✅ |
 | ۹ | سفارش: event store و read model | M | ✅ |
 | ۱۰ | پرداخت: مدل، جدول و درگاه آزمایشی | M | ✅ |
-| ۱۱ | Idempotency | S | ⬜ |
+| ۱۱ | Idempotency | S | ✅ |
 | ۱۲ | صفحه‌ی تسویه: `GET /checkout` | M | ⬜ |
 | ۱۳ | ثبت سفارش: `POST /orders` | L | ⬜ |
 | ۱۴ | برگشت از درگاه و نتیجه‌ی پرداخت | L | ⬜ |
@@ -830,6 +830,14 @@ callback هیچ‌وقت JSON یا خطا نشون نمی‌ده و همیشه r
 
 پورتش `IdempotencyStore` در application ـه و پیاده‌سازیش با Exposed. UseCase صداش می‌زنه، نه یه middleware ِ HTTP، چون باید داخل همون تراکنش باشه.
 
+**پیاده‌سازی (گام ۱۱):**
+- **یه جا برای جریان:** سرویس application ِ `IdempotencyGuard.once(request, outcomeOf, work)` (Rule 15)، داخل تراکنش UseCase: قفل، بعد `Done` یا `Replayed(outcome)` یا `KeyReused`. ثبت فقط وقتی کار موفق بوده و آخر تراکنش. پس سه UseCase ِ گام‌های ۱۳ و ۱۵ این جریان رو جدا نمی‌نویسن.
+- **شکل استاندارد:** Route بدنه رو به کلاس درخواستش decode می‌کنه و `RequestFingerprint` دوباره با یه JSON ِ ثابت می‌نویسدش (همه‌ی فیلدها، پیش‌فرض‌ها و null ها هم؛ کلیدها به ترتیب الفبا در همه‌ی سطح‌ها؛ بدون فاصله). پارامترهای مسیر هم جزوشن (`{"body":…,"path":…}`)، چون retry ِ یه پرداخت دیگه با همون کلید یه درخواست دیگه‌ست. `requestHash` = SHA-256 ِ همین متن.
+- **قفل:** `pg_advisory_xact_lock(hashtextextended('idempotency:{userId}:{scope}:{key}', 0))`، ۶۴ بیتی. دو کلید با یه hash فقط منتظر هم می‌مونن؛ خود ردیف دقیق پیدا می‌شه.
+- **کلید** مال کاربر و scope ـشه: همون UUID برای کاربر دیگه یا scope ِ دیگه یه کلید دیگه‌ست. ردیف‌ها با حساب کاربر حذف می‌شن (FK با `ON DELETE CASCADE`). `outcome` شناسه‌ی چیزهای ساخته‌شده‌ست (`{"orderCode": …, "paymentId": …}`).
+- **هدر:** نیومده ← `IDEMPOTENCY_KEY_REQUIRED`، UUID ِ استاندارد نیست ← `IDEMPOTENCY_KEY_INVALID`، هر دو 400 روی فیلد `Idempotency-Key`. حروف بزرگ و کوچیک یکی‌ان.
+- **دو دیوار برای «شکست ردیف نمی‌ذاره»:** Guard روی شکست چیزی نمی‌نویسه، و تراکنش هم با Failure rollback می‌شه. هر کدوم به‌تنهایی کافیه (خرابکاری فقط با برداشتن هر دو قرمز شد).
+
 ---
 
 <a id="13"></a>
@@ -1400,6 +1408,7 @@ application/src/main/kotlin/com/kiva/application/
   port/PaymentGateway.kt, PaymentGateways.kt, IdempotencyStore.kt, SmsSender.kt (+ sendOrderPaid)
   repository/OfferQmRepository.kt, OfferQm.kt, OrderQmRepository.kt
   usecase/cart/CartCaller.kt, CartCommands.kt                    (step 6: who the caller is; the shared run of every cart command)
+  usecase/idempotency/IdempotencyGuard.kt                        (step 11: the shared run of every request with an Idempotency-Key)
   usecase/geo/usecase/query/…
   usecase/address/usecase/{command,query}/…
   usecase/cart/usecase/{command,query}/…
@@ -1414,6 +1423,7 @@ src/main/kotlin/com/kiva/infrastructure/
   job/JobScheduler.kt, Jobs.kt
   common/text/JalaliDates.kt                   Persian calendar dates for the HTTP texts
   common/http/Caching.kt                       ETag + Cache-Control
+  httpserver/idempotency/RequestFingerprint.kt the canonical form of a request and its hash; the header (step 11)
   httpserver/controller/httprest/web/webV1Geo.kt, webV1Addresses.kt, webV1Cart.kt, webV1Checkout.kt, webV1PaymentCallbacks.kt, webV1MyOrders.kt
   httpserver/controller/httprest/web/devFakeGateway.kt
   httpserver/cart/CartAccess.kt                Bearer or X-Cart-Token → CartOwner, and the response header
@@ -1722,7 +1732,7 @@ PURCHASE_REVIEW.md                             (step 21)
 
 ---
 
-### گام ۱۱: Idempotency · S ⬜
+### گام ۱۱: Idempotency · S ✅
 
 **می‌سازی:** `V17__idempotency.sql`، پورت `IdempotencyStore`، پیاده‌سازیش (قفل advisory، hash و ثبت)، خوندن هدر `Idempotency-Key` در Route و ساختن `requestHash` از بدنه‌ی استاندارد.
 
@@ -1733,13 +1743,15 @@ PURCHASE_REVIEW.md                             (step 21)
 2. چرا شکست‌های rollback‌شده ردیف نمی‌ذارن؟ اگه می‌ذاشتن، مشتری بعد از درست کردن سبدش چی می‌دید؟
 
 **تموم شده یعنی:**
-- [ ] کلید تازه ← کار انجام و نتیجه ثبت می‌شه.
-- [ ] همون کلید و همون بدنه ← همون نتیجه، بدون انجام دوباره.
-- [ ] همون کلید با بدنه‌ی دیگه ← `409 IDEMPOTENCY_KEY_REUSED`.
-- [ ] کلید یه کاربر روی کاربر دیگه هیچ اثری نداره.
-- [ ] ۱۰ درخواست همزمان با یه کلید ← کار یک بار انجام می‌شه و هر ۱۰ تا همون نتیجه رو می‌گیرن.
-- [ ] شکستی که rollback می‌شه هیچ ردیفی نمی‌ذاره.
-- [ ] کلید غیر UUID یا نیومده ← 400 روی `Idempotency-Key`.
+- [x] کلید تازه ← کار انجام و نتیجه ثبت می‌شه.
+- [x] همون کلید و همون بدنه ← همون نتیجه، بدون انجام دوباره.
+- [x] همون کلید با بدنه‌ی دیگه ← `409 IDEMPOTENCY_KEY_REUSED`.
+- [x] کلید یه کاربر روی کاربر دیگه هیچ اثری نداره.
+- [x] ۱۰ درخواست همزمان با یه کلید ← کار یک بار انجام می‌شه و هر ۱۰ تا همون نتیجه رو می‌گیرن.
+- [x] شکستی که rollback می‌شه هیچ ردیفی نمی‌ذاره.
+- [x] کلید غیر UUID یا نیومده ← 400 روی `Idempotency-Key`.
+- [x] ترتیب کلیدها، فاصله‌ها و «فیلد نیومده یا با مقدار پیش‌فرض یا null» اثر انگشت درخواست رو عوض نمی‌کنن؛ مسیر دیگه (پرداخت دیگه) عوضش می‌کنه.
+- [x] همون کلید در scope ِ دیگه یه کلید تازه‌ست.
 
 ---
 
@@ -2088,6 +2100,7 @@ Route: StartPaymentUc ← 201 با order و payment، یا 422 PAYMENT_GATEWAY_U
 | ۲۰ مهر ۱۴۰۵ | ۸ | Purchase step 8 | فقط دامنه (به‌علاوه‌ی `returnable` در `PurchaseOffer` و متن کدهای فیلد تازه). `Order` با Event Sourcing و چهار رویداد (`OrderPlaced`، `OrderPaymentFailed`، `OrderPaid`، `OrderExpired`)؛ سفارش بدون مبلغ همون لحظه پرداخت‌شده‌ست. تصمیم‌های کاربر: `OrderPaid` خودش وضعیت بعدی رو می‌گه (`heldForReservation`)، یه `OrderPaymentFailed` برای هر تلاش (تکرار همون تلاش بی‌اثر)، ترتیب قانون‌های ثبت سفارش در `OrderDomainService.placeOrder`، و `fullText` در لایه‌ی HTTP. `OrderCodePolicy` با `A = 556243` و `B = 118340` (اولین کد `KV-218340`). `PaymentPolicy` (پنجره‌ی ۲۰ دقیقه، سقف ۳ سفارش و ۱۰ تلاش)، `OrderActionsPolicy`، `ReservationPolicy` (مشترک با سبد)، `PaymentPublicId` و `PaymentFailureReason` زودتر از گام ۱۰. ۵۴ تست تازه، ۱۶۷۰ کل. کانترکت: ردیف ۲۸ |
 | ۲۰ مهر ۱۴۰۵ | ۹ | Purchase step 9 | `V15__orders.sql` (`orderid_seq` و `orderqm_tbl`، بدون FK، با قید «پرداخت‌شده دقیقاً با `paidOn`»). چهار payload ِ رویداد و پنج payload ِ تیکه‌ها (همون شکل در read model)، با JSON ِ طلایی برای هر رویداد. `OrderRepositoryImpl`، `OrderIdGeneratorImpl`، `OrderQmProjector` (ردیف، تایم‌لاین، `soldCount`)، `OrderQmRepository.findOfCustomer`. کاربر گفت سؤال‌ها رو با پیشنهاد خودم جواب بدم: تایم‌لاین رو Projector می‌سازه؛ `soldCount` رو Projector ِ سفارش عوض می‌کنه و قفل محصول‌ها قبل از stream ِ سفارش گرفته می‌شه (تست «پرداخت و انقضا در یه لحظه، بدون بن‌بست»). `OrderTotals.constructFromPersisted`. ستون `reserveRequested` به‌جای `reserved`؛ `reservationGroupId` با گام ۱۹. ۲۴ تست تازه، ۱۶۹۴ کل |
 | ۲۰ مهر ۱۴۰۵ | ۱۰ | Purchase step 10 | `V16__payments.sql` (`payment_tbl` با یکتایی authority و `refId`، «یک پرداخت موفق برای هر سفارش»، CHECK ِ قانون‌های `Payment`، بدون FK؛ `paymentlog_tbl` فقط‌اضافه با trigger). Aggregate ِ `Payment` با جدول انتقال‌های ۱۰.۱ (به‌علاوه‌ی `REDIRECTED → FAILED` برای inquiry ِ job تطبیق)، `PaymentLogEntry`، `PaymentRepositoryImpl` (`FOR UPDATE` و نسخه)، `RandomPaymentIds`. پورت `PaymentGateway` و رجیستری `PaymentGateways` (فعال **و** آداپتر دار). `FakePaymentGateway` با صفحه‌ی `/dev/fake-gateway/{authority}` (دو فرم POST و `302` به callback)، حالت‌های «جواب نده/رد کن/کند باش» و شمارنده؛ هر تماسش داخل تراکنش خطا می‌ده. `kiva.payment` در `application.conf` و `PaymentConfig` (merchant id ِ پنهان؛ `zarinpal` تا گام ۱۸ برنامه رو بالا نمیاره). سؤال‌ها با پیشنهاد خودم: پرداخت جدا از سفارش و بدون ES، و درگاه آزمایشی خودش از Exposed می‌پرسه که داخل تراکنشه یا نه. ۴۴ تست تازه، ۱۷۳۸ کل |
+| ۲۰ مهر ۱۴۰۵ | ۱۱ | Purchase step 11 | `V17__idempotency.sql` (یکتایی `(userId, scope, key)`، FK با حذف حساب). پورت `IdempotencyStore` با `IdempotentRequest`، `IdempotencyKey` و `RequestHash`؛ `IdempotencyStoreImpl` (قفل advisory ِ ۶۴ بیتی و مقایسه‌ی hash)؛ سرویس `IdempotencyGuard.once` که جریان بخش ۱۲ رو یه جا نگه می‌داره؛ `RequestFingerprint` (بدنه‌ی decode‌شده دوباره با JSON ِ ثابت، کلیدهای مرتب، به‌علاوه‌ی پارامترهای مسیر) و خوندن هدر. سؤال‌ها با پیشنهاد خودم جواب داده شدن (بخش ۱۲). یه تست هم پیدا شد که به‌خاطر `runBlocking` ِ غیر `Unit` اصلاً اجرا نمی‌شد؛ درست شد و همه‌ی کلاس‌های تست با شمارش `@Test` چک شدن. ۱۶ تست تازه، ۱۷۵۴ کل |
 
 ---
 

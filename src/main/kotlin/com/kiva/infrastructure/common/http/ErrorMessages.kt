@@ -188,6 +188,8 @@ object ErrorMessages {
         "UNIT_TOO_LONG" to "واحد حداکثر {maxLength} حرفه",
         "UNIT_INVALID" to "واحد نمی‌تونه علامت‌هایی مثل < و > داشته باشه",
         "LOCATION_INVALID" to "موقعیت روی نقشه درست نیست",
+        "IDEMPOTENCY_KEY_REQUIRED" to "شناسه‌ی درخواست (Idempotency-Key) فرستاده نشده",
+        "IDEMPOTENCY_KEY_INVALID" to "شناسه‌ی درخواست (Idempotency-Key) باید یه UUID باشه",
         "MESSENGER_USERNAME_TOO_LONG" to "آیدی پیام‌رسان حداکثر {maxLength} حرفه",
         "MESSENGER_USERNAME_INVALID" to "آیدی پیام‌رسان علامت نامعتبر داره",
         "MESSENGER_NOTE_TOO_LONG" to "توضیح برای عکس حداکثر {maxLength} حرفه",

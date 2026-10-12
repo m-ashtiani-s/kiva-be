@@ -1,5 +1,6 @@
 package com.kiva.infrastructure.di
 
+import com.kiva.application.port.IdempotencyStore
 import com.kiva.application.port.SecurityEventLog
 import com.kiva.application.repository.AdminCustomerRepository
 import com.kiva.application.repository.OfferQmRepository
@@ -32,6 +33,7 @@ import com.kiva.infrastructure.persistence.exposed.CartRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.CategoryRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ColorRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.GeoRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.IdempotencyStoreImpl
 import com.kiva.infrastructure.persistence.exposed.InventoryRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.MaterialRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.OfferQmRepositoryImpl
@@ -79,4 +81,5 @@ val daoModule = module(createdAtStart = true) {
     single<OrderQmRepository> { OrderQmRepositoryImpl() }
     single<PaymentRepository> { PaymentRepositoryImpl() }
     single<PaymentIdGenerator> { RandomPaymentIds() }
+    single<IdempotencyStore> { IdempotencyStoreImpl() }
 }

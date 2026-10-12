@@ -21,6 +21,7 @@ import com.kiva.application.usecase.auth.usecase.command.RefreshSessionUc
 import com.kiva.application.usecase.auth.usecase.command.SendLoginCodeUc
 import com.kiva.application.usecase.auth.usecase.command.VerifyLoginCodeUc
 import com.kiva.application.usecase.cart.CartCommands
+import com.kiva.application.usecase.idempotency.IdempotencyGuard
 import com.kiva.application.usecase.cart.usecase.command.AddCartItemUc
 import com.kiva.application.usecase.cart.usecase.command.ChangeCartItemUc
 import com.kiva.application.usecase.cart.usecase.command.ChooseShippingMethodUc
@@ -59,6 +60,9 @@ val useCaseModule = module(createdAtStart = true) {
     single { UpdateAddressUc(transactionManager = get(), addressBookDomainService = get(), addressBookRepository = get(), clock = get()) }
     single { DeleteAddressUc(transactionManager = get(), addressBookRepository = get(), clock = get()) }
     single { SetDefaultAddressUc(transactionManager = get(), addressBookRepository = get(), clock = get()) }
+
+    // --- the use cases that take an Idempotency-Key (steps 13 and 15) ---
+    single { IdempotencyGuard(store = get(), clock = get()) }
 
     // --- cart ---
     single {
