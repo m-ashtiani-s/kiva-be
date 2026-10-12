@@ -195,6 +195,12 @@ class User private constructor(
         return Result.success(User(id, newPhone, firstName, lastName, email, birthDate, gender, defaultMessenger, defaultMessengerPhone, marketingSmsOptIn, roles, createdOn, version))
     }
 
+    /**
+     * The messenger and number an order sends the photo to, kept as the customer's default for their next checkout
+     * (`preShipmentMessenger.saveAsDefault`). Both are typed already, so nothing can be wrong.
+     */
+    fun keepMessenger(channel: MessengerChannel, phone: IranianMobileNumber): User = copy(defaultMessenger = channel, defaultMessengerPhone = phone)
+
     private fun copy(
         firstName: PersonName? = this.firstName,
         lastName: PersonName? = this.lastName,

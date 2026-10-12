@@ -3,6 +3,7 @@ package com.kiva.infrastructure.auth.sms
 import com.kiva.application.port.SmsSender
 import com.kiva.common.logging.getLogger
 import com.kiva.common.valueobject.IranianMobileNumber
+import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpPurpose
 
@@ -24,5 +25,9 @@ class LogSmsSender : SmsSender {
 
     override suspend fun sendPhoneChangedNotice(oldPhone: IranianMobileNumber, newPhoneEnding: String) {
         logger.warn("SMS to ${oldPhone.masked()}: your Kiva account moved to the number ending in $newPhoneEnding")
+    }
+
+    override suspend fun sendOrderPaid(to: IranianMobileNumber, orderCode: OrderCode) {
+        logger.warn("SMS to ${to.masked()}: order ${orderCode.value} is paid, /track?order=${orderCode.value}")
     }
 }

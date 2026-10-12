@@ -12,8 +12,12 @@ import com.kiva.infrastructure.persistence.exposed.tbl.OrderQmTbl
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.greater
+import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import java.time.Instant
+import java.time.ZoneOffset
 
 /** Reads orderqm_tbl. Runs inside the use case's transaction; it never opens one itself. */
 class OrderQmRepositoryImpl : OrderQmRepository {
@@ -23,6 +27,15 @@ class OrderQmRepositoryImpl : OrderQmRepository {
             .where { (OrderQmTbl.userId eq userId.value) and (OrderQmTbl.code eq code.value) }
             .singleOrNull()
             ?.toOrderQm()
+
+    override fun unpaidHoldingUntil(userId: UserId, now: Instant): List<Instant> =
+        OrderQmTbl.select(OrderQmTbl.holdUntil)
+            .where {
+                (OrderQmTbl.userId eq userId.value) and
+                    (OrderQmTbl.status inList OrderStatus.entries.filter { it.isAwaitingPayment }) and
+                    (OrderQmTbl.holdUntil greater now.atOffset(ZoneOffset.UTC))
+            }
+            .map { it[OrderQmTbl.holdUntil].toInstant() }
 
     private fun ResultRow.toOrderQm(): OrderQm = OrderQm(
         orderId = OrderId.constructFromPersisted(this[OrderQmTbl.orderId]),

@@ -1,51 +1,13 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
-import com.kiva.application.port.PaymentGateways
-import com.kiva.application.repository.OfferQmRepository
-import com.kiva.application.usecase.address.usecase.command.AddAddressUc
-import com.kiva.application.usecase.address.usecase.command.DeleteAddressUc
-import com.kiva.application.usecase.address.usecase.command.SetDefaultAddressUc
-import com.kiva.application.usecase.address.usecase.command.UpdateAddressUc
-import com.kiva.application.usecase.address.usecase.query.GetMyAddressUc
-import com.kiva.application.usecase.address.usecase.query.ListMyAddressesUc
-import com.kiva.application.usecase.cart.CartCommands
-import com.kiva.application.usecase.cart.usecase.command.AddCartItemUc
-import com.kiva.application.usecase.cart.usecase.command.ChangeCartItemUc
-import com.kiva.application.usecase.cart.usecase.command.ChooseShippingMethodUc
-import com.kiva.application.usecase.cart.usecase.command.ClearCartUc
-import com.kiva.application.usecase.cart.usecase.command.MergeGuestCartUc
-import com.kiva.application.usecase.cart.usecase.command.OpenCartUc
-import com.kiva.application.usecase.cart.usecase.command.RemoveCartItemUc
-import com.kiva.application.usecase.cart.usecase.command.SetCartReservationUc
-import com.kiva.application.usecase.cart.usecase.query.GetCartUc
-import com.kiva.application.usecase.checkout.usecase.query.GetCheckoutContextUc
-import com.kiva.domain.aggregate.address.AddressBookDomainService
-import com.kiva.domain.aggregate.cart.CartDomainService
 import com.kiva.domain.aggregate.inventory.model.valueobject.AdjustmentReason
 import com.kiva.domain.aggregate.inventory.model.valueobject.StockDelta
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
 import com.kiva.domain.aggregate.user.model.valueobject.MessengerChannel
 import com.kiva.infrastructure.MutableClock
-import com.kiva.infrastructure.cart.RandomCartIds
-import com.kiva.infrastructure.common.persistence.ExposedTransactionManager
 import com.kiva.infrastructure.httpserver.API_V1
-import com.kiva.infrastructure.httpserver.auth.configureAuthentication
-import com.kiva.infrastructure.httpserver.configureHttp
-import com.kiva.infrastructure.httpserver.controller.httprest.web.AuthTestStack.Companion.ORIGIN
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AuthTestStack.Companion.phone
-import com.kiva.infrastructure.payment.FakePaymentGateway
-import com.kiva.infrastructure.payment.PaymentConfig
-import com.kiva.infrastructure.persistence.exposed.AddressBookRepositoryImpl
-import com.kiva.infrastructure.persistence.exposed.AddressIdGeneratorImpl
-import com.kiva.infrastructure.persistence.exposed.CartRepositoryImpl
-import com.kiva.infrastructure.persistence.exposed.GeoRepositoryImpl
-import com.kiva.infrastructure.persistence.exposed.OfferQmRepositoryImpl
-import com.kiva.infrastructure.persistence.exposed.ShopSettingsRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.StoredCatalog
-import com.kiva.infrastructure.persistence.exposed.UserRepositoryImpl
-import com.kiva.infrastructure.persistence.exposed.tbl.CartTbl
-import com.kiva.infrastructure.persistence.exposed.tbl.ProductQmTbl
-import com.kiva.infrastructure.persistence.exposed.tbl.ProductVariantQmTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.UserTbl
 import com.kiva.infrastructure.seed.SeededCatalog
 import io.ktor.client.request.get
@@ -58,11 +20,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
-import io.ktor.server.config.MapApplicationConfig
-import io.ktor.server.routing.route
-import io.ktor.server.routing.routing
 import io.ktor.server.testing.ApplicationTestBuilder
-import io.ktor.server.testing.testApplication
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
@@ -73,12 +31,8 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
-import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.core.isNull
-import org.jetbrains.exposed.v1.jdbc.deleteWhere
-import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import org.junit.jupiter.api.AfterEach
@@ -97,49 +51,9 @@ import kotlin.test.assertNull
 class WebV1CheckoutOnDatabaseTest {
 
     private val clock = MutableClock(Instant.parse("2026-10-12T08:00:00Z"))
-    private val stack = AuthTestStack(clock)
+    private val purchase = PurchaseTestStack(clock)
     private val seeded = SeededCatalog(clock)
     private val others = StoredCatalog()
-    private val transactions = ExposedTransactionManager(stack.db)
-    private val carts = CartRepositoryImpl()
-    private val offers: OfferQmRepository = OfferQmRepositoryImpl()
-    private val settings = ShopSettingsRepositoryImpl()
-    private val books = AddressBookRepositoryImpl()
-    private val geo = GeoRepositoryImpl()
-    private val cartDomain = CartDomainService(RandomCartIds())
-    private val cartCommands = CartCommands(transactions, carts, cartDomain, offers, settings, clock)
-    private val openCart = OpenCartUc(cartCommands, cartDomain)
-
-    private val cartUseCases = CartUseCases(
-        openCart,
-        GetCartUc(transactions, carts, offers, settings, clock),
-        AddCartItemUc(cartCommands, cartDomain),
-        ChangeCartItemUc(cartCommands, cartDomain),
-        RemoveCartItemUc(cartCommands, cartDomain),
-        ClearCartUc(cartCommands, cartDomain),
-        ChooseShippingMethodUc(cartCommands, cartDomain),
-        SetCartReservationUc(cartCommands, cartDomain),
-        MergeGuestCartUc(cartCommands, cartDomain),
-    )
-
-    private val addressUseCases = AddressBookDomainService(geo, AddressIdGeneratorImpl()).let { service ->
-        AddressUseCases(
-            ListMyAddressesUc(transactions, books, geo),
-            GetMyAddressUc(transactions, books, geo),
-            AddAddressUc(transactions, service, books, clock),
-            UpdateAddressUc(transactions, service, books, clock),
-            DeleteAddressUc(transactions, books, clock),
-            SetDefaultAddressUc(transactions, books, clock),
-        )
-    }
-
-    private val checkoutUseCases = CheckoutUseCases(
-        openCart,
-        GetCheckoutContextUc(
-            transactions, carts, offers, settings, books, geo, UserRepositoryImpl(),
-            PaymentGateways(listOf(FakePaymentGateway(PaymentConfig.DEFAULT))), clock,
-        ),
-    )
 
     @BeforeEach
     fun seed() {
@@ -148,41 +62,17 @@ class WebV1CheckoutOnDatabaseTest {
 
     @AfterEach
     fun deleteWhatWasStored() {
-        transaction(stack.db) { CartTbl.deleteWhere { userId.isNull() } }
-        stack.deleteTestUsers() // their carts and addresses go with them
+        purchase.deleteWhatWasStored()
         seeded.deleteSeeded()
         others.deleteAll()
     }
 
-    private fun app(block: suspend ApplicationTestBuilder.() -> Unit) = testApplication {
-        environment { config = MapApplicationConfig() }
-        application {
-            configureHttp(listOf(ORIGIN))
-            configureAuthentication(stack.accessTokens)
-            routing {
-                route(API_V1) {
-                    webV1Auth(stack.authUseCases, listOf(ORIGIN))
-                    webV1Cart(cartUseCases)
-                    webV1Addresses(addressUseCases)
-                    webV1Checkout(checkoutUseCases)
-                }
-            }
-        }
-        block()
-    }
+    private fun app(block: suspend ApplicationTestBuilder.() -> Unit) = purchase.app(block)
 
     // ============ helpers ============
 
-    /** The variant id of a seeded bag's color. */
-    private fun variantOf(slug: String, color: String): Long = transaction(stack.db) {
-        ProductVariantQmTbl.join(ProductQmTbl, JoinType.INNER, ProductVariantQmTbl.productId, ProductQmTbl.productId)
-            .selectAll()
-            .where { (ProductQmTbl.slug eq slug) and (ProductVariantQmTbl.colorKey eq color) }
-            .single()[ProductVariantQmTbl.variantId]
-    }
-
-    private val nilaOlive by lazy { variantOf("nila-crossbody-bag", "olive") }
-    private val aidaBlack by lazy { variantOf("aida-handbag", "black") }
+    private val nilaOlive by lazy { purchase.variantOf("nila-crossbody-bag", "olive") }
+    private val aidaBlack by lazy { purchase.variantOf("aida-handbag", "black") }
 
     private suspend fun ApplicationTestBuilder.login(phone: String): String {
         client.post("$API_V1/auth/otp/send") {
@@ -191,7 +81,7 @@ class WebV1CheckoutOnDatabaseTest {
         }
         val response = client.post("$API_V1/auth/otp/verify") {
             contentType(ContentType.Application.Json)
-            setBody("""{"phone":"$phone","code":"${stack.lastCodeSentTo(phone).value}"}""")
+            setBody("""{"phone":"$phone","code":"${purchase.auth.lastCodeSentTo(phone).value}"}""")
         }
         return Json.parseToJsonElement(response.bodyAsText()).jsonObject["accessToken"]!!.jsonPrimitive.content
     }
@@ -336,7 +226,7 @@ class WebV1CheckoutOnDatabaseTest {
         assertEquals(JsonNull, fresh["selectedMessenger"])
         assertEquals(phone, fresh.text("messengerPhone"))
 
-        transaction(stack.db) {
+        transaction(purchase.db) {
             UserTbl.update({ UserTbl.phone eq phone }) {
                 it[defaultMessenger] = MessengerChannel.TELEGRAM
                 it[defaultMessengerPhone] = "09121112233"

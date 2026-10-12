@@ -1367,16 +1367,20 @@ paths:
 
         **اول، شکل ورودی** (`400 VALIDATION_ERROR`، همه‌ی خطاها با هم): هدر `Idempotency-Key`، دقیقاً یکی از `addressId` و `newAddress`
         (خطاهای `newAddress` با پیشوند `newAddress.` در `errors[].field`، مثل `newAddress.postalCode`)، مقدار enumها، طول یادداشت‌ها، و `expectedPayable ≥ 0`.
+        کدهای فیلد: هیچ آدرسی ← `addressId` با `ADDRESS_REQUIRED`، هر دو ← `addressId` با `ADDRESS_AMBIGUOUS`؛ `shippingMethod` یا `paymentGateway` نیامده ←
+        `SHIPPING_METHOD_REQUIRED` و `PAYMENT_GATEWAY_REQUIRED`؛ `preShipmentMessenger.channel` بیرون از فهرست ← `MESSENGER_CHANNEL_INVALID`؛
+        `expectedPayable` منفی ← `MONEY_NEGATIVE`؛ `gift.message` و `customerNote` و `preShipmentMessenger.username`/`note` با کدهای طولشان.
 
         **بعد، قانون‌ها به این ترتیب** (اولین موردی که برقرار نباشد برمی‌گردد):
         1. سبد هیچ ردیفی ندارد ← `422 CART_EMPTY`
-        2. `addressId` وجود ندارد یا مال کاربر دیگری است ← `422 ADDRESS_NOT_FOUND`
+        2. `addressId` وجود ندارد یا مال کاربر دیگری است ← `422 ADDRESS_NOT_FOUND`. برای `newAddress`: استان یا شهر ناموجود ← `400` روی `newAddress.provinceId` یا
+           `newAddress.cityId` (`PROVINCE_NOT_FOUND`، `CITY_NOT_FOUND`)، شهرِ استان دیگر ← `422 CITY_NOT_IN_PROVINCE`
         3. `preShipmentMessenger` نیامده یا `channel` ندارد ← `422 MESSENGER_REQUIRED`؛ شماره‌ی پیام‌رسان نیامده یا غلط است ← `422 MESSENGER_PHONE_INVALID`
         4. روش ارسال غیرفعال است (یا سفارش به رزرو فعال می‌پیوندد و روش، روش گروه نیست) ← `422 SHIPPING_METHOD_UNAVAILABLE`
         5. مبلغ قابل پرداخت بیشتر از صفر است و درگاه انتخابی در دسترس نیست ← `422 PAYMENT_GATEWAY_UNAVAILABLE` (بدون `meta.orderCode`: سفارشی ساخته نشده)
         6. `acceptTerms` نیست ← `422 TERMS_NOT_ACCEPTED`
         7. `reserve = true` ولی رزرو در دسترس نیست ← `422 RESERVATION_UNAVAILABLE` (`meta.reason`)
-        8. کاربر ۳ سفارش پرداخت‌نشده دارد که هنوز موجودی نگه داشته‌اند ← `429 RATE_LIMITED`
+        8. کاربر ۳ سفارش پرداخت‌نشده دارد که هنوز موجودی نگه داشته‌اند (مهلت پرداختشان تمام نشده) ← `429 RATE_LIMITED`
         9. ردیفی از فروشگاه خارج شده ← `422 PRODUCT_UNAVAILABLE`؛ ردیفی موجودی کافی ندارد ← `422 OUT_OF_STOCK`؛ رنگ‌های یک محصول با هم بیشتر از سقف خرید آن محصول‌اند
            (سقف بعد از افزودن به سبد کم شده) ← `422 QUANTITY_EXCEEDS_LIMIT`. هر سه با `meta.itemIds` (شناسه‌ی ردیف‌های سبد)، و به همین ترتیب.
         10. کد تخفیف سبد دیگر معتبر نیست ← سفارش بدون کد حساب می‌شود (و چون مبلغ عوض شده، قدم بعد `PRICE_CHANGED` می‌دهد)
@@ -1391,6 +1395,8 @@ paths:
         * مبلغ قابل پرداخت صفر (کد تخفیف کامل) ← `201` با `payment = null`؛ سفارش مستقیماً پرداخت‌شده است.
 
         **تکرار با همان `Idempotency-Key`:** همان سفارش و همان پرداخت برمی‌گردد، از جمله همان `422 PAYMENT_GATEWAY_UNAVAILABLE`، با وضعیت **فعلی** سفارش (شاید دیگر پرداخت شده باشد).
+        تکرار هیچ‌وقت جلسه‌ی تازه‌ای در درگاه باز نمی‌کند؛ `payment.redirect` همان قبلی است. درخواستی که رد شد (۴۰۰، ۴۰۹، ۴۲۲ ِ قبل از ثبت، ۴۲۹) کلید را مصرف نمی‌کند.
+        دو درخواست همزمان از یک سبد (دو تب، با دو کلید): یکی ثبت می‌شود و دیگری `422 CART_EMPTY` می‌گیرد.
 
         **رزرو:** اگر کاربر رزرو فعال به همین آدرس داشته باشد، سفارش بدون توجه به `reserve` به گروه رزرو می‌پیوندد (هزینه‌ی ارسال صفر) — قوانین کامل در بخش «قوانین کسب‌وکار».
       security: [{ bearerAuth: [] }]
@@ -1416,7 +1422,7 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
         '422':
           description: |
-            `CART_EMPTY`، `ADDRESS_NOT_FOUND`، `MESSENGER_REQUIRED`، `MESSENGER_PHONE_INVALID`، `SHIPPING_METHOD_UNAVAILABLE`، `TERMS_NOT_ACCEPTED`،
+            `CART_EMPTY`، `ADDRESS_NOT_FOUND`، `CITY_NOT_IN_PROVINCE` (`newAddress`)، `MESSENGER_REQUIRED`، `MESSENGER_PHONE_INVALID`، `SHIPPING_METHOD_UNAVAILABLE`، `TERMS_NOT_ACCEPTED`،
             `RESERVATION_UNAVAILABLE` (`meta.reason`)، `PRODUCT_UNAVAILABLE`، `OUT_OF_STOCK` و `QUANTITY_EXCEEDS_LIMIT` (`meta.itemIds`)،
             `PAYMENT_GATEWAY_UNAVAILABLE` (قبل از ثبت بدون meta؛ بعد از ثبت با `meta.orderCode` و `meta.paymentId`)
           content:
@@ -6152,7 +6158,7 @@ components:
         setAsDefault: { type: boolean, default: false, description: '`true` = پیش‌فرض شود. `false` پیش‌فرض بودن را برنمی‌دارد. اولین آدرس همیشه پیش‌فرض است.' }
     PlaceOrderRequest:
       type: object
-      required: [shippingMethod, paymentGateway, acceptTerms]
+      required: [shippingMethod, paymentGateway]
       description: |
         دقیقاً یکی از `addressId` یا `newAddress` باید ارسال شود؛ هیچ‌کدام یا هر دو = `400`. خطاهای `newAddress` با پیشوند `newAddress.` در `errors[].field` می‌آیند.
         سبد، کد تخفیف و وضعیت رزرو از سبد کاربر خوانده می‌شوند (و در صورت ارسال در این بدنه، override می‌شوند).
@@ -6193,7 +6199,7 @@ components:
             مبلغی که کاربر روی دکمه‌ی پرداخت دیده؛ برای تشخیص تغییر قیمت (`409 PRICE_CHANGED`). فقط برای مقایسه است و هیچ‌وقت مبلغ پرداخت را تعیین نمی‌کند.
             به‌شدت توصیه می‌شود همیشه فرستاده شود؛ اگر نیاید مقایسه‌ای انجام نمی‌شود و سفارش با مبلغ فعلی سرور ثبت می‌شود.
           example: 1595000
-        acceptTerms: { type: boolean, description: «با پرداخت، قوانین کیوا رو می‌پذیری», example: true }
+        acceptTerms: { type: boolean, default: false, description: '«با پرداخت، قوانین کیوا رو می‌پذیری». نیامده = نپذیرفته (`422 TERMS_NOT_ACCEPTED`)', example: true }
     PaymentInit:
       type: object
       required: [paymentId, gateway, amount, redirect]
@@ -6309,7 +6315,7 @@ components:
         productId: { type: integer, example: 4 }
         name: { type: string, example: کیف دستی آیدا }
         colorKey: { $ref: '#/components/schemas/ColorKey' }
-        imageUrl: { type: string, format: uri }
+        imageUrl: { type: string, format: uri, nullable: true, description: 'عکس رنگ؛ تا آپلود مدیا `null`، مثل ردیف سبد' }
         quantity: { type: integer, example: 1 }
     PreShipmentMediaSummary:
       type: object

@@ -17,5 +17,6 @@ data class OfferQm(
 
     data class Category(val id: Long, val slug: String, val name: String)
 
-    data class Color(val key: String, val name: String, val hex: String, val isLight: Boolean, val sortOrder: Int)
+    /** The palette's color, and [sku] the code of this very color of the bag (`KV-1004-CARAMEL`), which an order keeps. */
+    data class Color(val key: String, val name: String, val hex: String, val isLight: Boolean, val sortOrder: Int, val sku: String)
 }

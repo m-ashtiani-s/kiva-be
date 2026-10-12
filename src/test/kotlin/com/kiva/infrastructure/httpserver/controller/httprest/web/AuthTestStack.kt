@@ -20,6 +20,7 @@ import com.kiva.application.usecase.cart.CartCommands
 import com.kiva.application.usecase.cart.usecase.command.MergeGuestCartUc
 import com.kiva.application.usecase.cart.usecase.query.GetCartUc
 import com.kiva.common.valueobject.IranianMobileNumber
+import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
 import com.kiva.domain.aggregate.cart.CartDomainService
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpPurpose
@@ -150,6 +151,9 @@ class RecordingSmsSender : SmsSender {
     /** Warnings that an account moved, as (old phone, end of the new number). */
     val notices: MutableList<Pair<IranianMobileNumber, String>> = Collections.synchronizedList(mutableListOf())
 
+    /** «پرداخت موفق» messages, as (phone, order). */
+    val paid: MutableList<Pair<IranianMobileNumber, OrderCode>> = Collections.synchronizedList(mutableListOf())
+
     @Volatile
     var down = false
 
@@ -161,5 +165,10 @@ class RecordingSmsSender : SmsSender {
     override suspend fun sendPhoneChangedNotice(oldPhone: IranianMobileNumber, newPhoneEnding: String) {
         check(!down) { "the SMS provider is down" }
         notices += oldPhone to newPhoneEnding
+    }
+
+    override suspend fun sendOrderPaid(to: IranianMobileNumber, orderCode: OrderCode) {
+        check(!down) { "the SMS provider is down" }
+        paid += to to orderCode
     }
 }

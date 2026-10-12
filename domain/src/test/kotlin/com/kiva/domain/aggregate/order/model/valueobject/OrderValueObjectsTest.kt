@@ -1,5 +1,6 @@
 package com.kiva.domain.aggregate.order.model.valueobject
 
+import com.kiva.common.railway.Result
 import com.kiva.common.valueobject.IranianMobileNumber
 import com.kiva.domain.aggregate.address.entity.Address
 import com.kiva.domain.aggregate.address.model.valueobject.AddressId
@@ -73,6 +74,14 @@ class OrderValueObjectsTest {
             val refused = PreShipmentMessenger.makeNew(MessengerChannel.BALE, saraPhone, "a".repeat(51), "ا".repeat(201)).failureOrNull()
 
             assertEquals(listOf("username" to "MESSENGER_USERNAME_TOO_LONG", "note" to "MESSENGER_NOTE_TOO_LONG"), refused?.problems?.map { it.field to it.code })
+        }
+
+        @Test
+        fun `the texts are checked alone exactly as with a channel and a number, for an order that answers them first`() {
+            val refused = PreShipmentMessenger.checkTexts("a".repeat(51), "ا".repeat(201)).failureOrNull()
+
+            assertEquals(listOf("username" to "MESSENGER_USERNAME_TOO_LONG", "note" to "MESSENGER_NOTE_TOO_LONG"), refused?.problems?.map { it.field to it.code })
+            assertEquals(Result.success(Unit), PreShipmentMessenger.checkTexts(" @sara_m ", null))
         }
 
         @Test

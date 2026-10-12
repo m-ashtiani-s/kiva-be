@@ -31,9 +31,15 @@ class InventoryRepositoryImpl : InventoryRepository {
      * Adds the events recorded since the stock was read, each followed by its projection into the read model. If
      * someone else changed it in the meantime (two purchases of the same color at once), the save stops with
      * [ConcurrentChangeException] and none of the new events, nor their projections, stay.
+     *
+     * The product's row in the read model is locked first, before the stream (InventoryQmProjector.lockFor): whoever
+     * waits on a color's stream then always waits at its product's row first, in the one order every writer takes.
      */
     override fun save(inventory: Inventory) {
-        inventory.getRecordedEvents().forEach {
+        val events = inventory.getRecordedEvents()
+        if (events.isEmpty()) return
+        InventoryQmProjector.lockFor(inventory.variantId)
+        events.forEach {
             EventStore.append(it, DomainEventSerializer.serialize(it))
             InventoryQmProjector.project(it)
         }

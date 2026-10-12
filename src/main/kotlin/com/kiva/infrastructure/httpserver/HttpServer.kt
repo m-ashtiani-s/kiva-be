@@ -31,9 +31,13 @@ import com.kiva.application.usecase.catalog.usecase.query.GetCategoryUc
 import com.kiva.application.usecase.catalog.usecase.query.ListCategoriesUc
 import com.kiva.application.usecase.catalog.usecase.query.ListColorsUc
 import com.kiva.application.usecase.catalog.usecase.query.ListMaterialsUc
+import com.kiva.application.usecase.checkout.usecase.command.PlaceOrderUc
+import com.kiva.application.usecase.checkout.usecase.command.StartPaymentUc
 import com.kiva.application.usecase.checkout.usecase.query.GetCheckoutContextUc
+import com.kiva.application.usecase.checkout.usecase.query.GetPaymentInitUc
 import com.kiva.application.usecase.geo.usecase.query.ListCitiesOfProvinceUc
 import com.kiva.application.usecase.geo.usecase.query.ListProvincesUc
+import com.kiva.application.usecase.order.usecase.query.GetOrderSummaryUc
 import com.kiva.application.usecase.product.usecase.query.FindProductsUc
 import com.kiva.application.usecase.product.usecase.query.FindRelatedProductsUc
 import com.kiva.application.usecase.product.usecase.query.GetProductFacetsUc
@@ -181,6 +185,10 @@ fun Application.configureRouting() {
     val setCartReservationUc by inject<SetCartReservationUc>()
     val mergeGuestCartUc by inject<MergeGuestCartUc>()
     val getCheckoutContextUc by inject<GetCheckoutContextUc>()
+    val placeOrderUc by inject<PlaceOrderUc>()
+    val startPaymentUc by inject<StartPaymentUc>()
+    val getOrderSummaryUc by inject<GetOrderSummaryUc>()
+    val getPaymentInitUc by inject<GetPaymentInitUc>()
     val sendLoginCodeUc by inject<SendLoginCodeUc>()
     val verifyLoginCodeUc by inject<VerifyLoginCodeUc>()
     val refreshSessionUc by inject<RefreshSessionUc>()
@@ -216,7 +224,7 @@ fun Application.configureRouting() {
                     setCartReservationUc, mergeGuestCartUc,
                 ),
             )
-            webV1Checkout(CheckoutUseCases(openCartUc, getCheckoutContextUc))
+            webV1Checkout(CheckoutUseCases(openCartUc, getCheckoutContextUc, placeOrderUc, startPaymentUc, getOrderSummaryUc, getPaymentInitUc))
         }
     }
 }

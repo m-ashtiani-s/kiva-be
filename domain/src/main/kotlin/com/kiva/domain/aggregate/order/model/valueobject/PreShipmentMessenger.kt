@@ -3,6 +3,7 @@ package com.kiva.domain.aggregate.order.model.valueobject
 import com.kiva.common.railway.FailureKind
 import com.kiva.common.railway.Result
 import com.kiva.common.railway.ResultFailure
+import com.kiva.common.railway.mapOnSuccess
 import com.kiva.common.valueobject.IranianMobileNumber
 import com.kiva.domain.aggregate.user.model.valueobject.MessengerChannel
 
@@ -40,7 +41,16 @@ class PreShipmentMessenger private constructor(
         const val NOTE_MAX_LENGTH = 200
 
         /** Both texts at once, so the form shows both mistakes together; each names its own field. */
-        fun makeNew(channel: MessengerChannel, phone: IranianMobileNumber, username: String?, note: String?): Result<PreShipmentMessenger, Invalid> {
+        fun makeNew(channel: MessengerChannel, phone: IranianMobileNumber, username: String?, note: String?): Result<PreShipmentMessenger, Invalid> =
+            textsOf(username, note).mapOnSuccess { (checkedUsername, checkedNote) -> PreShipmentMessenger(channel, phone, checkedUsername, checkedNote) }
+
+        /**
+         * The free texts alone, checked exactly as [makeNew] checks them: placing an order answers a wrong text (400)
+         * before a missing channel or a wrong number (422), so it checks them before it has those.
+         */
+        fun checkTexts(username: String?, note: String?): Result<Unit, Invalid> = textsOf(username, note).mapOnSuccess { }
+
+        private fun textsOf(username: String?, note: String?): Result<Pair<String?, String?>, Invalid> {
             val problems = mutableListOf<ResultFailure>()
             val checkedUsername = when (val checked = OptionalText.check(username, USERNAME_MAX_LENGTH)) {
                 is OptionalText.Checked.Fine -> checked.value
@@ -52,8 +62,7 @@ class PreShipmentMessenger private constructor(
                 OptionalText.Checked.TooLong -> null.also { problems += Failure.NoteTooLong }
                 OptionalText.Checked.InvalidCharacters -> null.also { problems += Failure.NoteInvalid }
             }
-            if (problems.isNotEmpty()) return Result.failure(Invalid(problems))
-            return Result.success(PreShipmentMessenger(channel, phone, checkedUsername, checkedNote))
+            return if (problems.isEmpty()) Result.success(checkedUsername to checkedNote) else Result.failure(Invalid(problems))
         }
 
         /** For values read back from storage. Still checked by `init`. */

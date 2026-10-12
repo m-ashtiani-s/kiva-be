@@ -35,10 +35,14 @@ import com.kiva.application.usecase.catalog.usecase.query.GetCategoryUc
 import com.kiva.application.usecase.catalog.usecase.query.ListCategoriesUc
 import com.kiva.application.usecase.catalog.usecase.query.ListColorsUc
 import com.kiva.application.usecase.catalog.usecase.query.ListMaterialsUc
+import com.kiva.application.usecase.checkout.usecase.command.PlaceOrderUc
+import com.kiva.application.usecase.checkout.usecase.command.StartPaymentUc
 import com.kiva.application.usecase.checkout.usecase.query.GetCheckoutContextUc
+import com.kiva.application.usecase.checkout.usecase.query.GetPaymentInitUc
 import com.kiva.application.usecase.geo.usecase.query.ListCitiesOfProvinceUc
 import com.kiva.application.usecase.geo.usecase.query.ListProvincesUc
 import com.kiva.application.usecase.inventory.usecase.command.AdjustInventoryUc
+import com.kiva.application.usecase.order.usecase.query.GetOrderSummaryUc
 import com.kiva.application.usecase.product.usecase.command.CreateProductUc
 import com.kiva.application.usecase.product.usecase.query.FindProductsUc
 import com.kiva.application.usecase.product.usecase.query.FindRelatedProductsUc
@@ -91,6 +95,20 @@ val useCaseModule = module(createdAtStart = true) {
             addressBookRepository = get(), geoRepository = get(), userRepository = get(), paymentGateways = get(), clock = get(),
         )
     }
+    single {
+        PlaceOrderUc(
+            transactionManager = get(), idempotencyGuard = get(), cartRepository = get(), offerQmRepository = get(), shopSettingsRepository = get(),
+            addressBookRepository = get(), addressBookDomainService = get(), geoRepository = get(), userRepository = get(),
+            orderDomainService = get(), orderRepository = get(), orderQmRepository = get(), inventoryDomainService = get(),
+            inventoryRepository = get(), paymentRepository = get(), paymentIdGenerator = get(), paymentGateways = get(), smsSender = get(),
+            clock = get(),
+        )
+    }
+    single { StartPaymentUc(transactionManager = get(), paymentRepository = get(), paymentGateways = get(), clock = get()) }
+    single { GetPaymentInitUc(transactionManager = get(), paymentRepository = get(), orderQmRepository = get()) }
+
+    // --- orders ---
+    single { GetOrderSummaryUc(transactionManager = get(), orderQmRepository = get(), shopSettingsRepository = get(), clock = get()) }
 
     // --- geo: queries ---
     single { ListProvincesUc(transactionManager = get(), geoRepository = get()) }

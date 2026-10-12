@@ -91,7 +91,7 @@
 | ۱۰ | پرداخت: مدل، جدول و درگاه آزمایشی | M | ✅ |
 | ۱۱ | Idempotency | S | ✅ |
 | ۱۲ | صفحه‌ی تسویه: `GET /checkout` | M | ✅ |
-| ۱۳ | ثبت سفارش: `POST /orders` | L | ⬜ |
+| ۱۳ | ثبت سفارش: `POST /orders` | L | ✅ |
 | ۱۴ | برگشت از درگاه و نتیجه‌ی پرداخت | L | ⬜ |
 | ۱۵ | پرداخت دوباره | M | ⬜ |
 | ۱۶ | کارهای زمان‌بندی‌شده | M | ⬜ |
@@ -804,6 +804,8 @@ callback هیچ‌وقت JSON یا خطا نشون نمی‌ده و همیشه r
 
 قفل ۷ همون قفلیه که `InventoryQmProjector` و `ProductQmSummary.lock` از قبل می‌گیرن (اول محصول، بعد رنگ). تنها کار تازه اینه که ردیف‌های یه سفارش قبل از رزرو مرتب بشن. تست گام ۱۳ دو سفارش (A، B) و (B، A) رو ۵۰ بار همزمان اجرا می‌کنه.
 
+**قفل ۷ قبل از stream ِ موجودی (گام ۱۳):** `InventoryRepositoryImpl.save` ردیف محصول رو **قبل** از نوشتن رویدادهای موجودی قفل می‌کنه (`InventoryQmProjector.lockFor`)، نه بعدش. وگرنه مرتب کردن کافی نبود: سفارش (رنگ ۱، رنگ ۲) و سفارش (رنگ ۲) ِ همون محصول، اولی ردیف محصول رو با رنگ ۱ می‌گرفت و منتظر stream ِ رنگ ۲ می‌موند، دومی stream ِ رنگ ۲ رو گرفته بود و منتظر ردیف محصول بود. حالا هر کی stream ِ یه رنگ رو داره، ردیف محصولش رو هم داره، پس انتظار فقط سر ردیف محصول‌هاست و اونا به ترتیب گرفته می‌شن. همین قانون سفارش (`OrderQmProjector.lockFor`) حالا برای موجودی هم هست.
+
 نسخه‌ی کاربر (`user_tbl.version`، برای ذخیره‌ی پیام‌رسان پیش‌فرض) قفل خوش‌بینانه‌ست. اگه تداخل پیش بیاد، همون تلاش دوباره‌ی کل تراکنش انجام می‌شه.
 
 ---
@@ -1242,6 +1244,8 @@ CONSTRAINT discountredemption_tbl_code_order_key UNIQUE ("codeId", "orderId")
 
 **`GET /checkout` (گام ۱۲):** Route اول `OpenCartUc` رو با سبد همون کاربر صدا می‌زنه (همگام‌سازی، issueها یک بار) و بعد `GetCheckoutContextUc` رو با شناسه‌ای که برگردونده. سبد رو همون تابعی می‌سازه که `GetCartUc` (`cartDtoOf`)، پس `cart` ِ تسویه دقیقاً همون `GET /cart` ـه، و `shippingOptions`، `reservation` و `consolidation` ِ بالای پاسخ از خود `cart` برداشته می‌شن. ترتیب خطاها مثل ثبت سفارش: اول `CART_EMPTY` (فقط سبدی که هیچ ردیفی نداره؛ ردیف غیرقابل خرید هم ردیفه و ثبت سفارش ردش می‌کنه)، بعد `addressId`: مال کس دیگه، ناموجود یا غیرعدد، هر سه یه `400` روی `addressId` با `ADDRESS_NOT_FOUND`. `selectedAddressId` ِ دفترچه‌ی خالی `null` ـه و فرانت فرم آدرس تازه (`newAddress`) رو باز می‌کنه. `messengerPhone` شماره‌ی پیام‌رسان پیش‌فرض کاربره، وگرنه موبایل حساب. شکستِ بعد از همگام‌سازی (`CART_EMPTY` یا `addressId`) issueهای همون لحظه رو مصرف کرده، ولی جمع‌ها همیشه تازه‌ان: فقط پیام «از آخرین بازدید» از دست می‌ره، نه عدد درست.
 
+**`POST /orders` (گام ۱۳):** سه قدم، تا درگاه هیچ‌وقت داخل تراکنش صدا زده نشه: `PlaceOrderUc` (شکل ورودی بیرون تراکنش، بعد یه تراکنش با `IdempotencyGuard`، تا ۳ بار با `ConcurrentChangeException`)، `StartPaymentUc` (دو تراکنش کوتاه با درگاه بینشون)، و `GetOrderSummaryUc` و `GetPaymentInitUc` برای پاسخ. تکرار با همون کلید همین سه قدم رو می‌ره: `PlaceOrderUc` همون `PlacedOrder` رو از `outcome` برمی‌گردونه، و `StartPaymentUc` به وضعیت پرداخت نگاه می‌کنه (`INITIATED` ← درگاه، جلسه‌ی باز ← همون، `START_FAILED` ← همون ۴۲۲)، پس تکرار هیچ‌وقت جلسه‌ی تازه باز نمی‌کنه. `StartPaymentUc` وضعیت تازه‌ی پرداخت رو commit می‌کنه و **بعد** ۴۲۲ رو می‌سازه، چون Failure ِ داخل تراکنش rollback می‌کنه. آدرس تازه‌ای که باید ذخیره بشه همون اول (قدم ۳) به دفترچه اضافه می‌شه تا snapshot ِ سفارش `addressId` ـش رو داشته باشه، ولی دفترچه آخر کار ذخیره می‌شه (شکست هیچی ذخیره نمی‌کنه؛ فقط یه شماره از sequence ِ آدرس هدر می‌ره). قفل دفترچه فقط برای همین حالت گرفته می‌شه. سقف ۳ سفارش، سفارش‌های پرداخت‌نشده‌ای رو می‌شمره که `holdUntil` ـشون نگذشته (`OrderQmRepository.unpaidHoldingUntil`)؛ دو سفارش همزمان یه کاربر با قفل سبدش یکی‌یکی می‌شن، پس شمارش دقیقه. سفارش بدون مبلغ همون لحظه پرداخت‌شده‌ست و پیامک «پرداخت موفق» (`SmsSender.sendOrderPaid`، زودتر از گام ۱۴) بعد از commit فرستاده می‌شه.
+
 **کد سفارش بدشکل** (`/me/orders/abc`) مثل slug بدشکل محصول با `404 ORDER_NOT_FOUND` جواب می‌گیره، نه ۴۰۰، تا معلوم نشه فرمت درست چیه.
 
 ---
@@ -1411,6 +1415,7 @@ application/src/main/kotlin/com/kiva/application/
   repository/OfferQmRepository.kt, OfferQm.kt, OrderQmRepository.kt
   usecase/cart/CartCaller.kt, CartCommands.kt                    (step 6: who the caller is; the shared run of every cart command)
   usecase/cart/CartView.kt                                       (step 12: the cart as seen, shared by the cart and the checkout)
+  usecase/order/usecase/query/GetOrderSummaryUc.kt               (step 13: an order's card; the lists of step 17 reuse OrderSummaryDto)
   usecase/idempotency/IdempotencyGuard.kt                        (step 11: the shared run of every request with an Idempotency-Key)
   usecase/geo/usecase/query/…
   usecase/address/usecase/{command,query}/…
@@ -1418,7 +1423,7 @@ application/src/main/kotlin/com/kiva/application/
   usecase/checkout/usecase/{command,query}/…   PlaceOrderUc, StartPaymentUc, StartPaymentAttemptUc, HandleGatewayCallbackUc, GetCheckoutContextUc, GetPaymentResultUc, …
   usecase/order/usecase/{command,query}/…      ListMyOrdersUc, GetMyOrderUc, ReorderUc, ExpireUnpaidOrderUc, …
   usecase/payment/usecase/{command,query}/…    ReconcilePaymentUc, FindStalePaymentsUc
-  dto/CartDto.kt, CartChange.kt, CheckoutContextDto.kt, OrderSummaryDto.kt, OrderDetailDto.kt, PaymentInitDto.kt, PaymentResultDto.kt, AddressDto.kt, ProvinceDto.kt, …
+  dto/CartDto.kt, CartChange.kt, CheckoutContextDto.kt, PlacedOrder.kt, OrderSummaryDto.kt, OrderDetailDto.kt, PaymentInitDto.kt, PaymentResultDto.kt, AddressDto.kt, ProvinceDto.kt, …
 
 src/main/kotlin/com/kiva/infrastructure/
   cart/RandomCartIds.kt                        CartIdGenerator with SecureRandom (step 6)
@@ -1430,7 +1435,7 @@ src/main/kotlin/com/kiva/infrastructure/
   httpserver/controller/httprest/web/webV1Geo.kt, webV1Addresses.kt, webV1Cart.kt, webV1Checkout.kt, webV1PaymentCallbacks.kt, webV1MyOrders.kt
   httpserver/controller/httprest/web/devFakeGateway.kt
   httpserver/cart/CartAccess.kt                Bearer or X-Cart-Token → CartOwner, and the response header
-  httpserver/controller/httprest/model/request/…, model/response/… (CartTexts.kt, CheckoutTexts.kt, OrderTexts.kt, PaymentTexts.kt)
+  httpserver/controller/httprest/model/request/…, model/response/… (CartTexts.kt, CheckoutTexts.kt, OrderTexts.kt, OrderHttpResponses.kt, PaymentTexts.kt)
   persistence/exposed/tbl/ProvinceTbl.kt, CityTbl.kt, ShopSettingsTbl.kt, ShippingMethodTbl.kt, PaymentGatewayTbl.kt, AddressTbl.kt, CartTbl.kt (+ CartItemTbl), OrderQmTbl.kt, PaymentTbl.kt, PaymentLogTbl.kt, IdempotencyKeyTbl.kt
   persistence/exposed/…RepositoryImpl.kt, OfferQmRepositoryImpl.kt, OrderQmRepositoryImpl.kt, IdempotencyStoreImpl.kt
   persistence/exposed/projector/OrderQmProjector.kt
@@ -1480,8 +1485,9 @@ PURCHASE_REVIEW.md                             (step 21)
 | 27 | `POST /cart/merge`، `AuthResponse.cart`، `VerifyOtpRequest.guestCartToken` (گام ۷) | سبد مهمان خالی روش ارسال و سوییچ رزرو کاربر رو عوض نمی‌کنه و فقط حذف می‌شه. توکن بدشکل هم مثل ناشناخته‌ست (`200` بدون ادغام)، و `400` فقط وقتی `guestCartToken` نیومده یا رشته نیست. سبد پاسخ (هم merge و هم verify) مثل `GET /cart` همگام‌سازی می‌شه و `issues` داره. ادغام فقط بعد از کد درست | هر بازدید یه سبد مهمان خالی می‌سازه، و اون نباید `TIPAX` ِ کاربر رو بی‌صدا به `POST` برگردونه؛ ادغام دوباره باید بی‌خطر باشه؛ سبد پاسخ ورود همونیه که مشتری می‌بینه |
 | 28 | `POST /orders`، `OrderDetail.timeline` (گام ۸) | قدم ۹ ِ ترتیب قانون‌ها: بعد از `PRODUCT_UNAVAILABLE` و `OUT_OF_STOCK`، `422 QUANTITY_EXCEEDS_LIMIT` (`meta.itemIds`) وقتی رنگ‌های یه محصول با هم بیشتر از سقف خریدشن (سقف بعد از افزودن کم شده). تایم‌لاین برای هر تلاش پرداخت ناموفق یه ردیف `PAYMENT_FAILED` داره | سفارش سقف محصول رو خودش هم نگه می‌داره، پس این حالت یه جواب لازم داشت؛ هر شکست یه واقعه‌ست |
 | 29 | `GET /checkout`، `CheckoutContext`، `PaymentGateway` (گام ۱۲) | `CART_EMPTY` فقط برای سبد بدون هیچ ردیف (ردیف غیرقابل خرید هم ردیفه)، و ترتیب: اول `CART_EMPTY`، بعد `addressId`. `addressId` ِ کس دیگه، ناموجود یا غیرعدد ← یه `400` روی `addressId` با `ADDRESS_NOT_FOUND`. `selectedAddressId` با دفترچه‌ی خالی `null` (فرانت فرم `newAddress` رو باز می‌کنه). `shippingOptions`، `reservation` و `consolidation` ِ بالای پاسخ همون‌های `cart` ان. `paymentGateways` همه‌ی درگاه‌ها به ترتیب، با `available` = فعال **و** آداپتر دار، و `isDefault` همیشه یه درگاه در دسترس (پیش‌فرض فروشگاه، وگرنه اولین در دسترس). `messengers` به ترتیب روبیکا، تلگرام، بله. `giftWrap` فعلاً `{available: false, price: 0}` | صفحه و ثبت سفارش یه چیز رو یه‌جور رد کنن؛ هیچ پاسخی نگه آدرس کس دیگه‌ای هست؛ صفحه هیچ‌وقت روی درگاهی شروع نکنه که پرداخت رو نمی‌گیره |
+| 30 | `POST /orders`، `PlaceOrderRequest`، `OrderItemPreview` (گام ۱۳) | کدهای فیلد ِ ۴۰۰: `ADDRESS_REQUIRED` و `ADDRESS_AMBIGUOUS` روی `addressId`، `SHIPPING_METHOD_REQUIRED`، `PAYMENT_GATEWAY_REQUIRED`، `preShipmentMessenger.channel` با `MESSENGER_CHANNEL_INVALID`، `expectedPayable` با `MONEY_NEGATIVE`. `acceptTerms` از `required` بیرون اومد: نیامده یعنی نپذیرفته (`422 TERMS_NOT_ACCEPTED`). `newAddress` با استان یا شهر ناموجود ← ۴۰۰ روی `newAddress.provinceId`/`cityId`، شهر استان دیگه ← `422 CITY_NOT_IN_PROVINCE`، هر دو در قدم ۲. سقف ۳ سفارش فقط سفارش‌هایی رو می‌شمره که مهلت پرداختشون تموم نشده. تکرار با همون کلید جلسه‌ی تازه‌ی درگاه باز نمی‌کنه؛ درخواست ردشده کلید رو مصرف نمی‌کنه؛ دو سفارش همزمان از یه سبد ← یکی و `CART_EMPTY`. `OrderItemPreview.imageUrl` ← `nullable` (تا آپلود مدیا) | هر فیلد غلط اسم خودش رو داشته باشه؛ «قوانین رو پذیرفتم» ِ نیامده همون نپذیرفتنه؛ رفتار تکرار و دو تب باید معلوم باشه |
 
-**پیام برای فرانت (گام ۰ و ۲۱):** ردیف‌های ۲، ۴، ۵، ۶، ۷، ۸، ۱۰، ۱۱، ۲۰، ۲۴، ۲۵، ۲۶، ۲۷، ۲۸ و ۲۹ رفتار فرانت رو عوض می‌کنن. `docs/FRONTEND_PURCHASE.md` (گام ۲۱) کل جریان رو برای فرانت توضیح می‌ده، مثل `FRONTEND_AUTH.md`.
+**پیام برای فرانت (گام ۰ و ۲۱):** ردیف‌های ۲، ۴، ۵، ۶، ۷، ۸، ۱۰، ۱۱، ۲۰، ۲۴، ۲۵، ۲۶، ۲۷، ۲۸، ۲۹ و ۳۰ رفتار فرانت رو عوض می‌کنن. `docs/FRONTEND_PURCHASE.md` (گام ۲۱) کل جریان رو برای فرانت توضیح می‌ده، مثل `FRONTEND_AUTH.md`.
 
 ---
 
@@ -1779,7 +1785,7 @@ PURCHASE_REVIEW.md                             (step 21)
 
 ---
 
-### گام ۱۳: ثبت سفارش: `POST /orders` · L ⬜
+### گام ۱۳: ثبت سفارش: `POST /orders` · L ✅
 
 **می‌سازی:** `PlaceOrderUc`، `StartPaymentUc`، `GetOrderSummaryUc`، `GetPaymentInitUc`، `InventoryDomainService.reserveForOrder` و route. جریان دقیق:
 
@@ -1817,21 +1823,21 @@ Route: StartPaymentUc ← 201 با order و payment، یا 422 PAYMENT_GATEWAY_U
 3. چرا رزرو موجودی بعد از چک قیمته؟ اگه برعکس بود، `PRICE_CHANGED` چه هزینه‌ای داشت؟
 
 **تموم شده یعنی:**
-- [ ] مسیر موفق: 201، `order.status = PENDING_PAYMENT`، `payment.redirect` به درگاه آزمایشی، `expiresAt = placedAt + ۱۵ دقیقه`، سبد خالی، موجودی رزرو شده (`available` ِ read model کم شده)، پرداخت `REDIRECTED`.
-- [ ] ترتیب خطاها، وقتی چند چیز با هم غلطه، دقیقاً جریان بالاست: سبد خالی، آدرس کس دیگه (`ADDRESS_NOT_FOUND`)، بدون پیام‌رسان، موبایل پیام‌رسان غلط، COURIER، SAMAN، `acceptTerms: false`.
-- [ ] `newAddress` با کد پستی غلط ← 400 با `errors[].field = "newAddress.postalCode"`. هم `addressId` و هم `newAddress` ← 400.
-- [ ] `expectedPayable` متفاوت ← `409 PRICE_CHANGED` با `meta.payable`، و **هیچی** ذخیره نمی‌شه: سبد سر جاشه و موجودی رزرو نشده.
-- [ ] رقابت آخرین کیف: «کیف دوشی هستی» کرم (۲ عدد)، ۲۰ خریدار همزمان هر کدوم ۱ ← دقیقاً ۲ سفارش، بقیه `422 OUT_OF_STOCK`، و `available` صفر می‌شه و هرگز منفی نمی‌شه.
-- [ ] بن‌بست: سفارش (A، B) و (B، A) ۵۰ بار همزمان ← همه تموم می‌شن (یا `OUT_OF_STOCK`)، بدون هیچ deadlock.
-- [ ] دابل‌کلیک: دو POST همزمان با یه `Idempotency-Key` ← یه سفارش، و دو پاسخ با همون `code` و `paymentId`.
-- [ ] درگاه بعد از ثبت جواب نمی‌ده ← `422 PAYMENT_GATEWAY_UNAVAILABLE` با `meta.orderCode` و `meta.paymentId`. سفارش `PENDING_PAYMENT` با موجودی رزروشده‌ست، و تکرار همون کلید همون 422 رو می‌ده.
-- [ ] `payable = 0` (با یه پیشنهاد آزمایشی صفر تومانی، چون تخفیف دور دومه) ← `payment: null` و سفارش `PROCESSING`.
-- [ ] سفارش پرداخت‌نشده‌ی چهارم ← `429 RATE_LIMITED` با `Retry-After`.
-- [ ] آدرس تازه با `saveNewAddress` ← تو دفترچه ذخیره می‌شه. دفترچه‌ی پر ← سفارش ثبت می‌شه و آدرس نه.
-- [ ] `saveAsDefault` ← `defaultMessenger` و `defaultMessengerPhone` ِ کاربر عوض می‌شن.
-- [ ] snapshot: بعد از ثبت، عوض کردن قیمت محصول یا ویرایش آدرس، جزئیات سفارش رو عوض نمی‌کنه.
-- [ ] رنگی که بعد از افزودن از فروشگاه خارج شده ← `422 PRODUCT_UNAVAILABLE` با `meta.itemIds`.
-- [ ] تست معماری: هیچ تماس درگاهی داخل تراکنش نیست.
+- [x] مسیر موفق: 201، `order.status = PENDING_PAYMENT`، `payment.redirect` به درگاه آزمایشی، `expiresAt = placedAt + ۱۵ دقیقه`، سبد خالی، موجودی رزرو شده (`available` ِ read model کم شده)، پرداخت `REDIRECTED`.
+- [x] ترتیب خطاها، وقتی چند چیز با هم غلطه، دقیقاً جریان بالاست: سبد خالی، آدرس کس دیگه (`ADDRESS_NOT_FOUND`)، بدون پیام‌رسان، موبایل پیام‌رسان غلط، COURIER، SAMAN، `acceptTerms: false`.
+- [x] `newAddress` با کد پستی غلط ← 400 با `errors[].field = "newAddress.postalCode"`. هم `addressId` و هم `newAddress` ← 400.
+- [x] `expectedPayable` متفاوت ← `409 PRICE_CHANGED` با `meta.payable`، و **هیچی** ذخیره نمی‌شه: سبد سر جاشه و موجودی رزرو نشده.
+- [x] رقابت آخرین کیف: «کیف دوشی هستی» کرم (۲ عدد)، ۲۰ خریدار همزمان هر کدوم ۱ ← دقیقاً ۲ سفارش، بقیه `422 OUT_OF_STOCK`، و `available` صفر می‌شه و هرگز منفی نمی‌شه.
+- [x] بن‌بست: سفارش (A، B) و (B، A) ۵۰ بار همزمان ← همه تموم می‌شن (یا `OUT_OF_STOCK`)، بدون هیچ deadlock.
+- [x] دابل‌کلیک: دو POST همزمان با یه `Idempotency-Key` ← یه سفارش، و دو پاسخ با همون `code` و `paymentId`.
+- [x] درگاه بعد از ثبت جواب نمی‌ده ← `422 PAYMENT_GATEWAY_UNAVAILABLE` با `meta.orderCode` و `meta.paymentId`. سفارش `PENDING_PAYMENT` با موجودی رزروشده‌ست، و تکرار همون کلید همون 422 رو می‌ده.
+- [x] `payable = 0` (با یه پیشنهاد آزمایشی صفر تومانی، چون تخفیف دور دومه) ← `payment: null` و سفارش `PROCESSING`.
+- [x] سفارش پرداخت‌نشده‌ی چهارم ← `429 RATE_LIMITED` با `Retry-After`.
+- [x] آدرس تازه با `saveNewAddress` ← تو دفترچه ذخیره می‌شه. دفترچه‌ی پر ← سفارش ثبت می‌شه و آدرس نه.
+- [x] `saveAsDefault` ← `defaultMessenger` و `defaultMessengerPhone` ِ کاربر عوض می‌شن.
+- [x] snapshot: بعد از ثبت، عوض کردن قیمت محصول یا ویرایش آدرس، جزئیات سفارش رو عوض نمی‌کنه.
+- [x] رنگی که بعد از افزودن از فروشگاه خارج شده ← `422 PRODUCT_UNAVAILABLE` با `meta.itemIds`.
+- [x] تست معماری: هیچ تماس درگاهی داخل تراکنش نیست.
 
 ---
 
@@ -2106,6 +2112,7 @@ Route: StartPaymentUc ← 201 با order و payment، یا 422 PAYMENT_GATEWAY_U
 | ۲۰ مهر ۱۴۰۵ | ۱۰ | Purchase step 10 | `V16__payments.sql` (`payment_tbl` با یکتایی authority و `refId`، «یک پرداخت موفق برای هر سفارش»، CHECK ِ قانون‌های `Payment`، بدون FK؛ `paymentlog_tbl` فقط‌اضافه با trigger). Aggregate ِ `Payment` با جدول انتقال‌های ۱۰.۱ (به‌علاوه‌ی `REDIRECTED → FAILED` برای inquiry ِ job تطبیق)، `PaymentLogEntry`، `PaymentRepositoryImpl` (`FOR UPDATE` و نسخه)، `RandomPaymentIds`. پورت `PaymentGateway` و رجیستری `PaymentGateways` (فعال **و** آداپتر دار). `FakePaymentGateway` با صفحه‌ی `/dev/fake-gateway/{authority}` (دو فرم POST و `302` به callback)، حالت‌های «جواب نده/رد کن/کند باش» و شمارنده؛ هر تماسش داخل تراکنش خطا می‌ده. `kiva.payment` در `application.conf` و `PaymentConfig` (merchant id ِ پنهان؛ `zarinpal` تا گام ۱۸ برنامه رو بالا نمیاره). سؤال‌ها با پیشنهاد خودم: پرداخت جدا از سفارش و بدون ES، و درگاه آزمایشی خودش از Exposed می‌پرسه که داخل تراکنشه یا نه. ۴۴ تست تازه، ۱۷۳۸ کل |
 | ۲۰ مهر ۱۴۰۵ | ۱۱ | Purchase step 11 | `V17__idempotency.sql` (یکتایی `(userId, scope, key)`، FK با حذف حساب). پورت `IdempotencyStore` با `IdempotentRequest`، `IdempotencyKey` و `RequestHash`؛ `IdempotencyStoreImpl` (قفل advisory ِ ۶۴ بیتی و مقایسه‌ی hash)؛ سرویس `IdempotencyGuard.once` که جریان بخش ۱۲ رو یه جا نگه می‌داره؛ `RequestFingerprint` (بدنه‌ی decode‌شده دوباره با JSON ِ ثابت، کلیدهای مرتب، به‌علاوه‌ی پارامترهای مسیر) و خوندن هدر. سؤال‌ها با پیشنهاد خودم جواب داده شدن (بخش ۱۲). یه تست هم پیدا شد که به‌خاطر `runBlocking` ِ غیر `Unit` اصلاً اجرا نمی‌شد؛ درست شد و همه‌ی کلاس‌های تست با شمارش `@Test` چک شدن. ۱۶ تست تازه، ۱۷۵۴ کل |
 | ۲۰ مهر ۱۴۰۵ | ۱۲ | Purchase step 12 | `GetCheckoutContextUc` و `GET /checkout`: Route اول `OpenCartUc` (همگام‌سازی، issueها یک بار) و بعد Query با شناسه‌ی همون سبد. ساختن سبد (`cartDtoOf`) از `GetCartUc` بیرون اومد و بین سبد و تسویه مشترکه، پس `cart` ِ تسویه دقیقاً `GET /cart` ـه، و `shippingOptions`، `reservation` و `consolidation` ِ بالای پاسخ همون‌های `cart` ان. ترتیب مثل ثبت سفارش: `CART_EMPTY` (ردیف غیرقابل خرید هم ردیفه)، بعد `addressId`: مال کس دیگه، ناموجود یا غیرعدد، یه `400` با `ADDRESS_NOT_FOUND`. سؤال‌ها با پیشنهاد خودم: `selectedAddressId` ِ دفترچه‌ی خالی `null` ـه و فرانت فرم `newAddress` رو باز می‌کنه؛ «در دسترس» هر دوئه (تنظیمات **و** آداپتر) و یه جا حساب می‌شه، `PaymentGateways`، که تسویه و ثبت سفارش هر دو ازش می‌پرسن؛ `isDefault` همیشه یه درگاه در دسترسه (`checkoutOptions`: پیش‌فرض فروشگاه، وگرنه اولین در دسترس). پیام‌رسان‌ها (اسم و راهنما) ثابت‌های `CheckoutTexts`، `giftWrap = {false, 0}` و `termsUrl = /pages/terms`. یه تست خودم هم با خرابکاری پیدا شد که ترتیب ردیف‌هاش به ساعت ثابت تست بستگی داشت؛ درست شد. کانترکت: ردیف ۲۹. ۱۰ تست تازه، ۱۷۶۴ کل |
+| ۲۰ مهر ۱۴۰۵ | ۱۳ | Purchase step 13 | `PlaceOrderUc` (شکل ورودی بیرون تراکنش با همه‌ی خطاها با هم؛ بعد یه تراکنش با `IdempotencyGuard` به ترتیب کانترکت؛ تا ۳ بار با `ConcurrentChangeException`)، `StartPaymentUc` (دو تراکنش کوتاه، درگاه بینشون، و ثبت هر تماس در `paymentlog_tbl`)، `GetOrderSummaryUc` و `GetPaymentInitUc`، و `POST /orders` در `webV1Checkout.kt`. دامنه: `InventoryDomainService.reserveForOrder` (همه یا هیچ، به ترتیب قفل)، `PreShipmentMessenger.checkTexts` (۴۰۰ ِ متن‌ها قبل از ۴۲۲ ِ پیام‌رسان)، `User.keepMessenger`، `AddressBookDomainService.placeOf`. `OfferQm.Color.sku` برای snapshot ِ ردیف سفارش، `OrderQmRepository.unpaidHoldingUntil`، و `SmsSender.sendOrderPaid` (زودتر از گام ۱۴). `OrderSummaryHttpResponse` و `OrderTexts` (برچسب، رنگ، progress و پیام‌های انتظار). سؤال‌ها با پیشنهاد خودم: سبد موقع ثبت خالی می‌شه (اگه پرداخت شکست بخوره، مشتری با «پرداخت دوباره» ِ همون سفارش ادامه می‌ده)؛ `CART_EMPTY` اول چون بدون سبد هیچ چیز دیگه‌ای معنی نداره، و موجودی و قیمت آخر چون فقط اونا از دیتابیس تازه خونده می‌شن؛ رزرو بعد از چک قیمت، تا `PRICE_CHANGED` هیچ نوشتنی نداشته باشه. دو باگ پیدا و درست شد: ۴۲۲ ِ «درگاه جواب نداد» داخل تراکنش برگردونده می‌شد و `START_FAILED` رو rollback می‌کرد؛ و `InventoryRepositoryImpl` اول stream ِ موجودی و بعد ردیف محصول رو قفل می‌کرد، که برای دو رنگ ِ یه محصول بن‌بست می‌ساخت (حالا اول ردیف محصول، بخش ۱۱). خرابکاری عمدی همه‌ی نگهبان‌ها رو قرمز کرد، و `FOR UPDATE` ِ سبد که اول هیچ تستی رو قرمز نکرد با یه تست قطعی‌تر (دو تب) پوشش داده شد. کانترکت: ردیف ۳۰. ۲۱ تست تازه، ۱۷۸۵ کل |
 
 ---
 

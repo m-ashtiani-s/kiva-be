@@ -55,6 +55,8 @@ class OfferQmRepositoryImpl : OfferQmRepository {
         ),
         product = OfferQm.Product(this[ProductQmTbl.slug], this[ProductQmTbl.sku], this[ProductQmTbl.name]),
         category = OfferQm.Category(this[CategoryTbl.id].value, this[CategoryTbl.slug], this[CategoryTbl.name]),
-        color = OfferQm.Color(this[ColorTbl.colorKey], this[ColorTbl.name], this[ColorTbl.hex], this[ColorTbl.isLight], this[ColorTbl.sortOrder]),
+        color = OfferQm.Color(
+            this[ColorTbl.colorKey], this[ColorTbl.name], this[ColorTbl.hex], this[ColorTbl.isLight], this[ColorTbl.sortOrder], this[ProductVariantQmTbl.sku],
+        ),
     )
 }

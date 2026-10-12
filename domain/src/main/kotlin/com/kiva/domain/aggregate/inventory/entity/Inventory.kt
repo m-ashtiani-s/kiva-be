@@ -21,7 +21,8 @@ import kotlin.properties.Delegates
 
 /**
  * The stock of one color of a product (one variant): how many bags are in the warehouse ([onHand]) and how many of
- * them are promised to paid orders that haven't shipped yet ([reserved]). Its events are the warehouse book.
+ * them are promised to orders that hold stock ([reserved]): placed and still within their time to pay, or paid and not
+ * shipped yet. Its events are the warehouse book.
  *
  * Its own aggregate, apart from Product, so a purchase never competes with an edit of the description for the next
  * event number.
@@ -46,10 +47,10 @@ class Inventory private constructor() : EventSourceEntity<InventoryDomainEvent>(
     private val reservationMap = mutableMapOf<OrderCode, Quantity>()
     private val shippedOrders = mutableSetOf<OrderCode>()
 
-    /** What each paid order that hasn't shipped yet was promised, in the order they reserved. */
+    /** What each order holding stock was promised, in the order they reserved. */
     val reservations: Map<OrderCode, Quantity> get() = reservationMap.toMap()
 
-    /** Bags promised to paid orders that haven't shipped yet. */
+    /** Bags promised to orders holding stock. */
     val reserved: Int get() = reservationMap.values.sumOf { it.value }
 
     /** Bags that can still be sold. */
@@ -90,11 +91,12 @@ class Inventory private constructor() : EventSourceEntity<InventoryDomainEvent>(
         return Result.success(this)
     }
 
-    // ============ for orders (called by the order flow, a later phase) ============
+    // ============ for orders ============
 
     /**
-     * Promises [quantity] bags to a paid order. Asking again for the same order and amount changes nothing (a payment
-     * confirmed twice); a different amount, or an order that already shipped, is refused.
+     * Promises [quantity] bags to an order, from the moment it is placed: unpaid within its time to pay, then paid until
+     * it ships. Asking again for the same order and amount changes nothing; a different amount, or an order that
+     * already shipped, is refused.
      */
     fun reserve(orderCode: OrderCode, quantity: Quantity, by: UserId, now: Instant): Result<Inventory, ReserveFailure> {
         if (orderCode in shippedOrders) return Result.failure(ReserveFailure.OrderAlreadyShipped(orderCode))

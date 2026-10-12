@@ -62,6 +62,7 @@ class OfferQmRepositoryImplTest {
         assertEquals("کیف دوشی ماهک", lilac.product.name)
         assertEquals(OfferQm.Category(1, "shoulder", "کیف دوشی"), lilac.category)
         assertEquals("lilac", lilac.color.key)
+        assertEquals(product.variants.single { it.colorKey.value == "lilac" }.sku.value, lilac.color.sku)
         assertEquals(1L, lilac.offer.categoryId.value)
     }
 
