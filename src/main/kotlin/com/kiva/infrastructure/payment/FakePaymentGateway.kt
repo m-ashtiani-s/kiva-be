@@ -31,7 +31,8 @@ import java.util.concurrent.atomic.AtomicInteger
  * would use. Its sessions live in memory only.
  *
  * Two more jobs in tests:
- * - it can be told not to answer, to refuse, or to be slow ([mode], [delay]), and it counts its calls ([callsOf]);
+ * - it can be told not to answer, to refuse, or to be slow ([mode], [delay]), or not to answer one kind of call only
+ *   ([unreachable]), and it counts its calls ([callsOf]);
  * - **every call checks that no database transaction is open**, and throws if one is: a gateway call inside a
  *   transaction holds a connection for as long as the gateway takes, so whoever puts one there fails the build. It is
  *   an adapter, so it may ask Exposed directly; the application layer never knows about Exposed.
@@ -60,8 +61,11 @@ class FakePaymentGateway(private val config: PaymentConfig, private val random: 
     @Volatile
     var delay: Duration = Duration.ZERO
 
+    /** The kinds of call ([REQUEST], [VERIFY], [INQUIRE], [REVERSE]) that get no answer, whatever the [mode]. */
+    val unreachable: MutableSet<String> = ConcurrentHashMap.newKeySet()
+
     /** Where a session stands. */
-    enum class State { IN_BANK, PAID, CANCELLED, VERIFIED }
+    enum class State { IN_BANK, PAID, CANCELLED, VERIFIED, REVERSED }
 
     /** One session, as the pretend bank keeps it. */
     class Session(val authority: GatewayAuthority, val orderCode: OrderCode, val amount: Money, val refId: GatewayRefId) {
@@ -108,7 +112,7 @@ class FakePaymentGateway(private val config: PaymentConfig, private val random: 
                     session.state = State.VERIFIED
                     Result.success(receiptOf(session, alreadyConfirmed = false))
                 }
-            State.IN_BANK, State.CANCELLED -> Result.failure(GatewayFailure.Declined(NOT_PAID))
+            State.IN_BANK, State.CANCELLED, State.REVERSED -> Result.failure(GatewayFailure.Declined(NOT_PAID))
         }
     }
 
@@ -120,8 +124,20 @@ class FakePaymentGateway(private val config: PaymentConfig, private val random: 
                 State.PAID -> GatewayInquiry.PAID
                 State.VERIFIED -> GatewayInquiry.VERIFIED
                 State.CANCELLED -> GatewayInquiry.FAILED
+                State.REVERSED -> GatewayInquiry.REVERSED
             },
         )
+    }
+
+    /** Only a confirmed session can be given back, as with Zarinpal (-61 otherwise). */
+    override suspend fun reverse(authority: GatewayAuthority): Result<Unit, GatewayFailure> = call(REVERSE) {
+        val session = sessions[authority.value] ?: return@call Result.failure(GatewayFailure.Declined(NOT_FOUND))
+        synchronized(session) {
+            if (session.state != State.VERIFIED) return@call Result.failure(GatewayFailure.Declined(NOT_CONFIRMED))
+            session.state = State.REVERSED
+        }
+        logger.info("FakePaymentGateway.reverse order=${session.orderCode.value}")
+        Result.success(Unit)
     }
 
     // ============ the pretend bank's page ============
@@ -162,6 +178,7 @@ class FakePaymentGateway(private val config: PaymentConfig, private val random: 
         }
         calls.computeIfAbsent(kind) { AtomicInteger() }.incrementAndGet()
         if (!delay.isZero) delay(delay.toMillis())
+        if (kind in unreachable) return Result.failure(GatewayFailure.Unreachable)
         return when (mode) {
             Mode.UNREACHABLE -> Result.failure(GatewayFailure.Unreachable)
             Mode.REJECTING -> Result.failure(GatewayFailure.Rejected(WRONG_MERCHANT))
@@ -173,6 +190,7 @@ class FakePaymentGateway(private val config: PaymentConfig, private val random: 
         const val REQUEST = "requestPayment"
         const val VERIFY = "verify"
         const val INQUIRE = "inquire"
+        const val REVERSE = "reverse"
 
         private const val AUTHORITY = "Authority"
         private const val STATUS = "Status"
@@ -183,5 +201,6 @@ class FakePaymentGateway(private val config: PaymentConfig, private val random: 
         private const val WRONG_MERCHANT = -10
         private const val NOT_PAID = -51
         private const val NOT_FOUND = -55
+        private const val NOT_CONFIRMED = -61
     }
 }

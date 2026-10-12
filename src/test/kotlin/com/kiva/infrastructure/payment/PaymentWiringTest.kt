@@ -17,6 +17,7 @@ import com.kiva.infrastructure.config.AuthConfig
 import com.kiva.infrastructure.config.DatasourceConfig
 import com.kiva.infrastructure.di.infrastructureModule
 import org.junit.jupiter.api.Test
+import org.koin.dsl.koinApplication
 import java.time.DayOfWeek
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -80,7 +81,7 @@ class PaymentWiringTest {
     }
 
     @Test
-    fun `asking for Zarinpal itself before its adapter exists stops the boot with a clear message`() {
+    fun `with Zarinpal, the real adapter stands behind ZARINPAL, and there is no pretend bank`() {
         val config = AppConfig(
             DatasourceConfig("jdbc:postgresql://localhost:5432/kiva_test", "unused", "unused", 1),
             auth = AuthConfig(otpPepper = ByteArray(32) { 7 }, jwtSecret = ByteArray(32) { 8 }, maxSmsPerHour = 300),
@@ -89,9 +90,12 @@ class PaymentWiringTest {
                 ZarinpalConfig("1344b5d4-0048-11e8-94db-005056a205be", sandbox = false),
             ),
         )
+        val koin = koinApplication { modules(infrastructureModule(config, TestDatabase.database)) }.koin
 
-        val error = assertFailsWith<IllegalStateException> { infrastructureModule(config, TestDatabase.database) }
-        assertTrue("step 18" in error.message.orEmpty(), error.message)
+        val gateways = koin.get<PaymentGateways>()
+
+        assertTrue(gateways.of(ZARINPAL) is ZarinpalGateway)
+        assertEquals(null, koin.getOrNull<FakePaymentGateway>())
     }
 
     @Test

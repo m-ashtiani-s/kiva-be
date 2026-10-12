@@ -143,6 +143,36 @@ class PaymentDomainServiceTest {
         assertEquals(OrderStatus.PENDING_PAYMENT, order.status, "its order is the expiry's business")
     }
 
+    // ============ giving back (the exception of section 10.5) ============
+
+    @Test
+    fun `confirmed for an order that couldn't take it - given back while the gateway allows, then REFUNDED`() {
+        val order = order()
+        val payment = redirected(order)
+        service.beginConfirming(payment, order, listOf(payment), at(3))
+        order.expire(sara, at(16))
+        service.confirmed(payment, order, refId, card, sara, at(17))
+
+        assertTrue(service.mayReverse(payment, order, at(46)))
+        assertFalse(service.mayReverse(payment, order, at(47)), "30 minutes after it was confirmed")
+
+        service.reversed(payment, order, at(18))
+        assertEquals(PaymentStatus.REFUNDED to refId, payment.status to payment.refId)
+        assertFalse(service.mayReverse(payment, order, at(19)), "given back already")
+    }
+
+    @Test
+    fun `the attempt that paid its order is never given back alone`() {
+        val order = order()
+        val payment = redirected(order)
+        service.beginConfirming(payment, order, listOf(payment), at(3))
+        service.confirmed(payment, order, refId, card, sara, at(4))
+
+        assertFalse(service.mayReverse(payment, order, at(5)))
+        assertFailsWith<IllegalArgumentException> { service.reversed(payment, order, at(5)) }
+        assertEquals(PaymentStatus.SUCCEEDED, payment.status)
+    }
+
     // ============ back from the gateway ============
 
     @Test

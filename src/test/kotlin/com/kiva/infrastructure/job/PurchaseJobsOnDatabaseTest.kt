@@ -309,6 +309,48 @@ class PurchaseJobsOnDatabaseTest {
         assertEquals(1, purchase.auth.sms.paid.size)
     }
 
+    // ============ the exception: paid for an order that couldn't take it (section 10.5) ============
+
+    /** An attempt being confirmed whose order expired under it: what the rules never let happen, made by hand. */
+    private fun paidForAnOrderGone(n: Int): Placed {
+        val placed = placed(n)
+        purchase.gateway.pay(placed.authority!!)
+        purchase.gateway.unreachable += FakePaymentGateway.VERIFY
+        back(placed.authority, "OK")
+        purchase.gateway.unreachable.clear()
+        clock.advance(Duration.ofMinutes(16))
+        transaction(purchase.db) {
+            val order = purchase.orders.get(placed.orderId)!!
+            order.expire(UserId.SYSTEM, clock.now).getOrNull()!!
+            purchase.orders.save(order)
+        }
+        return placed
+    }
+
+    @Test
+    fun `confirmed for an order that couldn't take it - the money is given back at once, and the attempt is REFUNDED`() {
+        val placed = paidForAnOrderGone(1214)
+
+        reconcileRun()
+
+        assertEquals(PaymentStatus.REFUNDED, paymentOf(placed.paymentId).status)
+        assertEquals(listOf("REQUEST OK", "CALLBACK OK", "VERIFY UNREACHABLE", "VERIFY OK", "REVERSE OK"), logOf(placed.paymentId))
+        assertEquals(FakePaymentGateway.State.REVERSED, purchase.gateway.session(placed.authority!!)?.state)
+        assertEquals(OrderStatus.EXPIRED, statusOf(placed))
+        assertEquals(emptyList(), purchase.auth.sms.paid, "nothing was bought")
+    }
+
+    @Test
+    fun `when the gateway won't give it back, the attempt stays SUCCEEDED for support to give back by hand`() {
+        val placed = paidForAnOrderGone(1215)
+        purchase.gateway.unreachable += FakePaymentGateway.REVERSE
+
+        reconcileRun()
+
+        assertEquals(PaymentStatus.SUCCEEDED, paymentOf(placed.paymentId).status)
+        assertEquals(listOf("REQUEST OK", "CALLBACK OK", "VERIFY UNREACHABLE", "VERIFY OK", "REVERSE UNREACHABLE"), logOf(placed.paymentId))
+    }
+
     // ============ the clean-ups ============
 
     @Test

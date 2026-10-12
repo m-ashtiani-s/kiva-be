@@ -13,7 +13,7 @@ import com.kiva.domain.aggregate.payment.model.valueobject.PaymentRedirect
 import com.kiva.domain.aggregate.settings.model.valueobject.PaymentGatewayCode
 
 /**
- * One payment gateway (roadmap section 10.2). The adapters live in infrastructure: Zarinpal (step 18), and a fake one
+ * One payment gateway (roadmap section 10.2). The adapters live in infrastructure: Zarinpal, and a fake one
  * for development and tests that walks the same path through the same callback.
  *
  * **Never called inside a transaction.** A slow gateway would hold a database connection, and a full pool stops the
@@ -36,6 +36,13 @@ interface PaymentGateway {
 
     /** How the session stands, without confirming it. */
     suspend fun inquire(authority: GatewayAuthority): Result<GatewayInquiry, GatewayFailure>
+
+    /**
+     * Gives a confirmed payment's money back to the card, at once. Only for the exception of section 10.5: an attempt
+     * confirmed for an order that couldn't take it. Zarinpal allows it only within 30 minutes of the payment, and only
+     * from the server's registered address; any refusal leaves it to support, by hand.
+     */
+    suspend fun reverse(authority: GatewayAuthority): Result<Unit, GatewayFailure>
 }
 
 /** What a session is opened for. The adapter writes the description the gateway shows («سفارش KV-218340 کیوا»). */

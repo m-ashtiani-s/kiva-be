@@ -62,6 +62,7 @@ class PaymentTest {
         "failDeclined" to { p -> p.fail(GATEWAY_DECLINED, at(2)) },
         "failRejected" to { p -> p.fail(GATEWAY_REJECTED, at(2)) },
         "expire" to { p -> p.expire(at(2)) },
+        "refund" to { p -> p.refund(at(2)) },
     )
 
     /** The roadmap's table 10.1: which change is allowed from which status, and where it goes. */
@@ -77,6 +78,7 @@ class PaymentTest {
         (VERIFYING to "succeed") to SUCCEEDED,
         (VERIFYING to "failDeclined") to FAILED,
         (VERIFYING to "failRejected") to FAILED,
+        (SUCCEEDED to "refund") to REFUNDED,
     )
 
     /** A payment in [status], walked there the way a real one gets there. */

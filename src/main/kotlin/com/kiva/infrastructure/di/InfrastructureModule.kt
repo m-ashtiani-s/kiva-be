@@ -19,6 +19,8 @@ import com.kiva.infrastructure.payment.FakePaymentGateway
 import com.kiva.infrastructure.payment.PaymentProvider
 import org.jetbrains.exposed.v1.jdbc.Database
 import com.kiva.infrastructure.job.JobScheduler
+import com.kiva.infrastructure.payment.ZarinpalGateway
+import io.ktor.client.engine.cio.CIO
 import com.kiva.infrastructure.job.PurchaseJobs
 import org.koin.dsl.module
 import java.time.Clock
@@ -55,6 +57,9 @@ fun infrastructureModule(config: AppConfig, database: Database) = module {
             single { FakePaymentGateway(config.payment) }
             single { PaymentGateways(listOf(get<FakePaymentGateway>())) }
         }
-        PaymentProvider.ZARINPAL -> error("kiva.payment.provider = zarinpal: the Zarinpal adapter comes in purchase step 18; use fake until then")
+        PaymentProvider.ZARINPAL -> {
+            single { ZarinpalGateway(config.payment, CIO.create()) }
+            single { PaymentGateways(listOf(get<ZarinpalGateway>())) }
+        }
     }
 }

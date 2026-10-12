@@ -133,6 +133,24 @@ class PaymentDomainService(private val paymentIdGenerator: PaymentIdGenerator) {
     }
 
     /**
+     * Whether a confirmed attempt is to be given back at once: its order didn't take it (Confirmed.OrderNotPaid), and the
+     * gateway still reverses it (PaymentPolicy.REVERSE_WINDOW from its confirmation). Otherwise support gives it back.
+     */
+    fun mayReverse(payment: Payment, order: Order, now: Instant): Boolean =
+        payment.status == PaymentStatus.SUCCEEDED && order.paidByPaymentId != payment.publicId &&
+            now.isBefore(checkNotNull(payment.settledOn).plus(PaymentPolicy.REVERSE_WINDOW))
+
+    /**
+     * The gateway gave a confirmed attempt's money back ([mayReverse]): it is REFUNDED. Never the attempt that paid its
+     * order: that one is refunded only with its order (a later phase).
+     */
+    fun reversed(payment: Payment, order: Order, now: Instant) {
+        requireSameOrder(payment, order, listOf(payment))
+        require(order.paidByPaymentId != payment.publicId) { "Payment ${payment.publicId.value} paid order ${order.code.value}; it isn't reversed alone" }
+        payment.refund(now).orBug()
+    }
+
+    /**
      * The gateway didn't take the payment: it refused to confirm it ([reason] GATEWAY_DECLINED, or GATEWAY_REJECTED when
      * our request was wrong), or, asked about an attempt the shopper never came back from, says it failed. The attempt
      * fails, and so does the order's try, while it still waits.

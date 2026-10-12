@@ -155,6 +155,12 @@ class Payment private constructor(
         return move(from = from, to = FAILED) { settle(reason, now) }
     }
 
+    /**
+     * The money went back to the card: given back by the gateway right after (the exception of section 10.5), or, in a
+     * later phase, refunded. Its reference number stays: the shopper's bank knows the payment by it.
+     */
+    fun refund(now: Instant): Result<Payment, Failure> = move(from = setOf(SUCCEEDED), to = REFUNDED) { }
+
     // ============ the order's time ============
 
     /**

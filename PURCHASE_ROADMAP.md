@@ -96,7 +96,7 @@
 | ۱۵ | پرداخت دوباره | M | ✅ |
 | ۱۶ | کارهای زمان‌بندی‌شده | M | ✅ |
 | ۱۷ | سفارش‌های من و خرید دوباره | M | ✅ |
-| ۱۸ | درگاه واقعی زرین‌پال | M | ⬜ |
+| ۱۸ | درگاه واقعی زرین‌پال | M | ✅ |
 | ۱۹ | رزرو ۴ روزه و ادغام سفارش‌ها | L | ⬜ |
 | ۲۰ | کد تخفیف | L | ⬜ |
 | ۲۱ | حمله‌ی آزمایشی و جمع‌بندی | M | ⬜ |
@@ -706,6 +706,8 @@ sealed class GatewayFailure {
 
 کدهای خطای مهم: ‎`-9` (اعتبارسنجی)، ‎`-10` (merchant یا IP غلط)، ‎`-11` (درگاه غیرفعال)، ‎`-14` (دامنه‌ی callback با دامنه‌ی ثبت‌شده نمی‌خونه)، ‎`-41` (سقف ۱۰۰ میلیون تومان)، ‎`-50` (مبلغ پرداخت‌شده فرق داره)، ‎`-51` (پرداخت ناموفق)، ‎`-54` و ‎`-55` (authority نامعتبر یا پیدا نشد). جزئیات رو موقع پیاده‌سازی گام ۱۸ دوباره با مستندات رسمی (`zarinpal.com/docs/paymentGateway`) چک کن.
 
+**پیاده‌سازی (گام ۱۸):** `ZarinpalGateway` با `ktor-client` (CIO؛ اتصال ۵ و کل ۱۵ ثانیه) و JSON ِ دستی. در ۲۱ مهر ۱۴۰۵ با مستندات رسمی (`connectToGateway`، `errorList`، `sandBox`، `Inquiry`، `reverse`) چک شد: مسیرها، میزبان sandbox (همون مسیرها با `sandbox.zarinpal.com`)، ۱۰۱ برای verify ِ دوباره، `ref_id` ِ عددی و `card_pan` ِ ماسک‌شده. نگاشت کدها: ‎`-50` ← `AmountMismatch` (ERROR)؛ ‎`-51`، ‎`-53`، ‎`-54`، ‎`-55`، ‎`-60`، ‎`-61`، ‎`-63` ← `Declined`؛ ‎`-52`، HTTP 5xx، timeout و پاسخ بی‌کد ← `Unreachable`؛ بقیه (‎`-9` تا ‎`-19`، ‎`-40`، ‎`-41`، ‎`-62`، …) ← `Rejected` با لاگ ERROR. `card_pan` ِ ماسک‌نشده نگه داشته نمی‌شه (`CardMask.of`) و `card_hash` اصلاً خونده نمی‌شه. merchant id نه تو لاگه، نه تو `toString`، نه تو بدنه‌ی لاگ‌شده (بدنه‌ها لاگ نمی‌شن). `metadata` (موبایل) فرستاده نمی‌شه (سؤال باز ۸).
+
 ### ۱۰.۴ درگاه آزمایشی (فقط توسعه و تست)
 
 `FakePaymentGateway` خودش رو جای `ZARINPAL` جا می‌زنه، تا مسیرها و callback دقیقاً مثل سرور واقعی باشن:
@@ -730,7 +732,7 @@ HandleGatewayCallbackUc:  [tx: VERIFYING یا CANCELLED یا FAILED] → verify 
 
 - **دو StartPayment همزمان برای یه پرداخت** (مثلاً تکرار درخواست با همون کلید): هر دو authority می‌گیرن. تراکنش دوم با `FOR UPDATE` می‌بینه پرداخت دیگه `INITIATED` نیست، authority خودش رو دور می‌ریزه و redirect ِ برنده رو برمی‌گردونه. session ِ اضافه‌ی درگاه پرداخت‌نشده منقضی می‌شه و ضرری نداره.
 - **کرش بعد از VERIFYING و قبل از verify:** job تطبیق بعد از ۲ دقیقه دوباره verify می‌کنه. اگه قبلاً verify شده بود، ۱۰۱ برمی‌گرده که موفقیت حساب می‌شه.
-- **verify موفق، ولی سفارش دیگه قابل پرداخت نیست:** نباید پیش بیاد، چون job سفارشی رو که پرداخت VERIFYING داره منقضی نمی‌کنه. اگه به‌خاطر یه باگ پیش اومد: پرداخت `SUCCEEDED` می‌شه، یه لاگ ERROR با `PAID_BUT_ORDER_NOT_PAYABLE` نوشته می‌شه، و اگه هنوز زیر ۳۰ دقیقه‌ست، `reverse` امتحان می‌شه. وگرنه پشتیبانی دستی استرداد می‌کنه.
+- **verify موفق، ولی سفارش دیگه قابل پرداخت نیست:** نباید پیش بیاد، چون job سفارشی رو که پرداخت VERIFYING داره منقضی نمی‌کنه. اگه به‌خاطر یه باگ پیش اومد: پرداخت `SUCCEEDED` می‌شه، یه لاگ ERROR با `PAID_BUT_ORDER_NOT_PAYABLE` نوشته می‌شه، و اگه هنوز زیر ۳۰ دقیقه‌ست، `reverse` امتحان می‌شه. وگرنه پشتیبانی دستی استرداد می‌کنه. (گام ۱۸: `PaymentConfirmation` بعد از commit و بیرون تراکنش `reverse` رو صدا می‌زنه؛ موفق ← تلاش `REFUNDED` (`PaymentDomainService.reversed`، هرگز تلاشی که خود سفارش رو پرداخت کرده)، رد یا بی‌جواب ← `SUCCEEDED` و ERROR برای پشتیبانی. هر دو یه ردیف `REVERSE` تو `paymentlog_tbl`.)
 
 این دو UseCase تنها جاهایی‌ان که یه UseCase دو تراکنش داره. فرق با اسکیل شرکت تو بخش ۲۵ نوشته شده.
 
@@ -1354,7 +1356,7 @@ kiva {
 | متغیر | چی |
 |---|---|
 | `KIVA_PAYMENT_PROVIDER` | `fake` (پیش‌فرض، فقط توسعه) یا `zarinpal` |
-| `KIVA_ZARINPAL_MERCHANT_ID` | با `zarinpal` اجباریه. اگه نباشه یا UUID نباشه، برنامه با یه پیام روشن بالا نمیاد. تا گام ۱۸ خود `zarinpal` هم برنامه رو بالا نمیاره (آداپترش هنوز نیست) |
+| `KIVA_ZARINPAL_MERCHANT_ID` | با `zarinpal` اجباریه. اگه نباشه یا UUID نباشه، برنامه با یه پیام روشن بالا نمیاد |
 | `KIVA_ZARINPAL_SANDBOX` | `true` تو توسعه، `false` روی سرور |
 | `KIVA_API_PUBLIC_URL` | روی سرور `https://api.kiva.ir`. دامنه‌ش باید همون دامنه‌ی ثبت‌شده در زرین‌پال باشه (خطای ‎`-14`) |
 | `KIVA_PAYMENT_RESULT_URL` | روی سرور `https://kiva.ir/checkout/result` |
@@ -1504,8 +1506,9 @@ PURCHASE_REVIEW.md                             (step 21)
 | 32 | `POST /payments/{paymentId}/retry`، `POST /me/orders/{orderCode}/payments` (گام ۱۵) | بدنه اختیاری (بدون بدنه = `{}`)؛ `gateway` نیومده = درگاه همون تلاش، یا با کد سفارش درگاه آخرین تلاش؛ `gateway` نامعتبر ← `400` روی `gateway`. ترتیب: `404` (شناسه یا کد بدشکل هم) ← `ORDER_ALREADY_PAID` ← `PAYMENT_EXPIRED` ← `PAYMENT_GATEWAY_UNAVAILABLE` بدون `meta` ← `429`؛ و درگاهی که بعد از ساختن تلاش جواب نده `422 PAYMENT_GATEWAY_UNAVAILABLE` با `meta.orderCode` و `meta.paymentId`. کلید `Idempotency-Key` مال همون نوع درخواسته. سفارش پرداخت‌شده تا فاز درخواست تغییر `ORDER_ALREADY_PAID` می‌گیره | فرانت باید دو حالت ۴۲۲ رو از هم جدا کنه؛ هیچ پاسخی نگه سفارش یا پرداخت کس دیگه‌ای هست |
 | 33 | `PaymentStatus` (گام ۱۶) | `EXPIRED` برای تلاشی هم هست که مشتری بیش از ۲۰ دقیقه در درگاه رها کرد و درگاه می‌گه پرداخت نشده؛ `failureReason` ـش اگه سفارش با تلاش دیگه پرداخت شده همین رو می‌گه | تلاش رهاشده باید یه جا تموم بشه |
 | 34 | `/me/orders*`، `AdminCustomer` (گام ۱۷) | تب هر وضعیت (`EXPIRED` در `cancelled`)، تازه‌ترین اول، `ORDER_FILTER_INVALID`؛ کد بدشکل ← ۴۰۴؛ `payment` ِ جزئیات = آخرین تلاش؛ `image` تا مدیا `null`؛ «خرید دوباره»: `addedCount` تعداد کیف‌ها و `ALREADY_AT_MAX` وقتی سبد سقفش رو داره؛ `ordersCount`/`totalSpent`/`lastOrderAt` ِ پنل از سفارش‌های پرداخت‌شده | فیلتر و شمارنده یه قانون داشته باشن؛ عدد پنل با عدد فروش یکی باشه |
+| 35 | `PaymentStatus.REFUNDED` (گام ۱۸) | در این فاز هم ممکنه: تلاشی که verify شد ولی سفارشش دیگه قابل پرداخت نبود و درگاه همون لحظه پولش رو برگردوند | حالت استثنایی بخش ۱۰.۵ حالا خودکار حل می‌شه |
 
-**پیام برای فرانت (گام ۰ و ۲۱):** ردیف‌های ۲، ۴، ۵، ۶، ۷، ۸، ۱۰، ۱۱، ۲۰، ۲۴، ۲۵، ۲۶، ۲۷، ۲۸، ۲۹، ۳۰، ۳۱، ۳۲، ۳۳ و ۳۴ رفتار فرانت رو عوض می‌کنن. `docs/FRONTEND_PURCHASE.md` (گام ۲۱) کل جریان رو برای فرانت توضیح می‌ده، مثل `FRONTEND_AUTH.md`.
+**پیام برای فرانت (گام ۰ و ۲۱):** ردیف‌های ۲، ۴، ۵، ۶، ۷، ۸، ۱۰، ۱۱، ۲۰، ۲۴، ۲۵، ۲۶، ۲۷، ۲۸، ۲۹، ۳۰، ۳۱، ۳۲، ۳۳، ۳۴ و ۳۵ رفتار فرانت رو عوض می‌کنن. `docs/FRONTEND_PURCHASE.md` (گام ۲۱) کل جریان رو برای فرانت توضیح می‌ده، مثل `FRONTEND_AUTH.md`.
 
 ---
 
@@ -1947,7 +1950,7 @@ Route: StartPaymentUc ← 201 با order و payment، یا 422 PAYMENT_GATEWAY_U
 
 ---
 
-### گام ۱۸: درگاه واقعی زرین‌پال · M ⬜
+### گام ۱۸: درگاه واقعی زرین‌پال · M ✅
 
 **می‌سازی:** `ZarinpalGateway` با `ktor-client` (بخش ۱۰.۳)، نگاشت کدهای جواب به `GatewayFailure`، نوشتن هر تماس در `paymentlog_tbl`، `inquire`، و `reverse` (فقط برای حالت استثنایی بخش ۱۰.۵).
 
@@ -1958,13 +1961,13 @@ Route: StartPaymentUc ← 201 با order و payment، یا 422 PAYMENT_GATEWAY_U
 2. timeout ِ verify چقدر باشه؟ اگه verify بعد از timeout ِ ما در زرین‌پال موفق بشه، چی پیش میاد؟
 
 **تموم شده یعنی:**
-- [ ] تست‌ها با `MockEngine`: کد ۱۰۰ ← authority. ‎`-9`، ‎`-10`، ‎`-11` یا ‎`-14` ← `Rejected` و لاگ ERROR. timeout ← `Unreachable`.
-- [ ] مبلغ به ریاله: سفارش ۱٬۵۲۵٬۰۰۰ تومانی ← `amount: 15250000` (هم در request و هم در verify).
-- [ ] verify با ۱۰۰ و ۱۰۱ هر دو موفقه. ‎`-50` ← `AmountMismatch` و لاگ ERROR. ‎`-51` ← `Declined`.
-- [ ] `card_pan` ِ ماسک‌شده ذخیره می‌شه و `card_hash` نه.
-- [ ] merchant id نه تو لاگه، نه تو `toString`.
-- [ ] timeout اتصال ۵ ثانیه و کل درخواست ۱۵ ثانیه‌ست.
-- [ ] یه دور واقعی با sandbox (merchant id ِ دلخواه UUID نسخه‌ی ۴)، از kiva-fe تا صفحه‌ی نتیجه.
+- [x] تست‌ها با `MockEngine`: کد ۱۰۰ ← authority. ‎`-9`، ‎`-10`، ‎`-11` یا ‎`-14` ← `Rejected` و لاگ ERROR. timeout ← `Unreachable`.
+- [x] مبلغ به ریاله: سفارش ۱٬۵۲۵٬۰۰۰ تومانی ← `amount: 15250000` (هم در request و هم در verify).
+- [x] verify با ۱۰۰ و ۱۰۱ هر دو موفقه. ‎`-50` ← `AmountMismatch` و لاگ ERROR. ‎`-51` ← `Declined`.
+- [x] `card_pan` ِ ماسک‌شده ذخیره می‌شه و `card_hash` نه.
+- [x] merchant id نه تو لاگه، نه تو `toString`.
+- [x] timeout اتصال ۵ ثانیه و کل درخواست ۱۵ ثانیه‌ست.
+- [ ] یه دور واقعی با sandbox (merchant id ِ دلخواه UUID نسخه‌ی ۴)، از kiva-fe تا صفحه‌ی نتیجه. **مونده برای کاربر:** تماس واقعی با زرین‌پال و kiva-fe لازم داره؛ با `KIVA_PAYMENT_PROVIDER=zarinpal`، `KIVA_ZARINPAL_SANDBOX=true` و یه UUID دلخواه در `KIVA_ZARINPAL_MERCHANT_ID`.
 
 ---
 
@@ -2135,6 +2138,7 @@ Route: StartPaymentUc ← 201 با order و payment، یا 422 PAYMENT_GATEWAY_U
 | ۲۰ مهر ۱۴۰۵ | ۱۵ | Purchase step 15 | `StartPaymentAttemptUc` و دو route ـش (`POST /payments/{paymentId}/retry` و `POST /me/orders/{orderCode}/payments`): شکل اول (کلید و `gateway`، ۴۰۰)، بعد یه تراکنش با `IdempotencyGuard`، مالکیت (۴۰۴ برای بدشکل هم)، قفل همه‌ی تلاش‌های سفارش و قانون‌های `PaymentDomainService.startAttempt` به ترتیب کانترکت (پرداخت‌شده، مهلت، درگاه، سقف ۱۰ با `Retry-After` تا پایان مهلت)؛ شناسه‌ی تلاش آخر از همه. Route مثل `POST /orders`: تلاش، `StartPaymentUc`، `GetPaymentInitUc`. بدنه اختیاریه. **یه خطای همزمانی پیدا و درست شد:** `lockAttemptsOf` بعد از انتظار، تلاشی رو که نگه‌دارنده‌ی قفل اضافه کرده بود نمی‌دید، پس دو retry ِ همزمان سقف ۱۰ رو رد می‌کردن؛ حالا بعد از گرفتن قفل دوباره می‌خونه. سؤال‌ها با پیشنهاد خودم: `expiresAt` تمدید نمی‌شه چون اگه می‌شد یه ربات با retry ِ هر ۱۴ دقیقه موجودی رو برای همیشه از فروشگاه بیرون نگه می‌داشت؛ تلاش‌های قدیمی لغو نمی‌شن چون مشتری شاید همون لحظه تو تب دیگه داره پرداختش می‌کنه، و قانون‌های گام ۱۴ (یک verify در هر لحظه و فقط برای سفارش در انتظار) نمی‌ذارن پول دو بار گرفته بشه. کانترکت: ردیف ۳۲. ۱۱ تست تازه، ۱۸۲۴ کل |
 | ۲۰ مهر ۱۴۰۵ | ۱۶ | Purchase step 16 | `JobScheduler` (یه coroutine برای هر کار زیر `SupervisorJob`، از `ApplicationStarted` تا `ApplicationStopping`، با `kiva.jobs.enabled` ِ سخت‌گیر) و `PurchaseJobs`: انقضای سفارش (هر دقیقه، `FindExpirableOrdersUc` ← `ExpireUnpaidOrderUc`)، تطبیق پرداخت (هر ۲ دقیقه، `FindStalePaymentsUc` ← `ReconcilePaymentUc`)، پاک‌سازی سبد مهمان (۴ صبح تهران) و کلیدهای Idempotency (ساعتی). قانون‌ها در دامنه: `PaymentDomainService.expireUnpaid` و `abandon`، `PaymentPolicy.isAbandoned`، `InventoryDomainService.releaseForOrder`، `CartRetentionPolicy`. انقضا اول همه‌ی تلاش‌های سفارش رو قفل می‌کنه، پس با callback یکی‌یکی می‌شه. تطبیق ِ `REDIRECTED` با inquiry و همون قانون‌های callback. **یه چیز تازه:** تلاش رهاشده (۲۰ دقیقه، و درگاه می‌گه `IN_BANK`) حالا `EXPIRED` می‌شه؛ وگرنه تلاش اضافه‌ی سفارشی که با تلاش دیگه پرداخت شده تا ابد هر ۲ دقیقه از درگاه پرسیده می‌شد. سؤال‌ها با پیشنهاد خودم: کاندیدا از read model میاد ولی تصمیم با Aggregate ـه، چون `UPDATE … WHERE holdUntil < now` نه پرداخت ِ در جریان رو می‌دید، نه موجودی رو آزاد می‌کرد، نه رویداد و تایم‌لاین می‌ساخت، و وضعیتی رو که همون لحظه عوض شده بود بازنویسی می‌کرد؛ قفل جدا برای دو نمونه لازم نیست چون هر کاندیدا در تراکنش خودش و با قفل‌های خودش تصمیم گرفته می‌شه و Aggregate دوباره‌کاری رو رد می‌کنه (دو اجرای همزمان ← یه `OrderExpired`، یه آزادسازی، یه `OrderPaid`). برنامه یه بار روی پورت ۸۰۸۱ بالا اومد و کارها سر وقت اجرا شدن. ۲۱ تست تازه، ۱۸۴۵ کل. کانترکت: ردیف ۳۳ |
 | ۲۰ مهر ۱۴۰۵ | ۱۷ | Purchase step 17 | `ListMyOrdersUc` (تازه‌ترین اول، تب‌ها با `OrderTab` ِ دامنه، شمارنده‌ی همه‌ی تب‌ها، `ORDER_FILTER_INVALID`)، `GetMyOrderUc` (ردیف‌ها، آدرس با `fullText`، جمع‌ها، آخرین تلاش پرداخت، تایم‌لاین با برچسب و دلیل شکست، عکس‌های قبل از ارسال `WAITING` با پیام انتظار)، `ReorderUc` (`CartDomainService.reorder` و `CartCommands`)، `webV1MyOrders.kt`، و `ordersCount`/`totalSpent`/`lastOrderAt` ِ `/admin/customers` با یه کوئری برای کل صفحه. `OrderSummaryDto.of` بین ثبت سفارش و لیست مشترک شد. سؤال‌ها با پیشنهاد خودم: سفارش `EXPIRED` در «لغوشده» ـه (دیگه چیزی براش اتفاق نمی‌افته و «جاری» یعنی چیزی که مشتری منتظرشه؛ mock هم همینه)؛ `totalSpent` جمع `payable` ِ سفارش‌های پرداخت‌شده‌ست و در فاز استرداد `refunded` ازش کم می‌شه (سفارش لغوشده‌ی پرداخت‌شده تو شمارش می‌مونه چون پولش یه بار اومده). یه تست ناپایدار خودم پیدا و درست شد: کیف‌ها تو یه لحظه‌ی ساعت تست به سبد می‌رفتن و شماره‌ی ردیف‌ها جابه‌جا می‌شد. ۱۰ تست تازه، ۱۸۵۵ کل. کانترکت: ردیف ۳۴ |
+| ۲۱ مهر ۱۴۰۵ | ۱۸ | Purchase step 18 | `ZarinpalGateway` (REST v4 با `ktor-client` CIO، اتصال ۵ و کل ۱۵ ثانیه، مبلغ به ریال، `request`/`verify`/`inquiry`/`reverse`)، نگاشت کدها به `GatewayFailure` (چک‌شده با مستندات رسمی)، `CardMask.of` و `GatewayRefId.of` برای پاسخ درگاه، و `kiva.payment.provider = zarinpal` حالا واقعاً آداپتر رو می‌سازه. حالت استثنایی بخش ۱۰.۵ ساخته شد: verify ِ موفق برای سفارشی که دیگه قابل پرداخت نیست ← `reverse` بیرون تراکنش و `REFUNDED` (`Payment.refund`، `PaymentDomainService.mayReverse`/`reversed`)؛ رد ← `SUCCEEDED` و ERROR برای پشتیبانی. درگاه آزمایشی هم `reverse` و «بی‌جواب برای یه نوع تماس» گرفت. سؤال‌ها با پیشنهاد خودم: `Rejected` یعنی پیکربندی ما خرابه (‎`-9` تا ‎`-19`، ‎`-41`، ‎`-62`) و هیچ پرداختی تا درست شدنش انجام نمی‌شه، پس ERROR و هشدار؛ `Declined` یعنی پرداخت خود مشتری (‎`-51`، ‎`-54`، ‎`-55`، …)، کار عادی و INFO؛ قاطی کردنشون یعنی یا هشدار بی‌فایده برای هر انصراف، یا سکوت وقتی merchant id خرابه. timeout ِ verify ۱۵ ثانیه‌ست؛ اگه verify بعد از timeout ِ ما در زرین‌پال موفق بشه، پرداخت `VERIFYING` می‌مونه و job تطبیق دوباره verify می‌کنه و ۱۰۱ (قبلاً verify شده) رو موفقیت حساب می‌کنه، پس هیچ پولی گم نمی‌شه. **مونده:** یه دور واقعی با sandbox و kiva-fe (تماس بیرونی، کار کاربر). ۱۶ تست تازه، ۱۸۷۱ کل. کانترکت: ردیف ۳۵ |
 
 ---
 

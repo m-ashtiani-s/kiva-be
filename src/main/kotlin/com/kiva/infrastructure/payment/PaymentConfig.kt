@@ -6,7 +6,7 @@ import com.kiva.domain.aggregate.settings.model.valueobject.PaymentGatewayCode
  * How payments are taken (`kiva.payment`, roadmap section 19).
  *
  * @property provider which adapter stands behind the ZARINPAL gateway: the fake one (development and tests) or the
- *   real one (step 18).
+ *   real one.
  * @property callbackBaseUrl this API's public address (`KIVA_API_PUBLIC_URL`, `https://api.kiva.ir` on the server): a
  *   gateway sends the shopper back to `{callbackBaseUrl}/api/v1/payment-callbacks/...`. Its domain must be the one
  *   registered with Zarinpal.
@@ -64,7 +64,7 @@ enum class PaymentProvider {
     /** A page on this server plays the bank. Development and tests only; it says so loudly on startup. */
     FAKE,
 
-    /** Zarinpal itself (purchase step 18). */
+    /** Zarinpal itself: KIVA_ZARINPAL_MERCHANT_ID, and KIVA_ZARINPAL_SANDBOX=false on the server. */
     ZARINPAL,
     ;
 

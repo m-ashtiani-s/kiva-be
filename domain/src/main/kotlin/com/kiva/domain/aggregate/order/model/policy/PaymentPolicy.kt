@@ -28,6 +28,9 @@ object PaymentPolicy {
      */
     fun isAbandoned(redirectedOn: Instant, now: Instant): Boolean = !now.isBefore(redirectedOn.plus(GATEWAY_WINDOW))
 
+    /** How long after a payment its gateway still gives the money back at once (Zarinpal's reverse). */
+    val REVERSE_WINDOW: Duration = Duration.ofMinutes(30)
+
     /** Unpaid orders a customer may have holding stock at once; one more is 429. */
     const val MAX_UNPAID_ORDERS = 3
 
