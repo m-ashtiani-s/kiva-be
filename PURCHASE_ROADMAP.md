@@ -83,7 +83,7 @@
 | ۲ | تنظیمات فروشگاه | M | ✅ |
 | ۳ | دفترچه‌ی آدرس | M | ✅ |
 | ۴ | قانون‌های قیمت و ارسال (دامنه) | S | ✅ |
-| ۵ | Aggregate سبد (دامنه) | M | ⬜ |
+| ۵ | Aggregate سبد (دامنه) | M | ✅ |
 | ۶ | سبد: دیتابیس و endpointها | L | ⬜ |
 | ۷ | ادغام سبد مهمان | S | ⬜ |
 | ۸ | Aggregate سفارش (دامنه) | L | ⬜ |
@@ -299,22 +299,23 @@ flowchart LR
 
 | فیلد | نوع | قانون |
 |---|---|---|
-| `id` | `CartId` | عدد داخلی، هیچ‌وقت بیرون نمی‌ره |
-| `publicId` | `CartPublicId` | `cart_` + ۱۰ کاراکتر تصادفی. همون `Cart.id` ِ کانترکت |
+| `publicId` | `CartPublicId` | `cart_` + ۱۰ حرف و رقم تصادفی. همون `Cart.id` ِ کانترکت، و هویت Aggregate. `pId` ِ جدول فقط مال persistence ـه و `CartId` ِ جدا لازم نشد |
 | `owner` | `CartOwner` | `User(userId)` یا `Guest(tokenHash)`. دقیقاً یکی (`CHECK` تو دیتابیس). هر کاربر یه سبد داره |
 | `lines` | `List<CartLine>` | هر رنگ (ورینت) حداکثر یه ردیف |
 | `shippingMethod` | `ShippingMethodCode` | پیش‌فرض از تنظیمات (`POST`) |
 | `reserve` | `Boolean` | سوییچ رزرو ۴ روزه. فقط وقتی رزرو در دسترسه true می‌مونه |
-| `discountCode` | `DiscountCodeText?` | دور ۲ |
+| `discountCode` | `DiscountCodeText?` | دور ۲. تو دامنه با گام ۲۰ میاد؛ ستونش از V14 هست |
 | `createdOn`، `updatedOn` | `Instant` | `updatedOn` برای پاک‌سازی سبد مهمان |
 
-**`CartLine`:** `itemId` (`ci_` + ۱۰ کاراکتر، همون `CartItem.id`)، `variantId`، `quantity` (۱ تا ۲۰)، `seenUnitPrice` (قیمتی که مشتری آخرین بار دیده)، `seenPurchasable` (آخرین بار قابل خرید بود یا نه)، `addedOn`.
+**`CartLine`:** `itemId` (`ci_` + ۱۰ حرف و رقم، همون `CartItem.id`)، `variantId`، `quantity` (۱ تا ۲۰)، `seenUnitPrice` (قیمتی که مشتری آخرین بار دیده)، `seenPurchasable` (آخرین بار قابل خرید بود یا نه)، `addedOn`.
+
+**شناسه‌ها و توکن:** پورت دامنه‌ی `CartIdGenerator` (مثل `AddressIdGenerator`) شناسه‌ی سبد، شناسه‌ی ردیف و توکن مهمان رو می‌ده. پیاده‌سازیش با `SecureRandom` تو infrastructure ـه (گام ۶). `CartToken` فقط شکل توکن رو چک می‌کنه و hash ـش رو می‌سازه (`TokenHash` ِ مشترک با refresh token).
 
 ### «پیشنهاد» یه رنگ: آنچه سبد از کاتالوگ لازم داره
 
 سبد هیچ‌وقت قیمت یا موجودی ذخیره نمی‌کنه. هر بار از read model خونده می‌شه، از طریق پورت `OfferQmRepository` (در application). برای هر `variantId` یه `OfferQm` برمی‌گردونه که هم داده‌ی دامنه داره، هم داده‌ی نمایش:
 
-- **برای دامنه (`PurchaseOffer`):** `variantId`، `productId`، `categoryId`، `priceTag` (قیمت مؤثر رنگ: `ownPriceTag` یا قیمت محصول)، `available` (موجودی منهای رزرو)، `maxPerOrder`، `purchasable` (محصول `ACTIVE` و رنگ فعال)، `reservable`
+- **برای دامنه (`PurchaseOffer`):** `variantId`، `productId`، `categoryId`، `priceTag` (قیمت مؤثر رنگ: `ownPriceTag` یا قیمت محصول)، `available` (موجودی منهای رزرو)، `maxPerOrder`، `inShop` (محصول `ACTIVE` و رنگ فعال)، `reservable`. `isPurchasable = inShop && available > 0`، همون `CartItem.purchasable` ِ کانترکت. اسم `inShop` برای اینه که با `purchasable` ِ ردیف قاطی نشه
 - **برای نمایش:** اسم، slug، کد محصول، دسته (`id`، `slug`، `name`)، رنگ (`key`، `name`، `hex`، `isLight`، `sortOrder`) و اولین مدیای رنگ
 
 همه‌ی این‌ها با **یک** کوئری روی `productvariantqm_tbl` و `productqm_tbl` و `category_tbl` و `color_tbl` خونده می‌شن.
@@ -325,6 +326,9 @@ flowchart LR
 2. **تعداد هر درخواست ۱ تا ۲۰** (کانترکت). بیشتر یا کمتر ← `400 VALIDATION_ERROR` روی `quantity`.
 3. **سقف ردیف:** `maxQuantity = min(available, maxPerOrder − جمع بقیه‌ی رنگ‌های همون محصول)`.
    `maxPerOrder` مال **محصوله**، نه رنگ (کانترکت: «سقف خرید هر محصول»). پس با سقف ۵، ۳ کاراملی و ۳ مشکی آیدا با هم ممکن نیست. وقتی ظرفیت محصول تقسیم می‌شه، ردیف‌ها به ترتیب `addedOn` سهم می‌گیرن. (این برداشت تو سؤال‌های باز هست.)
+   - **هر ردیف سهم می‌گیره**، چه قابل خرید باشه چه نه. پس جمع ردیف‌های یه محصول هیچ‌وقت از سقف بیشتر نمی‌شه، و برگشتن موجودی یه رنگ هیچ‌وقت رنگی رو که مشتری داره می‌خره کم نمی‌کنه.
+   - **کم کردن سقف** (ادمین سقف رو کم کرده، یا ادغام سبد): قدیمی‌ترین ردیف سهمش رو نگه می‌داره. ردیفی که هیچ جایی براش نمونه **حذف** می‌شه، با `QUANTITY_REDUCED` به ۰.
+   - هیچ ردیفی بیشتر از ۲۰ نداره (`CartQuantity`، همون قید `cartitem_tbl`). `maxQuantity = min(available, maxPerOrder − بقیه، ۲۰)`.
 4. **عدد دقیق موجودی لو نمی‌ره.** `maxQuantity` و `meta.availableQuantity` همون عدد بالا رو نشون می‌دن، که با سقف پیش‌فرض ۵ هیچ‌وقت بیشتر از چیزی که `LOW_STOCK` نشون می‌ده لو نمی‌ده.
 5. **ردیف غیرقابل خرید می‌مونه.** اگه رنگ ناموجود بشه یا از فروشگاه خارج بشه، ردیف پاک نمی‌شه (شاید برگرده، یا مشتری بخواد ببینه). ولی تو جمع پول حساب نمی‌شه و ثبت سفارش تا وقتی حذفش نکنی ردش می‌کنه. فیلد تازه‌ی `CartItem.purchasable` (کانترکت 1.6.0) این رو به فرانت می‌گه.
 6. **سوییچ رزرو** فقط وقتی true می‌مونه که رزرو در دسترس باشه. اگه نباشه، بی‌صدا خاموش می‌شه و `reservation.unavailableReason` دلیلش رو می‌گه.
@@ -339,10 +343,15 @@ flowchart LR
 | قابل خرید بود، الان `available = 0` | `seenPurchasable = false` | `OUT_OF_STOCK` |
 | قابل خرید بود، الان محصول یا رنگ بیرون از فروشگاهه | `seenPurchasable = false` | `VARIANT_UNAVAILABLE` |
 | `quantity > maxQuantity ≥ 1` | تعداد ذخیره‌شده کم می‌شه | `QUANTITY_REDUCED` (با مقدار قبلی و فعلی) |
+| سقف محصول برای ردیف جایی نذاشته (رنگ‌های قدیمی‌تر پرش کردن) | ردیف حذف می‌شه | `QUANTITY_REDUCED` با `currentValue = 0` |
 | روش ارسال انتخاب‌شده غیرفعال شده | می‌ره روی روش پیش‌فرض | `SHIPPING_METHOD_CHANGED` |
 | کد تخفیف دیگه معتبر نیست (دور ۲) | کد برداشته می‌شه | `DISCOUNT_REMOVED` |
 
-هر issue فقط **یک بار** دیده می‌شه، چون همون لحظه «دیده شد» ثبت می‌شه. متن فارسی هر issue (مثلاً «قیمت «کیف دستی آیدا» از آخرین بازدیدت تغییر کرده.») رو لایه‌ی HTTP می‌سازه.
+هر issue فقط **یک بار** دیده می‌شه، چون همون لحظه «دیده شد» ثبت می‌شه. متن فارسی هر issue (مثلاً «قیمت «کیف دستی آیدا» از آخرین بازدیدت تغییر کرده.») رو لایه‌ی HTTP می‌سازه. هر issue `variantId` ِ ردیفش رو هم داره، تا اسم کیف حتی برای ردیفی که دیگه نیست ساخته بشه.
+
+تغییر قیمت فقط برای ردیف **قابل خرید** گفته می‌شه. ردیف غیرقابل خرید قیمت قبلی رو نگه می‌داره، پس اگه برگرده و قیمتش عوض شده باشه، همون موقع گفته می‌شه. برگشتن خودش issue نداره (کانترکت کدی براش نداره).
+
+issueها روی خود سبد جمع می‌شن (`Cart.issues`)، مثل رویدادهای ذخیره‌نشده‌ی یه Aggregate، و هیچ‌وقت ذخیره نمی‌شن.
 
 ### عملیات‌ها
 
@@ -350,7 +359,7 @@ flowchart LR
 |---|---|
 | `add(variantId, quantity)` | رنگ ناشناخته ← `404 VARIANT_NOT_FOUND`. محصول یا رنگ بیرون از فروشگاه ← `422 PRODUCT_UNAVAILABLE`. `available = 0` ← `422 OUT_OF_STOCK`. ظرفیت محصول با رنگ‌های دیگه پر شده (`maxQuantity = 0` با وجود موجودی) ← `422 QUANTITY_EXCEEDS_LIMIT` با `meta.maxPerOrder`. بیشتر از سقف ← **تا سقف کم می‌شه** با `QUANTITY_REDUCED` (کانترکت) |
 | `changeQuantity(itemId, q)` | ردیف ناشناخته ← `404 CART_ITEM_NOT_FOUND`. بیشتر از موجودی ← `422 QUANTITY_EXCEEDS_STOCK` با `meta.availableQuantity`. بیشتر از سقف محصول ← `422 QUANTITY_EXCEEDS_LIMIT` با `meta.maxQuantity` |
-| `changeColor(itemId, variantId)` [پیشنهادی] | رنگ باید مال همون محصول باشه، وگرنه `400` روی `variantId`. رنگ تازه ناموجود ← `OUT_OF_STOCK` یا `PRODUCT_UNAVAILABLE`. اگه اون رنگ از قبل ردیف داره، دو ردیف یکی می‌شن (جمع تعداد، تا سقف) |
+| `changeColor(itemId, variantId)` [پیشنهادی] | رنگ باید مال همون محصول باشه، وگرنه `400 VARIANT_ID_INVALID` روی `variantId`. رنگ تازه ناموجود ← `OUT_OF_STOCK` یا `PRODUCT_UNAVAILABLE`. اگه اون رنگ از قبل ردیف داره، دو ردیف یکی می‌شن (جمع تعداد، تا سقف) |
 | `remove(itemId)` | `404 CART_ITEM_NOT_FOUND`. خروجی: `variantId`، `quantity` و اسم، برای «برگردون» |
 | `clear()` | ردیف‌ها، کد تخفیف و سوییچ رزرو پاک می‌شن. روش ارسال می‌مونه |
 | `chooseShippingMethod(m)` | روش ناشناخته ← `400`. غیرفعال ← `422 SHIPPING_METHOD_UNAVAILABLE`. در حالت ادغام با رزرو (دور ۲) فقط روش گروه مجازه |
@@ -375,8 +384,8 @@ flowchart LR
 
 موقع `POST /auth/otp/verify` با `guestCartToken`، یا با `POST /cart/merge`:
 
-1. سبد کاربر قفل می‌شه، بعد سبد مهمان (ترتیب ثابت).
-2. هر ردیف مهمان به سبد کاربر اضافه می‌شه: رنگ مشترک تعدادش جمع می‌شه، و هر چیزی بیشتر از سقف باشه کم می‌شه با `QUANTITY_REDUCED`.
+1. سبد کاربر قفل می‌شه، بعد سبد مهمان (ترتیب ثابت). هر دو `sync` می‌شن و issueهای سبد مهمان هم به پاسخ میان.
+2. هر ردیف مهمان به سبد کاربر اضافه می‌شه: رنگ مشترک تعدادش تو ردیف کاربر جمع می‌شه، و رنگی که فقط مهمان داشت **با همون `itemId`** و `addedOn` منتقل می‌شه. بعد سقف‌ها روی کل سبد اعمال می‌شن، قدیمی‌ترین ردیف اول (از هر کدوم از دو سبد که باشه). بیشتر از سقف ← `QUANTITY_REDUCED`، بدون جا ← حذف با `QUANTITY_REDUCED` به ۰. چون `itemId` جابه‌جا می‌شه، Repository باید سبد مهمان رو **قبل** از ذخیره‌ی ردیف‌های تازه‌ی کاربر پاک کنه (یکتایی `cartitem_tbl.publicId`، گام ۷).
 3. روش ارسال و سوییچ رزرو سبد مهمان برنده‌ان، چون مشتری همین الان روی صفحه‌ی سبد انتخابشون کرده. کد تخفیف (دور ۲): اگه کاربر کد داشته، کد خودش می‌مونه، وگرنه کد مهمان (بعد از اعتبارسنجی دوباره).
 4. سبد مهمان حذف می‌شه.
 
@@ -386,7 +395,7 @@ flowchart LR
 
 ### شکل UseCaseهای سبد
 
-هر Command سبد (`AddCartItemUc`، `ChangeCartItemUc`، …) در یک تراکنش این کارها رو می‌کنه: سبد رو قفل می‌کنه، اول `sync` و بعد خود تغییر رو انجام می‌ده، و ذخیره می‌کنه. خروجیش یه `CartChange` ـه: `cartId`، توکن تازه (اگه ساخته شده)، `issues`، `affectedItemId` و `removedItem`. بعد Route با `GetCartUc` (Query) کل سبد رو می‌سازه: جمع‌ها، گزینه‌های ارسال، نوار ارسال رایگان و وضعیت رزرو.
+هر Command سبد (`AddCartItemUc`، `ChangeCartItemUc`، …) در یک تراکنش این کارها رو می‌کنه: سبد رو قفل می‌کنه، `CartDomainService` رو صدا می‌زنه، و ذخیره می‌کنه. ترتیب `sync` و تغییر قانون کسب‌وکاره و تو `CartDomainService` ـه، نه UseCase: تغییرهایی که به فروشگاه وابسته‌ان (افزودن، تغییر ردیف، روش ارسال، رزرو) **اول `sync`**، تا قانون‌ها روی موجودی و قیمت امروز چک بشن. تغییرهایی که فقط چیزی برمی‌دارن (حذف، خالی کردن) **اول خود تغییر**، تا درباره‌ی ردیفی که مشتری همین الان دور انداخته چیزی گفته نشه. `PATCH` با رنگ و تعداد با هم: اول رنگ، بعد تعداد روی ردیفی که می‌مونه. خروجیش یه `CartChange` ـه: `cartId`، توکن تازه (اگه ساخته شده)، `issues`، `affectedItemId` و `removedItem`. بعد Route با `GetCartUc` (Query) کل سبد رو می‌سازه: جمع‌ها، گزینه‌های ارسال، نوار ارسال رایگان و وضعیت رزرو.
 
 `CartChange` یه استثنای مستند از قانون «Command فقط شناسه برمی‌گردونه» ـه، دقیقاً به همون دلیل `IssuedSession` ِ سند ورود: `issues` و توکن تازه فقط همون لحظه وجود دارن و هیچ Query ای بعداً نمی‌تونه بخوندشون.
 
@@ -1344,12 +1353,13 @@ domain/src/main/kotlin/com/kiva/domain/aggregate/
     model/AddressInput.kt
     model/valueobject/AddressId.kt, AddressLine.kt, PostalCode.kt, RecipientName.kt, AddressTitle.kt, Plaque.kt, UnitNumber.kt, GeoPoint.kt
     repository/AddressBookRepository.kt, AddressIdGenerator.kt
-  cart/
+  cart/                                                                                       (step 5, CartRepository in step 6)
     entity/Cart.kt, CartLine.kt
+    CartDomainService.kt
     model/PurchaseOffer.kt, CartIssue.kt
     model/policy/CartLimitsPolicy.kt
-    model/valueobject/CartId.kt, CartPublicId.kt, CartItemId.kt, CartToken.kt, CartOwner.kt, CartQuantity.kt
-    repository/CartRepository.kt
+    model/valueobject/CartPublicId.kt, CartItemId.kt, CartToken.kt, CartOwner.kt, CartQuantity.kt, ReservationUnavailableReason.kt
+    repository/CartIdGenerator.kt, CartRepository.kt
   order/
     entity/Order.kt, OrderLine.kt
     entity/event/OrderDomainEvent.kt, OrderPlaced.kt, OrderPaymentFailed.kt, OrderPaid.kt, OrderExpired.kt, OrderReleasedFromReservation.kt
@@ -1432,8 +1442,9 @@ PURCHASE_REVIEW.md                             (step 21)
 | 22 | `ShippingMethod.description` و `ShippingOptionQuote.description` (گام ۲) | ساخته‌شده از `minDays` و `maxDays`؛ در `AdminSettings` فقط خوندنی و در PUT نادیده گرفته می‌شه | یه منبع برای مدت تحویل؛ متن هیچ‌وقت با عدد ناجور نمی‌شه |
 | 23 | `/me/addresses*` (گام ۳) | 404ها `ADDRESS_NOT_FOUND`. `PUT` ِ آدرس `422 CITY_NOT_IN_PROVINCE` هم داره. ترتیب لیست: پیش‌فرض، بعد قدیمی‌ترین. اولین آدرس همیشه پیش‌فرض، و `setAsDefault: false` پیش‌فرض بودن رو برنمی‌داره. استان یا شهر ناموجود ← 400 روی فیلد (`PROVINCE_NOT_FOUND`، `CITY_NOT_FOUND`). کد پستی با ارقام فارسی و «-» پذیرفته می‌شه. ارقام `addressLine` همون‌طور که تایپ شده می‌مونن. `fullText` پلاک و واحد رو هم داره | رفتار دقیق دفترچه |
 | 24 | بخش ۳ «قوانین کسب‌وکار»، `FreeShippingProgress.progressPercent`، `Cart.freeShipping` (گام ۴) | سفارش جمعه شنبه ارسال می‌شه و `estimatedDelivery` از روز ارسال شمرده می‌شه. `progressPercent` با یک رقم اعشار (نیمه به بالا) و `100` فقط وقتی `eligible` (وگرنه حداکثر `99.9`). `freeShipping` ← `nullable` (فروشگاه روش فعالی با ارسال رایگان نداره) | «جمعه‌ها ارسال نداریم» یعنی تاریخ تحویل سفارش جمعه یه روز دیرتره؛ نوار پر با «۱ تومان مونده» نمی‌خونه؛ بدون روش رایگان چیزی برای نوار نیست |
+| 25 | `CartItem.maxQuantity`، `CartIssue`، `GET /cart`، `POST /cart/merge`، `PATCH /cart/items/{itemId}` (گام ۵) | هر ردیف، قابل خرید یا نه، از سقف محصول سهم می‌گیره، و هیچ ردیفی بیشتر از ۲۰ نداره. وقتی سقف کم بیاد، ردیف قدیمی‌تر سهمش رو نگه می‌داره و ردیف بی‌جا حذف می‌شه (`QUANTITY_REDUCED` با `currentValue = 0`). در ادغام، رنگی که فقط مهمان داشت با همون `id` منتقل می‌شه. رنگ محصول دیگه ← `400 VARIANT_ID_INVALID` | برگشتن موجودی یه رنگ نباید رنگی رو که مشتری داره می‌خره کم کنه؛ تعداد ردیف نمی‌تونه صفر باشه؛ صفحه‌ی سبد بعد از ورود ردیف‌هاش رو گم نکنه |
 
-**پیام برای فرانت (گام ۰ و ۲۱):** ردیف‌های ۲، ۴، ۵، ۶، ۷، ۸، ۱۰، ۱۱، ۲۰ و ۲۴ رفتار فرانت رو عوض می‌کنن. `docs/FRONTEND_PURCHASE.md` (گام ۲۱) کل جریان رو برای فرانت توضیح می‌ده، مثل `FRONTEND_AUTH.md`.
+**پیام برای فرانت (گام ۰ و ۲۱):** ردیف‌های ۲، ۴، ۵، ۶، ۷، ۸، ۱۰، ۱۱، ۲۰، ۲۴ و ۲۵ رفتار فرانت رو عوض می‌کنن. `docs/FRONTEND_PURCHASE.md` (گام ۲۱) کل جریان رو برای فرانت توضیح می‌ده، مثل `FRONTEND_AUTH.md`.
 
 ---
 
@@ -1552,7 +1563,7 @@ PURCHASE_REVIEW.md                             (step 21)
 
 ---
 
-### گام ۵: Aggregate سبد (دامنه) · M ⬜
+### گام ۵: Aggregate سبد (دامنه) · M ✅
 
 **می‌سازی:** `Cart`، `CartLine`، `PurchaseOffer`، `CartIssue`، `CartLimitsPolicy` و VOهای بخش ۶ (`CartToken` با hash و `toString` ستاره‌دار). عملیات‌ها، `sync` و `absorb`. فقط دامنه.
 
@@ -1563,13 +1574,14 @@ PURCHASE_REVIEW.md                             (step 21)
 2. ردیف ناموجود تو سبد بمونه یا خودکار پاک بشه؟ هزینه‌ی هر کدوم برای مشتری چیه؟
 
 **تموم شده یعنی:**
-- [ ] افزودن همون رنگ دو بار ← یه ردیف با تعداد جمع‌شده.
-- [ ] آیدا (۳ از هر رنگ، سقف ۵): ۳ کاراملی، بعد ۳ مشکی ← مشکی به ۲ کم می‌شه با `QUANTITY_REDUCED`. بعدش ۱ قرمز ← `QUANTITY_EXCEEDS_LIMIT`.
-- [ ] تعداد ۲۱ ← 400 روی `quantity`.
-- [ ] `sync`: قیمت از ۱٬۴۵۰٬۰۰۰ به ۱٬۶۰۰٬۰۰۰ ← یه بار `PRICE_INCREASED` (۱٬۴۵۰٬۰۰۰ ← ۱٬۶۰۰٬۰۰۰)، بار دوم هیچی. موجودی صفر ← یه بار `OUT_OF_STOCK`، ردیف می‌مونه و `purchasable = false`. محصول از فروشگاه خارج ← `VARIANT_UNAVAILABLE`. موجودی کمتر از تعداد ← `QUANTITY_REDUCED` و تعداد ذخیره‌شده کم می‌شه.
-- [ ] تغییر رنگ به رنگی که ردیف داره ← دو ردیف یکی می‌شن. رنگ محصول دیگه ← Failure.
-- [ ] `absorb`: مهمان ۲ نیلا مشکی، کاربر ۱ نیلا مشکی ← ۳. اگه از سقف بیشتر بشه ← کم می‌شه با `QUANTITY_REDUCED`. روش ارسال مهمان می‌مونه.
-- [ ] توکن: ۴۳ کاراکتر base64url بعد از `gct_`، hash ۳۲ بایتی، و `"$token"` شامل خود توکن نیست.
+- [x] افزودن همون رنگ دو بار ← یه ردیف با تعداد جمع‌شده.
+- [x] آیدا (۳ از هر رنگ، سقف ۵): ۳ کاراملی، بعد ۳ مشکی ← مشکی به ۲ کم می‌شه با `QUANTITY_REDUCED`. بعدش ۱ قرمز ← `QUANTITY_EXCEEDS_LIMIT`.
+- [x] تعداد ۲۱ ← 400 روی `quantity`.
+- [x] `sync`: قیمت از ۱٬۴۵۰٬۰۰۰ به ۱٬۶۰۰٬۰۰۰ ← یه بار `PRICE_INCREASED` (۱٬۴۵۰٬۰۰۰ ← ۱٬۶۰۰٬۰۰۰)، بار دوم هیچی. موجودی صفر ← یه بار `OUT_OF_STOCK`، ردیف می‌مونه و `purchasable = false`. محصول از فروشگاه خارج ← `VARIANT_UNAVAILABLE`. موجودی کمتر از تعداد ← `QUANTITY_REDUCED` و تعداد ذخیره‌شده کم می‌شه.
+- [x] تغییر رنگ به رنگی که ردیف داره ← دو ردیف یکی می‌شن. رنگ محصول دیگه ← Failure.
+- [x] `absorb`: مهمان ۲ نیلا مشکی، کاربر ۱ نیلا مشکی ← ۳. اگه از سقف بیشتر بشه ← کم می‌شه با `QUANTITY_REDUCED`. روش ارسال مهمان می‌مونه.
+- [x] توکن: ۴۳ کاراکتر base64url بعد از `gct_`، hash ۳۲ بایتی، و `"$token"` شامل خود توکن نیست. (دامنه شکل توکن رو چک می‌کنه؛ ساختنش با `SecureRandom` و تستش در گام ۶ ـه.)
+- [x] سقف کم‌شده: قدیمی‌ترین ردیف سهمش رو نگه می‌داره و ردیف بی‌جا با `QUANTITY_REDUCED` به ۰ حذف می‌شه. ردیف ناموجود هم سهم می‌گیره.
 
 ---
 
@@ -2039,6 +2051,7 @@ Route: StartPaymentUc ← 201 با order و payment، یا 422 PAYMENT_GATEWAY_U
 | ۱۹ مهر ۱۴۰۵ | ۲ | Purchase step 2 | `V12__shop_settings.sql`: یه ردیف تایپ‌دار با قید یکتایی، `shippingmethod_tbl` (تیپاکس و پست؛ پیک ردیف نداره) و `paymentgateway_tbl` (زرین‌پال فعال و پیش‌فرض، سامان و ملت خاموش). دامنه‌ی `settings` و `ShopSettingsRepository`. سه UseCase ِ کاتالوگ آستانه رو هر بار از دیتابیس می‌خونن (بدون کش) و `kiva.shop.freeShippingThreshold` حذف شد. متن مدت تحویل از روزها ساخته می‌شه (ردیف ۲۲) |
 | ۱۹ مهر ۱۴۰۵ | ۳ | Purchase step 3 | `V13__addresses.sql` (با `ON DELETE CASCADE` روی کاربر و FK ترکیبی به شهر). Aggregate ِ `AddressBook` با قفل advisory، `AddressBookDomainService` و شش UseCase. ارقام `addressLine` همون‌طور که تایپ شده می‌مونن (`normalizePersianLetters` تو کامن). استان یا شهر ناموجود ← 400 روی فیلد (`PROVINCE_NOT_FOUND`، `CITY_NOT_FOUND`)، و نبودنشون `PROVINCE_REQUIRED` و `CITY_REQUIRED`. `RouteGuardsTest` حالا همه‌ی routeهای `bearerAuth` ِ کانترکت رو چک می‌کنه. کانترکت: ردیف ۲۳ |
 | ۱۹ مهر ۱۴۰۵ | ۴ | Purchase step 4 | فقط دامنه. یک نقطه‌ی ورود: `OrderPricing.quote` ← `PurchaseQuote` (مبلغ ردیف‌ها، `OrderTotals`، گزینه‌های ارسال، روش مؤثر، نوار ارسال رایگان). `now: Instant` از UseCase و فقط `ShopCalendar` تهران رو می‌شناسه. سفارش جمعه شنبه ارسال می‌شه. `progressPerMille` عدد صحیح، و ۱۰۰٪ فقط وقتی `eligible`. `OrderTotals` با سازنده‌ی `internal` و قانون‌های جمع در `init`. تخفیف (`codeDiscount`) و ادغام (`ShippingConsolidation`) ورودی‌های اختیاری‌ان. ۷۷ تست تازه، ۱۴۶۷ کل. کانترکت: ردیف ۲۴ |
+| ۲۰ مهر ۱۴۰۵ | ۵ | Purchase step 5 | فقط دامنه. `Cart` و `CartLine`، `PurchaseOffer` (`inShop` و `isPurchasable`)، `CartIssue`، `CartLimitsPolicy`، VOها، `CartIdGenerator` (پورت؛ `SecureRandom` در گام ۶) و `CartDomainService` (ترتیب sync و تغییر). سقف محصول بین همه‌ی ردیف‌ها، قدیمی‌ترین اول؛ ردیف بی‌جا حذف با `QUANTITY_REDUCED` به ۰؛ هر ردیف حداکثر ۲۰. issueها روی خود سبد جمع می‌شن. ردیف مهمان با همون `itemId` منتقل می‌شه. `ShippingPolicy.offeredMethods` و `methodFor`: قانون «روش مؤثر» یه جا. `CartId` لازم نشد. ۹۳ تست تازه، ۱۵۶۰ کل. کانترکت: ردیف ۲۵ |
 
 ---
 

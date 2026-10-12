@@ -63,6 +63,7 @@ object PricingFixtures {
         freeShippingThreshold: Long = 3_000_000,
         freeShippingMethods: Set<ShippingMethodCode> = setOf(POST),
         nonShippingWeekdays: Set<DayOfWeek> = setOf(DayOfWeek.FRIDAY),
+        reservationEnabled: Boolean = false,
         reservationHoldDays: Int = 4,
     ): ShopSettings = ShopSettings.constructFromPersisted(
         shippingMethods = shippingMethods,
@@ -71,7 +72,7 @@ object PricingFixtures {
         freeShippingMethods = freeShippingMethods,
         nonShippingWeekdays = nonShippingWeekdays,
         paymentPendingMinutes = 15,
-        reservationEnabled = false,
+        reservationEnabled = reservationEnabled,
         reservationHoldDays = reservationHoldDays,
         returnWindowDays = 7,
         paymentGateways = listOf(

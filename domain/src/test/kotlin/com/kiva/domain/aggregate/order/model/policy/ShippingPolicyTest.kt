@@ -165,6 +165,21 @@ class ShippingPolicyTest {
         }
 
         @Test
+        fun `offered are the active methods in the shop's order, and while joining a reservation only the group's`() {
+            assertEquals(listOf(TIPAX, POST), ShippingPolicy.offeredMethods(shopSettings(), consolidation = null))
+            assertEquals(listOf(POST), ShippingPolicy.offeredMethods(shopSettings(listOf(tipax(isActive = false), post())), consolidation = null))
+            assertEquals(listOf(TIPAX), ShippingPolicy.offeredMethods(shopSettings(), ShippingConsolidation(TIPAX)))
+        }
+
+        @Test
+        fun `the one rule - chosen while offered, else the default, else the first offered, else nothing`() {
+            assertEquals(TIPAX, ShippingPolicy.methodFor(listOf(TIPAX, POST), chosen = TIPAX, default = POST))
+            assertEquals(POST, ShippingPolicy.methodFor(listOf(TIPAX, POST), chosen = COURIER, default = POST))
+            assertEquals(TIPAX, ShippingPolicy.methodFor(listOf(TIPAX), chosen = COURIER, default = POST))
+            assertNull(ShippingPolicy.methodFor(emptyList(), chosen = POST, default = POST))
+        }
+
+        @Test
         fun `joining a reservation selects the group's method, whatever was chosen`() {
             val options = ShippingPolicy.optionsFor(shopSettings(), toman(1_450_000), true, thursday, ShippingConsolidation(POST))
 

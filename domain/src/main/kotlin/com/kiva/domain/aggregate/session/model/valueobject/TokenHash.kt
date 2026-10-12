@@ -3,11 +3,12 @@ package com.kiva.domain.aggregate.session.model.valueobject
 import java.security.MessageDigest
 
 /**
- * The stored form of a refresh token: its SHA-256 (32 bytes), made by the session token port. The token is 256 random
- * bits, so a plain hash is enough: there is nothing to try. Compared in constant time ([MessageDigest.isEqual]).
+ * The stored form of a random token: its SHA-256 (32 bytes). Used for refresh tokens (made by the session token port)
+ * and for guest cart tokens (CartToken.hash). Each token is 256 random bits, so a plain hash is enough: there is
+ * nothing to try. Compared in constant time ([MessageDigest.isEqual]).
  *
- * Never user input: made by the port, or read back from storage. So the constructor is public and a wrong length is a
- * bug. It keeps its own copy of the bytes.
+ * Never user input: computed from a token, or read back from storage. So the constructor is public and a wrong length
+ * is a bug. It keeps its own copy of the bytes.
  */
 class TokenHash(bytes: ByteArray) {
 

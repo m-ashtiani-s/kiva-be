@@ -41,16 +41,30 @@ object ShippingPolicy {
             .map { quoteOf(it, settings, subtotal, hasPurchasableLines, shipDate, consolidation) }
 
     /**
-     * The option the order actually ships by: [chosen] while it can be chosen, otherwise the shop's default, otherwise
-     * the first that can be chosen. Null only when the shop has switched every method off; such an order can't be
-     * placed. The cart compares this with what it stored to tell the shopper SHIPPING_METHOD_CHANGED.
+     * The option the order actually ships by: the one [methodFor] picks among those that can be chosen. Null only when
+     * the shop has switched every method off; such an order can't be placed.
      */
     fun selectedOption(options: List<ShippingQuote>, chosen: ShippingMethodCode, default: ShippingMethodCode): ShippingQuote? {
-        val available = options.filter { it.available }
-        return available.firstOrNull { it.method.code == chosen }
-            ?: available.firstOrNull { it.method.code == default }
-            ?: available.firstOrNull()
+        val method = methodFor(options.filter { it.available }.map { it.method.code }, chosen, default)
+        return options.firstOrNull { it.method.code == method }
     }
+
+    /**
+     * The methods an order can be shipped by, in the shop's order: the active ones, and while it joins a reservation
+     * (round 2) only the group's. The same set [optionsFor] marks as available.
+     */
+    fun offeredMethods(settings: ShopSettings, consolidation: ShippingConsolidation?): List<ShippingMethodCode> =
+        settings.shippingMethods
+            .filter { it.isActive && (consolidation == null || it.code == consolidation.method) }
+            .map { it.code }
+
+    /**
+     * The one rule for which method is used: [chosen] while it is [offered], otherwise the shop's [default], otherwise
+     * the first offered; null when nothing is. The pricing ships by it, and the cart's sync moves a cart to it with
+     * SHIPPING_METHOD_CHANGED.
+     */
+    fun methodFor(offered: List<ShippingMethodCode>, chosen: ShippingMethodCode, default: ShippingMethodCode): ShippingMethodCode? =
+        chosen.takeIf { it in offered } ?: default.takeIf { it in offered } ?: offered.firstOrNull()
 
     /**
      * The «تا ارسال رایگان» bar. Its method is the first active method with free shipping (POST); null when the shop
