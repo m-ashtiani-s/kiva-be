@@ -18,6 +18,14 @@ import com.kiva.application.usecase.auth.usecase.command.LogoutUc
 import com.kiva.application.usecase.auth.usecase.command.RefreshSessionUc
 import com.kiva.application.usecase.auth.usecase.command.SendLoginCodeUc
 import com.kiva.application.usecase.auth.usecase.command.VerifyLoginCodeUc
+import com.kiva.application.usecase.cart.usecase.command.AddCartItemUc
+import com.kiva.application.usecase.cart.usecase.command.ChangeCartItemUc
+import com.kiva.application.usecase.cart.usecase.command.ChooseShippingMethodUc
+import com.kiva.application.usecase.cart.usecase.command.ClearCartUc
+import com.kiva.application.usecase.cart.usecase.command.OpenCartUc
+import com.kiva.application.usecase.cart.usecase.command.RemoveCartItemUc
+import com.kiva.application.usecase.cart.usecase.command.SetCartReservationUc
+import com.kiva.application.usecase.cart.usecase.query.GetCartUc
 import com.kiva.application.usecase.catalog.usecase.query.GetCategoryUc
 import com.kiva.application.usecase.catalog.usecase.query.ListCategoriesUc
 import com.kiva.application.usecase.catalog.usecase.query.ListColorsUc
@@ -35,11 +43,13 @@ import com.kiva.infrastructure.common.http.configureStatusPages
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AddressUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminCustomerUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AuthUseCases
+import com.kiva.infrastructure.httpserver.controller.httprest.web.CartUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.MeUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Addresses
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminCustomers
 import com.kiva.infrastructure.httpserver.controller.httprest.web.OTP_SEND_RATE_LIMIT
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Auth
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Cart
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Catalog
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Geo
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Me
@@ -153,6 +163,14 @@ fun Application.configureRouting() {
     val updateAddressUc by inject<UpdateAddressUc>()
     val deleteAddressUc by inject<DeleteAddressUc>()
     val setDefaultAddressUc by inject<SetDefaultAddressUc>()
+    val openCartUc by inject<OpenCartUc>()
+    val getCartUc by inject<GetCartUc>()
+    val addCartItemUc by inject<AddCartItemUc>()
+    val changeCartItemUc by inject<ChangeCartItemUc>()
+    val removeCartItemUc by inject<RemoveCartItemUc>()
+    val clearCartUc by inject<ClearCartUc>()
+    val chooseShippingMethodUc by inject<ChooseShippingMethodUc>()
+    val setCartReservationUc by inject<SetCartReservationUc>()
     val sendLoginCodeUc by inject<SendLoginCodeUc>()
     val verifyLoginCodeUc by inject<VerifyLoginCodeUc>()
     val refreshSessionUc by inject<RefreshSessionUc>()
@@ -177,6 +195,12 @@ fun Application.configureRouting() {
             webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, config.shop.siteUrl)
             webV1Geo(listProvincesUc, listCitiesOfProvinceUc)
             webV1Addresses(AddressUseCases(listMyAddressesUc, getMyAddressUc, addAddressUc, updateAddressUc, deleteAddressUc, setDefaultAddressUc))
+            webV1Cart(
+                CartUseCases(
+                    openCartUc, getCartUc, addCartItemUc, changeCartItemUc, removeCartItemUc, clearCartUc, chooseShippingMethodUc,
+                    setCartReservationUc,
+                ),
+            )
         }
     }
 }

@@ -84,7 +84,7 @@
 | ۳ | دفترچه‌ی آدرس | M | ✅ |
 | ۴ | قانون‌های قیمت و ارسال (دامنه) | S | ✅ |
 | ۵ | Aggregate سبد (دامنه) | M | ✅ |
-| ۶ | سبد: دیتابیس و endpointها | L | ⬜ |
+| ۶ | سبد: دیتابیس و endpointها | L | ✅ |
 | ۷ | ادغام سبد مهمان | S | ⬜ |
 | ۸ | Aggregate سفارش (دامنه) | L | ⬜ |
 | ۹ | سفارش: event store و read model | M | ⬜ |
@@ -398,6 +398,14 @@ issueها روی خود سبد جمع می‌شن (`Cart.issues`)، مثل رو�
 هر Command سبد (`AddCartItemUc`، `ChangeCartItemUc`، …) در یک تراکنش این کارها رو می‌کنه: سبد رو قفل می‌کنه، `CartDomainService` رو صدا می‌زنه، و ذخیره می‌کنه. ترتیب `sync` و تغییر قانون کسب‌وکاره و تو `CartDomainService` ـه، نه UseCase: تغییرهایی که به فروشگاه وابسته‌ان (افزودن، تغییر ردیف، روش ارسال، رزرو) **اول `sync`**، تا قانون‌ها روی موجودی و قیمت امروز چک بشن. تغییرهایی که فقط چیزی برمی‌دارن (حذف، خالی کردن) **اول خود تغییر**، تا درباره‌ی ردیفی که مشتری همین الان دور انداخته چیزی گفته نشه. `PATCH` با رنگ و تعداد با هم: اول رنگ، بعد تعداد روی ردیفی که می‌مونه. خروجیش یه `CartChange` ـه: `cartId`، توکن تازه (اگه ساخته شده)، `issues`، `affectedItemId` و `removedItem`. بعد Route با `GetCartUc` (Query) کل سبد رو می‌سازه: جمع‌ها، گزینه‌های ارسال، نوار ارسال رایگان و وضعیت رزرو.
 
 `CartChange` یه استثنای مستند از قانون «Command فقط شناسه برمی‌گردونه» ـه، دقیقاً به همون دلیل `IssuedSession` ِ سند ورود: `issues` و توکن تازه فقط همون لحظه وجود دارن و هیچ Query ای بعداً نمی‌تونه بخوندشون.
+
+**پیاده‌سازی (گام ۶):** کار مشترک همه‌ی Commandها تو سرویس application ِ `CartCommands` ـه (Rule 15)، به این ترتیب:
+1. پیدا کردن و قفل سبد. سبد کاربر اگه نباشه با `INSERT … ON CONFLICT DO NOTHING` ساخته می‌شه. سبد مهمان با hash ِ توکن پیدا می‌شه، و اگه توکن نیومده یا بدشکل یا ناشناخته باشه، سبد تازه با توکن تازه ساخته می‌شه.
+2. خوندن تنظیمات و پیشنهادهای همه‌ی رنگ‌ها با یه کوئری.
+3. تغییر خود UseCase از طریق `CartDomainService`.
+4. ذخیره، و ساخت `CartChange`. issueها همین‌جا اسم کیف و رنگ رو می‌گیرن، تا متنشون حتی برای ردیفی که دیگه نیست ساخته بشه.
+
+UseCaseها `CartCaller` می‌گیرن: `Customer(userId)` یا `Guest(token خام)`. شکستِ تغییر کل تراکنش رو برمی‌گردونه، سبد تازه‌ی مهمان هم همراهش، پس توکنش هیچ‌وقت داده نمی‌شه. `GetCartUc` سبد رو با شناسه‌ای که Command برگردونده می‌خونه. جمع‌ها و گزینه‌های ارسال رو `OrderPricing.quote` می‌ده، سقف‌ها رو خود سبد و موجودی رو `StockPolicy`.
 
 ---
 
@@ -1381,6 +1389,7 @@ domain/src/main/kotlin/com/kiva/domain/aggregate/
 application/src/main/kotlin/com/kiva/application/
   port/PaymentGateway.kt, PaymentGateways.kt, IdempotencyStore.kt, SmsSender.kt (+ sendOrderPaid)
   repository/OfferQmRepository.kt, OfferQm.kt, OrderQmRepository.kt
+  usecase/cart/CartCaller.kt, CartCommands.kt                    (step 6: who the caller is; the shared run of every cart command)
   usecase/geo/usecase/query/…
   usecase/address/usecase/{command,query}/…
   usecase/cart/usecase/{command,query}/…
@@ -1390,6 +1399,7 @@ application/src/main/kotlin/com/kiva/application/
   dto/CartDto.kt, CartChange.kt, CheckoutContextDto.kt, OrderSummaryDto.kt, OrderDetailDto.kt, PaymentInitDto.kt, PaymentResultDto.kt, AddressDto.kt, ProvinceDto.kt, …
 
 src/main/kotlin/com/kiva/infrastructure/
+  cart/RandomCartIds.kt                        CartIdGenerator with SecureRandom (step 6)
   payment/ZarinpalGateway.kt, FakePaymentGateway.kt, PaymentConfig.kt
   job/JobScheduler.kt, Jobs.kt
   common/text/JalaliDates.kt                   Persian calendar dates for the HTTP texts
@@ -1398,7 +1408,7 @@ src/main/kotlin/com/kiva/infrastructure/
   httpserver/controller/httprest/web/devFakeGateway.kt
   httpserver/cart/CartAccess.kt                Bearer or X-Cart-Token → CartOwner, and the response header
   httpserver/controller/httprest/model/request/…, model/response/… (CartTexts.kt, OrderTexts.kt, PaymentTexts.kt)
-  persistence/exposed/tbl/ProvinceTbl.kt, CityTbl.kt, ShopSettingsTbl.kt, ShippingMethodTbl.kt, PaymentGatewayTbl.kt, AddressTbl.kt, CartTbl.kt, CartItemTbl.kt, OrderQmTbl.kt, PaymentTbl.kt, PaymentLogTbl.kt, IdempotencyKeyTbl.kt
+  persistence/exposed/tbl/ProvinceTbl.kt, CityTbl.kt, ShopSettingsTbl.kt, ShippingMethodTbl.kt, PaymentGatewayTbl.kt, AddressTbl.kt, CartTbl.kt (+ CartItemTbl), OrderQmTbl.kt, PaymentTbl.kt, PaymentLogTbl.kt, IdempotencyKeyTbl.kt
   persistence/exposed/…RepositoryImpl.kt, OfferQmRepositoryImpl.kt, OrderQmRepositoryImpl.kt, IdempotencyStoreImpl.kt
   persistence/exposed/projector/OrderQmProjector.kt
   persistence/event/serializer/payload/order/…
@@ -1443,8 +1453,9 @@ PURCHASE_REVIEW.md                             (step 21)
 | 23 | `/me/addresses*` (گام ۳) | 404ها `ADDRESS_NOT_FOUND`. `PUT` ِ آدرس `422 CITY_NOT_IN_PROVINCE` هم داره. ترتیب لیست: پیش‌فرض، بعد قدیمی‌ترین. اولین آدرس همیشه پیش‌فرض، و `setAsDefault: false` پیش‌فرض بودن رو برنمی‌داره. استان یا شهر ناموجود ← 400 روی فیلد (`PROVINCE_NOT_FOUND`، `CITY_NOT_FOUND`). کد پستی با ارقام فارسی و «-» پذیرفته می‌شه. ارقام `addressLine` همون‌طور که تایپ شده می‌مونن. `fullText` پلاک و واحد رو هم داره | رفتار دقیق دفترچه |
 | 24 | بخش ۳ «قوانین کسب‌وکار»، `FreeShippingProgress.progressPercent`، `Cart.freeShipping` (گام ۴) | سفارش جمعه شنبه ارسال می‌شه و `estimatedDelivery` از روز ارسال شمرده می‌شه. `progressPercent` با یک رقم اعشار (نیمه به بالا) و `100` فقط وقتی `eligible` (وگرنه حداکثر `99.9`). `freeShipping` ← `nullable` (فروشگاه روش فعالی با ارسال رایگان نداره) | «جمعه‌ها ارسال نداریم» یعنی تاریخ تحویل سفارش جمعه یه روز دیرتره؛ نوار پر با «۱ تومان مونده» نمی‌خونه؛ بدون روش رایگان چیزی برای نوار نیست |
 | 25 | `CartItem.maxQuantity`، `CartIssue`، `GET /cart`، `POST /cart/merge`، `PATCH /cart/items/{itemId}` (گام ۵) | هر ردیف، قابل خرید یا نه، از سقف محصول سهم می‌گیره، و هیچ ردیفی بیشتر از ۲۰ نداره. وقتی سقف کم بیاد، ردیف قدیمی‌تر سهمش رو نگه می‌داره و ردیف بی‌جا حذف می‌شه (`QUANTITY_REDUCED` با `currentValue = 0`). در ادغام، رنگی که فقط مهمان داشت با همون `id` منتقل می‌شه. رنگ محصول دیگه ← `400 VARIANT_ID_INVALID` | برگشتن موجودی یه رنگ نباید رنگی رو که مشتری داره می‌خره کم کنه؛ تعداد ردیف نمی‌تونه صفر باشه؛ صفحه‌ی سبد بعد از ورود ردیف‌هاش رو گم نکنه |
+| 26 | `CartItem.image`، `CartReservation.timeline`، `Cart.items`، `PATCH /cart/items/{itemId}`، `CartMutationResponse.message`، هدر `X-Cart-Token` (گام ۶) | `image` ← `nullable` (تا آپلود مدیا `null`، مثل کارت محصول). `timeline` وقتی رزرو در تنظیمات خاموشه خالیه. ردیف‌ها به ترتیب افزودن، قدیمی‌ترین اول. `PATCH` بدون هر دو ← 400 روی `quantity` (`QUANTITY_OR_VARIANT_REQUIRED`)، با هر دو اول رنگ، و `itemId` ِ بدشکل ← 404. `message` برای تغییر ردیف و افزودنی که چیزی اضافه نکرد `null` ـه. توکن تازه روی پاسخ خطا هیچ‌وقت نمیاد | هنوز مدیایی با `id` نداریم؛ تایم‌لاین تاریخ شمسی لازم داره و تا گام ۱۹ کسی نمی‌بینه‌ش؛ سبدِ درخواستِ شکست‌خورده نگه داشته نمی‌شه |
 
-**پیام برای فرانت (گام ۰ و ۲۱):** ردیف‌های ۲، ۴، ۵، ۶، ۷، ۸، ۱۰، ۱۱، ۲۰، ۲۴ و ۲۵ رفتار فرانت رو عوض می‌کنن. `docs/FRONTEND_PURCHASE.md` (گام ۲۱) کل جریان رو برای فرانت توضیح می‌ده، مثل `FRONTEND_AUTH.md`.
+**پیام برای فرانت (گام ۰ و ۲۱):** ردیف‌های ۲، ۴، ۵، ۶، ۷، ۸، ۱۰، ۱۱، ۲۰، ۲۴، ۲۵ و ۲۶ رفتار فرانت رو عوض می‌کنن. `docs/FRONTEND_PURCHASE.md` (گام ۲۱) کل جریان رو برای فرانت توضیح می‌ده، مثل `FRONTEND_AUTH.md`.
 
 ---
 
@@ -1585,7 +1596,7 @@ PURCHASE_REVIEW.md                             (step 21)
 
 ---
 
-### گام ۶: سبد: دیتابیس و endpointها · L ⬜
+### گام ۶: سبد: دیتابیس و endpointها · L ✅
 
 **می‌سازی:** `V14__carts.sql`، `CartRepositoryImpl` (`FOR UPDATE`، ساخت سبد کاربر با `ON CONFLICT`، جست‌وجوی سبد مهمان با hash)، `OfferQmRepository` و پیاده‌سازیش (یه کوئری)، UseCaseهای سبد بخش ۱۷ (به‌جز ادغام و تخفیف)، `CartAccess` (Bearer یا توکن، و هدر پاسخ)، `webV1Cart.kt` با `authenticate(ACCESS, optional = true)`، و `CartTexts` (پیام‌های فارسی: issueها، `message` ِ افزودن و حذف، `freeShipping.message`، `unavailableReason`).
 
@@ -1596,19 +1607,19 @@ PURCHASE_REVIEW.md                             (step 21)
 2. اگه دو تب همزمان سبد رو عوض کنن، `FOR UPDATE` چی رو تضمین می‌کنه که `version` (قفل خوش‌بینانه) نمی‌کرد؟
 
 **تموم شده یعنی:**
-- [ ] `GET /cart` بدون توکن ← 200، سبد خالی و `X-Cart-Token` تو هدر. با همون توکن ← همون سبد و بدون هدر تازه. توکن ناشناخته یا بدشکل ← سبد تازه و هدر.
-- [ ] با Bearer ← سبد کاربر، و `X-Cart-Token` نادیده گرفته می‌شه. Bearer منقضی ← `401 TOKEN_EXPIRED`، هرگز مهمان.
-- [ ] `POST /cart/items`: شب‌تاب (موجودی ۰) ← `422 OUT_OF_STOCK`. variant ناموجود ← `404 VARIANT_NOT_FOUND`. محصول `DRAFT` ← `422 PRODUCT_UNAVAILABLE`. `quantity` ۰ یا ۲۱ ← 400.
-- [ ] پاسخ افزودن `affectedItemId` و `message` («کراس‌بادی نیلا — زیتونی (۱ عدد) به سبد اضافه شد») داره.
-- [ ] `PATCH` بیشتر از موجودی ← `422 QUANTITY_EXCEEDS_STOCK` با `meta.availableQuantity` برابر `maxQuantity`. بیشتر از سقف محصول ← `QUANTITY_EXCEEDS_LIMIT`.
-- [ ] `DELETE /cart/items/{id}` ← `removedItem` (`variantId`، `quantity`، `name`). item ِ سبد دیگه ← `404 CART_ITEM_NOT_FOUND`.
-- [ ] `PUT /cart/shipping-method`: TIPAX ← گزینه‌ها و `selected` درست. COURIER (غیرفعال) ← `422 SHIPPING_METHOD_UNAVAILABLE`. `"BIKE"` ← 400.
-- [ ] `PUT /cart/reservation {enabled: true}` ← `422 RESERVATION_UNAVAILABLE` با `meta.reason = RESERVATION_DISABLED`. `false` ← 200.
-- [ ] `DELETE /cart` ← سبد خالی، و روش ارسال حفظ شده.
-- [ ] همه‌ی پاسخ‌ها شکل کامل `Cart` رو دارن و فیلدهای بی‌مقدار `null` ان (`isWishlisted`، `discount`، `consolidation`).
-- [ ] ۲۰ افزودن همزمان روی یه سبد ← تعداد نهایی دقیقاً جمعشونه (تا سقف) و هیچ ردیف تکراری‌ای نیست.
-- [ ] عدد دقیق موجودی بالای ۴ هیچ‌جای پاسخ سبد نیست.
-- [ ] توکن خام تو دیتابیس پیدا نمی‌شه، فقط hash ـش.
+- [x] `GET /cart` بدون توکن ← 200، سبد خالی و `X-Cart-Token` تو هدر. با همون توکن ← همون سبد و بدون هدر تازه. توکن ناشناخته یا بدشکل ← سبد تازه و هدر.
+- [x] با Bearer ← سبد کاربر، و `X-Cart-Token` نادیده گرفته می‌شه. Bearer منقضی ← `401 TOKEN_EXPIRED`، هرگز مهمان.
+- [x] `POST /cart/items`: شب‌تاب (موجودی ۰) ← `422 OUT_OF_STOCK`. variant ناموجود ← `404 VARIANT_NOT_FOUND`. محصول `DRAFT` ← `422 PRODUCT_UNAVAILABLE`. `quantity` ۰ یا ۲۱ ← 400.
+- [x] پاسخ افزودن `affectedItemId` و `message` («کراس‌بادی نیلا — زیتونی (۱ عدد) به سبد اضافه شد») داره.
+- [x] `PATCH` بیشتر از موجودی ← `422 QUANTITY_EXCEEDS_STOCK` با `meta.availableQuantity` برابر `maxQuantity`. بیشتر از سقف محصول ← `QUANTITY_EXCEEDS_LIMIT`.
+- [x] `DELETE /cart/items/{id}` ← `removedItem` (`variantId`، `quantity`، `name`). item ِ سبد دیگه ← `404 CART_ITEM_NOT_FOUND`.
+- [x] `PUT /cart/shipping-method`: TIPAX ← گزینه‌ها و `selected` درست. COURIER (غیرفعال) ← `422 SHIPPING_METHOD_UNAVAILABLE`. `"BIKE"` ← 400.
+- [x] `PUT /cart/reservation {enabled: true}` ← `422 RESERVATION_UNAVAILABLE` با `meta.reason = RESERVATION_DISABLED`. `false` ← 200.
+- [x] `DELETE /cart` ← سبد خالی، و روش ارسال حفظ شده.
+- [x] همه‌ی پاسخ‌ها شکل کامل `Cart` رو دارن و فیلدهای بی‌مقدار `null` ان (`isWishlisted`، `discount`، `consolidation`).
+- [x] ۲۰ افزودن همزمان روی یه سبد ← تعداد نهایی دقیقاً جمعشونه (تا سقف) و هیچ ردیف تکراری‌ای نیست.
+- [x] عدد دقیق موجودی بالای ۴ هیچ‌جای پاسخ سبد نیست.
+- [x] توکن خام تو دیتابیس پیدا نمی‌شه، فقط hash ـش.
 
 ---
 
@@ -2052,6 +2063,7 @@ Route: StartPaymentUc ← 201 با order و payment، یا 422 PAYMENT_GATEWAY_U
 | ۱۹ مهر ۱۴۰۵ | ۳ | Purchase step 3 | `V13__addresses.sql` (با `ON DELETE CASCADE` روی کاربر و FK ترکیبی به شهر). Aggregate ِ `AddressBook` با قفل advisory، `AddressBookDomainService` و شش UseCase. ارقام `addressLine` همون‌طور که تایپ شده می‌مونن (`normalizePersianLetters` تو کامن). استان یا شهر ناموجود ← 400 روی فیلد (`PROVINCE_NOT_FOUND`، `CITY_NOT_FOUND`)، و نبودنشون `PROVINCE_REQUIRED` و `CITY_REQUIRED`. `RouteGuardsTest` حالا همه‌ی routeهای `bearerAuth` ِ کانترکت رو چک می‌کنه. کانترکت: ردیف ۲۳ |
 | ۱۹ مهر ۱۴۰۵ | ۴ | Purchase step 4 | فقط دامنه. یک نقطه‌ی ورود: `OrderPricing.quote` ← `PurchaseQuote` (مبلغ ردیف‌ها، `OrderTotals`، گزینه‌های ارسال، روش مؤثر، نوار ارسال رایگان). `now: Instant` از UseCase و فقط `ShopCalendar` تهران رو می‌شناسه. سفارش جمعه شنبه ارسال می‌شه. `progressPerMille` عدد صحیح، و ۱۰۰٪ فقط وقتی `eligible`. `OrderTotals` با سازنده‌ی `internal` و قانون‌های جمع در `init`. تخفیف (`codeDiscount`) و ادغام (`ShippingConsolidation`) ورودی‌های اختیاری‌ان. ۷۷ تست تازه، ۱۴۶۷ کل. کانترکت: ردیف ۲۴ |
 | ۲۰ مهر ۱۴۰۵ | ۵ | Purchase step 5 | فقط دامنه. `Cart` و `CartLine`، `PurchaseOffer` (`inShop` و `isPurchasable`)، `CartIssue`، `CartLimitsPolicy`، VOها، `CartIdGenerator` (پورت؛ `SecureRandom` در گام ۶) و `CartDomainService` (ترتیب sync و تغییر). سقف محصول بین همه‌ی ردیف‌ها، قدیمی‌ترین اول؛ ردیف بی‌جا حذف با `QUANTITY_REDUCED` به ۰؛ هر ردیف حداکثر ۲۰. issueها روی خود سبد جمع می‌شن. ردیف مهمان با همون `itemId` منتقل می‌شه. `ShippingPolicy.offeredMethods` و `methodFor`: قانون «روش مؤثر» یه جا. `CartId` لازم نشد. ۹۳ تست تازه، ۱۵۶۰ کل. کانترکت: ردیف ۲۵ |
+| ۲۰ مهر ۱۴۰۵ | ۶ | Purchase step 6 | `V14__carts.sql` (مالک: کاربر یا hash ِ توکن، هرگز هر دو؛ هر رنگ یه ردیف؛ ۱ تا ۲۰). `CartRepositoryImpl` با `FOR UPDATE` و `ON CONFLICT DO NOTHING`، `OfferQmRepositoryImpl` (یه کوئری با join)، `RandomCartIds` (`SecureRandom`). سرویس `CartCommands` و هفت Command + `GetCartUc`، `CartAccess` (Bearer بر توکن مقدمه)، `webV1Cart.kt` با ورود اختیاری، `CartTexts`. `progressPercent` با serializer ِ دقیق (بدون Double). `image` null و `timeline` خالی تا گام ۱۹. ۳۷ تست تازه، ۱۵۹۷ کل. کانترکت: ردیف ۲۶ |
 
 ---
 

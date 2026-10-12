@@ -1096,7 +1096,8 @@ paths:
       operationId: updateCartItem
       summary: "تغییر تعداد یا رنگ یک ردیف سبد"
       description: |
-        حداقل یکی از `quantity` و `variantId` لازم است.
+        حداقل یکی از `quantity` و `variantId` لازم است؛ وگرنه `400` روی `quantity` (`QUANTITY_OR_VARIANT_REQUIRED`). با هر دو، اول رنگ و بعد تعداد روی ردیفی که می‌ماند.
+        `itemId` بدشکل مثل ردیفی که در این سبد نیست `404 CART_ITEM_NOT_FOUND` می‌گیرد.
 
         **تعداد:** برخلاف افزودن، کم نمی‌شود و رد می‌شود: بیشتر از موجودی رنگ ← `QUANTITY_EXCEEDS_STOCK`؛ در موجودی جا می‌شود ولی از سقف خرید محصول
         (با حساب بقیه‌ی رنگ‌هایش در سبد) بیشتر است ← `QUANTITY_EXCEEDS_LIMIT`.
@@ -4833,7 +4834,7 @@ components:
       description: نسخه‌ی منبع برای کش شرطی (`If-None-Match`)
       schema: { type: string, example: 'W/"a1b2c3"' }
     XCartToken:
-      description: توکن سبد مهمان (فقط وقتی سبد جدید ساخته شده یا توکن عوض شده)
+      description: توکن سبد مهمان (فقط وقتی سبد جدید ساخته شده یا توکن عوض شده). روی پاسخ خطا هیچ‌وقت نمی‌آید، چون سبد تازه‌ی درخواستِ شکست‌خورده نگه داشته نمی‌شود
       schema: { type: string, example: 'gct_7f3a9c2e1b' }
     RetryAfter:
       description: چند ثانیه‌ی دیگر می‌توان دوباره تلاش کرد
@@ -5890,7 +5891,11 @@ components:
             category: { $ref: '#/components/schemas/CategoryRef' }
             url: { type: string, example: '/product/nila-crossbody?color=olive' }
         color: { $ref: '#/components/schemas/Color' }
-        image: { $ref: '#/components/schemas/MediaAsset' }
+        image:
+          type: object
+          allOf: [{ $ref: '#/components/schemas/MediaAsset' }]
+          nullable: true
+          description: عکس رنگ ردیف (همیشه فرستاده می‌شود)؛ تا وقتی عکسی آپلود نشده `null` است، مثل `ProductSummary.image`
         quantity: { type: integer, minimum: 1, example: 1 }
         maxQuantity:
           type: integer
@@ -5989,7 +5994,7 @@ components:
         shipAfterDate: { type: string, format: date, description: «ارسال بعد از سه‌شنبه ۱۵ مهر», example: '2026-10-09' }
         timeline:
           type: array
-          description: سه کارت تایم‌لاین رزرو
+          description: سه کارت تایم‌لاین رزرو. وقتی رزرو در تنظیمات سایت خاموش است (`RESERVATION_DISABLED`) خالی است
           items:
             type: object
             properties:
@@ -6015,6 +6020,7 @@ components:
         isGuest: { type: boolean, example: true }
         items:
           type: array
+          description: به ترتیب افزودن، قدیمی‌ترین اول
           items: { $ref: '#/components/schemas/CartItem' }
         totals: { $ref: '#/components/schemas/CartTotals' }
         shippingMethod:
@@ -6050,7 +6056,11 @@ components:
             variantId: { type: integer, example: 205 }
             quantity: { type: integer, example: 1 }
             name: { type: string, example: کراس‌بادی نیلا }
-        message: { type: string, nullable: true, example: کراس‌بادی نیلا — زیتونی (۱ عدد) به سبد اضافه شد }
+        message:
+          type: string
+          nullable: true
+          description: تُست بعد از افزودن («… (۱ عدد) به سبد اضافه شد») یا حذف («… از سبد حذف شد»)؛ `null` برای تغییر ردیف، و برای افزودنی که ردیف جای بیشتری نداشت (`issues` دلیلش را می‌گوید)
+          example: کراس‌بادی نیلا — زیتونی (۱ عدد) به سبد اضافه شد
     AddCartItemRequest:
       type: object
       required: [variantId]

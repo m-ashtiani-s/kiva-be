@@ -2,9 +2,12 @@ package com.kiva.infrastructure.di
 
 import com.kiva.application.port.SecurityEventLog
 import com.kiva.application.repository.AdminCustomerRepository
+import com.kiva.application.repository.OfferQmRepository
 import com.kiva.application.repository.ProductQmRepository
 import com.kiva.domain.aggregate.address.repository.AddressBookRepository
 import com.kiva.domain.aggregate.address.repository.AddressIdGenerator
+import com.kiva.domain.aggregate.cart.repository.CartIdGenerator
+import com.kiva.domain.aggregate.cart.repository.CartRepository
 import com.kiva.domain.aggregate.otp.repository.OtpChallengeRepository
 import com.kiva.domain.aggregate.session.repository.AuthSessionRepository
 import com.kiva.domain.aggregate.category.repository.CategoryRepository
@@ -20,11 +23,13 @@ import com.kiva.infrastructure.persistence.exposed.AddressBookRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.AddressIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.AdminCustomerRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.AuthSessionRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.CartRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.CategoryRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ColorRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.GeoRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.InventoryRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.MaterialRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.OfferQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.OtpChallengeRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.SecurityEventLogImpl
 import com.kiva.infrastructure.persistence.exposed.ProductIdGeneratorImpl
@@ -32,6 +37,7 @@ import com.kiva.infrastructure.persistence.exposed.ProductQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ProductRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ShopSettingsRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.UserRepositoryImpl
+import com.kiva.infrastructure.cart.RandomCartIds
 import org.koin.dsl.module
 
 /**
@@ -55,4 +61,7 @@ val daoModule = module(createdAtStart = true) {
     single<ShopSettingsRepository> { ShopSettingsRepositoryImpl() }
     single<AddressBookRepository> { AddressBookRepositoryImpl() }
     single<AddressIdGenerator> { AddressIdGeneratorImpl() }
+    single<CartRepository> { CartRepositoryImpl() }
+    single<CartIdGenerator> { RandomCartIds() }
+    single<OfferQmRepository> { OfferQmRepositoryImpl() }
 }

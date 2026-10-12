@@ -3,7 +3,6 @@ package com.kiva.infrastructure.di
 import com.kiva.application.usecase.account.usecase.command.ConfirmPhoneChangeUc
 import com.kiva.application.usecase.account.usecase.command.RequestPhoneChangeUc
 import com.kiva.application.usecase.account.usecase.command.UpdateMyProfileUc
-import com.kiva.application.usecase.auth.OtpIssuer
 import com.kiva.application.usecase.account.usecase.query.GetMeUc
 import com.kiva.application.usecase.address.usecase.command.AddAddressUc
 import com.kiva.application.usecase.address.usecase.command.DeleteAddressUc
@@ -15,11 +14,21 @@ import com.kiva.application.usecase.admin.usecase.command.CheckPanelAccessUc
 import com.kiva.application.usecase.admin.usecase.command.SetUserRolesUc
 import com.kiva.application.usecase.admin.usecase.query.FindCustomersUc
 import com.kiva.application.usecase.admin.usecase.query.GetCustomerUc
+import com.kiva.application.usecase.auth.OtpIssuer
 import com.kiva.application.usecase.auth.usecase.command.BootstrapAdminUc
 import com.kiva.application.usecase.auth.usecase.command.LogoutUc
 import com.kiva.application.usecase.auth.usecase.command.RefreshSessionUc
 import com.kiva.application.usecase.auth.usecase.command.SendLoginCodeUc
 import com.kiva.application.usecase.auth.usecase.command.VerifyLoginCodeUc
+import com.kiva.application.usecase.cart.CartCommands
+import com.kiva.application.usecase.cart.usecase.command.AddCartItemUc
+import com.kiva.application.usecase.cart.usecase.command.ChangeCartItemUc
+import com.kiva.application.usecase.cart.usecase.command.ChooseShippingMethodUc
+import com.kiva.application.usecase.cart.usecase.command.ClearCartUc
+import com.kiva.application.usecase.cart.usecase.command.OpenCartUc
+import com.kiva.application.usecase.cart.usecase.command.RemoveCartItemUc
+import com.kiva.application.usecase.cart.usecase.command.SetCartReservationUc
+import com.kiva.application.usecase.cart.usecase.query.GetCartUc
 import com.kiva.application.usecase.catalog.usecase.query.GetCategoryUc
 import com.kiva.application.usecase.catalog.usecase.query.ListCategoriesUc
 import com.kiva.application.usecase.catalog.usecase.query.ListColorsUc
@@ -49,6 +58,24 @@ val useCaseModule = module(createdAtStart = true) {
     single { UpdateAddressUc(transactionManager = get(), addressBookDomainService = get(), addressBookRepository = get(), clock = get()) }
     single { DeleteAddressUc(transactionManager = get(), addressBookRepository = get(), clock = get()) }
     single { SetDefaultAddressUc(transactionManager = get(), addressBookRepository = get(), clock = get()) }
+
+    // --- cart ---
+    single {
+        CartCommands(
+            transactionManager = get(), cartRepository = get(), cartDomainService = get(), offerQmRepository = get(),
+            shopSettingsRepository = get(), clock = get(),
+        )
+    }
+    single { OpenCartUc(cartCommands = get(), cartDomainService = get()) }
+    single { AddCartItemUc(cartCommands = get(), cartDomainService = get()) }
+    single { ChangeCartItemUc(cartCommands = get(), cartDomainService = get()) }
+    single { RemoveCartItemUc(cartCommands = get(), cartDomainService = get()) }
+    single { ClearCartUc(cartCommands = get(), cartDomainService = get()) }
+    single { ChooseShippingMethodUc(cartCommands = get(), cartDomainService = get()) }
+    single { SetCartReservationUc(cartCommands = get(), cartDomainService = get()) }
+    single {
+        GetCartUc(transactionManager = get(), cartRepository = get(), offerQmRepository = get(), shopSettingsRepository = get(), clock = get())
+    }
 
     // --- geo: queries ---
     single { ListProvincesUc(transactionManager = get(), geoRepository = get()) }
