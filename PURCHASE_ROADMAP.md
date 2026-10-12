@@ -87,7 +87,7 @@
 | ۶ | سبد: دیتابیس و endpointها | L | ✅ |
 | ۷ | ادغام سبد مهمان | S | ✅ |
 | ۸ | Aggregate سفارش (دامنه) | L | ✅ |
-| ۹ | سفارش: event store و read model | M | ⬜ |
+| ۹ | سفارش: event store و read model | M | ✅ |
 | ۱۰ | پرداخت: مدل، جدول و درگاه آزمایشی | M | ⬜ |
 | ۱۱ | Idempotency | S | ⬜ |
 | ۱۲ | صفحه‌ی تسویه: `GET /checkout` | M | ⬜ |
@@ -615,9 +615,9 @@ code = "KV-" + (100000 + (n × A + B) mod 900000)    A نسبت به 900000 = 2�
 
 ### Read model: `orderqm_tbl`
 
-ستون برای هر چیزی که فیلتر یا مرتب می‌شه (`userId`، `status`، `placedOn`، `holdUntil`) و JSONB برای سندهای نمایش (`lines`، `address`، `messenger`، `totals`، `timeline`، `gift`). اطلاعات پرداخت تو این جدول نیست: `OrderDetail.payment` موقع خوندن از `payment_tbl` (آخرین تلاش) میاد. ستون‌هایی که پنل ادمین بعداً لازم داره (شهر گیرنده، گروه ارسال) اون موقع با یه migration و بازسازی read model از روی رویدادها اضافه می‌شن.
+ستون برای هر چیزی که فیلتر یا مرتب می‌شه (`userId`، `status`، `placedOn`، `holdUntil`) و JSONB برای سندهای نمایش (`lines`، `address`، `messenger`، `totals`، `timeline`، `gift`)، با همون شکل payloadهای `OrderPlaced`، تا هر دو با یه دسته کلاس خونده بشن. `timeline` رو Projector می‌سازه (هر رویداد یه ردیف: وضعیت، زمان، و دلیل شکست تلاش پرداخت)، چون لیست‌ها و صفحه‌ها هیچ‌وقت event store رو نمی‌خونن (گام ۹). جدول هیچ FK ای نداره: قابل بازسازیه و سفارش از هر چیزی که بهش اشاره می‌کنه بیشتر عمر می‌کنه. اطلاعات پرداخت تو این جدول نیست: `OrderDetail.payment` موقع خوندن از `payment_tbl` (آخرین تلاش) میاد. ستون‌هایی که پنل ادمین بعداً لازم داره (شهر گیرنده، گروه ارسال) اون موقع با یه migration و بازسازی read model از روی رویدادها اضافه می‌شن.
 
-**`soldCount`:** `OrderQmProjector` با `OrderPaid` ستون `soldCount` ِ محصول‌های سفارش رو به اندازه‌ی تعدادشون بالا می‌بره (به ترتیب صعودی `productId`)، تا مرتب‌سازی «پرفروش‌ترین» واقعی بشه. کم کردنش با لغو، مال فاز بعده.
+**`soldCount`:** `OrderQmProjector` با `OrderPaid` ستون `soldCount` ِ محصول‌های سفارش رو به اندازه‌ی تعدادشون بالا می‌بره (به ترتیب صعودی `productId`)، تا مرتب‌سازی «پرفروش‌ترین» واقعی بشه. کم کردنش با لغو، مال فاز بعده. چون رویدادش مال سفارشه، Projector ِ سفارش عوضش می‌کنه، نه Projector ِ محصول. قفل ردیف محصول‌ها رو `OrderRepositoryImpl.save` **قبل** از نوشتن رویدادهای سفارش می‌گیره (`OrderQmProjector.lockFor`، قفل ۷ قبل از ۸ ِ بخش ۱۱)؛ وگرنه job انقضا که اول موجودی رو آزاد می‌کنه و callback ای که اول رویداد سفارش رو می‌نویسه بن‌بست می‌ساختن (گام ۹).
 
 ---
 
@@ -796,7 +796,7 @@ callback هیچ‌وقت JSON یا خطا نشون نمی‌ده و همیشه r
 | 4 | advisory ِ گروه رزرو `(userId)` (دور ۲) | پرداخت موفق با رزرو، پایان مهلت |
 | 5 | ردیف کد تخفیف (`FOR UPDATE`، دور ۲) | ثبت سفارش، پرداخت موفق، انقضا |
 | 6 | ردیف پرداخت (`FOR UPDATE`) | callback، تطبیق، انقضا |
-| 7 | ردیف محصول‌ها و رنگ‌ها در read model (Projectorها)، **به ترتیب صعودی `(productId, variantId)`** | رزرو، آزادسازی، `soldCount` |
+| 7 | ردیف محصول‌ها و رنگ‌ها در read model (Projectorها)، **به ترتیب صعودی `(productId, variantId)`** | رزرو، آزادسازی، `soldCount` (برای پرداخت، قبل از نوشتن رویدادهای سفارش: `OrderQmProjector.lockFor`) |
 | 8 | stream ِ سفارش (قید یکتای event store) | همه‌ی رویدادهای سفارش |
 
 قفل ۷ همون قفلیه که `InventoryQmProjector` و `ProductQmSummary.lock` از قبل می‌گیرن (اول محصول، بعد رنگ). تنها کار تازه اینه که ردیف‌های یه سفارش قبل از رزرو مرتب بشن. تست گام ۱۳ دو سفارش (A، B) و (B، A) رو ۵۰ بار همزمان اجرا می‌کنه.
@@ -1034,8 +1034,7 @@ erDiagram
     int itemsCount
     varchar shippingMethod
     varchar messengerChannel
-    boolean reserved
-    bigint reservationGroupId
+    boolean reserveRequested
     jsonb lines
     jsonb address
     jsonb messenger
@@ -1675,7 +1674,7 @@ PURCHASE_REVIEW.md                             (step 21)
 
 ---
 
-### گام ۹: سفارش: event store و read model · M ⬜
+### گام ۹: سفارش: event store و read model · M ✅
 
 **می‌سازی:** payloadها و `DomainEventSerializer` برای سفارش (با تست طلایی JSON)، `OrderRepositoryImpl` (با `EventStore` ِ مشترک)، `OrderIdGenerator` (`orderid_seq`)، `V15__orders.sql`، `OrderQmProjector` (ردیف، تایم‌لاین و `soldCount`) و `OrderQmRepository`.
 
@@ -1686,11 +1685,13 @@ PURCHASE_REVIEW.md                             (step 21)
 2. `soldCount` رو Projector ِ سفارش عوض کنه یا Projector ِ محصول؟ ترتیب قفل چی می‌شه؟
 
 **تموم شده یعنی:**
-- [ ] برای هر رویداد یه JSON طلایی هست و هر `eventType` یکتاست.
-- [ ] ذخیره و خوندن دوباره همون وضعیت رو می‌سازه.
-- [ ] `orderqm_tbl` یه ردیف با `lines`، `address`، `totals` و `timeline` ِ درست داره، و رویداد بعدی فقط **همون** ردیف رو عوض می‌کنه.
-- [ ] `OrderPaid` ← `soldCount` ِ هر محصول به اندازه‌ی تعدادش بالا می‌ره.
-- [ ] دو save همزمان روی یه سفارش ← `ConcurrentChangeException`.
+- [x] برای هر رویداد یه JSON طلایی هست و هر `eventType` یکتاست.
+- [x] ذخیره و خوندن دوباره همون وضعیت رو می‌سازه.
+- [x] `orderqm_tbl` یه ردیف با `lines`، `address`، `totals` و `timeline` ِ درست داره، و رویداد بعدی فقط **همون** ردیف رو عوض می‌کنه.
+- [x] `OrderPaid` ← `soldCount` ِ هر محصول به اندازه‌ی تعدادش بالا می‌ره.
+- [x] دو save همزمان روی یه سفارش ← `ConcurrentChangeException`.
+- [x] پرداخت و انقضای یه سفارش در یه لحظه ← یکی‌شون انجام می‌شه و اون یکی `ConcurrentChangeException` می‌گیره، هیچ‌وقت بن‌بست.
+- [x] دیتابیس رد می‌کنه: سفارش پرداخت‌شده بدون `paidOn`، پرداخت‌نشده با `paidOn`، کد بدشکل و تایم‌لاین خالی.
 
 ---
 
@@ -2078,6 +2079,7 @@ Route: StartPaymentUc ← 201 با order و payment، یا 422 PAYMENT_GATEWAY_U
 | ۲۰ مهر ۱۴۰۵ | ۶ | Purchase step 6 | `V14__carts.sql` (مالک: کاربر یا hash ِ توکن، هرگز هر دو؛ هر رنگ یه ردیف؛ ۱ تا ۲۰). `CartRepositoryImpl` با `FOR UPDATE` و `ON CONFLICT DO NOTHING`، `OfferQmRepositoryImpl` (یه کوئری با join)، `RandomCartIds` (`SecureRandom`). سرویس `CartCommands` و هفت Command + `GetCartUc`، `CartAccess` (Bearer بر توکن مقدمه)، `webV1Cart.kt` با ورود اختیاری، `CartTexts`. `progressPercent` با serializer ِ دقیق (بدون Double). `image` null و `timeline` خالی تا گام ۱۹. ۳۷ تست تازه، ۱۵۹۷ کل. کانترکت: ردیف ۲۶ |
 | ۲۰ مهر ۱۴۰۵ | ۷ | Purchase step 7 | `MergeGuestCartUc` با `CartCommands.runMerge`: قفل سبد کاربر (اگه نباشه ساخته می‌شه)، بعد سبد مهمان، و حذف سبد مهمان **قبل** از ذخیره‌ی سبد کاربر (`CartRepository.delete`). ادغام تو تراکنش خودش و بعد از commit ِ verify؛ Route: verify ← merge ← `GetCartUc` و `GetMeUc`. `AuthHttpResponse.cart` دیگه null نیست. `POST /cart/merge` با ورود اجباری. تصمیم‌های کاربر: توکن بدشکل مثل ناشناخته (200)، سبد مهمان خالی انتخاب‌های کاربر رو عوض نمی‌کنه (`Cart.absorb`)، و بدون سبد مهمان هم سبد کاربر sync می‌شه. `FRONTEND_AUTH.md` به‌روز شد. ۱۹ تست تازه، ۱۶۱۶ کل. کانترکت: ردیف ۲۷ |
 | ۲۰ مهر ۱۴۰۵ | ۸ | Purchase step 8 | فقط دامنه (به‌علاوه‌ی `returnable` در `PurchaseOffer` و متن کدهای فیلد تازه). `Order` با Event Sourcing و چهار رویداد (`OrderPlaced`، `OrderPaymentFailed`، `OrderPaid`، `OrderExpired`)؛ سفارش بدون مبلغ همون لحظه پرداخت‌شده‌ست. تصمیم‌های کاربر: `OrderPaid` خودش وضعیت بعدی رو می‌گه (`heldForReservation`)، یه `OrderPaymentFailed` برای هر تلاش (تکرار همون تلاش بی‌اثر)، ترتیب قانون‌های ثبت سفارش در `OrderDomainService.placeOrder`، و `fullText` در لایه‌ی HTTP. `OrderCodePolicy` با `A = 556243` و `B = 118340` (اولین کد `KV-218340`). `PaymentPolicy` (پنجره‌ی ۲۰ دقیقه، سقف ۳ سفارش و ۱۰ تلاش)، `OrderActionsPolicy`، `ReservationPolicy` (مشترک با سبد)، `PaymentPublicId` و `PaymentFailureReason` زودتر از گام ۱۰. ۵۴ تست تازه، ۱۶۷۰ کل. کانترکت: ردیف ۲۸ |
+| ۲۰ مهر ۱۴۰۵ | ۹ | Purchase step 9 | `V15__orders.sql` (`orderid_seq` و `orderqm_tbl`، بدون FK، با قید «پرداخت‌شده دقیقاً با `paidOn`»). چهار payload ِ رویداد و پنج payload ِ تیکه‌ها (همون شکل در read model)، با JSON ِ طلایی برای هر رویداد. `OrderRepositoryImpl`، `OrderIdGeneratorImpl`، `OrderQmProjector` (ردیف، تایم‌لاین، `soldCount`)، `OrderQmRepository.findOfCustomer`. کاربر گفت سؤال‌ها رو با پیشنهاد خودم جواب بدم: تایم‌لاین رو Projector می‌سازه؛ `soldCount` رو Projector ِ سفارش عوض می‌کنه و قفل محصول‌ها قبل از stream ِ سفارش گرفته می‌شه (تست «پرداخت و انقضا در یه لحظه، بدون بن‌بست»). `OrderTotals.constructFromPersisted`. ستون `reserveRequested` به‌جای `reserved`؛ `reservationGroupId` با گام ۱۹. ۲۴ تست تازه، ۱۶۹۴ کل |
 
 ---
 

@@ -7,9 +7,9 @@ import com.kiva.common.valueobject.Money
  * `itemsCompareAtTotal` قیمت کالاها − `productDiscount` تخفیف محصولات = `subtotal`;
  * `subtotal` − `codeDiscount` کد تخفیف + `shippingCost` ارسال = `payable` مبلغ قابل پرداخت.
  *
- * Made only by OrderPricing, so the cart, the checkout page and the placed order show the same numbers. The amounts
- * count only the lines that can be bought; [itemsCount] and [linesCount] count every line, because the cart's badge
- * shows what is in the cart.
+ * New totals are made only by OrderPricing, so the cart, the checkout page and the placed order show the same numbers;
+ * a placed order's are read back with [constructFromPersisted]. The amounts count only the lines that can be bought;
+ * [itemsCount] and [linesCount] count every line, because the cart's badge shows what is in the cart.
  *
  * The rules below are the arithmetic itself: totals that don't add up are a bug, and they stop loudly before anybody
  * is asked to pay them.
@@ -44,5 +44,24 @@ data class OrderTotals internal constructor(
         require(payable == subtotal - codeDiscount + shippingCost) { "$subtotal − $codeDiscount + $shippingCost is not $payable" }
         require(!shippingIsFree || shippingCost == Money.ZERO) { "Free shipping that costs $shippingCost" }
         require(shippingFreeReason == null || shippingIsFree) { "A free reason on shipping that is not free" }
+    }
+
+    companion object {
+        /** For totals read back from a placed order's events or its read model. Still checked by `init`. */
+        fun constructFromPersisted(
+            itemsCount: Int,
+            linesCount: Int,
+            itemsCompareAtTotal: Money,
+            productDiscount: Money,
+            subtotal: Money,
+            codeDiscount: Money,
+            shippingCost: Money,
+            shippingIsFree: Boolean,
+            shippingFreeReason: ShippingFreeReason?,
+            payable: Money,
+        ): OrderTotals = OrderTotals(
+            itemsCount, linesCount, itemsCompareAtTotal, productDiscount, subtotal, codeDiscount, shippingCost, shippingIsFree,
+            shippingFreeReason, payable,
+        )
     }
 }

@@ -3,6 +3,7 @@ package com.kiva.infrastructure.di
 import com.kiva.application.port.SecurityEventLog
 import com.kiva.application.repository.AdminCustomerRepository
 import com.kiva.application.repository.OfferQmRepository
+import com.kiva.application.repository.OrderQmRepository
 import com.kiva.application.repository.ProductQmRepository
 import com.kiva.domain.aggregate.address.repository.AddressBookRepository
 import com.kiva.domain.aggregate.address.repository.AddressIdGenerator
@@ -15,6 +16,8 @@ import com.kiva.domain.aggregate.color.repository.ColorRepository
 import com.kiva.domain.aggregate.geo.repository.GeoRepository
 import com.kiva.domain.aggregate.inventory.repository.InventoryRepository
 import com.kiva.domain.aggregate.material.repository.MaterialRepository
+import com.kiva.domain.aggregate.order.repository.OrderIdGenerator
+import com.kiva.domain.aggregate.order.repository.OrderRepository
 import com.kiva.domain.aggregate.product.repository.ProductIdGenerator
 import com.kiva.domain.aggregate.product.repository.ProductRepository
 import com.kiva.domain.aggregate.settings.repository.ShopSettingsRepository
@@ -30,6 +33,9 @@ import com.kiva.infrastructure.persistence.exposed.GeoRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.InventoryRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.MaterialRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.OfferQmRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.OrderIdGeneratorImpl
+import com.kiva.infrastructure.persistence.exposed.OrderQmRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.OrderRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.OtpChallengeRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.SecurityEventLogImpl
 import com.kiva.infrastructure.persistence.exposed.ProductIdGeneratorImpl
@@ -64,4 +70,7 @@ val daoModule = module(createdAtStart = true) {
     single<CartRepository> { CartRepositoryImpl() }
     single<CartIdGenerator> { RandomCartIds() }
     single<OfferQmRepository> { OfferQmRepositoryImpl() }
+    single<OrderRepository> { OrderRepositoryImpl() }
+    single<OrderIdGenerator> { OrderIdGeneratorImpl() }
+    single<OrderQmRepository> { OrderQmRepositoryImpl() }
 }
