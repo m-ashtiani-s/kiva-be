@@ -91,6 +91,11 @@ class CartRepositoryImpl : CartRepository {
         insertLines(cartId, wanted.values.filter { it.itemId !in stored })
     }
 
+    // The lines go with it: cartitem_tbl's foreign key is ON DELETE CASCADE.
+    override fun delete(cart: Cart) {
+        CartTbl.deleteWhere { publicId eq cart.publicId.value }
+    }
+
     private fun lockAndRead(which: Op<Boolean>): Cart? {
         val row = CartTbl.selectAll().where { which }.forUpdate().singleOrNull() ?: return null
         return row.toCart(linesOf(row[CartTbl.id].value))

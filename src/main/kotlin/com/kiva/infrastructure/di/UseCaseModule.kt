@@ -25,6 +25,7 @@ import com.kiva.application.usecase.cart.usecase.command.AddCartItemUc
 import com.kiva.application.usecase.cart.usecase.command.ChangeCartItemUc
 import com.kiva.application.usecase.cart.usecase.command.ChooseShippingMethodUc
 import com.kiva.application.usecase.cart.usecase.command.ClearCartUc
+import com.kiva.application.usecase.cart.usecase.command.MergeGuestCartUc
 import com.kiva.application.usecase.cart.usecase.command.OpenCartUc
 import com.kiva.application.usecase.cart.usecase.command.RemoveCartItemUc
 import com.kiva.application.usecase.cart.usecase.command.SetCartReservationUc
@@ -73,6 +74,7 @@ val useCaseModule = module(createdAtStart = true) {
     single { ClearCartUc(cartCommands = get(), cartDomainService = get()) }
     single { ChooseShippingMethodUc(cartCommands = get(), cartDomainService = get()) }
     single { SetCartReservationUc(cartCommands = get(), cartDomainService = get()) }
+    single { MergeGuestCartUc(cartCommands = get(), cartDomainService = get()) }
     single {
         GetCartUc(transactionManager = get(), cartRepository = get(), offerQmRepository = get(), shopSettingsRepository = get(), clock = get())
     }

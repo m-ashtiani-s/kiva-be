@@ -7,6 +7,7 @@ import com.kiva.application.usecase.cart.usecase.command.AddCartItemUc
 import com.kiva.application.usecase.cart.usecase.command.ChangeCartItemUc
 import com.kiva.application.usecase.cart.usecase.command.ChooseShippingMethodUc
 import com.kiva.application.usecase.cart.usecase.command.ClearCartUc
+import com.kiva.application.usecase.cart.usecase.command.MergeGuestCartUc
 import com.kiva.application.usecase.cart.usecase.command.OpenCartUc
 import com.kiva.application.usecase.cart.usecase.command.RemoveCartItemUc
 import com.kiva.application.usecase.cart.usecase.command.SetCartReservationUc
@@ -121,6 +122,7 @@ class WebV1CartOnDatabaseTest {
             ClearCartUc(c, domain),
             ChooseShippingMethodUc(c, domain),
             SetCartReservationUc(c, domain),
+            MergeGuestCartUc(c, domain),
         )
     }
 
@@ -144,7 +146,7 @@ class WebV1CartOnDatabaseTest {
             configureAuthentication(stack.accessTokens)
             routing {
                 route(API_V1) {
-                    webV1Auth(AuthUseCases(stack.send, stack.verify, stack.getMe, stack.refresh, stack.logout), listOf(ORIGIN))
+                    webV1Auth(stack.authUseCases, listOf(ORIGIN))
                     webV1Cart(useCases)
                 }
             }

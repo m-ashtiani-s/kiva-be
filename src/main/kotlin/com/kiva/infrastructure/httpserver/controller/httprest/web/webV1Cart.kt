@@ -6,6 +6,7 @@ import com.kiva.application.usecase.cart.usecase.command.AddCartItemUc
 import com.kiva.application.usecase.cart.usecase.command.ChangeCartItemUc
 import com.kiva.application.usecase.cart.usecase.command.ChooseShippingMethodUc
 import com.kiva.application.usecase.cart.usecase.command.ClearCartUc
+import com.kiva.application.usecase.cart.usecase.command.MergeGuestCartUc
 import com.kiva.application.usecase.cart.usecase.command.OpenCartUc
 import com.kiva.application.usecase.cart.usecase.command.RemoveCartItemUc
 import com.kiva.application.usecase.cart.usecase.command.SetCartReservationUc
@@ -15,10 +16,12 @@ import com.kiva.common.railway.ResultFailure
 import com.kiva.common.railway.unwrapOr
 import com.kiva.infrastructure.common.http.respondFailure
 import com.kiva.infrastructure.httpserver.auth.ACCESS
+import com.kiva.infrastructure.httpserver.auth.accessPrincipal
 import com.kiva.infrastructure.httpserver.cart.cartCaller
 import com.kiva.infrastructure.httpserver.cart.sendNewCartToken
 import com.kiva.infrastructure.httpserver.controller.httprest.model.request.AddCartItemHttpRequest
 import com.kiva.infrastructure.httpserver.controller.httprest.model.request.ChooseShippingMethodHttpRequest
+import com.kiva.infrastructure.httpserver.controller.httprest.model.request.MergeCartHttpRequest
 import com.kiva.infrastructure.httpserver.controller.httprest.model.request.SetCartReservationHttpRequest
 import com.kiva.infrastructure.httpserver.controller.httprest.model.request.UpdateCartItemHttpRequest
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.CartHttpResponse
@@ -46,6 +49,7 @@ class CartUseCases(
     val clearCart: ClearCartUc,
     val chooseShippingMethod: ChooseShippingMethodUc,
     val setCartReservation: SetCartReservationUc,
+    val mergeGuestCart: MergeGuestCartUc,
 )
 
 /** The path parameter every line route names its line by. */
@@ -55,7 +59,7 @@ private const val ITEM_ID = "itemId"
  * The cart (contract tag `Cart`). Mounted under `/api/v1`. A login is optional: with a valid access token it is the
  * customer's cart, without one the guest's of `X-Cart-Token` (see CartAccess). Every route is a command, `GET` included
  * (it records the cart as seen); after it the answer is built by GetCartUc, and a new guest cart's token goes in the
- * `X-Cart-Token` header.
+ * `X-Cart-Token` header. Merging a guest's cart into the customer's (`POST /cart/merge`) needs a login.
  */
 fun Route.webV1Cart(useCases: CartUseCases) {
     authenticate(ACCESS, optional = true) {
@@ -97,6 +101,15 @@ fun Route.webV1Cart(useCases: CartUseCases) {
         put("/cart/reservation") {
             val request = call.receive<SetCartReservationHttpRequest>()
             call.respondCart(useCases, useCases.setCartReservation.execute(SetCartReservationUc.Cmd(call.cartCaller(), request.enabled)))
+        }
+    }
+
+    // The same merge as a login with guestCartToken; a token that reaches no guest cart is 200 with the customer's cart.
+    authenticate(ACCESS) {
+        post("/cart/merge") {
+            val request = call.receive<MergeCartHttpRequest>()
+            val command = MergeGuestCartUc.Cmd(call.accessPrincipal().userId, request.guestCartToken)
+            call.respondCart(useCases, useCases.mergeGuestCart.execute(command))
         }
     }
 }

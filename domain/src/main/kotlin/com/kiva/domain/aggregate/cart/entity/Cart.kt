@@ -274,8 +274,9 @@ class Cart private constructor(
      * Takes in a guest's cart after its owner logged in; the guest cart is deleted afterwards. A color in both carts
      * becomes one line (the customer's) with both quantities; any other guest line moves over as it is, keeping its
      * id, so the shopper's page doesn't lose track of it. Then the limits are applied to the whole cart, oldest line
-     * first, as in [sync]. The guest's shipping method and reservation switch win: the shopper chose them just now.
-     * The guest cart's own issues come along.
+     * first, as in [sync]. The guest's shipping method and reservation switch win, since the shopper chose them just
+     * now, but only when the guest cart holds something: an empty one was never used (every visit makes one) and has
+     * only the shop's default, so it leaves the customer's choices as they are. The guest cart's own issues come along.
      */
     fun absorb(
         guest: Cart,
@@ -297,8 +298,10 @@ class Cart private constructor(
             }
         }
         entries.sortWith(OLDEST_FIRST)
-        shippingMethod = guest.shippingMethod
-        reserve = guest.reserve
+        if (guest.entries.isNotEmpty()) {
+            shippingMethod = guest.shippingMethod
+            reserve = guest.reserve
+        }
         fitToLimits(offers, asked)
         dropReservationIfUnavailable(offers, settings, hasActiveReservation)
         updatedOn = now

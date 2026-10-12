@@ -6,6 +6,8 @@ import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.classic.spi.ThrowableProxyUtil
 import ch.qos.logback.core.read.ListAppender
 import com.kiva.application.port.OtpCodes
+import com.kiva.application.usecase.cart.CartCaller
+import com.kiva.application.usecase.cart.usecase.command.OpenCartUc
 import com.kiva.common.valueobject.IranianMobileNumber
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpCode
@@ -20,6 +22,7 @@ import com.kiva.infrastructure.httpserver.controller.httprest.web.AuthTestStack.
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AuthTestStack.Companion.OTP_PEPPER
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AuthTestStack.Companion.phone
 import com.kiva.infrastructure.persistence.exposed.UserRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.tbl.CartTbl
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.parameter
@@ -33,9 +36,12 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.server.testing.ApplicationTestBuilder
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
@@ -62,7 +68,10 @@ class AuthLogScanOnDatabaseTest {
     private val db = stack.db
 
     @AfterEach
-    fun deleteWhatWasStored() = stack.deleteTestUsers()
+    fun deleteWhatWasStored() {
+        transaction(db) { CartTbl.deleteWhere { userId.isNull() } }
+        stack.deleteTestUsers()
+    }
 
     private class Session(val accessToken: String, val cookie: String)
 
@@ -95,16 +104,20 @@ class AuthLogScanOnDatabaseTest {
     private fun code(phone: String) = stack.lastCodeSentTo(phone).value
 
     @Test
-    fun `a login with a wrong try, a profile, a refresh and a logout leave nothing secret in the log`() {
+    fun `a login with a wrong try, a guest cart's merge, a profile, a refresh and a logout leave nothing secret in the log`() {
         val sara = phone(1)
         val messenger = phone(2)
         val handedOut = mutableListOf<String>()
 
         val log = logOf {
+            val guestCart = runBlocking { OpenCartUc(stack.cartCommands, stack.cartDomainService).execute(OpenCartUc.Cmd(CartCaller.Guest(null))) }
+            val guestCartToken = guestCart.getOrNull()?.newToken?.reveal() ?: error("no guest cart")
+            handedOut += guestCartToken
             stack.app {
                 post("/auth/otp/send", """{"phone":"$sara"}""")
-                assertEquals(HttpStatusCode.UnprocessableEntity, post("/auth/otp/verify", """{"phone":"$sara","code":"$WRONG_CODE"}""").status)
-                val login = post("/auth/otp/verify", """{"phone":"$sara","code":"${code(sara)}"}""").session()
+                val wrong = post("/auth/otp/verify", """{"phone":"$sara","code":"$WRONG_CODE","guestCartToken":"$guestCartToken"}""")
+                assertEquals(HttpStatusCode.UnprocessableEntity, wrong.status)
+                val login = post("/auth/otp/verify", """{"phone":"$sara","code":"${code(sara)}","guestCartToken":"$guestCartToken"}""").session()
                 handedOut += listOf(login.accessToken, login.cookie)
 
                 assertEquals(HttpStatusCode.OK, client.get("$API_V1/me") { header(HttpHeaders.Authorization, "Bearer ${login.accessToken}") }.status)

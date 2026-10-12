@@ -99,7 +99,7 @@ class WebV1AddressesOnDatabaseTest {
             configureAuthentication(stack.accessTokens)
             routing {
                 route(API_V1) {
-                    webV1Auth(AuthUseCases(stack.send, stack.verify, stack.getMe, stack.refresh, stack.logout), listOf(ORIGIN))
+                    webV1Auth(stack.authUseCases, listOf(ORIGIN))
                     webV1Addresses(useCases)
                 }
             }

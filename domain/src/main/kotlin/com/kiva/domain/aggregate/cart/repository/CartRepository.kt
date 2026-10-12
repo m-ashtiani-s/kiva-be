@@ -31,4 +31,10 @@ interface CartRepository {
 
     /** Writes what changed since it was locked: the cart's own values, and its lines added, changed and removed. */
     fun save(cart: Cart)
+
+    /**
+     * Deletes a locked cart and its lines: a guest's, once it went into the customer's after a login. Before the
+     * customer's cart is saved: its lines moved over with their ids, and a line id is the shop's, unique in every cart.
+     */
+    fun delete(cart: Cart)
 }

@@ -9,6 +9,7 @@ import com.kiva.common.railway.Result
 import com.kiva.common.railway.ResultFailure
 import com.kiva.common.railway.unwrapOr
 import com.kiva.common.transaction.TransactionManager
+import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.cart.CartDomainService
 import com.kiva.domain.aggregate.cart.entity.Cart
 import com.kiva.domain.aggregate.cart.entity.CartLine
@@ -62,20 +63,45 @@ class CartCommands(
         val done = change(Context(cart, offers.mapValues { it.value.offer }, settings, now)).unwrapOr { return@inTransaction Result.failure(it) }
         cartRepository.save(cart)
 
-        Result.success(
-            CartChange(
-                cartId = cart.publicId,
-                newToken = newToken,
-                issues = cart.issues.map { issue ->
-                    val names = issue.variantId?.let { offers[it] }
-                    CartIssueDto(issue.code, issue.itemId?.value, names?.product?.name, names?.color?.name, issue.previousValue, issue.currentValue)
-                },
-                affectedItemId = done.affectedItemId,
-                addedQuantity = done.addedQuantity,
-                removedItem = done.removedLine?.let { removedItemOf(it, offers) },
-            ),
-        )
+        Result.success(changeOf(cart, newToken, offers, done))
     }
+
+    /**
+     * The run of a merge after a login (MergeGuestCartUc), in one transaction: the customer's cart is locked (made, if
+     * they have none), then the guest cart of [guestToken] (section 11's order: the customer's first, so two merges
+     * never wait on each other in a circle), then the offers of both carts' lines are read in one query. [change] gets
+     * the guest cart, or null when the token reaches none: missing, malformed, unknown, or merged a moment ago by
+     * another request, which deleted it while this one waited on its lock. A token never reaches a customer's cart.
+     *
+     * The guest cart is deleted before the customer's is saved: its lines move over keeping their ids.
+     */
+    suspend fun runMerge(userId: UserId, guestToken: String?, change: (Context, guest: Cart?) -> Unit): Result<CartChange, Nothing> =
+        transactionManager.inTransaction {
+            val settings = shopSettingsRepository.get()
+            val now = clock.instant()
+            val (cart, _) = lockOrCreate(CartCaller.Customer(userId), settings, now)
+            val guest = guestToken?.let { CartToken.makeNew(it).getOrNull() }?.let { cartRepository.lockForGuest(it.hash()) }
+            val offers = offerQmRepository.findOffers((cart.lines + guest?.lines.orEmpty()).map { it.variantId })
+
+            change(Context(cart, offers.mapValues { it.value.offer }, settings, now), guest)
+            guest?.let(cartRepository::delete)
+            cartRepository.save(cart)
+
+            Result.success(changeOf(cart, newToken = null, offers, Done()))
+        }
+
+    private fun changeOf(cart: Cart, newToken: CartToken?, offers: Map<VariantId, OfferQm>, done: Done): CartChange =
+        CartChange(
+            cartId = cart.publicId,
+            newToken = newToken,
+            issues = cart.issues.map { issue ->
+                val names = issue.variantId?.let { offers[it] }
+                CartIssueDto(issue.code, issue.itemId?.value, names?.product?.name, names?.color?.name, issue.previousValue, issue.currentValue)
+            },
+            affectedItemId = done.affectedItemId,
+            addedQuantity = done.addedQuantity,
+            removedItem = done.removedLine?.let { removedItemOf(it, offers) },
+        )
 
     private fun lockOrCreate(caller: CartCaller, settings: ShopSettings, now: Instant): Pair<Cart, CartToken?> = when (caller) {
         is CartCaller.Customer -> {

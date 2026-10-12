@@ -20,6 +20,7 @@ import com.kiva.infrastructure.persistence.exposed.tbl.CartItemTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.CartTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.UserTbl
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.like
 import org.jetbrains.exposed.v1.exceptions.ExposedSQLException
@@ -68,8 +69,9 @@ class CartRepositoryImplTest {
         ids.nextCartPublicId(), CartOwner.User(user), lines.toList(), ShippingMethodCode.TIPAX, reserve = true, createdOn = now, updatedOn = now,
     )
 
-    private fun guestCart(hash: TokenHash = TokenHash(ByteArray(32) { 3 })): Cart =
-        Cart.new(ids.nextCartPublicId(), CartOwner.Guest(hash), ShippingMethodCode.POST, now)
+    private fun guestCart(hash: TokenHash = TokenHash(ByteArray(32) { 3 }), vararg lines: CartLine): Cart = Cart.constructFromPersisted(
+        ids.nextCartPublicId(), CartOwner.Guest(hash), lines.toList(), ShippingMethodCode.POST, reserve = false, createdOn = now, updatedOn = now,
+    )
 
     private fun Cart.values(): List<Any?> = listOf(publicId, owner, shippingMethod, reserve, createdOn, updatedOn)
 
@@ -151,6 +153,46 @@ class CartRepositoryImplTest {
 
         val stored = transaction(db) { repository.lockForUser(user) }!!
         assertEquals(listOf(olive.itemId to 3), stored.lines.map { it.itemId to it.quantity.value })
+    }
+
+    @Test
+    fun `deleting a guest cart takes its lines with it, and its token reaches nothing any more`() {
+        val hash = TokenHash(ByteArray(32) { 4 })
+        val cart = guestCart(hash, line(205, 2), line(301, 1))
+        transaction(db) { repository.insertGuest(cart) }
+
+        transaction(db) { repository.delete(repository.lockForGuest(hash)!!) }
+
+        assertNull(transaction(db) { repository.lockForGuest(hash) })
+        assertNull(transaction(db) { repository.find(cart.publicId) })
+        val lineIds = cart.lines.map { it.itemId.value }
+        assertEquals(0, transaction(db) { CartItemTbl.selectAll().where { CartItemTbl.publicId inList lineIds }.count() })
+    }
+
+    @Test
+    fun `a guest's lines move into the customer's cart with their ids, once the guest cart is gone and not before`() {
+        val hash = TokenHash(ByteArray(32) { 5 })
+        val guestLine = line(205, 2)
+        transaction(db) {
+            repository.insertForUserIfAbsent(userCart(line(301, 1)))
+            repository.insertGuest(guestCart(hash, guestLine))
+        }
+        fun merge(deleteFirst: Boolean) = transaction(db) {
+            val cart = repository.lockForUser(user)!!
+            val guest = repository.lockForGuest(hash)!!
+            cart.absorb(guest, offers(205 to 2, 301 to 3), ShopSettingsRepositoryImpl().get(), now)
+            if (deleteFirst) repository.delete(guest)
+            repository.save(cart)
+        }
+
+        // A line id is unique in every cart, so the moved line can't be written while the guest's still has it.
+        assertFailsWith<ExposedSQLException> { merge(deleteFirst = false) }
+        merge(deleteFirst = true)
+
+        val stored = transaction(db) { repository.lockForUser(user) }!!
+        assertEquals(mapOf(301L to 1, 205L to 2), stored.lines.associate { it.variantId.value to it.quantity.value })
+        assertEquals(guestLine.itemId, stored.lines.single { it.variantId.value == 205L }.itemId)
+        assertNull(transaction(db) { repository.lockForGuest(hash) })
     }
 
     // ============ the database's own walls ============

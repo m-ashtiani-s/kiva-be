@@ -17,3 +17,13 @@ data class ChooseShippingMethodHttpRequest(val method: String)
 /** The body of `PUT /cart/reservation`. */
 @Serializable
 data class SetCartReservationHttpRequest(val enabled: Boolean)
+
+/**
+ * The body of `POST /cart/merge`. The token is required; one that reaches no guest cart (malformed included) merges
+ * nothing and is no error.
+ */
+@Serializable
+data class MergeCartHttpRequest(val guestCartToken: String) {
+    // The token opens a cart, if this is ever printed.
+    override fun toString(): String = "MergeCartHttpRequest(guestCartToken=****)"
+}

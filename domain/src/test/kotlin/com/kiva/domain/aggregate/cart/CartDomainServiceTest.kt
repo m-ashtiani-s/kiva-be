@@ -166,4 +166,15 @@ class CartDomainServiceTest {
         assertEquals(mapOf(AIDA_BLACK to 1, NILA_BLACK to 2), cart.lines.associate { it.variantId.value to it.quantity.value })
         assertEquals(listOf(itemId(2) to PRICE_INCREASED), cart.issues.map { it.itemId to it.code })
     }
+
+    @Test
+    fun `a login without a guest cart is a look at the customer's cart - what changed is told, once`() {
+        val cart = userCart(line(itemId(1), NILA_BLACK, 1, 1_450_000))
+
+        service.mergeGuestCart(cart, guest = null, dearerNila, settings, at(2))
+
+        assertEquals(listOf(itemId(1) to PRICE_INCREASED), cart.issues.map { it.itemId to it.code })
+        assertEquals(1_600_000, cart.lines.single().seenUnitPrice.toman)
+        assertEquals(at(2), cart.updatedOn)
+    }
 }

@@ -22,6 +22,7 @@ import com.kiva.application.usecase.cart.usecase.command.AddCartItemUc
 import com.kiva.application.usecase.cart.usecase.command.ChangeCartItemUc
 import com.kiva.application.usecase.cart.usecase.command.ChooseShippingMethodUc
 import com.kiva.application.usecase.cart.usecase.command.ClearCartUc
+import com.kiva.application.usecase.cart.usecase.command.MergeGuestCartUc
 import com.kiva.application.usecase.cart.usecase.command.OpenCartUc
 import com.kiva.application.usecase.cart.usecase.command.RemoveCartItemUc
 import com.kiva.application.usecase.cart.usecase.command.SetCartReservationUc
@@ -171,6 +172,7 @@ fun Application.configureRouting() {
     val clearCartUc by inject<ClearCartUc>()
     val chooseShippingMethodUc by inject<ChooseShippingMethodUc>()
     val setCartReservationUc by inject<SetCartReservationUc>()
+    val mergeGuestCartUc by inject<MergeGuestCartUc>()
     val sendLoginCodeUc by inject<SendLoginCodeUc>()
     val verifyLoginCodeUc by inject<VerifyLoginCodeUc>()
     val refreshSessionUc by inject<RefreshSessionUc>()
@@ -188,7 +190,10 @@ fun Application.configureRouting() {
     routing {
         healthRoutes()
         route(API_V1) {
-            webV1Auth(AuthUseCases(sendLoginCodeUc, verifyLoginCodeUc, getMeUc, refreshSessionUc, logoutUc), config.http.allowedOrigins)
+            webV1Auth(
+                AuthUseCases(sendLoginCodeUc, verifyLoginCodeUc, getMeUc, refreshSessionUc, logoutUc, mergeGuestCartUc, getCartUc),
+                config.http.allowedOrigins,
+            )
             webV1Me(MeUseCases(getMeUc, updateMyProfileUc, requestPhoneChangeUc, confirmPhoneChangeUc))
             webV1AdminCustomers(AdminCustomerUseCases(checkPanelAccessUc, findCustomersUc, getCustomerUc, setUserRolesUc))
             webV1Catalog(listColorsUc, listMaterialsUc, listCategoriesUc, getCategoryUc)
@@ -198,7 +203,7 @@ fun Application.configureRouting() {
             webV1Cart(
                 CartUseCases(
                     openCartUc, getCartUc, addCartItemUc, changeCartItemUc, removeCartItemUc, clearCartUc, chooseShippingMethodUc,
-                    setCartReservationUc,
+                    setCartReservationUc, mergeGuestCartUc,
                 ),
             )
         }

@@ -129,11 +129,14 @@ class CartDomainService(private val cartIdGenerator: CartIdGenerator) {
 
     /**
      * After a login: both carts are brought up to date, then the guest's goes into the customer's ([Cart.absorb]).
+     * Without a guest cart (no token, or one that reaches none) it is a look at the customer's cart, as [openCart]: the
+     * login's answer shows the cart, so what changed since the last look is told there, once.
      * [offers] must cover the lines of both. The use case deletes the guest cart.
      */
-    fun mergeGuestCart(cart: Cart, guest: Cart, offers: Map<VariantId, PurchaseOffer>, settings: ShopSettings, now: Instant) {
-        logger.info("mergeGuestCart cart=${cart.publicId.value} guestCart=${guest.publicId.value} guestLines=${guest.lines.size}")
+    fun mergeGuestCart(cart: Cart, guest: Cart?, offers: Map<VariantId, PurchaseOffer>, settings: ShopSettings, now: Instant) {
+        logger.info("mergeGuestCart cart=${cart.publicId.value} guestCart=${guest?.publicId?.value} guestLines=${guest?.lines?.size}")
         cart.sync(offers, settings, now)
+        if (guest == null) return
         guest.sync(offers, settings, now)
         cart.absorb(guest, offers, settings, now)
     }

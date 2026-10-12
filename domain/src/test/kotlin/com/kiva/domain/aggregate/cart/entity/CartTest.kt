@@ -564,6 +564,19 @@ class CartTest {
         }
 
         @Test
+        fun `an empty guest cart, made by a mere visit, leaves the customer's shipping method and reservation switch as they are`() {
+            val cart = userCart(line(itemId(1), NILA_BLACK, 1, 1_450_000), method = TIPAX, reserve = true)
+
+            cart.absorb(guestCart(method = POST, reserve = false), offers(), reservationsOn, at(3))
+
+            assertEquals(TIPAX, cart.shippingMethod)
+            assertTrue(cart.reserve)
+            assertEquals(mapOf(NILA_BLACK to 1), cart.quantities())
+            assertTrue(cart.issues.isEmpty())
+            assertEquals(at(3), cart.updatedOn)
+        }
+
+        @Test
         fun `but the reservation goes off when the customer's own lines can't be reserved`() {
             val cart = userCart(line(itemId(1), AIDA_BLACK, 1, 2_790_000))
 
