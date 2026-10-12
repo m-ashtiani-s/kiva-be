@@ -8,10 +8,12 @@ import com.kiva.domain.aggregate.order.OrderFixtures.sara
 import com.kiva.domain.aggregate.order.entity.Order
 import com.kiva.domain.aggregate.order.entity.event.OrderPaid
 import com.kiva.domain.aggregate.order.entity.event.OrderPaymentFailed
+import com.kiva.domain.aggregate.order.model.policy.PaymentPolicy
 import com.kiva.domain.aggregate.order.model.valueobject.OrderId
 import com.kiva.domain.aggregate.order.model.valueobject.OrderStatus
 import com.kiva.domain.aggregate.payment.PaymentDomainService.Confirmed
 import com.kiva.domain.aggregate.payment.PaymentDomainService.Return
+import com.kiva.domain.aggregate.payment.PaymentDomainService.StartAttemptFailure
 import com.kiva.domain.aggregate.payment.entity.Payment
 import com.kiva.domain.aggregate.payment.model.valueobject.CardMask
 import com.kiva.domain.aggregate.payment.model.valueobject.GatewayAuthority
@@ -20,8 +22,10 @@ import com.kiva.domain.aggregate.payment.model.valueobject.PaymentFailureReason
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentPublicId
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentRedirect
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentStatus
+import com.kiva.domain.aggregate.payment.repository.PaymentIdGenerator
 import com.kiva.domain.aggregate.settings.model.valueobject.PaymentGatewayCode
 import org.junit.jupiter.api.Test
+import java.time.Duration
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
@@ -29,7 +33,11 @@ import kotlin.test.assertNull
 
 class PaymentDomainServiceTest {
 
-    private val service = PaymentDomainService()
+    private val ids = object : PaymentIdGenerator {
+        var handedOut = 0
+        override fun nextPaymentPublicId() = PaymentPublicId.constructFromPersisted("pay_N" + (++handedOut).toString().padStart(11, '0'))
+    }
+    private val service = PaymentDomainService(ids)
     private val refId = GatewayRefId.constructFromPersisted("201843917")
     private val card = CardMask.constructFromPersisted("6037-99**-****-1234")
 
@@ -44,6 +52,41 @@ class PaymentDomainServiceTest {
     private fun order(): Order = Order(placedOrder().getRecordedEvents())
 
     private fun Order.newEventTypes(): List<String> = getRecordedEvents().map { it.type.value }
+
+    // ============ another attempt ============
+
+    @Test
+    fun `another attempt of an unpaid order - for its payable, through the gateway asked, its id taken last`() {
+        val order = order()
+        val first = redirected(order)
+        first.cancel(at(2))
+
+        val attempt = service.startAttempt(order, listOf(first), PaymentGatewayCode.ZARINPAL, gatewayAvailable = true, sara, at(3)).getOrNull()!!
+
+        assertEquals(listOf(PaymentStatus.INITIATED, order.totals.payable, order.id, PaymentGatewayCode.ZARINPAL), listOf(attempt.status, attempt.amount, attempt.orderId, attempt.gateway))
+        assertEquals("pay_N00000000001", attempt.publicId.value)
+        assertEquals(PaymentStatus.CANCELLED, first.status, "the attempts of before stay as they are")
+    }
+
+    @Test
+    fun `another attempt is refused in the contract's order - paid, then time over, then the gateway, then too many - and takes no id`() {
+        val unavailable = false
+        val paid = order().also { o -> redirected(o).let { p -> service.shopperReturned(p, true, o, listOf(p), sara, at(1)); service.confirmed(p, o, refId, card, sara, at(1)) } }
+        val tenAttempts = { o: Order -> List(10) { redirected(o, it) } }
+
+        assertEquals(StartAttemptFailure.AlreadyPaid, service.startAttempt(paid, tenAttempts(paid), PaymentGatewayCode.SAMAN, unavailable, sara, at(30)).failureOrNull())
+        val late = order()
+        assertEquals(StartAttemptFailure.Expired, service.startAttempt(late, tenAttempts(late), PaymentGatewayCode.SAMAN, unavailable, sara, at(15)).failureOrNull())
+        val expired = order().also { it.expire(sara, at(16)) }
+        assertEquals(StartAttemptFailure.Expired, service.startAttempt(expired, emptyList(), PaymentGatewayCode.ZARINPAL, true, sara, at(16)).failureOrNull())
+        val open = order()
+        assertEquals(StartAttemptFailure.GatewayUnavailable, service.startAttempt(open, tenAttempts(open), PaymentGatewayCode.SAMAN, unavailable, sara, at(4)).failureOrNull())
+        val tooMany = service.startAttempt(open, tenAttempts(open), PaymentGatewayCode.ZARINPAL, true, sara, at(4)).failureOrNull()
+        assertEquals(StartAttemptFailure.TooManyAttempts(PaymentPolicy.Refusal.TooManyAttempts(Duration.ofMinutes(11))), tooMany)
+        assertEquals(mapOf("retryAfterSeconds" to 660L), tooMany?.meta)
+        assertEquals(0, ids.handedOut)
+        assertEquals("pay_N00000000001", service.startAttempt(open, tenAttempts(open).take(9), PaymentGatewayCode.ZARINPAL, true, sara, at(4)).getOrNull()?.publicId?.value)
+    }
 
     // ============ back from the gateway ============
 

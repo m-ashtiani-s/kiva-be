@@ -20,6 +20,7 @@ import com.kiva.application.usecase.cart.usecase.command.SetCartReservationUc
 import com.kiva.application.usecase.cart.usecase.query.GetCartUc
 import com.kiva.application.usecase.checkout.usecase.command.HandleGatewayCallbackUc
 import com.kiva.application.usecase.checkout.usecase.command.PlaceOrderUc
+import com.kiva.application.usecase.checkout.usecase.command.StartPaymentAttemptUc
 import com.kiva.application.usecase.checkout.usecase.command.StartPaymentUc
 import com.kiva.application.usecase.checkout.usecase.query.GetCheckoutContextUc
 import com.kiva.application.usecase.checkout.usecase.query.GetPaymentInitUc
@@ -122,10 +123,15 @@ class PurchaseTestStack(val clock: MutableClock) {
     )
     val startPayment = StartPaymentUc(transactions, payments, gateways, clock)
 
-    val paymentDomain = PaymentDomainService()
+    val paymentDomain = PaymentDomainService(RandomPaymentIds())
     val paymentConfirmation = PaymentConfirmation(transactions, payments, orders, users, paymentDomain, gateways, auth.sms, clock)
     val handleCallback = HandleGatewayCallbackUc(transactions, payments, orders, paymentDomain, gateways, paymentConfirmation, clock)
-    val paymentUseCases = PaymentUseCases(handleCallback, GetPaymentResultUc(transactions, payments, orderQm, settings, clock))
+    val startPaymentAttempt =
+        StartPaymentAttemptUc(transactions, IdempotencyGuard(IdempotencyStoreImpl(), clock), payments, orders, orderQm, settings, paymentDomain, gateways, clock)
+    val paymentUseCases = PaymentUseCases(
+        handleCallback, GetPaymentResultUc(transactions, payments, orderQm, settings, clock), startPaymentAttempt, startPayment,
+        GetPaymentInitUc(transactions, payments, orderQm),
+    )
 
     val cartUseCases = CartUseCases(
         openCart,

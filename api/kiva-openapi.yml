@@ -1508,10 +1508,15 @@ paths:
       operationId: retryPayment
       summary: "پرداخت مجدد سفارش پرداخت‌نشده (در صورت شکست/انصراف) — امکان تغییر درگاه"
       description: |
-        یک تراکنش تازه به مبلغ `totals.payable` سفارش ساخته می‌شود؛ `gateway` نیامده = درگاه همین تراکنش.
+        یک تراکنش تازه به مبلغ `totals.payable` سفارش ساخته می‌شود؛ `gateway` نیامده (یا بدنه‌ای نیامده) = درگاه همین تراکنش. `gateway` نامعتبر ← `400` روی `gateway`.
         `expiresAt` همان پایان مهلت پرداخت سفارش است و **تمدید نمی‌شود**؛ بعد از آن `PAYMENT_EXPIRED`.
         تلاش‌های قبلی لغو نمی‌شوند: اگر تلاشی قدیمی (مثلاً در تب دیگر) اول پرداخت شود همان برنده است، و تلاش‌های بعدی verify نمی‌شوند و درگاه مبلغشان را برمی‌گرداند.
-        هر سفارش حداکثر ۱۰ تلاش پرداخت دارد. تکرار با همان `Idempotency-Key` همان تراکنش را برمی‌گرداند (مثل `POST /orders`).
+        هر سفارش حداکثر ۱۰ تلاش پرداخت دارد. تکرار با همان `Idempotency-Key` همان تراکنش را برمی‌گرداند (مثل `POST /orders`)؛ کلید مال همین نوع درخواست است،
+        پس همان UUID روی `POST /me/orders/{orderCode}/payments` کلید دیگری است.
+
+        ترتیب قانون‌ها: تراکنش مال کاربر نیست یا شناسه شکل `pay_…` ندارد (`404`) ← `ORDER_ALREADY_PAID` ← `PAYMENT_EXPIRED` ← درگاه در دسترس نیست
+        (`PAYMENT_GATEWAY_UNAVAILABLE` **بدون** `meta`، تراکنشی ساخته نشد) ← ۱۰ تلاش (`429`). اگر تراکنش ساخته شد ولی درگاه جواب نداد،
+        `422 PAYMENT_GATEWAY_UNAVAILABLE` **با** `meta.orderCode` و `meta.paymentId` (همان رفتار `POST /orders`)؛ ادامه با retry ِ همین `paymentId`.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/PaymentId'
@@ -2134,9 +2139,10 @@ paths:
       operationId: payMyOrder
       summary: "پرداخت سفارش «در انتظار پرداخت» یا مانده‌ی پرداخت آن از حساب کاربری — امکان تغییر درگاه"
       description: |
-        مثل `POST /payments/{paymentId}/retry`، ولی با کد سفارش؛ چون صفحه‌ی سفارش `paymentId` ندارد.
+        مثل `POST /payments/{paymentId}/retry`، ولی با کد سفارش؛ چون صفحه‌ی سفارش `paymentId` ندارد. همان ترتیب قانون‌ها و همان دو حالت `PAYMENT_GATEWAY_UNAVAILABLE`؛
+        `gateway` نیامده = درگاه آخرین تلاش سفارش. کد سفارش کاربر دیگر یا کد بدشکل ← `404 ORDER_NOT_FOUND`.
         فقط وقتی مجاز است که `actions.canPay = true` باشد. یک تراکنش جدید ساخته می‌شود: برای سفارش پرداخت‌نشده به مبلغ `totals.payable`،
-        و برای سفارش پرداخت‌شده‌ای که بعد از درخواست تغییر مانده‌ی پرداخت دارد به مبلغ `totals.balanceDue`.
+        و برای سفارش پرداخت‌شده‌ای که بعد از درخواست تغییر مانده‌ی پرداخت دارد به مبلغ `totals.balanceDue` (فاز بعد؛ تا آن موقع سفارش پرداخت‌شده `ORDER_ALREADY_PAID` می‌گیرد).
         بازگشت از درگاه مثل تسویه است: `https://kiva.ir/checkout/result?paymentId=...`
       security: [{ bearerAuth: [] }]
       parameters:

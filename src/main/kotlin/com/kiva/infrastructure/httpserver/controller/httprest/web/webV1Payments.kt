@@ -1,19 +1,32 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
 import com.kiva.application.usecase.checkout.usecase.command.HandleGatewayCallbackUc
+import com.kiva.application.usecase.checkout.usecase.command.StartPaymentAttemptUc
+import com.kiva.application.usecase.checkout.usecase.command.StartPaymentUc
+import com.kiva.application.usecase.checkout.usecase.query.GetPaymentInitUc
 import com.kiva.application.usecase.checkout.usecase.query.GetPaymentResultUc
 import com.kiva.common.logging.getLogger
 import com.kiva.common.railway.unwrapOr
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentPublicId
+import com.kiva.infrastructure.common.http.respondFailure
 import com.kiva.infrastructure.common.http.respondResult
 import com.kiva.infrastructure.httpserver.auth.ACCESS
 import com.kiva.infrastructure.httpserver.auth.accessPrincipal
+import com.kiva.infrastructure.httpserver.controller.httprest.model.request.PayAgainHttpRequest
+import com.kiva.infrastructure.httpserver.controller.httprest.model.response.PaymentInitHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.PaymentResultHttpResponse
+import com.kiva.infrastructure.httpserver.idempotency.RequestFingerprint
+import com.kiva.infrastructure.httpserver.idempotency.idempotencyKeyHeader
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.Parameters
 import io.ktor.http.URLBuilder
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.auth.authenticate
+import io.ktor.server.request.contentLength
+import io.ktor.server.request.receive
 import io.ktor.server.request.receiveParameters
+import io.ktor.server.response.respond
 import io.ktor.server.response.respondRedirect
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
@@ -25,11 +38,15 @@ import kotlin.coroutines.cancellation.CancellationException
 class PaymentUseCases(
     val handleGatewayCallback: HandleGatewayCallbackUc,
     val getPaymentResult: GetPaymentResultUc,
+    val startPaymentAttempt: StartPaymentAttemptUc,
+    val startPayment: StartPaymentUc,
+    val getPaymentInit: GetPaymentInitUc,
 )
 
 /** The path parameters. */
 private const val GATEWAY = "gateway"
 private const val PAYMENT_ID = "paymentId"
+private const val ORDER_CODE = "orderCode"
 
 /** Only for the one log line of a callback that broke; the routes are functions, not a class. */
 private object PaymentRoutes
@@ -44,6 +61,10 @@ private val logger = PaymentRoutes.getLogger()
  *   from the request), with `?paymentId=` when the attempt was found and without it otherwise. Never JSON, never an
  *   error page: even a crash sends the shopper to the result page, where «سفارش‌های من» shows how it went.
  * - `GET /payments/{paymentId}`: how the attempt went, for that page; the customer's own only.
+ * - `POST /payments/{paymentId}/retry` and `POST /me/orders/{orderCode}/payments`: another attempt to pay an unpaid
+ *   order, with an `Idempotency-Key`. Like placing an order, in steps, so the gateway is never called inside a
+ *   transaction: StartPaymentAttemptUc makes the attempt, StartPaymentUc opens its session, a query builds the 201
+ *   PaymentInit; or 422 PAYMENT_GATEWAY_UNAVAILABLE with the order and the attempt when the gateway didn't answer.
  */
 fun Route.webV1Payments(useCases: PaymentUseCases, resultUrl: String) {
     route("/payment-callbacks/{$GATEWAY}") {
@@ -66,7 +87,32 @@ fun Route.webV1Payments(useCases: PaymentUseCases, resultUrl: String) {
             val query = GetPaymentResultUc.Qry(call.accessPrincipal().userId, call.parameters[PAYMENT_ID].orEmpty())
             call.respondResult(useCases.getPaymentResult.execute(query)) { PaymentResultHttpResponse.from(it) }
         }
+
+        post("/payments/{$PAYMENT_ID}/retry") {
+            val paymentId = call.parameters[PAYMENT_ID].orEmpty()
+            call.payAgain(useCases, StartPaymentAttemptUc.Target.Attempt(paymentId), PAYMENT_ID to paymentId)
+        }
+
+        post("/me/orders/{$ORDER_CODE}/payments") {
+            val orderCode = call.parameters[ORDER_CODE].orEmpty()
+            call.payAgain(useCases, StartPaymentAttemptUc.Target.Order(orderCode), ORDER_CODE to orderCode)
+        }
     }
+}
+
+/** Another attempt, its session opened, and its PaymentInit (201); a repeat with the same key answers the same attempt. */
+private suspend fun ApplicationCall.payAgain(useCases: PaymentUseCases, target: StartPaymentAttemptUc.Target, path: Pair<String, String>) {
+    val userId = accessPrincipal().userId
+    // The body is optional (contract): none at all keeps the gateway of before, exactly like `{}`.
+    val hasBody = (request.contentLength() ?: 0L) > 0L || request.headers.contains(HttpHeaders.TransferEncoding)
+    val body = if (hasBody) receive<PayAgainHttpRequest>() else PayAgainHttpRequest()
+    val fingerprint = RequestFingerprint.of(PayAgainHttpRequest.serializer(), body, mapOf(path))
+    val command = StartPaymentAttemptUc.Cmd(userId, target, idempotencyKeyHeader(), fingerprint, body.gateway)
+    val paymentId = useCases.startPaymentAttempt.execute(command).unwrapOr { return respondFailure(it) }
+    // The gateway refused or didn't answer: 422 with the order and the attempt, as after placing an order.
+    useCases.startPayment.execute(StartPaymentUc.Cmd(userId, paymentId)).unwrapOr { return respondFailure(it) }
+    val init = useCases.getPaymentInit.execute(GetPaymentInitUc.Qry(userId, paymentId)).unwrapOr { return respondFailure(it) }
+    respond(HttpStatusCode.Created, PaymentInitHttpResponse.from(init))
 }
 
 private suspend fun ApplicationCall.backFromGateway(useCases: PaymentUseCases, resultUrl: String, params: Parameters) {

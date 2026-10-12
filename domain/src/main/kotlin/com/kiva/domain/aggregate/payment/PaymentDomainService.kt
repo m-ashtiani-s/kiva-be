@@ -1,19 +1,25 @@
 package com.kiva.domain.aggregate.payment
 
 import com.kiva.common.logging.getLogger
+import com.kiva.common.railway.FailureKind
 import com.kiva.common.railway.Result
+import com.kiva.common.railway.ResultFailure
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.order.entity.Order
+import com.kiva.domain.aggregate.order.model.policy.PaymentPolicy
 import com.kiva.domain.aggregate.payment.entity.Payment
 import com.kiva.domain.aggregate.payment.model.valueobject.CardMask
 import com.kiva.domain.aggregate.payment.model.valueobject.GatewayRefId
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentFailureReason
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentStatus
+import com.kiva.domain.aggregate.payment.repository.PaymentIdGenerator
+import com.kiva.domain.aggregate.settings.model.valueobject.PaymentGatewayCode
 import java.time.Instant
 
 /**
- * The rules between an attempt to pay and its order (roadmap sections 3, row 3, and 10.6): what a shopper back from the
- * gateway changes, when an attempt may be confirmed, and what the gateway's answer to confirming it does to both.
+ * The rules between an attempt to pay and its order (roadmap sections 3, row 3, 10.6 and 10.8): when a new attempt may
+ * start, what a shopper back from the gateway changes, when an attempt may be confirmed, and what the gateway's answer
+ * to confirming it does to both.
  *
  * **An attempt is confirmed only while its order still waits for its money, and while no other attempt of the order is
  * being confirmed.** Both are checked on every attempt of the order, which the caller has locked together, so two
@@ -23,9 +29,41 @@ import java.time.Instant
  *
  * It changes the payment and the order it is given and never saves them; the use case saves both in its transaction.
  */
-class PaymentDomainService {
+class PaymentDomainService(private val paymentIdGenerator: PaymentIdGenerator) {
 
     private val logger = getLogger()
+
+    /**
+     * Another attempt to pay [order] (`POST /payments/{paymentId}/retry`, `POST /me/orders/{orderCode}/payments`), for its
+     * whole payable, through [gateway]. The rules, in the order the customer is told them:
+     *
+     * 1. the order isn't paid already (ORDER_ALREADY_PAID);
+     * 2. its time to pay hasn't ended, and it hasn't expired (PAYMENT_EXPIRED): the time is never moved, so a robot can't
+     *    hold the stock by asking again and again;
+     * 3. the gateway is available now ([gatewayAvailable]: switched on and with an adapter; PAYMENT_GATEWAY_UNAVAILABLE);
+     * 4. the order has had fewer than PaymentPolicy.MAX_ATTEMPTS_PER_ORDER attempts (429, until its time to pay ends).
+     *
+     * Only then is the attempt's id taken. The earlier attempts stay as they are: one still open in another tab that is
+     * paid first wins, and the rules of [beginConfirming] keep the order from being paid twice. [attempts] are every
+     * attempt of the order, locked by the caller.
+     */
+    fun startAttempt(
+        order: Order,
+        attempts: List<Payment>,
+        gateway: PaymentGatewayCode,
+        gatewayAvailable: Boolean,
+        by: UserId,
+        now: Instant,
+    ): Result<Payment, StartAttemptFailure> {
+        logger.info("startAttempt order=${order.code.value} gateway=$gateway attempts=${attempts.size}")
+        require(attempts.all { it.orderId == order.id }) { "The attempts are not those of order ${order.id.value}" }
+        if (order.status.isPaid) return Result.failure(StartAttemptFailure.AlreadyPaid)
+        if (!order.canStartPayment(now)) return Result.failure(StartAttemptFailure.Expired)
+        if (!gatewayAvailable) return Result.failure(StartAttemptFailure.GatewayUnavailable)
+        PaymentPolicy.refusalToAttempt(attempts.size, order.holdUntil, now)?.let { return Result.failure(StartAttemptFailure.TooManyAttempts(it)) }
+
+        return Result.success(Payment.start(paymentIdGenerator.nextPaymentPublicId(), order.id, by, gateway, order.totals.payable, now))
+    }
 
     /**
      * The shopper came back from the gateway: [paid] is what the gateway's callback said (Zarinpal's OK or NOK).
@@ -111,6 +149,19 @@ class PaymentDomainService {
     // Every change here is made only from the state checked just before it.
     private fun Result<Payment, Payment.Failure>.orBug(): Payment =
         getOrNull() ?: error("A payment change checked beforehand was refused: ${failureOrNull()?.code}")
+
+    sealed class StartAttemptFailure(code: String, kind: FailureKind, meta: Map<String, Any> = emptyMap()) : ResultFailure(code, kind, meta = meta) {
+        data object AlreadyPaid : StartAttemptFailure("ORDER_ALREADY_PAID", FailureKind.BUSINESS_RULE)
+
+        /** Its time to pay ended: its stock is given back, or about to be. Only «خرید دوباره» is left. */
+        data object Expired : StartAttemptFailure("PAYMENT_EXPIRED", FailureKind.BUSINESS_RULE)
+
+        data object GatewayUnavailable : StartAttemptFailure("PAYMENT_GATEWAY_UNAVAILABLE", FailureKind.BUSINESS_RULE)
+
+        /** 429, with how long until the order's time to pay ends (`retryAfterSeconds`). */
+        data class TooManyAttempts(val refusal: PaymentPolicy.Refusal.TooManyAttempts) :
+            StartAttemptFailure(refusal.code, refusal.kind, refusal.meta)
+    }
 
     /** What a shopper back from the gateway, or a paid attempt found by the reconciliation job, changed. */
     sealed interface Return {

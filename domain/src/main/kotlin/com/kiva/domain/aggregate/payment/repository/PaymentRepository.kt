@@ -25,7 +25,8 @@ interface PaymentRepository {
      * Locks every attempt of [orderId], always in the same order (oldest first), and reads them all. Settling an attempt
      * (a callback, the jobs) takes this lock, not the attempt's alone: whether an attempt may be confirmed depends on
      * the order's other attempts (PaymentDomainService), and one order of locking keeps two callbacks of one order from
-     * waiting on each other.
+     * waiting on each other. A new attempt is added only under this lock too, so what it returns is every attempt the
+     * order has, the ones added by whoever held the lock before included.
      */
     fun lockAttemptsOf(orderId: OrderId): List<Payment>
 

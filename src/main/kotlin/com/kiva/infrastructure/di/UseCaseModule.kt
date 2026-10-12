@@ -37,6 +37,7 @@ import com.kiva.application.usecase.catalog.usecase.query.ListColorsUc
 import com.kiva.application.usecase.catalog.usecase.query.ListMaterialsUc
 import com.kiva.application.usecase.checkout.usecase.command.HandleGatewayCallbackUc
 import com.kiva.application.usecase.checkout.usecase.command.PlaceOrderUc
+import com.kiva.application.usecase.checkout.usecase.command.StartPaymentAttemptUc
 import com.kiva.application.usecase.checkout.usecase.command.StartPaymentUc
 import com.kiva.application.usecase.checkout.usecase.query.GetCheckoutContextUc
 import com.kiva.application.usecase.checkout.usecase.query.GetPaymentInitUc
@@ -121,6 +122,12 @@ val useCaseModule = module(createdAtStart = true) {
         HandleGatewayCallbackUc(
             transactionManager = get(), paymentRepository = get(), orderRepository = get(), paymentDomainService = get(), paymentGateways = get(),
             paymentConfirmation = get(), clock = get(),
+        )
+    }
+    single {
+        StartPaymentAttemptUc(
+            transactionManager = get(), idempotencyGuard = get(), paymentRepository = get(), orderRepository = get(), orderQmRepository = get(),
+            shopSettingsRepository = get(), paymentDomainService = get(), paymentGateways = get(), clock = get(),
         )
     }
     single {

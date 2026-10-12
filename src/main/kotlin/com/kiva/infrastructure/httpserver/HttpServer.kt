@@ -33,6 +33,7 @@ import com.kiva.application.usecase.catalog.usecase.query.ListColorsUc
 import com.kiva.application.usecase.catalog.usecase.query.ListMaterialsUc
 import com.kiva.application.usecase.checkout.usecase.command.HandleGatewayCallbackUc
 import com.kiva.application.usecase.checkout.usecase.command.PlaceOrderUc
+import com.kiva.application.usecase.checkout.usecase.command.StartPaymentAttemptUc
 import com.kiva.application.usecase.checkout.usecase.command.StartPaymentUc
 import com.kiva.application.usecase.checkout.usecase.query.GetCheckoutContextUc
 import com.kiva.application.usecase.checkout.usecase.query.GetPaymentInitUc
@@ -195,6 +196,7 @@ fun Application.configureRouting() {
     val getPaymentInitUc by inject<GetPaymentInitUc>()
     val handleGatewayCallbackUc by inject<HandleGatewayCallbackUc>()
     val getPaymentResultUc by inject<GetPaymentResultUc>()
+    val startPaymentAttemptUc by inject<StartPaymentAttemptUc>()
     val sendLoginCodeUc by inject<SendLoginCodeUc>()
     val verifyLoginCodeUc by inject<VerifyLoginCodeUc>()
     val refreshSessionUc by inject<RefreshSessionUc>()
@@ -231,7 +233,10 @@ fun Application.configureRouting() {
                 ),
             )
             webV1Checkout(CheckoutUseCases(openCartUc, getCheckoutContextUc, placeOrderUc, startPaymentUc, getOrderSummaryUc, getPaymentInitUc))
-            webV1Payments(PaymentUseCases(handleGatewayCallbackUc, getPaymentResultUc), config.payment.resultUrl)
+            webV1Payments(
+                PaymentUseCases(handleGatewayCallbackUc, getPaymentResultUc, startPaymentAttemptUc, startPaymentUc, getPaymentInitUc),
+                config.payment.resultUrl,
+            )
         }
     }
 }

@@ -23,5 +23,5 @@ val domainServiceModule = module(createdAtStart = true) {
     single { AddressBookDomainService(geoRepository = get(), addressIdGenerator = get()) }
     single { CartDomainService(cartIdGenerator = get()) }
     single { OrderDomainService(orderIdGenerator = get()) }
-    single { PaymentDomainService() }
+    single { PaymentDomainService(paymentIdGenerator = get()) }
 }

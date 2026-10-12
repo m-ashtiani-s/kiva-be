@@ -48,8 +48,20 @@ class PaymentRepositoryImpl : PaymentRepository {
 
     override fun lock(publicId: PaymentPublicId): Payment? = lockAndRead(PaymentTbl.publicId eq publicId.value)
 
-    /** ORDER BY before FOR UPDATE: Postgres locks the rows as they come out of the sort, so always in this order. */
-    override fun lockAttemptsOf(orderId: OrderId): List<Payment> =
+    /**
+     * ORDER BY before FOR UPDATE: Postgres locks the rows as they come out of the sort, so always in this order.
+     *
+     * Read twice. The first read waits for whoever holds the attempts, but it only sees the rows of its own start: an
+     * attempt that the holder added meanwhile (a retry) is missing from it. The second read starts once the lock is
+     * ours, and everyone who adds an attempt takes this lock first, so it sees them all: the limit of attempts per
+     * order counts exactly, even when two retries come at once.
+     */
+    override fun lockAttemptsOf(orderId: OrderId): List<Payment> {
+        lockedAttemptsOf(orderId)
+        return lockedAttemptsOf(orderId)
+    }
+
+    private fun lockedAttemptsOf(orderId: OrderId): List<Payment> =
         PaymentTbl.selectAll().where { PaymentTbl.orderId eq orderId.value }.orderBy(PaymentTbl.id).forUpdate().map { it.toPayment() }
 
     override fun findByAuthority(gateway: PaymentGatewayCode, authority: GatewayAuthority): Payment? =
