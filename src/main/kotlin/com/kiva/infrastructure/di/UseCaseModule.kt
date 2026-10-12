@@ -35,6 +35,7 @@ import com.kiva.application.usecase.catalog.usecase.query.GetCategoryUc
 import com.kiva.application.usecase.catalog.usecase.query.ListCategoriesUc
 import com.kiva.application.usecase.catalog.usecase.query.ListColorsUc
 import com.kiva.application.usecase.catalog.usecase.query.ListMaterialsUc
+import com.kiva.application.usecase.checkout.usecase.query.GetCheckoutContextUc
 import com.kiva.application.usecase.geo.usecase.query.ListCitiesOfProvinceUc
 import com.kiva.application.usecase.geo.usecase.query.ListProvincesUc
 import com.kiva.application.usecase.inventory.usecase.command.AdjustInventoryUc
@@ -81,6 +82,14 @@ val useCaseModule = module(createdAtStart = true) {
     single { MergeGuestCartUc(cartCommands = get(), cartDomainService = get()) }
     single {
         GetCartUc(transactionManager = get(), cartRepository = get(), offerQmRepository = get(), shopSettingsRepository = get(), clock = get())
+    }
+
+    // --- checkout ---
+    single {
+        GetCheckoutContextUc(
+            transactionManager = get(), cartRepository = get(), offerQmRepository = get(), shopSettingsRepository = get(),
+            addressBookRepository = get(), geoRepository = get(), userRepository = get(), paymentGateways = get(), clock = get(),
+        )
     }
 
     // --- geo: queries ---

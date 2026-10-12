@@ -90,7 +90,7 @@
 | ۹ | سفارش: event store و read model | M | ✅ |
 | ۱۰ | پرداخت: مدل، جدول و درگاه آزمایشی | M | ✅ |
 | ۱۱ | Idempotency | S | ✅ |
-| ۱۲ | صفحه‌ی تسویه: `GET /checkout` | M | ⬜ |
+| ۱۲ | صفحه‌ی تسویه: `GET /checkout` | M | ✅ |
 | ۱۳ | ثبت سفارش: `POST /orders` | L | ⬜ |
 | ۱۴ | برگشت از درگاه و نتیجه‌ی پرداخت | L | ⬜ |
 | ۱۵ | پرداخت دوباره | M | ⬜ |
@@ -286,7 +286,7 @@ flowchart LR
 
 **یک منبع برای آستانه:** امروز نشان «ارسال رایگان» کاتالوگ آستانه رو از `kiva.shop.freeShippingThreshold` ِ config می‌خونه. گام ۲ اون رو به همین تنظیمات دیتابیس وصل می‌کنه و کلید config رو حذف می‌کنه، تا دو عدد هیچ‌وقت از هم جدا نشن.
 
-**درگاه «در دسترس»** یعنی ردیفش فعال باشه **و** برنامه براش آداپتر پیکربندی‌شده داشته باشه. پس سامان با فعال کردن ردیفش در دسترس نمی‌شه.
+**درگاه «در دسترس»** یعنی ردیفش فعال باشه **و** برنامه براش آداپتر پیکربندی‌شده داشته باشه. پس سامان با فعال کردن ردیفش در دسترس نمی‌شه. تسویه همه‌ی درگاه‌ها رو به ترتیب نشون می‌ده (در دسترس یا نه)، و درگاهی که اول انتخاب می‌شه (`isDefault`) پیش‌فرض فروشگاهه اگه در دسترسه، وگرنه اولین درگاه در دسترس؛ پس صفحه هیچ‌وقت روی درگاهی شروع نمی‌کنه که ثبت سفارش ردش کنه. هر دو قانون یه جان: `PaymentGateways` (گام ۱۲).
 
 ---
 
@@ -1240,6 +1240,8 @@ CONSTRAINT discountredemption_tbl_code_order_key UNIQUE ("codeId", "orderId")
 
 **خروجی Commandها:** شناسه‌ها (`AddressId`، `PlacedOrder(orderCode, paymentId?)`، `PaymentPublicId`). تنها استثنای مستند `CartChange` ـه (بخش ۶). Route بعد از هر Command، پاسخ رو با Query می‌سازه.
 
+**`GET /checkout` (گام ۱۲):** Route اول `OpenCartUc` رو با سبد همون کاربر صدا می‌زنه (همگام‌سازی، issueها یک بار) و بعد `GetCheckoutContextUc` رو با شناسه‌ای که برگردونده. سبد رو همون تابعی می‌سازه که `GetCartUc` (`cartDtoOf`)، پس `cart` ِ تسویه دقیقاً همون `GET /cart` ـه، و `shippingOptions`، `reservation` و `consolidation` ِ بالای پاسخ از خود `cart` برداشته می‌شن. ترتیب خطاها مثل ثبت سفارش: اول `CART_EMPTY` (فقط سبدی که هیچ ردیفی نداره؛ ردیف غیرقابل خرید هم ردیفه و ثبت سفارش ردش می‌کنه)، بعد `addressId`: مال کس دیگه، ناموجود یا غیرعدد، هر سه یه `400` روی `addressId` با `ADDRESS_NOT_FOUND`. `selectedAddressId` ِ دفترچه‌ی خالی `null` ـه و فرانت فرم آدرس تازه (`newAddress`) رو باز می‌کنه. `messengerPhone` شماره‌ی پیام‌رسان پیش‌فرض کاربره، وگرنه موبایل حساب. شکستِ بعد از همگام‌سازی (`CART_EMPTY` یا `addressId`) issueهای همون لحظه رو مصرف کرده، ولی جمع‌ها همیشه تازه‌ان: فقط پیام «از آخرین بازدید» از دست می‌ره، نه عدد درست.
+
 **کد سفارش بدشکل** (`/me/orders/abc`) مثل slug بدشکل محصول با `404 ORDER_NOT_FOUND` جواب می‌گیره، نه ۴۰۰، تا معلوم نشه فرمت درست چیه.
 
 ---
@@ -1408,6 +1410,7 @@ application/src/main/kotlin/com/kiva/application/
   port/PaymentGateway.kt, PaymentGateways.kt, IdempotencyStore.kt, SmsSender.kt (+ sendOrderPaid)
   repository/OfferQmRepository.kt, OfferQm.kt, OrderQmRepository.kt
   usecase/cart/CartCaller.kt, CartCommands.kt                    (step 6: who the caller is; the shared run of every cart command)
+  usecase/cart/CartView.kt                                       (step 12: the cart as seen, shared by the cart and the checkout)
   usecase/idempotency/IdempotencyGuard.kt                        (step 11: the shared run of every request with an Idempotency-Key)
   usecase/geo/usecase/query/…
   usecase/address/usecase/{command,query}/…
@@ -1427,7 +1430,7 @@ src/main/kotlin/com/kiva/infrastructure/
   httpserver/controller/httprest/web/webV1Geo.kt, webV1Addresses.kt, webV1Cart.kt, webV1Checkout.kt, webV1PaymentCallbacks.kt, webV1MyOrders.kt
   httpserver/controller/httprest/web/devFakeGateway.kt
   httpserver/cart/CartAccess.kt                Bearer or X-Cart-Token → CartOwner, and the response header
-  httpserver/controller/httprest/model/request/…, model/response/… (CartTexts.kt, OrderTexts.kt, PaymentTexts.kt)
+  httpserver/controller/httprest/model/request/…, model/response/… (CartTexts.kt, CheckoutTexts.kt, OrderTexts.kt, PaymentTexts.kt)
   persistence/exposed/tbl/ProvinceTbl.kt, CityTbl.kt, ShopSettingsTbl.kt, ShippingMethodTbl.kt, PaymentGatewayTbl.kt, AddressTbl.kt, CartTbl.kt (+ CartItemTbl), OrderQmTbl.kt, PaymentTbl.kt, PaymentLogTbl.kt, IdempotencyKeyTbl.kt
   persistence/exposed/…RepositoryImpl.kt, OfferQmRepositoryImpl.kt, OrderQmRepositoryImpl.kt, IdempotencyStoreImpl.kt
   persistence/exposed/projector/OrderQmProjector.kt
@@ -1476,8 +1479,9 @@ PURCHASE_REVIEW.md                             (step 21)
 | 26 | `CartItem.image`، `CartReservation.timeline`، `Cart.items`، `PATCH /cart/items/{itemId}`، `CartMutationResponse.message`، هدر `X-Cart-Token` (گام ۶) | `image` ← `nullable` (تا آپلود مدیا `null`، مثل کارت محصول). `timeline` وقتی رزرو در تنظیمات خاموشه خالیه. ردیف‌ها به ترتیب افزودن، قدیمی‌ترین اول. `PATCH` بدون هر دو ← 400 روی `quantity` (`QUANTITY_OR_VARIANT_REQUIRED`)، با هر دو اول رنگ، و `itemId` ِ بدشکل ← 404. `message` برای تغییر ردیف و افزودنی که چیزی اضافه نکرد `null` ـه. توکن تازه روی پاسخ خطا هیچ‌وقت نمیاد | هنوز مدیایی با `id` نداریم؛ تایم‌لاین تاریخ شمسی لازم داره و تا گام ۱۹ کسی نمی‌بینه‌ش؛ سبدِ درخواستِ شکست‌خورده نگه داشته نمی‌شه |
 | 27 | `POST /cart/merge`، `AuthResponse.cart`، `VerifyOtpRequest.guestCartToken` (گام ۷) | سبد مهمان خالی روش ارسال و سوییچ رزرو کاربر رو عوض نمی‌کنه و فقط حذف می‌شه. توکن بدشکل هم مثل ناشناخته‌ست (`200` بدون ادغام)، و `400` فقط وقتی `guestCartToken` نیومده یا رشته نیست. سبد پاسخ (هم merge و هم verify) مثل `GET /cart` همگام‌سازی می‌شه و `issues` داره. ادغام فقط بعد از کد درست | هر بازدید یه سبد مهمان خالی می‌سازه، و اون نباید `TIPAX` ِ کاربر رو بی‌صدا به `POST` برگردونه؛ ادغام دوباره باید بی‌خطر باشه؛ سبد پاسخ ورود همونیه که مشتری می‌بینه |
 | 28 | `POST /orders`، `OrderDetail.timeline` (گام ۸) | قدم ۹ ِ ترتیب قانون‌ها: بعد از `PRODUCT_UNAVAILABLE` و `OUT_OF_STOCK`، `422 QUANTITY_EXCEEDS_LIMIT` (`meta.itemIds`) وقتی رنگ‌های یه محصول با هم بیشتر از سقف خریدشن (سقف بعد از افزودن کم شده). تایم‌لاین برای هر تلاش پرداخت ناموفق یه ردیف `PAYMENT_FAILED` داره | سفارش سقف محصول رو خودش هم نگه می‌داره، پس این حالت یه جواب لازم داشت؛ هر شکست یه واقعه‌ست |
+| 29 | `GET /checkout`، `CheckoutContext`، `PaymentGateway` (گام ۱۲) | `CART_EMPTY` فقط برای سبد بدون هیچ ردیف (ردیف غیرقابل خرید هم ردیفه)، و ترتیب: اول `CART_EMPTY`، بعد `addressId`. `addressId` ِ کس دیگه، ناموجود یا غیرعدد ← یه `400` روی `addressId` با `ADDRESS_NOT_FOUND`. `selectedAddressId` با دفترچه‌ی خالی `null` (فرانت فرم `newAddress` رو باز می‌کنه). `shippingOptions`، `reservation` و `consolidation` ِ بالای پاسخ همون‌های `cart` ان. `paymentGateways` همه‌ی درگاه‌ها به ترتیب، با `available` = فعال **و** آداپتر دار، و `isDefault` همیشه یه درگاه در دسترس (پیش‌فرض فروشگاه، وگرنه اولین در دسترس). `messengers` به ترتیب روبیکا، تلگرام، بله. `giftWrap` فعلاً `{available: false, price: 0}` | صفحه و ثبت سفارش یه چیز رو یه‌جور رد کنن؛ هیچ پاسخی نگه آدرس کس دیگه‌ای هست؛ صفحه هیچ‌وقت روی درگاهی شروع نکنه که پرداخت رو نمی‌گیره |
 
-**پیام برای فرانت (گام ۰ و ۲۱):** ردیف‌های ۲، ۴، ۵، ۶، ۷، ۸، ۱۰، ۱۱، ۲۰، ۲۴، ۲۵، ۲۶، ۲۷ و ۲۸ رفتار فرانت رو عوض می‌کنن. `docs/FRONTEND_PURCHASE.md` (گام ۲۱) کل جریان رو برای فرانت توضیح می‌ده، مثل `FRONTEND_AUTH.md`.
+**پیام برای فرانت (گام ۰ و ۲۱):** ردیف‌های ۲، ۴، ۵، ۶، ۷، ۸، ۱۰، ۱۱، ۲۰، ۲۴، ۲۵، ۲۶، ۲۷، ۲۸ و ۲۹ رفتار فرانت رو عوض می‌کنن. `docs/FRONTEND_PURCHASE.md` (گام ۲۱) کل جریان رو برای فرانت توضیح می‌ده، مثل `FRONTEND_AUTH.md`.
 
 ---
 
@@ -1755,7 +1759,7 @@ PURCHASE_REVIEW.md                             (step 21)
 
 ---
 
-### گام ۱۲: صفحه‌ی تسویه: `GET /checkout` · M ⬜
+### گام ۱۲: صفحه‌ی تسویه: `GET /checkout` · M ✅
 
 **می‌سازی:** `GetCheckoutContextUc` و route. Route اول `OpenCartUc` (همگام‌سازی) و بعد Query رو صدا می‌زنه. ثابت‌های پیام‌رسان‌ها (اسم و راهنما) در لایه‌ی HTTP.
 
@@ -1766,12 +1770,12 @@ PURCHASE_REVIEW.md                             (step 21)
 2. «درگاه در دسترس» کجا حساب بشه: تنظیمات، رجیستری آداپترها یا هر دو؟
 
 **تموم شده یعنی:**
-- [ ] بدون ورود ← 401. سبد بدون ردیف ← `422 CART_EMPTY`.
-- [ ] `addresses` با پیش‌فرض شروع می‌شه. `selectedAddressId` = پیش‌فرض، یا `?addressId=` اگه مال خودشه. آدرس کس دیگه ← 400 روی `addressId`.
-- [ ] `selectedMessenger` = `defaultMessenger` ِ کاربر، و `messengerPhone` = `defaultMessengerPhone` یا موبایل حساب.
-- [ ] `messengers` سه تاست (روبیکا، تلگرام، بله). در `paymentGateways`، زرین‌پال `available` ـه و سامان و ملت نه.
-- [ ] `giftWrap = {available: false, price: 0}` و `termsUrl = "/pages/terms"`.
-- [ ] `cart` همون سبدیه که `GET /cart` می‌ده، با `issues` ِ همگام‌سازی.
+- [x] بدون ورود ← 401. سبد بدون ردیف ← `422 CART_EMPTY`.
+- [x] `addresses` با پیش‌فرض شروع می‌شه. `selectedAddressId` = پیش‌فرض، یا `?addressId=` اگه مال خودشه. آدرس کس دیگه ← 400 روی `addressId`.
+- [x] `selectedMessenger` = `defaultMessenger` ِ کاربر، و `messengerPhone` = `defaultMessengerPhone` یا موبایل حساب.
+- [x] `messengers` سه تاست (روبیکا، تلگرام، بله). در `paymentGateways`، زرین‌پال `available` ـه و سامان و ملت نه.
+- [x] `giftWrap = {available: false, price: 0}` و `termsUrl = "/pages/terms"`.
+- [x] `cart` همون سبدیه که `GET /cart` می‌ده، با `issues` ِ همگام‌سازی.
 
 ---
 
@@ -2101,6 +2105,7 @@ Route: StartPaymentUc ← 201 با order و payment، یا 422 PAYMENT_GATEWAY_U
 | ۲۰ مهر ۱۴۰۵ | ۹ | Purchase step 9 | `V15__orders.sql` (`orderid_seq` و `orderqm_tbl`، بدون FK، با قید «پرداخت‌شده دقیقاً با `paidOn`»). چهار payload ِ رویداد و پنج payload ِ تیکه‌ها (همون شکل در read model)، با JSON ِ طلایی برای هر رویداد. `OrderRepositoryImpl`، `OrderIdGeneratorImpl`، `OrderQmProjector` (ردیف، تایم‌لاین، `soldCount`)، `OrderQmRepository.findOfCustomer`. کاربر گفت سؤال‌ها رو با پیشنهاد خودم جواب بدم: تایم‌لاین رو Projector می‌سازه؛ `soldCount` رو Projector ِ سفارش عوض می‌کنه و قفل محصول‌ها قبل از stream ِ سفارش گرفته می‌شه (تست «پرداخت و انقضا در یه لحظه، بدون بن‌بست»). `OrderTotals.constructFromPersisted`. ستون `reserveRequested` به‌جای `reserved`؛ `reservationGroupId` با گام ۱۹. ۲۴ تست تازه، ۱۶۹۴ کل |
 | ۲۰ مهر ۱۴۰۵ | ۱۰ | Purchase step 10 | `V16__payments.sql` (`payment_tbl` با یکتایی authority و `refId`، «یک پرداخت موفق برای هر سفارش»، CHECK ِ قانون‌های `Payment`، بدون FK؛ `paymentlog_tbl` فقط‌اضافه با trigger). Aggregate ِ `Payment` با جدول انتقال‌های ۱۰.۱ (به‌علاوه‌ی `REDIRECTED → FAILED` برای inquiry ِ job تطبیق)، `PaymentLogEntry`، `PaymentRepositoryImpl` (`FOR UPDATE` و نسخه)، `RandomPaymentIds`. پورت `PaymentGateway` و رجیستری `PaymentGateways` (فعال **و** آداپتر دار). `FakePaymentGateway` با صفحه‌ی `/dev/fake-gateway/{authority}` (دو فرم POST و `302` به callback)، حالت‌های «جواب نده/رد کن/کند باش» و شمارنده؛ هر تماسش داخل تراکنش خطا می‌ده. `kiva.payment` در `application.conf` و `PaymentConfig` (merchant id ِ پنهان؛ `zarinpal` تا گام ۱۸ برنامه رو بالا نمیاره). سؤال‌ها با پیشنهاد خودم: پرداخت جدا از سفارش و بدون ES، و درگاه آزمایشی خودش از Exposed می‌پرسه که داخل تراکنشه یا نه. ۴۴ تست تازه، ۱۷۳۸ کل |
 | ۲۰ مهر ۱۴۰۵ | ۱۱ | Purchase step 11 | `V17__idempotency.sql` (یکتایی `(userId, scope, key)`، FK با حذف حساب). پورت `IdempotencyStore` با `IdempotentRequest`، `IdempotencyKey` و `RequestHash`؛ `IdempotencyStoreImpl` (قفل advisory ِ ۶۴ بیتی و مقایسه‌ی hash)؛ سرویس `IdempotencyGuard.once` که جریان بخش ۱۲ رو یه جا نگه می‌داره؛ `RequestFingerprint` (بدنه‌ی decode‌شده دوباره با JSON ِ ثابت، کلیدهای مرتب، به‌علاوه‌ی پارامترهای مسیر) و خوندن هدر. سؤال‌ها با پیشنهاد خودم جواب داده شدن (بخش ۱۲). یه تست هم پیدا شد که به‌خاطر `runBlocking` ِ غیر `Unit` اصلاً اجرا نمی‌شد؛ درست شد و همه‌ی کلاس‌های تست با شمارش `@Test` چک شدن. ۱۶ تست تازه، ۱۷۵۴ کل |
+| ۲۰ مهر ۱۴۰۵ | ۱۲ | Purchase step 12 | `GetCheckoutContextUc` و `GET /checkout`: Route اول `OpenCartUc` (همگام‌سازی، issueها یک بار) و بعد Query با شناسه‌ی همون سبد. ساختن سبد (`cartDtoOf`) از `GetCartUc` بیرون اومد و بین سبد و تسویه مشترکه، پس `cart` ِ تسویه دقیقاً `GET /cart` ـه، و `shippingOptions`، `reservation` و `consolidation` ِ بالای پاسخ همون‌های `cart` ان. ترتیب مثل ثبت سفارش: `CART_EMPTY` (ردیف غیرقابل خرید هم ردیفه)، بعد `addressId`: مال کس دیگه، ناموجود یا غیرعدد، یه `400` با `ADDRESS_NOT_FOUND`. سؤال‌ها با پیشنهاد خودم: `selectedAddressId` ِ دفترچه‌ی خالی `null` ـه و فرانت فرم `newAddress` رو باز می‌کنه؛ «در دسترس» هر دوئه (تنظیمات **و** آداپتر) و یه جا حساب می‌شه، `PaymentGateways`، که تسویه و ثبت سفارش هر دو ازش می‌پرسن؛ `isDefault` همیشه یه درگاه در دسترسه (`checkoutOptions`: پیش‌فرض فروشگاه، وگرنه اولین در دسترس). پیام‌رسان‌ها (اسم و راهنما) ثابت‌های `CheckoutTexts`، `giftWrap = {false, 0}` و `termsUrl = /pages/terms`. یه تست خودم هم با خرابکاری پیدا شد که ترتیب ردیف‌هاش به ساعت ثابت تست بستگی داشت؛ درست شد. کانترکت: ردیف ۲۹. ۱۰ تست تازه، ۱۷۶۴ کل |
 
 ---
 

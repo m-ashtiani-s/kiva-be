@@ -1333,14 +1333,16 @@ paths:
         گزینه‌های ارسال با قیمت محاسبه‌شده، وضعیت رزرو (تاریخ ارسال بعد از ۴ روز)، درگاه‌های فعال،
         و اگر کاربر رزرو فعال داشته باشد پیشنهاد **پیوستن به سفارش رزروی** (`consolidation`).
         سبد مثل `GET /cart` همگام‌سازی می‌شود، پس `cart.issues` تغییرهای از آخرین بازدید را دارد (هر کدام یک بار).
-        اگر سبد هیچ ردیفی نداشته باشد `422 CART_EMPTY`.
+        `shippingOptions`، `reservation` و `consolidation` ِ بالای پاسخ همان‌های `cart` اند.
+        اگر سبد هیچ ردیفی نداشته باشد `422 CART_EMPTY`. ردیفی که قابل خرید نیست (`purchasable = false`) هم ردیف است: صفحه نشانش می‌دهد و `POST /orders` ردش می‌کند.
+        ترتیب خطاها مثل `POST /orders`: اول `CART_EMPTY`، بعد `addressId`.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: addressId
           in: query
           description: |
             برای محاسبه‌ی مجدد (مثلاً امکان ادغام با رزرو فقط برای همان آدرس است). نیامده = آدرس پیش‌فرض.
-            آدرسی که مال این کاربر نیست یا وجود ندارد `400` روی فیلد `addressId` می‌گیرد.
+            آدرسی که مال این کاربر نیست، وجود ندارد یا عدد نیست `400` روی فیلد `addressId` با کد `ADDRESS_NOT_FOUND` می‌گیرد (هر سه یکی، تا معلوم نشود آدرس کس دیگری وجود دارد).
           schema: { type: integer }
       responses:
         '200':
@@ -6092,8 +6094,8 @@ components:
         logoUrl: { type: string, format: uri, nullable: true }
         brandColor: { type: string, example: '#F2C230' }
         initial: { type: string, description: حرف داخل لوگوی جایگزین, example: ز }
-        isDefault: { type: boolean, example: true }
-        available: { type: boolean, example: true }
+        isDefault: { type: boolean, description: 'درگاهی که تسویه اول انتخاب می‌کند، و همیشه یکی از درگاه‌های `available`: پیش‌فرض فروشگاه اگر در دسترس است، وگرنه اولین درگاه در دسترس. بدون درگاه در دسترس، هیچ‌کدام', example: true }
+        available: { type: boolean, description: 'در تنظیمات فروشگاه فعال است **و** سرور برایش آداپتر دارد. فقط همین‌ها در `POST /orders` پذیرفته می‌شوند', example: true }
     CheckoutContext:
       type: object
       required: [cart, addresses, messengers, shippingOptions, paymentGateways]
@@ -6101,10 +6103,12 @@ components:
         cart: { $ref: '#/components/schemas/Cart' }
         addresses:
           type: array
+          description: آدرس پیش‌فرض اول، بعد بقیه از قدیمی‌ترین (مثل `GET /me/addresses`)
           items: { $ref: '#/components/schemas/Address' }
-        selectedAddressId: { type: integer, nullable: true, example: 42 }
+        selectedAddressId: { type: integer, nullable: true, description: 'آدرسی که تسویه با آن شروع می‌شود: `addressId` ِ درخواست، وگرنه آدرس پیش‌فرض. `null` وقتی کاربر هیچ آدرسی ندارد: فرانت فرم آدرس تازه (`newAddress` در `POST /orders`) را باز می‌کند', example: 42 }
         messengers:
           type: array
+          description: روبیکا، تلگرام و بله، به همین ترتیب
           items: { $ref: '#/components/schemas/MessengerOption' }
         selectedMessenger: { type: string, allOf: [{ $ref: '#/components/schemas/PhotoMessengerChannel' }], nullable: true, description: پیام‌رسان پیش‌فرض پروفایل یا آخرین انتخاب }
         messengerPhone: { allOf: [{ $ref: '#/components/schemas/PhoneNumber' }], description: آخرین شماره‌ی استفاده‌شده یا موبایل حساب }
@@ -6115,10 +6119,11 @@ components:
         consolidation: { type: object, allOf: [{ $ref: '#/components/schemas/ReservationConsolidation' }], nullable: true }
         paymentGateways:
           type: array
+          description: همه‌ی درگاه‌های فروشگاه به ترتیب، در دسترس یا نه (`available`)؛ دقیقاً یکی `isDefault` اگر حداقل یکی در دسترس است
           items: { $ref: '#/components/schemas/PaymentGateway' }
         giftWrap:
           type: object
-          description: '[پیشنهادی] بسته‌بندی هدیه'
+          description: '[پیشنهادی] بسته‌بندی هدیه. فعلاً `{available: false, price: 0}`'
           properties:
             available: { type: boolean, example: true }
             price: { allOf: [{ $ref: '#/components/schemas/Money' }], example: 45000 }

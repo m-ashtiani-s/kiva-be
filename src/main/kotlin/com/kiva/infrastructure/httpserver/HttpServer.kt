@@ -31,6 +31,7 @@ import com.kiva.application.usecase.catalog.usecase.query.GetCategoryUc
 import com.kiva.application.usecase.catalog.usecase.query.ListCategoriesUc
 import com.kiva.application.usecase.catalog.usecase.query.ListColorsUc
 import com.kiva.application.usecase.catalog.usecase.query.ListMaterialsUc
+import com.kiva.application.usecase.checkout.usecase.query.GetCheckoutContextUc
 import com.kiva.application.usecase.geo.usecase.query.ListCitiesOfProvinceUc
 import com.kiva.application.usecase.geo.usecase.query.ListProvincesUc
 import com.kiva.application.usecase.product.usecase.query.FindProductsUc
@@ -47,6 +48,7 @@ import com.kiva.infrastructure.httpserver.controller.httprest.web.AddressUseCase
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminCustomerUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AuthUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.CartUseCases
+import com.kiva.infrastructure.httpserver.controller.httprest.web.CheckoutUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.MeUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Addresses
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminCustomers
@@ -55,6 +57,7 @@ import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Auth
 import com.kiva.infrastructure.httpserver.controller.httprest.web.devFakeGateway
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Cart
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Catalog
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Checkout
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Geo
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Me
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Products
@@ -177,6 +180,7 @@ fun Application.configureRouting() {
     val chooseShippingMethodUc by inject<ChooseShippingMethodUc>()
     val setCartReservationUc by inject<SetCartReservationUc>()
     val mergeGuestCartUc by inject<MergeGuestCartUc>()
+    val getCheckoutContextUc by inject<GetCheckoutContextUc>()
     val sendLoginCodeUc by inject<SendLoginCodeUc>()
     val verifyLoginCodeUc by inject<VerifyLoginCodeUc>()
     val refreshSessionUc by inject<RefreshSessionUc>()
@@ -212,6 +216,7 @@ fun Application.configureRouting() {
                     setCartReservationUc, mergeGuestCartUc,
                 ),
             )
+            webV1Checkout(CheckoutUseCases(openCartUc, getCheckoutContextUc))
         }
     }
 }

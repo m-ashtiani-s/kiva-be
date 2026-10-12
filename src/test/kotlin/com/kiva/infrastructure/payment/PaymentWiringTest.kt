@@ -26,7 +26,8 @@ import kotlin.test.assertTrue
 /** Which gateways can take a payment, and what the app is given to take them with. */
 class PaymentWiringTest {
 
-    private fun settings(vararg active: PaymentGatewayCode): ShopSettings = ShopSettings.constructFromPersisted(
+    /** Zarinpal, Saman and Mellat in that order; only [active] switched on, and [default] the shop's default. */
+    private fun settings(vararg active: PaymentGatewayCode, default: PaymentGatewayCode = ZARINPAL): ShopSettings = ShopSettings.constructFromPersisted(
         shippingMethods = listOf(ShippingMethod.constructFromPersisted(ShippingMethodCode.POST, "پست معمولی", Money.constructFromPersisted(75_000), DeliveryDays.constructFromPersisted(3, 5), "box", true, 1)),
         defaultShippingMethod = ShippingMethodCode.POST,
         freeShippingThreshold = Money.constructFromPersisted(3_000_000),
@@ -37,7 +38,7 @@ class PaymentWiringTest {
         reservationHoldDays = 4,
         returnWindowDays = 7,
         paymentGateways = listOf(ZARINPAL, SAMAN, MELLAT).mapIndexed { index, code ->
-            PaymentGatewayOption.constructFromPersisted(code, code.name, "#F2C230", "ز", null, isActive = code in active, isDefault = index == 0, sortOrder = index)
+            PaymentGatewayOption.constructFromPersisted(code, code.name, "#F2C230", "ز", null, isActive = code in active, isDefault = code == default, sortOrder = index)
         },
     )
 
@@ -50,6 +51,27 @@ class PaymentWiringTest {
         // Switched on in the panel, but no Saman adapter exists.
         assertFalse(gateways.isAvailable(SAMAN, settings(ZARINPAL, SAMAN)))
         assertEquals(null, gateways.of(MELLAT))
+    }
+
+    @Test
+    fun `checkout lists every gateway in order, and starts on the shop's default while it is available`() {
+        val options = gateways.checkoutOptions(settings(ZARINPAL))
+
+        assertEquals(listOf(ZARINPAL, SAMAN, MELLAT), options.map { it.gateway.code })
+        assertEquals(listOf(true, false, false), options.map { it.available })
+        assertEquals(listOf(true, false, false), options.map { it.isDefault })
+    }
+
+    @Test
+    fun `a default that can't take the payment gives way to the first available gateway, and with none available there is no default`() {
+        // Saman is the shop's default and switched on, but has no adapter.
+        val samanDefault = gateways.checkoutOptions(settings(ZARINPAL, SAMAN, default = SAMAN))
+        assertEquals(listOf(true, false, false), samanDefault.map { it.isDefault })
+        assertEquals(listOf(true, false, false), samanDefault.map { it.available })
+
+        val noneOn = gateways.checkoutOptions(settings())
+        assertEquals(listOf(false, false, false), noneOn.map { it.available })
+        assertEquals(listOf(false, false, false), noneOn.map { it.isDefault })
     }
 
     @Test
