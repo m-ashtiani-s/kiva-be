@@ -48,8 +48,11 @@ import com.kiva.application.usecase.geo.usecase.query.ListCitiesOfProvinceUc
 import com.kiva.application.usecase.geo.usecase.query.ListProvincesUc
 import com.kiva.application.usecase.inventory.usecase.command.AdjustInventoryUc
 import com.kiva.application.usecase.order.usecase.command.ExpireUnpaidOrderUc
+import com.kiva.application.usecase.order.usecase.command.ReorderUc
 import com.kiva.application.usecase.order.usecase.query.FindExpirableOrdersUc
+import com.kiva.application.usecase.order.usecase.query.GetMyOrderUc
 import com.kiva.application.usecase.order.usecase.query.GetOrderSummaryUc
+import com.kiva.application.usecase.order.usecase.query.ListMyOrdersUc
 import com.kiva.application.usecase.payment.PaymentConfirmation
 import com.kiva.application.usecase.payment.usecase.command.ReconcilePaymentUc
 import com.kiva.application.usecase.payment.usecase.query.FindStalePaymentsUc
@@ -159,6 +162,14 @@ val useCaseModule = module(createdAtStart = true) {
     single { DeleteOldIdempotencyKeysUc(transactionManager = get(), idempotencyStore = get(), clock = get()) }
 
     // --- orders ---
+    single { ListMyOrdersUc(transactionManager = get(), orderQmRepository = get(), shopSettingsRepository = get(), clock = get()) }
+    single {
+        GetMyOrderUc(
+            transactionManager = get(), orderQmRepository = get(), paymentRepository = get(), shopSettingsRepository = get(), colorRepository = get(),
+            clock = get(),
+        )
+    }
+    single { ReorderUc(transactionManager = get(), orderQmRepository = get(), cartCommands = get(), cartDomainService = get()) }
     single { GetOrderSummaryUc(transactionManager = get(), orderQmRepository = get(), shopSettingsRepository = get(), clock = get()) }
 
     // --- geo: queries ---
@@ -299,8 +310,8 @@ val useCaseModule = module(createdAtStart = true) {
     }
 
     // --- admin: customers and roles ---
-    single { FindCustomersUc(transactionManager = get(), adminCustomerRepository = get()) }
-    single { GetCustomerUc(transactionManager = get(), adminCustomerRepository = get()) }
+    single { FindCustomersUc(transactionManager = get(), adminCustomerRepository = get(), orderQmRepository = get()) }
+    single { GetCustomerUc(transactionManager = get(), adminCustomerRepository = get(), orderQmRepository = get()) }
     single {
         SetUserRolesUc(transactionManager = get(), userRepository = get(), authSessionRepository = get(), securityEventLog = get(), clock = get())
     }

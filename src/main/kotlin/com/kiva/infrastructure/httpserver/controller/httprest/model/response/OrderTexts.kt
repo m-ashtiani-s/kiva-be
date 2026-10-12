@@ -1,6 +1,7 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.model.response
 
 import com.kiva.domain.aggregate.order.model.valueobject.OrderStatus
+import com.kiva.infrastructure.common.http.toPersianNumber
 import com.kiva.domain.aggregate.user.model.valueobject.MessengerChannel
 
 /**
@@ -58,6 +59,27 @@ object OrderTexts {
 
     /** «بعد از تحویل به پست معمولی این‌جا نمایش داده می‌شه»: the shipment card before there is a tracking code. */
     fun shipmentWaiting(methodName: String): String = "بعد از تحویل به $methodName این‌جا نمایش داده می‌شه"
+
+    /**
+     * One line of the order's timeline, by the status it moved to. The first line is its placing, whatever came after;
+     * a failed attempt says so, and why in its note.
+     */
+    fun timelineLabel(status: OrderStatus): String = when (status) {
+        OrderStatus.PENDING_PAYMENT -> "سفارش ثبت شد"
+        OrderStatus.PAYMENT_FAILED -> "پرداخت ناموفق"
+        OrderStatus.PROCESSING -> "پرداخت شد"
+        OrderStatus.RESERVED -> "پرداخت شد و رزرو شد"
+        OrderStatus.EXPIRED -> "مهلت پرداخت تموم شد"
+        else -> statusLabel(status)
+    }
+
+    /** The photos before shipping, before there are any (contract example). */
+    fun photosWaiting(messengerName: String): String =
+        "قبل از ارسال، از کیفت عکس و ویدیو می‌گیریم و توی $messengerName برات می‌فرستیم؛ یه نسخه هم همین‌جا قرار می‌گیره."
+
+    /** «خرید دوباره»'s toast: how many bags went into the cart, in Persian digits, or that none could. */
+    fun reordered(addedCount: Int): String =
+        if (addedCount > 0) "${addedCount.toLong().toPersianNumber()} کیف به سبد اضافه شد" else "کیف‌های این سفارش الان موجود نیستن"
 
     /** The messenger's name, as checkout lists it. */
     fun messengerName(channel: MessengerChannel): String = CheckoutTexts.messengers.first { it.channel == channel.name }.name

@@ -147,6 +147,7 @@ object ErrorMessages {
         "LAST_ACTIVE_VARIANT" to "محصول منتشرشده حداقل یه رنگ فعال لازم داره؛ اول محصول رو از انتشار دربیار",
         "QUANTITY_INVALID" to "تعداد باید بین ۱ و {max} باشه",
         "ORDER_CODE_INVALID" to "کد سفارش باید به شکل KV-218340 باشه",
+        "ORDER_FILTER_INVALID" to "فیلتر سفارش‌ها باید یکی از all، current، delivered یا cancelled باشه",
         "STOCK_DELTA_INVALID" to "تغییر موجودی باید یه عدد غیرصفر و حداکثر {maxAbs} باشه (مثبت برای ورود، منفی برای خروج)",
         "ADJUSTMENT_NOTE_TOO_LONG" to "یادداشت حداکثر {maxLength} حرفه",
         "ADJUSTMENT_REASON_INVALID" to "دلیل تغییر باید یکی از RESTOCK، STOCKTAKE، DAMAGED، RETURNED یا MANUAL_CORRECTION باشه",

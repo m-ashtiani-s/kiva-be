@@ -2102,6 +2102,11 @@ paths:
       tags: [Orders]
       operationId: listMyOrders
       summary: "سفارش‌های من (فیلتر همه / جاری / تحویل شده)"
+      description: |
+        تازه‌ترین سفارش اول (ترتیب دیگری ندارد)؛ پیش‌فرض ۲۰ در هر صفحه. `counts` شمارنده‌ی همه‌ی تب‌هاست، هر تبی که نمایش داده شود.
+        هر وضعیت دقیقاً در یک تب است: `current` = `PENDING_PAYMENT`، `PAYMENT_FAILED`، `RESERVED`، `PROCESSING`، `PHOTO_SENT`، `CHANGE_REQUESTED`، `SHIPPED` ·
+        `delivered` = `DELIVERED`، `RETURN_REQUESTED`، `RETURNED` · `cancelled` = `EXPIRED`، `CANCELLED`، `REFUNDED`.
+        سفارشی که پرداخت‌نشده منقضی شد در `cancelled` است. `filter` نامعتبر ← `400` روی `filter` با `ORDER_FILTER_INVALID`.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: filter
@@ -2122,6 +2127,10 @@ paths:
       tags: [Orders]
       operationId: getMyOrder
       summary: "جزئیات کامل سفارش (کالاها، عکس‌ها و ویدیوهای قبل از ارسال، آدرس، خلاصه پرداخت، تایم‌لاین)"
+      description: |
+        سفارش کاربر دیگر، سفارشی که نیست و کدی که شکل `KV-…` ندارد هر سه `404 ORDER_NOT_FOUND`.
+        `payment` آخرین تلاش پرداخت سفارش است (`null` برای سفارشی که مبلغی نداشت). `items[].image` تا آپلود مدیا `null` است؛
+        `items[].color` نام و hex ِ لحظه‌ی خرید را دارد و `isLight`/`sortOrder` ِ پالت فعلی را.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/OrderCode'
@@ -2292,6 +2301,10 @@ paths:
       tags: [Orders]
       operationId: reorder
       summary: "خرید دوباره — افزودن کالاهای موجود این سفارش به سبد [پیشنهادی]"
+      description: |
+        هر رنگ سفارش با همان تعداد، مثل `POST /cart/items` (بیشتر از سقف کم می‌شود با `QUANTITY_REDUCED`). `addedCount` تعداد کیف‌هایی است که واقعاً اضافه شد.
+        `skipped`: ناموجود ← `OUT_OF_STOCK`، بیرون از فروشگاه یا حذف‌شده ← `UNAVAILABLE`، سبد همین الان سقف آن را دارد ← `ALREADY_AT_MAX`؛ `name` نام لحظه‌ی خرید است.
+        هیچ‌وقت به‌خاطر ناموجودی خطا نمی‌دهد. سفارش کاربر دیگر یا کد بدشکل ← `404 ORDER_NOT_FOUND`.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/OrderCode'
@@ -8065,9 +8078,9 @@ components:
         phone: { $ref: '#/components/schemas/PhoneNumber' }
         fullName: { type: string, nullable: true }
         email: { type: string, nullable: true }
-        ordersCount: { type: integer }
-        totalSpent: { $ref: '#/components/schemas/Money' }
-        lastOrderAt: { type: string, format: date-time, nullable: true }
+        ordersCount: { type: integer, description: 'سفارش‌هایی که پولشان رسیده (پرداخت‌شده، از جمله لغو و مرجوعی بعدی)؛ پرداخت‌نشده و منقضی نه' }
+        totalSpent: { allOf: [{ $ref: '#/components/schemas/Money' }], description: 'جمع `payable` ِ همان سفارش‌ها (در فاز استرداد، مبلغ برگشتی از آن کم می‌شود)' }
+        lastOrderAt: { type: string, format: date-time, nullable: true, description: 'زمان ثبت آخرین همان سفارش‌ها؛ بدون خرید `null`' }
         defaultMessenger: { type: string, allOf: [{ $ref: '#/components/schemas/PhotoMessengerChannel' }], nullable: true }
         marketingSmsOptIn: { type: boolean }
         roles:

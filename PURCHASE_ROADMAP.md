@@ -95,7 +95,7 @@
 | ۱۴ | برگشت از درگاه و نتیجه‌ی پرداخت | L | ✅ |
 | ۱۵ | پرداخت دوباره | M | ✅ |
 | ۱۶ | کارهای زمان‌بندی‌شده | M | ✅ |
-| ۱۷ | سفارش‌های من و خرید دوباره | M | ⬜ |
+| ۱۷ | سفارش‌های من و خرید دوباره | M | ✅ |
 | ۱۸ | درگاه واقعی زرین‌پال | M | ⬜ |
 | ۱۹ | رزرو ۴ روزه و ادغام سفارش‌ها | L | ⬜ |
 | ۲۰ | کد تخفیف | L | ⬜ |
@@ -1260,6 +1260,8 @@ CONSTRAINT discountredemption_tbl_code_order_key UNIQUE ("codeId", "orderId")
 
 **کد سفارش بدشکل** (`/me/orders/abc`) مثل slug بدشکل محصول با `404 ORDER_NOT_FOUND` جواب می‌گیره، نه ۴۰۰، تا معلوم نشه فرمت درست چیه.
 
+**«سفارش‌های من» (گام ۱۷):** تب هر وضعیت رو `OrderTab` (دامنه) می‌گه، پس فیلتر و شمارنده‌ها هیچ‌وقت با هم ناجور نمی‌شن؛ `EXPIRED` در «لغوشده» ـه. لیست فقط از read model، تازه‌ترین اول (بدون پارامتر `sort`)، و کارت هر سفارش با همون `OrderSummaryDto.of` ِ ثبت سفارش. صفحه‌ی سفارش هم از read model، به‌علاوه‌ی آخرین تلاش پرداخت از `payment_tbl` (`findAttemptsOf`) و `isLight`/`sortOrder` ِ رنگ‌ها از پالت فعلی. «خرید دوباره» با `CartDomainService.reorder`: هر رنگ مثل افزودن به سبد، و `addedCount` تعداد کیف‌هاست. پنل مشتری‌ها: `ordersCount` و `totalSpent` از سفارش‌های پرداخت‌شده (`OrderStatus.isPaid`) و `lastOrderAt` زمان ثبت آخرینشون، با یه کوئری برای کل صفحه (`purchasesOf`).
+
 ---
 
 <a id="18"></a>
@@ -1501,8 +1503,9 @@ PURCHASE_REVIEW.md                             (step 21)
 | 31 | `/payment-callbacks/{gateway}`، `GET /payments/{paymentId}`، `PaymentResult` (گام ۱۴) | callback: اگه تلاش دیگه‌ای از همون سفارش در حال verify ـه، این یکی فعلاً verify نمی‌شه و `PENDING` می‌مونه تا سرور تمومش کنه؛ `saman`، `mellat` و خطای داخلی هم redirect بدون `paymentId`. شناسه‌ی بدشکل ← `404 PAYMENT_NOT_FOUND`. `failureReason` فقط برای تلاش ناموفق؛ `canRetry` موقع verify ـِ در جریان `false`؛ `nextSteps` فقط برای `SUCCEEDED` و وگرنه خالی | دو تلاش یه سفارش هیچ‌وقت با هم verify نمی‌شن؛ «همیشه 302»؛ دکمه‌ی «تلاش دوباره» وسط verify یعنی احتمال دو بار پول |
 | 32 | `POST /payments/{paymentId}/retry`، `POST /me/orders/{orderCode}/payments` (گام ۱۵) | بدنه اختیاری (بدون بدنه = `{}`)؛ `gateway` نیومده = درگاه همون تلاش، یا با کد سفارش درگاه آخرین تلاش؛ `gateway` نامعتبر ← `400` روی `gateway`. ترتیب: `404` (شناسه یا کد بدشکل هم) ← `ORDER_ALREADY_PAID` ← `PAYMENT_EXPIRED` ← `PAYMENT_GATEWAY_UNAVAILABLE` بدون `meta` ← `429`؛ و درگاهی که بعد از ساختن تلاش جواب نده `422 PAYMENT_GATEWAY_UNAVAILABLE` با `meta.orderCode` و `meta.paymentId`. کلید `Idempotency-Key` مال همون نوع درخواسته. سفارش پرداخت‌شده تا فاز درخواست تغییر `ORDER_ALREADY_PAID` می‌گیره | فرانت باید دو حالت ۴۲۲ رو از هم جدا کنه؛ هیچ پاسخی نگه سفارش یا پرداخت کس دیگه‌ای هست |
 | 33 | `PaymentStatus` (گام ۱۶) | `EXPIRED` برای تلاشی هم هست که مشتری بیش از ۲۰ دقیقه در درگاه رها کرد و درگاه می‌گه پرداخت نشده؛ `failureReason` ـش اگه سفارش با تلاش دیگه پرداخت شده همین رو می‌گه | تلاش رهاشده باید یه جا تموم بشه |
+| 34 | `/me/orders*`، `AdminCustomer` (گام ۱۷) | تب هر وضعیت (`EXPIRED` در `cancelled`)، تازه‌ترین اول، `ORDER_FILTER_INVALID`؛ کد بدشکل ← ۴۰۴؛ `payment` ِ جزئیات = آخرین تلاش؛ `image` تا مدیا `null`؛ «خرید دوباره»: `addedCount` تعداد کیف‌ها و `ALREADY_AT_MAX` وقتی سبد سقفش رو داره؛ `ordersCount`/`totalSpent`/`lastOrderAt` ِ پنل از سفارش‌های پرداخت‌شده | فیلتر و شمارنده یه قانون داشته باشن؛ عدد پنل با عدد فروش یکی باشه |
 
-**پیام برای فرانت (گام ۰ و ۲۱):** ردیف‌های ۲، ۴، ۵، ۶، ۷، ۸، ۱۰، ۱۱، ۲۰، ۲۴، ۲۵، ۲۶، ۲۷، ۲۸، ۲۹، ۳۰، ۳۱، ۳۲ و ۳۳ رفتار فرانت رو عوض می‌کنن. `docs/FRONTEND_PURCHASE.md` (گام ۲۱) کل جریان رو برای فرانت توضیح می‌ده، مثل `FRONTEND_AUTH.md`.
+**پیام برای فرانت (گام ۰ و ۲۱):** ردیف‌های ۲، ۴، ۵، ۶، ۷، ۸، ۱۰، ۱۱، ۲۰، ۲۴، ۲۵، ۲۶، ۲۷، ۲۸، ۲۹، ۳۰، ۳۱، ۳۲، ۳۳ و ۳۴ رفتار فرانت رو عوض می‌کنن. `docs/FRONTEND_PURCHASE.md` (گام ۲۱) کل جریان رو برای فرانت توضیح می‌ده، مثل `FRONTEND_AUTH.md`.
 
 ---
 
@@ -1924,7 +1927,7 @@ Route: StartPaymentUc ← 201 با order و payment، یا 422 PAYMENT_GATEWAY_U
 
 ---
 
-### گام ۱۷: سفارش‌های من و خرید دوباره · M ⬜
+### گام ۱۷: سفارش‌های من و خرید دوباره · M ✅
 
 **می‌سازی:** `ListMyOrdersUc`، `GetMyOrderUc`، `ReorderUc`، `webV1MyOrders.kt` و `OrderTexts` (برچسب‌ها، `progress`، پیام‌های انتظار). پر کردن `ordersCount`، `totalSpent` و `lastOrderAt` ِ `/admin/customers` از سفارش‌های پرداخت‌شده.
 
@@ -1935,12 +1938,12 @@ Route: StartPaymentUc ← 201 با order و payment، یا 422 PAYMENT_GATEWAY_U
 2. `totalSpent` یعنی جمع `payable` ِ سفارش‌های پرداخت‌شده. بعداً با استرداد چی عوض می‌شه؟
 
 **تموم شده یعنی:**
-- [ ] لیست با تازه‌ترین شروع می‌شه و صفحه‌بندی داره (پیش‌فرض ۲۰). فیلترهای `current`، `delivered` و `cancelled` درستن، و `counts` هر چهار تب رو داره.
-- [ ] جزئیات: `items`، `address`، `totals`، `payment` (آخرین تلاش)، `timeline` از رویدادها، `progress`، `actions`، `preShipmentMediaDetail` با `WAITING` و پیام انتظار، `shipment` با `waitingMessage`، `returns: []` و `invoiceUrl: null`.
-- [ ] سفارش کس دیگه، یا کد بدشکل ← `404 ORDER_NOT_FOUND`.
-- [ ] `statusLabel` و `statusTone` طبق جدول بخش ۹ ان.
-- [ ] `reorder` ِ سفارش منقضی ← کالاهای موجود به سبد اضافه می‌شن و ناموجودها تو `skipped` با `OUT_OF_STOCK` یا `UNAVAILABLE` میان.
-- [ ] `/admin/customers` برای کاربری با دو سفارش پرداخت‌شده و یه منقضی ← `ordersCount = 2`، `totalSpent` درست و `lastOrderAt` ِ آخرین پرداخت‌شده.
+- [x] لیست با تازه‌ترین شروع می‌شه و صفحه‌بندی داره (پیش‌فرض ۲۰). فیلترهای `current`، `delivered` و `cancelled` درستن، و `counts` هر چهار تب رو داره.
+- [x] جزئیات: `items`، `address`، `totals`، `payment` (آخرین تلاش)، `timeline` از رویدادها، `progress`، `actions`، `preShipmentMediaDetail` با `WAITING` و پیام انتظار، `shipment` با `waitingMessage`، `returns: []` و `invoiceUrl: null`.
+- [x] سفارش کس دیگه، یا کد بدشکل ← `404 ORDER_NOT_FOUND`.
+- [x] `statusLabel` و `statusTone` طبق جدول بخش ۹ ان.
+- [x] `reorder` ِ سفارش منقضی ← کالاهای موجود به سبد اضافه می‌شن و ناموجودها تو `skipped` با `OUT_OF_STOCK` یا `UNAVAILABLE` میان.
+- [x] `/admin/customers` برای کاربری با دو سفارش پرداخت‌شده و یه منقضی ← `ordersCount = 2`، `totalSpent` درست و `lastOrderAt` ِ آخرین پرداخت‌شده.
 
 ---
 
@@ -2131,6 +2134,7 @@ Route: StartPaymentUc ← 201 با order و payment، یا 422 PAYMENT_GATEWAY_U
 | ۲۰ مهر ۱۴۰۵ | ۱۴ | Purchase step 14 | `HandleGatewayCallbackUc` (GET و POST ِ `/payment-callbacks/{gateway}`، همیشه 302، حتی وقتی چیزی داخلش می‌شکنه)، `GetPaymentResultUc` و `GET /payments/{paymentId}`، `PaymentTexts`. دامنه: `PaymentDomainService` (قانون‌های بین تلاش و سفارش: برگشت مشتری، شروع verify، تأیید و رد) و `PaymentPolicy.canRetry`. سرویس application ِ `PaymentConfirmation` (verify بیرون تراکنش و تسویه در تراکنش دوم، و پیامک بعد از commit) که job تطبیق گام ۱۶ هم ازش استفاده می‌کنه. **یه خطر تازه پیدا و بسته شد:** قفل ردیف یه پرداخت جلوی دو تلاش ِ یه سفارش رو نمی‌گرفت که در یک لحظه برگردن و هر دو verify بشن (پول دو بار گرفته می‌شد و ایندکس «یک موفق» فقط ثبت دومی رو رد می‌کرد، بعد از گرفتن پول). حالا تسویه همه‌ی تلاش‌های سفارش رو با هم قفل می‌کنه (`PaymentRepository.lockAttemptsOf`، به جای `lockByAuthority`)، تلاشی که همزمان با verify ـِ تلاش دیگه برمی‌گرده منتظر می‌مونه (job تمومش می‌کنه)، و `V18__payment_one_verifying.sql` دیوار دومه؛ پس رزرو گروهی و کد تخفیف V19 و V20 شدن. سؤال‌ها با پیشنهاد خودم: پرداخت از روی authority پیدا می‌شه چون اون شناسه رو درگاه داده و ما ذخیره کردیم؛ اگه از `paymentId` ِ آدرس پیدا می‌شد، کسی می‌تونست جلسه‌ی پرداخت‌شده‌ی سفارش ارزون خودش رو با شناسه‌ی پرداخت سفارش گرون بفرسته و رابطه‌ی «این جلسه مال کدوم پرداخته» رو درخواست تعیین می‌کرد، نه ما. برای سفارش منقضی verify نمی‌کنیم چون پولی که گرفته نشه خودکار برمی‌گرده؛ verify و بعد reverse فقط تا ۳۰ دقیقه و از IP ِ ثبت‌شده کار می‌کنه و اگه شکست بخوره پول مشتری برای سفارشی که موجودیش آزاد شده پیش ما می‌مونه. تصمیم‌های دیگه: `saman` و `mellat` (بی‌آداپتر) به جای `404` همون redirect ِ بدون `paymentId` رو می‌گیرن (کانترکت: همیشه 302)؛ callback ِ دوباره روی تلاش `VERIFYING` هیچ کاری نمی‌کنه؛ `canRetry` وسط verify `false` ـه؛ `nextSteps` فقط برای موفق. کانترکت: ردیف ۳۱. ۲۸ تست تازه، ۱۸۱۳ کل |
 | ۲۰ مهر ۱۴۰۵ | ۱۵ | Purchase step 15 | `StartPaymentAttemptUc` و دو route ـش (`POST /payments/{paymentId}/retry` و `POST /me/orders/{orderCode}/payments`): شکل اول (کلید و `gateway`، ۴۰۰)، بعد یه تراکنش با `IdempotencyGuard`، مالکیت (۴۰۴ برای بدشکل هم)، قفل همه‌ی تلاش‌های سفارش و قانون‌های `PaymentDomainService.startAttempt` به ترتیب کانترکت (پرداخت‌شده، مهلت، درگاه، سقف ۱۰ با `Retry-After` تا پایان مهلت)؛ شناسه‌ی تلاش آخر از همه. Route مثل `POST /orders`: تلاش، `StartPaymentUc`، `GetPaymentInitUc`. بدنه اختیاریه. **یه خطای همزمانی پیدا و درست شد:** `lockAttemptsOf` بعد از انتظار، تلاشی رو که نگه‌دارنده‌ی قفل اضافه کرده بود نمی‌دید، پس دو retry ِ همزمان سقف ۱۰ رو رد می‌کردن؛ حالا بعد از گرفتن قفل دوباره می‌خونه. سؤال‌ها با پیشنهاد خودم: `expiresAt` تمدید نمی‌شه چون اگه می‌شد یه ربات با retry ِ هر ۱۴ دقیقه موجودی رو برای همیشه از فروشگاه بیرون نگه می‌داشت؛ تلاش‌های قدیمی لغو نمی‌شن چون مشتری شاید همون لحظه تو تب دیگه داره پرداختش می‌کنه، و قانون‌های گام ۱۴ (یک verify در هر لحظه و فقط برای سفارش در انتظار) نمی‌ذارن پول دو بار گرفته بشه. کانترکت: ردیف ۳۲. ۱۱ تست تازه، ۱۸۲۴ کل |
 | ۲۰ مهر ۱۴۰۵ | ۱۶ | Purchase step 16 | `JobScheduler` (یه coroutine برای هر کار زیر `SupervisorJob`، از `ApplicationStarted` تا `ApplicationStopping`، با `kiva.jobs.enabled` ِ سخت‌گیر) و `PurchaseJobs`: انقضای سفارش (هر دقیقه، `FindExpirableOrdersUc` ← `ExpireUnpaidOrderUc`)، تطبیق پرداخت (هر ۲ دقیقه، `FindStalePaymentsUc` ← `ReconcilePaymentUc`)، پاک‌سازی سبد مهمان (۴ صبح تهران) و کلیدهای Idempotency (ساعتی). قانون‌ها در دامنه: `PaymentDomainService.expireUnpaid` و `abandon`، `PaymentPolicy.isAbandoned`، `InventoryDomainService.releaseForOrder`، `CartRetentionPolicy`. انقضا اول همه‌ی تلاش‌های سفارش رو قفل می‌کنه، پس با callback یکی‌یکی می‌شه. تطبیق ِ `REDIRECTED` با inquiry و همون قانون‌های callback. **یه چیز تازه:** تلاش رهاشده (۲۰ دقیقه، و درگاه می‌گه `IN_BANK`) حالا `EXPIRED` می‌شه؛ وگرنه تلاش اضافه‌ی سفارشی که با تلاش دیگه پرداخت شده تا ابد هر ۲ دقیقه از درگاه پرسیده می‌شد. سؤال‌ها با پیشنهاد خودم: کاندیدا از read model میاد ولی تصمیم با Aggregate ـه، چون `UPDATE … WHERE holdUntil < now` نه پرداخت ِ در جریان رو می‌دید، نه موجودی رو آزاد می‌کرد، نه رویداد و تایم‌لاین می‌ساخت، و وضعیتی رو که همون لحظه عوض شده بود بازنویسی می‌کرد؛ قفل جدا برای دو نمونه لازم نیست چون هر کاندیدا در تراکنش خودش و با قفل‌های خودش تصمیم گرفته می‌شه و Aggregate دوباره‌کاری رو رد می‌کنه (دو اجرای همزمان ← یه `OrderExpired`، یه آزادسازی، یه `OrderPaid`). برنامه یه بار روی پورت ۸۰۸۱ بالا اومد و کارها سر وقت اجرا شدن. ۲۱ تست تازه، ۱۸۴۵ کل. کانترکت: ردیف ۳۳ |
+| ۲۰ مهر ۱۴۰۵ | ۱۷ | Purchase step 17 | `ListMyOrdersUc` (تازه‌ترین اول، تب‌ها با `OrderTab` ِ دامنه، شمارنده‌ی همه‌ی تب‌ها، `ORDER_FILTER_INVALID`)، `GetMyOrderUc` (ردیف‌ها، آدرس با `fullText`، جمع‌ها، آخرین تلاش پرداخت، تایم‌لاین با برچسب و دلیل شکست، عکس‌های قبل از ارسال `WAITING` با پیام انتظار)، `ReorderUc` (`CartDomainService.reorder` و `CartCommands`)، `webV1MyOrders.kt`، و `ordersCount`/`totalSpent`/`lastOrderAt` ِ `/admin/customers` با یه کوئری برای کل صفحه. `OrderSummaryDto.of` بین ثبت سفارش و لیست مشترک شد. سؤال‌ها با پیشنهاد خودم: سفارش `EXPIRED` در «لغوشده» ـه (دیگه چیزی براش اتفاق نمی‌افته و «جاری» یعنی چیزی که مشتری منتظرشه؛ mock هم همینه)؛ `totalSpent` جمع `payable` ِ سفارش‌های پرداخت‌شده‌ست و در فاز استرداد `refunded` ازش کم می‌شه (سفارش لغوشده‌ی پرداخت‌شده تو شمارش می‌مونه چون پولش یه بار اومده). یه تست ناپایدار خودم پیدا و درست شد: کیف‌ها تو یه لحظه‌ی ساعت تست به سبد می‌رفتن و شماره‌ی ردیف‌ها جابه‌جا می‌شد. ۱۰ تست تازه، ۱۸۵۵ کل. کانترکت: ردیف ۳۴ |
 
 ---
 

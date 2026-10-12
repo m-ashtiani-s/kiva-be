@@ -2,6 +2,9 @@ package com.kiva.domain.aggregate.cart
 
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.cart.CartFixtures.AIDA_BLACK
+import com.kiva.domain.aggregate.cart.CartFixtures.AIDA_CARAMEL
+import com.kiva.domain.aggregate.cart.CartFixtures.AIDA_RED
+import com.kiva.domain.aggregate.cart.CartFixtures.aida
 import com.kiva.domain.aggregate.cart.CartFixtures.NILA_BLACK
 import com.kiva.domain.aggregate.cart.CartFixtures.NILA_OLIVE
 import com.kiva.domain.aggregate.cart.CartFixtures.SequentialCartIds
@@ -17,6 +20,11 @@ import com.kiva.domain.aggregate.cart.CartFixtures.quantity
 import com.kiva.domain.aggregate.cart.CartFixtures.userCart
 import com.kiva.domain.aggregate.cart.CartFixtures.variant
 import com.kiva.domain.aggregate.cart.model.CartIssueCode.PRICE_INCREASED
+import com.kiva.domain.aggregate.cart.model.CartIssueCode.QUANTITY_REDUCED
+import com.kiva.domain.aggregate.cart.model.Reordered
+import com.kiva.domain.aggregate.cart.model.Reordered.Reason.ALREADY_AT_MAX
+import com.kiva.domain.aggregate.cart.model.Reordered.Reason.OUT_OF_STOCK
+import com.kiva.domain.aggregate.cart.model.Reordered.Reason.UNAVAILABLE
 import com.kiva.domain.aggregate.cart.model.CartIssueCode.SHIPPING_METHOD_CHANGED
 import com.kiva.domain.aggregate.cart.model.valueobject.CartOwner
 import com.kiva.domain.aggregate.cart.model.valueobject.CartToken
@@ -176,5 +184,50 @@ class CartDomainServiceTest {
         assertEquals(listOf(itemId(1) to PRICE_INCREASED), cart.issues.map { it.itemId to it.code })
         assertEquals(1_600_000, cart.lines.single().seenUnitPrice.toman)
         assertEquals(at(2), cart.updatedOn)
+    }
+
+    @Nested
+    inner class Reordering {
+        @Test
+        fun `an earlier order's colors go into the cart - one there already adds to its line, more than fits is cut`() {
+            val cart = userCart(line(itemId(1), NILA_BLACK, 4, 1_450_000))
+
+            val reordered = service.reorder(cart, listOf(variant(NILA_BLACK) to quantity(2), variant(AIDA_BLACK) to quantity(1)), offers(), settings, at(1))
+
+            assertEquals(Reordered(addedQuantity = 2, skipped = emptyList()), reordered)
+            assertEquals(mapOf(NILA_BLACK to 5, AIDA_BLACK to 1), cart.lines.associate { it.variantId.value to it.quantity.value })
+            assertEquals(listOf(QUANTITY_REDUCED), cart.issues.map { it.code }, "Nila black was cut from 6 to its limit of 5")
+        }
+
+        @Test
+        fun `a color that can't go in is skipped with why - none left, out of the shop, gone, or the cart holds all it may`() {
+            val cart = userCart(line(itemId(1), NILA_BLACK, 5, 1_450_000))
+            val shop = offers(aida(AIDA_BLACK, available = 0), aida(AIDA_RED, inShop = false))
+
+            val reordered = service.reorder(
+                cart,
+                listOf(AIDA_BLACK, AIDA_RED, 999L, NILA_BLACK, AIDA_CARAMEL).map { variant(it) to quantity(1) },
+                shop,
+                settings,
+                at(1),
+            )
+
+            assertEquals(1, reordered.addedQuantity)
+            assertEquals(
+                listOf(AIDA_BLACK to OUT_OF_STOCK, AIDA_RED to UNAVAILABLE, 999L to UNAVAILABLE, NILA_BLACK to ALREADY_AT_MAX),
+                reordered.skipped.map { it.variantId.value to it.reason },
+            )
+            assertEquals(mapOf(NILA_BLACK to 5, AIDA_CARAMEL to 1), cart.lines.associate { it.variantId.value to it.quantity.value })
+        }
+
+        @Test
+        fun `a color whose product's limit the cart's other colors hold is ALREADY_AT_MAX too`() {
+            val cart = userCart(line(itemId(1), NILA_BLACK, 5, 1_450_000))
+
+            val reordered = service.reorder(cart, listOf(variant(NILA_OLIVE) to quantity(1)), offers(), settings, at(1))
+
+            assertEquals(listOf(NILA_OLIVE to ALREADY_AT_MAX), reordered.skipped.map { it.variantId.value to it.reason })
+            assertEquals(0, reordered.addedQuantity)
+        }
     }
 }

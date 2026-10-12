@@ -3,6 +3,7 @@ package com.kiva.application.usecase.admin.usecase.query
 import com.kiva.application.dto.AdminCustomerDto
 import com.kiva.application.repository.AdminCustomerRepository
 import com.kiva.application.repository.AdminCustomerRepository.CustomerSearch
+import com.kiva.application.repository.OrderQmRepository
 import com.kiva.common.logging.getLogger
 import com.kiva.common.pagination.Page
 import com.kiva.common.pagination.Pageable
@@ -16,7 +17,7 @@ import com.kiva.common.valueobject.IranianMobileNumber
 
 /**
  * The panel's customer list (`GET /admin/customers`, ADMIN and SUPPORT): everyone, or those matching `q`, newest
- * account first.
+ * account first, each with what they bought (their paid orders, the money, the latest one).
  *
  * `q` is read the way people type it: Persian or Arabic digits and letters are made the same as stored ones. A whole
  * mobile number in any form (`+98 912 …`, `۰۹۱۲…`) finds exactly that phone; otherwise every word must be in the phone,
@@ -25,6 +26,7 @@ import com.kiva.common.valueobject.IranianMobileNumber
 class FindCustomersUc(
     private val transactionManager: TransactionManager,
     private val adminCustomerRepository: AdminCustomerRepository,
+    private val orderQmRepository: OrderQmRepository,
 ) : QueryUseCase<FindCustomersUc.Qry, Page<AdminCustomerDto>, FindCustomersUc.Failure> {
 
     private val logger = getLogger()
@@ -36,7 +38,10 @@ class FindCustomersUc(
         val search = searchOf(query.q) ?: return Result.failure(Failure.InvalidInput(listOf(QueryTooLong)))
 
         return transactionManager.inTransaction {
-            Result.success(adminCustomerRepository.find(search, query.pageable).map(AdminCustomerDto::from))
+            val customers = adminCustomerRepository.find(search, query.pageable)
+            // One query for the whole page's purchases, not one per customer.
+            val purchases = orderQmRepository.purchasesOf(customers.items.map { it.id })
+            Result.success(customers.map { AdminCustomerDto.from(it, purchases[it.id]) })
         }
     }
 

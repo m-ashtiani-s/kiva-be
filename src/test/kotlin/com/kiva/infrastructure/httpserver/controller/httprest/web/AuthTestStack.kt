@@ -35,6 +35,7 @@ import com.kiva.infrastructure.httpserver.API_V1
 import com.kiva.infrastructure.httpserver.auth.configureAuthentication
 import com.kiva.infrastructure.httpserver.configureHttp
 import com.kiva.infrastructure.persistence.exposed.AdminCustomerRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.OrderQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.AuthSessionRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.CartRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.OfferQmRepositoryImpl
@@ -85,8 +86,8 @@ class AuthTestStack(val clock: MutableClock, maxSmsPerHour: Int = 300, val otpCo
     val logout = LogoutUc(transactions, sessions, sessionTokens, events, clock)
     val updateProfile = UpdateMyProfileUc(transactions, users, clock)
     val checkPanelAccess = CheckPanelAccessUc(transactions, sessions, users, events, clock)
-    val findCustomers = FindCustomersUc(transactions, AdminCustomerRepositoryImpl())
-    val getCustomer = GetCustomerUc(transactions, AdminCustomerRepositoryImpl())
+    val findCustomers = FindCustomersUc(transactions, AdminCustomerRepositoryImpl(), OrderQmRepositoryImpl())
+    val getCustomer = GetCustomerUc(transactions, AdminCustomerRepositoryImpl(), OrderQmRepositoryImpl())
     val setUserRoles = SetUserRolesUc(transactions, users, sessions, events, clock)
     val bootstrapAdmin = BootstrapAdminUc(transactions, users, sessions, events, clock)
     val requestPhoneChange = RequestPhoneChangeUc(transactions, users, sessions, otpIssuer, sms, clock)

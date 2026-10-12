@@ -80,6 +80,9 @@ class PaymentRepositoryImpl : PaymentRepository {
             .limit(limit)
             .map { PaymentPublicId.constructFromPersisted(it[PaymentTbl.publicId]) }
 
+    override fun findAttemptsOf(orderId: OrderId): List<Payment> =
+        PaymentTbl.selectAll().where { PaymentTbl.orderId eq orderId.value }.orderBy(PaymentTbl.id).map { it.toPayment() }
+
     override fun find(publicId: PaymentPublicId): Payment? =
         PaymentTbl.selectAll().where { PaymentTbl.publicId eq publicId.value }.singleOrNull()?.toPayment()
 

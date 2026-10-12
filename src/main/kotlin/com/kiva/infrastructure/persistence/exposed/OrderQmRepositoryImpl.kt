@@ -2,13 +2,23 @@ package com.kiva.infrastructure.persistence.exposed
 
 import com.kiva.application.repository.OrderQm
 import com.kiva.application.repository.OrderQmRepository
+import com.kiva.common.pagination.Page
+import com.kiva.common.pagination.Pageable
+import com.kiva.common.valueobject.Money
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.order.model.valueobject.CustomerNote
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
 import com.kiva.domain.aggregate.order.model.valueobject.OrderId
 import com.kiva.domain.aggregate.order.model.valueobject.OrderStatus
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentFailureReason
+import com.kiva.infrastructure.common.persistence.SortOrders
+import com.kiva.infrastructure.common.persistence.paginate
 import com.kiva.infrastructure.persistence.exposed.tbl.OrderQmTbl
+import org.jetbrains.exposed.v1.core.Op
+import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.count
+import org.jetbrains.exposed.v1.core.max
+import org.jetbrains.exposed.v1.core.sum
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
@@ -44,6 +54,43 @@ class OrderQmRepositoryImpl : OrderQmRepository {
             .orderBy(OrderQmTbl.holdUntil)
             .limit(limit)
             .map { OrderId.constructFromPersisted(it[OrderQmTbl.orderId]) }
+
+    /** Always newest first (the list has no other order); the order id breaks a tie, so a page never repeats an order. */
+    override fun listOfCustomer(userId: UserId, statuses: Set<OrderStatus>?, pageable: Pageable): Page<OrderQm> {
+        val query = OrderQmTbl.selectAll()
+            .where { (OrderQmTbl.userId eq userId.value) and (statuses?.let { OrderQmTbl.status inList it } ?: Op.TRUE) }
+        val total = query.copy().count()
+        val items = query.orderBy(OrderQmTbl.placedOn to SortOrder.DESC, OrderQmTbl.orderId to SortOrder.DESC)
+            .limit(pageable.size)
+            .offset(pageable.offset)
+            .map { it.toOrderQm() }
+        return Page(items, pageable.page, pageable.size, total)
+    }
+
+    override fun countByStatusOfCustomer(userId: UserId): Map<OrderStatus, Long> {
+        val count = OrderQmTbl.orderId.count()
+        return OrderQmTbl.select(OrderQmTbl.status, count)
+            .where { OrderQmTbl.userId eq userId.value }
+            .groupBy(OrderQmTbl.status)
+            .associate { it[OrderQmTbl.status] to it[count] }
+    }
+
+    override fun purchasesOf(userIds: Collection<UserId>): Map<UserId, OrderQmRepository.Purchases> {
+        if (userIds.isEmpty()) return emptyMap()
+        val count = OrderQmTbl.orderId.count()
+        val spent = OrderQmTbl.payable.sum()
+        val latest = OrderQmTbl.placedOn.max()
+        return OrderQmTbl.select(OrderQmTbl.userId, count, spent, latest)
+            .where { (OrderQmTbl.userId inList userIds.map { it.value }) and (OrderQmTbl.status inList OrderStatus.entries.filter { it.isPaid }) }
+            .groupBy(OrderQmTbl.userId)
+            .associate { row ->
+                UserId.constructFromPersisted(row[OrderQmTbl.userId]) to OrderQmRepository.Purchases(
+                    ordersCount = Math.toIntExact(row[count]),
+                    totalSpent = Money.constructFromPersisted(row[spent] ?: 0),
+                    lastOrderOn = checkNotNull(row[latest]).toInstant(),
+                )
+            }
+    }
 
     private fun ResultRow.toOrderQm(): OrderQm = OrderQm(
         orderId = OrderId.constructFromPersisted(this[OrderQmTbl.orderId]),

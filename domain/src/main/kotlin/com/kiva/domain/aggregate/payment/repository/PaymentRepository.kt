@@ -45,6 +45,9 @@ interface PaymentRepository {
      */
     fun findToReconcile(verifyingSince: Instant, redirectedSince: Instant, limit: Int): List<PaymentPublicId>
 
+    /** Every attempt of [orderId], oldest first, for reading only: nothing is locked (the order's page). */
+    fun findAttemptsOf(orderId: OrderId): List<Payment>
+
     /** The attempt as it is, for reading only: nothing is locked. */
     fun find(publicId: PaymentPublicId): Payment?
 

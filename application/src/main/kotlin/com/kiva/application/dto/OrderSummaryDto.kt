@@ -2,8 +2,10 @@ package com.kiva.application.dto
 
 import com.kiva.application.repository.OrderQm
 import com.kiva.common.valueobject.Money
+import com.kiva.domain.aggregate.order.model.policy.OrderActionsPolicy
 import com.kiva.domain.aggregate.order.model.valueobject.OrderActions
 import com.kiva.domain.aggregate.order.model.valueobject.OrderStatus
+import com.kiva.domain.aggregate.settings.entity.ShopSettings
 import com.kiva.domain.aggregate.settings.model.valueobject.ShippingMethodCode
 import com.kiva.domain.aggregate.user.model.valueobject.MessengerChannel
 import java.time.Instant
@@ -33,6 +35,16 @@ data class OrderSummaryDto(
     data class ItemPreview(val productId: Long, val name: String, val colorKey: String, val imageUrl: String?, val quantity: Int)
 
     companion object {
+        /**
+         * [order]'s card as it stands at [now]: its shipping method named as the shop's [settings] call it now (a method
+         * without a row any more keeps its code as its name), and the buttons it shows.
+         */
+        fun of(order: OrderQm, settings: ShopSettings, now: Instant): OrderSummaryDto = from(
+            order,
+            settings.shippingMethods.firstOrNull { it.code == order.shippingMethod }?.name ?: order.shippingMethod.name,
+            OrderActionsPolicy.actionsOf(order.status, order.holdUntil, now),
+        )
+
         fun from(order: OrderQm, shippingMethodName: String, actions: OrderActions) = OrderSummaryDto(
             code = order.code.value,
             status = order.status,

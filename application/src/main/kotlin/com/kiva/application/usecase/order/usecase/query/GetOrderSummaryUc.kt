@@ -9,7 +9,6 @@ import com.kiva.common.railway.ResultFailure
 import com.kiva.common.transaction.TransactionManager
 import com.kiva.common.usecase.QueryUseCase
 import com.kiva.common.valueobject.UserId
-import com.kiva.domain.aggregate.order.model.policy.OrderActionsPolicy
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
 import com.kiva.domain.aggregate.settings.repository.ShopSettingsRepository
 import java.time.Clock
@@ -34,9 +33,7 @@ class GetOrderSummaryUc(
         logger.info("GetOrderSummaryUc.execute userId=${query.userId.value} orderCode=${query.orderCode.value}")
         return transactionManager.inTransaction {
             val order = orderQmRepository.findOfCustomer(query.userId, query.orderCode) ?: return@inTransaction Result.failure(Failure.OrderNotFound)
-            // A method without a row (taken out of the settings since) keeps its code as its name.
-            val methodName = shopSettingsRepository.get().shippingMethods.firstOrNull { it.code == order.shippingMethod }?.name ?: order.shippingMethod.name
-            Result.success(OrderSummaryDto.from(order, methodName, OrderActionsPolicy.actionsOf(order.status, order.holdUntil, clock.instant())))
+            Result.success(OrderSummaryDto.of(order, shopSettingsRepository.get(), clock.instant()))
         }
     }
 

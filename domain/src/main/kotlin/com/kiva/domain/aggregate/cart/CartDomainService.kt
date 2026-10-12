@@ -7,6 +7,7 @@ import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.cart.entity.Cart
 import com.kiva.domain.aggregate.cart.entity.CartLine
 import com.kiva.domain.aggregate.cart.model.PurchaseOffer
+import com.kiva.domain.aggregate.cart.model.Reordered
 import com.kiva.domain.aggregate.cart.model.valueobject.CartItemId
 import com.kiva.domain.aggregate.cart.model.valueobject.CartOwner
 import com.kiva.domain.aggregate.cart.model.valueobject.CartQuantity
@@ -62,6 +63,44 @@ class CartDomainService(private val cartIdGenerator: CartIdGenerator) {
         logger.info("addItem cart=${cart.publicId.value} variantId=${variantId.value} quantity=${quantity.value}")
         cart.sync(offers, settings, now)
         return cart.add(cartIdGenerator.nextCartItemId(), variantId, quantity, offers, now)
+    }
+
+    /**
+     * «خرید دوباره» (`POST /me/orders/{orderCode}/reorder`): the colors of an earlier order, each with its quantity, into
+     * the cart as far as the shop allows now, each the way adding one does (a color already there adds to its line; more
+     * than fits is cut, with QUANTITY_REDUCED). A color that can't be added at all is skipped and told why; one that adds
+     * nothing because the cart already holds all it may is ALREADY_AT_MAX. It never fails: an order whose bags are all
+     * gone adds nothing. The cart is brought up to date first, like any change that depends on the shop.
+     */
+    fun reorder(
+        cart: Cart,
+        lines: List<Pair<VariantId, CartQuantity>>,
+        offers: Map<VariantId, PurchaseOffer>,
+        settings: ShopSettings,
+        now: Instant,
+    ): Reordered {
+        logger.info("reorder cart=${cart.publicId.value} lines=${lines.map { (variantId, quantity) -> "${variantId.value}x${quantity.value}" }}")
+        cart.sync(offers, settings, now)
+        var added = 0
+        val skipped = mutableListOf<Reordered.Skipped>()
+        lines.forEach { (variantId, quantity) ->
+            val before = cart.lineOf(variantId)?.quantity?.value ?: 0
+            when (val result = cart.add(cartIdGenerator.nextCartItemId(), variantId, quantity, offers, now)) {
+                is Result.Success -> {
+                    val after = cart.lineOf(variantId)?.quantity?.value ?: 0
+                    if (after > before) added += after - before else skipped += Reordered.Skipped(variantId, Reordered.Reason.ALREADY_AT_MAX)
+                }
+                is Result.Failure -> skipped += Reordered.Skipped(variantId, reasonOf(result.failure))
+            }
+        }
+        return Reordered(added, skipped)
+    }
+
+    private fun reasonOf(failure: Cart.Failure): Reordered.Reason = when (failure) {
+        Cart.Failure.OutOfStock -> Reordered.Reason.OUT_OF_STOCK
+        Cart.Failure.VariantNotFound, Cart.Failure.ProductUnavailable -> Reordered.Reason.UNAVAILABLE
+        is Cart.Failure.LimitTakenByOtherColors -> Reordered.Reason.ALREADY_AT_MAX
+        else -> error("Adding a color can't fail with ${failure.code}")
     }
 
     /**

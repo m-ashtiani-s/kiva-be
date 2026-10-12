@@ -3,6 +3,7 @@ package com.kiva.application.usecase.admin
 import com.kiva.application.port.SecurityEventLog
 import com.kiva.application.repository.AdminCustomerRepository
 import com.kiva.application.repository.AdminCustomerRepository.CustomerSearch
+import com.kiva.application.repository.OrderQmRepository
 import com.kiva.application.usecase.admin.usecase.command.SetUserRolesUc
 import com.kiva.application.usecase.admin.usecase.query.FindCustomersUc
 import com.kiva.application.util.MockTransactionManager
@@ -14,6 +15,7 @@ import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.session.repository.AuthSessionRepository
 import com.kiva.domain.aggregate.user.entity.User
 import com.kiva.domain.aggregate.user.repository.UserRepository
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
@@ -41,9 +43,12 @@ class AdminCustomersUcTest {
         override fun findById(id: UserId): User? = null
     }
 
+    // Nobody is found, so the purchases of nobody are asked for.
+    private val orders = mockk<OrderQmRepository> { every { purchasesOf(emptyList()) } returns emptyMap() }
+
     private suspend fun searchFor(q: String?): CustomerSearch? {
         val customers = RecordingCustomers()
-        FindCustomersUc(transactions, customers).execute(FindCustomersUc.Qry(pageable, q))
+        FindCustomersUc(transactions, customers, orders).execute(FindCustomersUc.Qry(pageable, q))
         return customers.searched
     }
 
@@ -70,7 +75,7 @@ class AdminCustomersUcTest {
 
     @Test
     fun `a q over 100 characters is refused on the q field`() = runTest {
-        val failure = FindCustomersUc(transactions, RecordingCustomers()).execute(FindCustomersUc.Qry(pageable, "س".repeat(101))).failureOrNull()
+        val failure = FindCustomersUc(transactions, RecordingCustomers(), orders).execute(FindCustomersUc.Qry(pageable, "س".repeat(101))).failureOrNull()
 
         assertEquals(listOf("q" to "SEARCH_QUERY_TOO_LONG"), failure?.causes?.map { it.field to it.code })
         assertEquals(0, transactions.transactionsOpened)

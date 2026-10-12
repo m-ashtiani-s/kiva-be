@@ -30,7 +30,10 @@ import com.kiva.application.usecase.idempotency.IdempotencyGuard
 import com.kiva.application.usecase.idempotency.usecase.command.DeleteOldIdempotencyKeysUc
 import com.kiva.application.usecase.order.usecase.command.ExpireUnpaidOrderUc
 import com.kiva.application.usecase.order.usecase.query.FindExpirableOrdersUc
+import com.kiva.application.usecase.order.usecase.command.ReorderUc
+import com.kiva.application.usecase.order.usecase.query.GetMyOrderUc
 import com.kiva.application.usecase.order.usecase.query.GetOrderSummaryUc
+import com.kiva.application.usecase.order.usecase.query.ListMyOrdersUc
 import com.kiva.application.usecase.payment.PaymentConfirmation
 import com.kiva.application.usecase.payment.usecase.command.ReconcilePaymentUc
 import com.kiva.application.usecase.payment.usecase.query.FindStalePaymentsUc
@@ -56,6 +59,7 @@ import com.kiva.infrastructure.payment.RandomPaymentIds
 import com.kiva.infrastructure.persistence.exposed.AddressBookRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.AddressIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.CartRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.ColorRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.GeoRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.IdempotencyStoreImpl
 import com.kiva.infrastructure.persistence.exposed.InventoryRepositoryImpl
@@ -153,9 +157,18 @@ class PurchaseTestStack(val clock: MutableClock) {
         GetPaymentInitUc(transactions, payments, orderQm),
     )
 
+    val getCart = GetCartUc(transactions, carts, offers, settings, clock)
+
+    val myOrderUseCases = MyOrderUseCases(
+        ListMyOrdersUc(transactions, orderQm, settings, clock),
+        GetMyOrderUc(transactions, orderQm, payments, settings, ColorRepositoryImpl(), clock),
+        ReorderUc(transactions, orderQm, cartCommands, cartDomain),
+        getCart,
+    )
+
     val cartUseCases = CartUseCases(
         openCart,
-        GetCartUc(transactions, carts, offers, settings, clock),
+        getCart,
         addCartItem,
         ChangeCartItemUc(cartCommands, cartDomain),
         RemoveCartItemUc(cartCommands, cartDomain),
@@ -195,6 +208,7 @@ class PurchaseTestStack(val clock: MutableClock) {
                     webV1Addresses(addressUseCases)
                     webV1Checkout(checkoutUseCases)
                     webV1Payments(paymentUseCases, PaymentConfig.DEFAULT.resultUrl)
+                    webV1MyOrders(myOrderUseCases)
                 }
             }
         }
