@@ -10,6 +10,7 @@ import com.kiva.application.repository.OfferQm
 import com.kiva.application.repository.OfferQmRepository
 import com.kiva.application.repository.OrderQmRepository
 import com.kiva.application.usecase.address.AddressFields
+import com.kiva.application.usecase.discount.Discounts
 import com.kiva.application.usecase.idempotency.IdempotencyGuard
 import com.kiva.application.usecase.reservation.Reservations
 import com.kiva.common.event.ConcurrentChangeException
@@ -38,6 +39,7 @@ import com.kiva.domain.aggregate.address.repository.AddressBookRepository
 import com.kiva.domain.aggregate.cart.entity.CartLine
 import com.kiva.domain.aggregate.cart.repository.CartRepository
 import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
+import com.kiva.domain.aggregate.discount.model.DiscountLine
 import com.kiva.domain.aggregate.geo.repository.GeoRepository
 import com.kiva.domain.aggregate.inventory.InventoryDomainService
 import com.kiva.domain.aggregate.inventory.repository.InventoryRepository
@@ -76,18 +78,20 @@ import kotlin.coroutines.cancellation.CancellationException
  * 2. Then one transaction, refusing in the contract's order, and saving nothing when it refuses: the key (a repeat
  *    answers what the first request made; another request with it is IDEMPOTENCY_KEY_REUSED), the cart (CART_EMPTY),
  *    the address (ADDRESS_NOT_FOUND; a new address's province and city), the messenger (MESSENGER_REQUIRED,
- *    MESSENGER_PHONE_INVALID), and OrderDomainService's rules from the shipping method to the price. Then the order
- *    gets its code, its stock is held, the order and its attempt to pay are saved, a new address is kept in the book
- *    (when there is room) and the messenger as the customer's default (when asked), the cart is emptied, and the key
- *    is recorded.
+ *    MESSENGER_PHONE_INVALID), and OrderDomainService's rules from the shipping method to the price. The cart's discount
+ *    code (round 2) is checked again, its row locked: one that no longer applies (expired, used up meanwhile) is left
+ *    out, so the payable changed and the customer gets PRICE_CHANGED with the new amount, not an error of its own. Then
+ *    the order gets its code, its stock is held, the order and its attempt to pay are saved, the code's use is held, a
+ *    new address is kept in the book (when there is room) and the messenger as the customer's default (when asked), the
+ *    cart is emptied, and the key is recorded.
  * 3. When someone else changed the same stock at the same moment (ConcurrentChangeException), the whole transaction
  *    runs again from a fresh read, up to [MAX_ATTEMPTS] times in all: the rules are checked again on what is left, so
  *    the last bag goes to one customer and the next is told OUT_OF_STOCK.
  * 4. After the commit, an order with nothing to pay is paid already: «پرداخت موفق» is sent.
  *
  * Locks, only in section 11's order, so two orders never wait on each other in a circle: the key, the cart, the address
- * book (only to keep a new address), the products and colors of the read model (InventoryRepository, in lock order),
- * the order's stream.
+ * book (only to keep a new address), the discount code's row, the products and colors of the read model
+ * (InventoryRepository, in lock order), the order's stream.
  */
 class PlaceOrderUc(
     private val transactionManager: TransactionManager,
@@ -109,6 +113,7 @@ class PlaceOrderUc(
     private val paymentGateways: PaymentGateways,
     private val smsSender: SmsSender,
     private val reservations: Reservations,
+    private val discounts: Discounts,
     private val clock: Clock,
 ) : CommandUseCase<PlaceOrderUc.Cmd, PlacedOrder, PlaceOrderUc.Failure> {
 
@@ -279,9 +284,16 @@ class PlaceOrderUc(
         val messenger = messengerOf(input).unwrapOr { return Result.failure(it) }
 
         val offers = offerQmRepository.findOffers(cart.lines.map { it.variantId })
+        val lines = cart.lines.map { lineOf(it, offers) }
+        val codeDiscount = cart.discountCode?.let { code ->
+            when (val checked = discounts.lockAndCheck(code, userId, lines.map { DiscountLine(it.offer, it.quantity) }, now)) {
+                is Result.Success -> checked.value
+                is Result.Failure -> null.also { logger.info("PlaceOrderUc: code ${code.value} no longer applies (${checked.failure.code}); the order is priced without it") }
+            }
+        }
         val placement = OrderPlacement(
             userId = userId,
-            lines = cart.lines.map { lineOf(it, offers) },
+            lines = lines,
             address = destination.snapshot,
             messenger = messenger,
             shippingMethod = input.shippingMethod,
@@ -295,6 +307,7 @@ class PlaceOrderUc(
             settings = settings,
             // Read, not locked: a reservation started by a payment at this very moment only means this order ships alone.
             holdingGroup = reservations.holdingOf(userId),
+            codeDiscount = codeDiscount,
         )
         val order = orderDomainService.placeOrder(placement, now).unwrapOr { return Result.failure(Failure.Refused(it)) }
 
@@ -308,6 +321,7 @@ class PlaceOrderUc(
         }
         held.forEach(inventoryRepository::save)
         orderRepository.save(order)
+        codeDiscount?.let { discounts.redeem(it, order, now) }
         val payment = if (order.totals.payable > Money.ZERO) {
             Payment.start(paymentIdGenerator.nextPaymentPublicId(), order.id, userId, input.gateway, order.totals.payable, now).also(paymentRepository::add)
         } else {

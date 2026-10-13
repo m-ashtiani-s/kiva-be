@@ -9,6 +9,7 @@ import com.kiva.infrastructure.httpserver.configureHttp
 import com.kiva.infrastructure.httpserver.configureRouting
 import com.kiva.infrastructure.persistence.DatabaseFactory
 import com.kiva.infrastructure.seed.DevCatalogSeeder
+import com.kiva.infrastructure.seed.DevDiscountCodeSeeder
 import com.kiva.infrastructure.job.JobScheduler
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationStarted
@@ -45,7 +46,12 @@ fun Application.start() {
     }
 
     // Before the routes, so the first request already sees the seeded catalog.
-    if (config.seed.enabled) runBlocking { get<DevCatalogSeeder>().seed() }
+    if (config.seed.enabled) {
+        runBlocking {
+            get<DevCatalogSeeder>().seed()
+            get<DevDiscountCodeSeeder>().seed()
+        }
+    }
     // The very first admin, while there is none (KIVA_BOOTSTRAP_ADMIN_PHONE).
     config.auth.bootstrapAdminPhone?.let { phone -> runBlocking { get<BootstrapAdminUc>().execute(BootstrapAdminUc.Cmd(phone)) } }
 

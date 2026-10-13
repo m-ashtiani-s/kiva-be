@@ -184,7 +184,7 @@ data class OrderAddressHttpResponse(
     }
 }
 
-/** Contract schema `OrderTotals`. No discount codes (round 2), refunds or change requests yet. */
+/** Contract schema `OrderTotals`. No refunds or change requests yet. */
 @Serializable
 data class OrderTotalsHttpResponse(
     val itemsCompareAtTotal: Long,
@@ -205,7 +205,7 @@ data class OrderTotalsHttpResponse(
             itemsCompareAtTotal = totals.itemsCompareAtTotal.toman,
             productDiscount = totals.productDiscount.toman,
             subtotal = totals.subtotal.toman,
-            discountCode = null,
+            discountCode = totals.discountCode?.value,
             codeDiscount = totals.codeDiscount.toman,
             shippingCost = totals.shippingCost.toman,
             shippingFreeReason = totals.shippingFreeReason?.name,

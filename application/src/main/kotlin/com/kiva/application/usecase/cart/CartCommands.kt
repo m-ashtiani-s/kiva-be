@@ -5,6 +5,7 @@ import com.kiva.application.dto.CartIssueDto
 import com.kiva.application.dto.RemovedItemDto
 import com.kiva.application.repository.OfferQm
 import com.kiva.application.repository.OfferQmRepository
+import com.kiva.application.usecase.discount.Discounts
 import com.kiva.application.usecase.reservation.Reservations
 import com.kiva.common.railway.Result
 import com.kiva.common.railway.ResultFailure
@@ -35,7 +36,8 @@ import java.time.Instant
  * 2. reads the shop's settings and the offers of the cart's colors, and of [run]'s `alsoOffersOf`, in one query, and,
  *    for a customer, what their «رزرو ۴ روزه» means for the cart (Reservations; a guest's is none);
  * 3. lets the use case make its change through CartDomainService;
- * 4. saves, and describes what happened ([CartChange]).
+ * 4. checks the cart's discount code again (round 2): one that no longer applies goes, with DISCOUNT_REMOVED (Discounts);
+ * 5. saves, and describes what happened ([CartChange]).
  *
  * A failed change rolls everything back, a new guest cart included, so its token is never handed out.
  */
@@ -46,6 +48,7 @@ class CartCommands(
     private val offerQmRepository: OfferQmRepository,
     private val shopSettingsRepository: ShopSettingsRepository,
     private val reservations: Reservations,
+    private val discounts: Discounts,
     private val clock: Clock,
 ) {
     /**
@@ -68,7 +71,9 @@ class CartCommands(
         val offers = offerQmRepository.findOffers(cart.lines.map { it.variantId } + alsoOffersOf)
 
         val standing = (caller as? CartCaller.Customer)?.let { reservations.standingOf(it.userId, addressId = null, now).forCart() } ?: ReservationStanding.NONE
-        val done = change(Context(cart, offers.mapValues { it.value.offer }, settings, now, standing)).unwrapOr { return@inTransaction Result.failure(it) }
+        val purchaseOffers = offers.mapValues { it.value.offer }
+        val done = change(Context(cart, purchaseOffers, settings, now, standing)).unwrapOr { return@inTransaction Result.failure(it) }
+        discounts.recheck(cart, purchaseOffers, now)
         cartRepository.save(cart)
 
         Result.success(changeOf(cart, newToken, offers, done))
@@ -92,7 +97,10 @@ class CartCommands(
             val offers = offerQmRepository.findOffers((cart.lines + guest?.lines.orEmpty()).map { it.variantId })
 
             val standing = reservations.standingOf(userId, addressId = null, now).forCart()
-            change(Context(cart, offers.mapValues { it.value.offer }, settings, now, standing), guest)
+            val purchaseOffers = offers.mapValues { it.value.offer }
+            change(Context(cart, purchaseOffers, settings, now, standing), guest)
+            // The guest's code (or the customer's own) is checked for the customer, on the merged cart.
+            discounts.recheck(cart, purchaseOffers, now)
             guest?.let(cartRepository::delete)
             cartRepository.save(cart)
 
@@ -105,7 +113,7 @@ class CartCommands(
             newToken = newToken,
             issues = cart.issues.map { issue ->
                 val names = issue.variantId?.let { offers[it] }
-                CartIssueDto(issue.code, issue.itemId?.value, names?.product?.name, names?.color?.name, issue.previousValue, issue.currentValue)
+                CartIssueDto(issue.code, issue.itemId?.value, names?.product?.name, names?.color?.name, issue.previousValue, issue.currentValue, issue.discountCode?.value)
             },
             affectedItemId = done.affectedItemId,
             addedQuantity = done.addedQuantity,

@@ -1,5 +1,6 @@
 package com.kiva.application.usecase.order.usecase.command
 
+import com.kiva.application.usecase.discount.Discounts
 import com.kiva.common.event.ConcurrentChangeException
 import com.kiva.common.logging.getLogger
 import com.kiva.common.railway.FailureKind
@@ -18,8 +19,9 @@ import java.time.Clock
 
 /**
  * Expires one unpaid order whose time to pay is over (the expiry job, roadmap section 15), in its own transaction: the
- * order expires, its stock goes back to the shop, and its attempts still open expire with it. The job's query only
- * found it; the order decides here, with every attempt of it locked, so:
+ * order expires, its stock goes back to the shop, its attempts still open expire with it, and the use of its discount
+ * code goes back to the code (round 2). The job's query only found it; the order decides here, with every attempt of
+ * it locked, so:
  *
  * - one paid or expired meanwhile is left alone (ORDER_NOT_AWAITING_PAYMENT): running twice, or two app instances
  *   running at once, never expire twice nor give the stock back twice;
@@ -36,6 +38,7 @@ class ExpireUnpaidOrderUc(
     private val paymentDomainService: PaymentDomainService,
     private val inventoryDomainService: InventoryDomainService,
     private val inventoryRepository: InventoryRepository,
+    private val discounts: Discounts,
     private val clock: Clock,
 ) : CommandUseCase<ExpireUnpaidOrderUc.Cmd, Unit, ExpireUnpaidOrderUc.Failure> {
 
@@ -70,6 +73,7 @@ class ExpireUnpaidOrderUc(
         inventoryDomainService.releaseForOrder(order.code, order.lines, UserId.SYSTEM, now).forEach(inventoryRepository::save)
         orderRepository.save(order)
         expired.forEach(paymentRepository::save)
+        discounts.releaseFor(order.id, now)
         logger.info("ExpireUnpaidOrderUc: order ${order.code.value} expired, its stock given back, attempts expired: ${expired.map { it.publicId.value }}")
         Result.success(Unit)
     }

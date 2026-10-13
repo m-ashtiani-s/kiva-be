@@ -2,6 +2,7 @@ package com.kiva.domain.aggregate.order.model.policy
 
 import com.kiva.common.valueobject.Money
 import com.kiva.common.valueobject.sum
+import com.kiva.domain.aggregate.discount.model.CodeDiscount
 import com.kiva.domain.aggregate.order.model.PricedLine
 import com.kiva.domain.aggregate.order.model.PurchaseQuote
 import com.kiva.domain.aggregate.order.model.valueobject.LineTotals
@@ -31,8 +32,8 @@ object OrderPricing {
      * @param now read once by the use case; «today» is its date in Tehran.
      * @param reserve «رزرو ۴ روزه» is on: the order ships after the hold, so delivery is counted from then. Ignored when
      *   the order joins a reservation, which ships with its group.
-     * @param codeDiscount round 2: what the discount code takes off, already worked out from the lines it covers, so
-     *   never more than the subtotal. Null (no code) until then.
+     * @param codeDiscount round 2: the discount code that applies, and what it takes off, worked out by
+     *   DiscountDomainService from the same lines, so never more than the subtotal. Null without a code.
      * @param consolidation the order joins the customer's held reservation; null otherwise.
      */
     fun quote(
@@ -41,7 +42,7 @@ object OrderPricing {
         chosenMethod: ShippingMethodCode,
         now: Instant,
         reserve: Boolean = false,
-        codeDiscount: Money? = null,
+        codeDiscount: CodeDiscount? = null,
         consolidation: ShippingConsolidation? = null,
     ): PurchaseQuote {
         val lineTotals = lines.map(::lineTotalsOf)
@@ -56,7 +57,7 @@ object OrderPricing {
         val options = ShippingPolicy.optionsFor(settings, subtotal, purchasable.isNotEmpty(), shipDate, consolidation)
         val shipping = ShippingPolicy.selectedOption(options, chosenMethod, settings.defaultShippingMethod)
         val shippingCost = shipping?.cost ?: Money.ZERO
-        val code = codeDiscount ?: Money.ZERO
+        val code = codeDiscount?.amount ?: Money.ZERO
 
         val totals = OrderTotals(
             itemsCount = lines.sumOf { it.quantity.value },
@@ -70,6 +71,7 @@ object OrderPricing {
             shippingFreeReason = shipping?.freeReason,
             // Never negative: the code takes at most the subtotal (OrderTotals checks it, and Money refuses less than 0).
             payable = subtotal - code + shippingCost,
+            discountCode = codeDiscount?.code?.code,
         )
         return PurchaseQuote(
             lines = lineTotals,

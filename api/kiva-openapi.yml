@@ -96,7 +96,11 @@ info:
     * **محاسبه‌ی جمع سبد** (دقیقاً مطابق طرح سبد و تسویه):
       `itemsCompareAtTotal` (قیمت کالاها = جمع قیمت قبل از تخفیف) − `productDiscount` (تخفیف محصولات) = `subtotal`
       ← − `codeDiscount` (کد تخفیف) + `shippingCost` = `payable` (مبلغ قابل پرداخت، هرگز منفی نیست).
-    * **کد تخفیف:** نوع درصدی روی `subtotal` محاسبه و به نزدیک‌ترین ۱٬۰۰۰ تومان گرد می‌شود؛ نوع مبلغی حداکثر به اندازه‌ی `subtotal`. شرط‌ها: حداقل خرید، فقط خرید اول، بازه‌ی زمانی، سقف تخفیف، سقف استفاده.
+    * **کد تخفیف:** مبنا جمع ردیف‌های قابل خریدی است که کد شاملشان می‌شود (کد بدون محدودیت دسته/محصول/«بدون کالاهای تخفیف‌خورده» = کل `subtotal`).
+      نوع درصدی: `floor((مبنا × درصد + 50000) / 100000) × 1000`، یعنی به نزدیک‌ترین ۱٬۰۰۰ تومان، نیمه به بالا (۱۴۵٬۵۰۰ ← ۱۴۶٬۰۰۰؛ ۱۴۵٬۴۹۹ ← ۱۴۵٬۰۰۰)، بعد حداکثر `maxDiscount`؛
+      نوع مبلغی حداکثر به اندازه‌ی مبنا. شرط‌ها به این ترتیب (اولین شرط ناموفق جواب است): وجود و فعال بودن، شروع، پایان، ورود (کد با سقف هر کاربر، خرید اول یا «فقط با ورود» برای مهمان نیست)،
+      خرید اول (کاربری که سفارش پرداخت‌شده دارد)، سقف استفاده (کل و هر کاربر؛ سفارش‌های پرداخت‌نشده‌ی در جریان هم شمرده می‌شوند)، حداقل خرید، و دست‌کم یک ردیف مشمول.
+      کد سبد بعد از هر تغییر سبد دوباره بررسی می‌شود و اگر دیگر معتبر نباشد با `DISCOUNT_REMOVED` (یک بار) برداشته می‌شود. استفاده‌ی سفارشی که منقضی شود آزاد می‌شود.
     * **موجودی:** موجودی دقیق هیچ‌وقت لو نمی‌رود؛ فقط وقتی کمتر از `lowStockThreshold` (پیش‌فرض ۵) است، `availableQuantity` برگردانده می‌شود («فقط ۳ عدد باقی مونده»).
     * **سقف خرید هر محصول** (`maxPerOrder`، پیش‌فرض ۵) مال **محصول** است، نه هر رنگ: جمع تعداد همه‌ی رنگ‌های یک محصول در سبد و در سفارش از آن بیشتر نمی‌شود.
       پس سقف هر ردیف سبد (`CartItem.maxQuantity`) = min(موجودی آن رنگ، `maxPerOrder` − تعداد بقیه‌ی رنگ‌های همان محصول در سبد).
@@ -1247,6 +1251,10 @@ paths:
       tags: [Cart]
       operationId: applyDiscountCode
       summary: "اعمال کد تخفیف"
+      description: |
+        کد trim، ارقامش لاتین و حروفش بزرگ می‌شود (`kiva10 ` و `KIVA۱۰` هر دو `KIVA10`) و جای کد قبلی سبد را می‌گیرد. سبد اول همگام‌سازی می‌شود.
+        کد خالی ← `400` روی `code` (`DISCOUNT_CODE_REQUIRED`)؛ متنی که هیچ کدی نمی‌تواند باشد ← همان `422 DISCOUNT_CODE_INVALID`.
+        کدی که رد شود کد قبلی سبد را دست نمی‌زند. ترتیب `422`ها در «قوانین کسب‌وکار».
       security: [{}, { bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/CartToken'
@@ -1268,7 +1276,7 @@ paths:
           description: |
             `DISCOUNT_CODE_INVALID` «این کد تخفیف معتبر نیست»،
             `DISCOUNT_MIN_SUBTOTAL_NOT_MET` «این کد برای خرید بالای ۲٬۰۰۰٬۰۰۰ تومان فعاله» (`meta.minSubtotal`)،
-            `DISCOUNT_CODE_EXPIRED`، `DISCOUNT_FIRST_ORDER_ONLY`، `DISCOUNT_USAGE_LIMIT_REACHED`، `DISCOUNT_LOGIN_REQUIRED`، `DISCOUNT_NOT_APPLICABLE`
+            `DISCOUNT_CODE_NOT_STARTED`، `DISCOUNT_CODE_EXPIRED`، `DISCOUNT_FIRST_ORDER_ONLY`، `DISCOUNT_USAGE_LIMIT_REACHED`، `DISCOUNT_LOGIN_REQUIRED`، `DISCOUNT_NOT_APPLICABLE`
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -1276,6 +1284,7 @@ paths:
       tags: [Cart]
       operationId: removeDiscountCode
       summary: "حذف کد تخفیف"
+      description: سبد بدون کد هم `200` می‌گیرد.
       security: [{}, { bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/CartToken'
@@ -5961,6 +5970,7 @@ components:
         مشکلاتی که از آخرین مشاهده‌ی سبد پیش آمده (نمایش نوار هشدار). هر کدام فقط یک بار می‌آید.
         `QUANTITY_REDUCED` با `currentValue = 0` یعنی ردیف حذف شد: سقف خرید محصول (بعد از کم شدن سقف یا ادغام سبد) جایی برایش نگذاشت؛
         `itemId` شناسه‌ی همان ردیفی است که دیگر در سبد نیست.
+        `DISCOUNT_REMOVED`: کد تخفیف سبد دیگر معتبر نیست (منقضی شد، ظرفیتش پر شد، یا سبد دیگر شرطش را ندارد) و برداشته شد؛ `itemId` نال است و پیام کد را نام می‌برد.
       required: [code, message]
       properties:
         code:
@@ -6010,7 +6020,7 @@ components:
         label: { type: string, example: ۱۰٪ تخفیف روی کل سبد }
         type: { type: string, enum: [PERCENT, FIXED] }
         value: { type: integer, example: 10 }
-        amount: { allOf: [{ $ref: '#/components/schemas/Money' }], example: 348000 }
+        amount: { allOf: [{ $ref: '#/components/schemas/Money' }], description: مبلغی که کد از همین سبد کم می‌کند (همان `totals.codeDiscount`), example: 348000 }
     CartReservation:
       type: object
       description: وضعیت سوییچ «رزرو ۴ روزه» در سبد/تسویه
@@ -6114,7 +6124,7 @@ components:
       type: object
       required: [code]
       properties:
-        code: { type: string, minLength: 2, maxLength: 32, description: حساس به حروف نیست؛ سرور UPPERCASE و trim می‌کند, example: KIVA10 }
+        code: { type: string, minLength: 2, maxLength: 32, description: حساس به حروف نیست؛ سرور trim و UPPERCASE می‌کند و ارقام فارسی/عربی را لاتین, example: KIVA10 }
 
     # ============ CHECKOUT ============
     PaymentGateway:
@@ -6187,7 +6197,7 @@ components:
       required: [shippingMethod, paymentGateway]
       description: |
         دقیقاً یکی از `addressId` یا `newAddress` باید ارسال شود؛ هیچ‌کدام یا هر دو = `400`. خطاهای `newAddress` با پیشوند `newAddress.` در `errors[].field` می‌آیند.
-        سبد، کد تخفیف و وضعیت رزرو از سبد کاربر خوانده می‌شوند (و در صورت ارسال در این بدنه، override می‌شوند).
+        سبد و کد تخفیف همیشه از سبد کاربر خوانده می‌شوند؛ وضعیت رزرو هم، مگر `reserve` در این بدنه بیاید.
         `preShipmentMessenger` اجباری است، ولی با قانون کسب‌وکار (`422 MESSENGER_REQUIRED` / `MESSENGER_PHONE_INVALID`)، نه با شکل ورودی (`400`)؛ ترتیب کامل در `POST /orders`.
       properties:
         addressId: { type: integer, nullable: true, example: 42 }
@@ -6415,7 +6425,7 @@ components:
         itemsCompareAtTotal: { allOf: [{ $ref: '#/components/schemas/Money' }], example: 4080000 }
         productDiscount: { allOf: [{ $ref: '#/components/schemas/Money' }], example: 600000 }
         subtotal: { allOf: [{ $ref: '#/components/schemas/Money' }], example: 3480000 }
-        discountCode: { type: string, nullable: true, example: null }
+        discountCode: { type: string, nullable: true, description: کد تخفیفی که سفارش با آن ثبت شد (`codeDiscount` مال آن است), example: null }
         codeDiscount: { allOf: [{ $ref: '#/components/schemas/Money' }], example: 0 }
         shippingCost: { allOf: [{ $ref: '#/components/schemas/Money' }], example: 0 }
         shippingFreeReason: { type: string, nullable: true, example: THRESHOLD }

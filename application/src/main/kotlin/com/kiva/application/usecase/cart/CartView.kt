@@ -1,5 +1,6 @@
 package com.kiva.application.usecase.cart
 
+import com.kiva.application.dto.AppliedDiscountDto
 import com.kiva.application.dto.CartDto
 import com.kiva.application.dto.CartItemDto
 import com.kiva.application.dto.CartReservationDto
@@ -9,6 +10,7 @@ import com.kiva.application.usecase.reservation.Reservations
 import com.kiva.common.valueobject.Quantity
 import com.kiva.domain.aggregate.cart.entity.Cart
 import com.kiva.domain.aggregate.cart.entity.CartLine
+import com.kiva.domain.aggregate.discount.model.CodeDiscount
 import com.kiva.domain.aggregate.order.model.PricedLine
 import com.kiva.domain.aggregate.order.model.policy.DeliveryWindowPolicy
 import com.kiva.domain.aggregate.order.model.policy.OrderCodePolicy
@@ -31,6 +33,7 @@ import java.time.Instant
  *
  * @param offers the offers of every line's color.
  * @param standing the customer's reservation, for the address the order would go to (Reservations); none for a guest.
+ * @param discount the cart's discount code, when it applies now (Discounts.appliedTo), with what it takes off.
  */
 internal fun cartDtoOf(
     cart: Cart,
@@ -38,6 +41,7 @@ internal fun cartDtoOf(
     settings: ShopSettings,
     now: Instant,
     standing: Reservations.Standing = Reservations.Standing.NONE,
+    discount: CodeDiscount? = null,
 ): CartDto {
     val purchaseOffers = offers.mapValues { it.value.offer }
     val joins = standing.joins
@@ -47,6 +51,7 @@ internal fun cartDtoOf(
         chosenMethod = cart.shippingMethod,
         now = now,
         reserve = cart.reserve && joins == null,
+        codeDiscount = discount,
         consolidation = joins?.let { ShippingConsolidation(it.shippingMethod) },
     )
     val unavailableReason = cart.reservationUnavailableReason(purchaseOffers, settings, hasActiveReservation = standing.holding != null)
@@ -91,6 +96,7 @@ internal fun cartDtoOf(
                 shippingMethod = group.shippingMethod,
             )
         },
+        discount = discount?.let { AppliedDiscountDto(it.code.code.value, it.code.label, it.code.type, it.code.value, it.amount) },
         updatedAt = cart.updatedOn,
     )
 }

@@ -304,7 +304,7 @@ flowchart LR
 | `lines` | `List<CartLine>` | هر رنگ (ورینت) حداکثر یه ردیف |
 | `shippingMethod` | `ShippingMethodCode` | پیش‌فرض از تنظیمات (`POST`) |
 | `reserve` | `Boolean` | سوییچ رزرو ۴ روزه. فقط وقتی رزرو در دسترسه true می‌مونه |
-| `discountCode` | `DiscountCodeText?` | دور ۲. تو دامنه با گام ۲۰ میاد؛ ستونش از V14 هست |
+| `discountCode` | `DiscountCodeText?` | دور ۲ (گام ۲۰). بعد از هر تغییر سبد دوباره چک می‌شه؛ ستونش از V14 هست و V20 `_` رو هم می‌پذیره |
 | `createdOn`، `updatedOn` | `Instant` | `updatedOn` برای پاک‌سازی سبد مهمان |
 
 **`CartLine`:** `itemId` (`ci_` + ۱۰ حرف و رقم، همون `CartItem.id`)، `variantId`، `quantity` (۱ تا ۲۰)، `seenUnitPrice` (قیمتی که مشتری آخرین بار دیده)، `seenPurchasable` (آخرین بار قابل خرید بود یا نه)، `addedOn`.
@@ -1508,8 +1508,9 @@ PURCHASE_REVIEW.md                             (step 21)
 | 34 | `/me/orders*`، `AdminCustomer` (گام ۱۷) | تب هر وضعیت (`EXPIRED` در `cancelled`)، تازه‌ترین اول، `ORDER_FILTER_INVALID`؛ کد بدشکل ← ۴۰۴؛ `payment` ِ جزئیات = آخرین تلاش؛ `image` تا مدیا `null`؛ «خرید دوباره»: `addedCount` تعداد کیف‌ها و `ALREADY_AT_MAX` وقتی سبد سقفش رو داره؛ `ordersCount`/`totalSpent`/`lastOrderAt` ِ پنل از سفارش‌های پرداخت‌شده | فیلتر و شمارنده یه قانون داشته باشن؛ عدد پنل با عدد فروش یکی باشه |
 | 35 | `PaymentStatus.REFUNDED` (گام ۱۸) | در این فاز هم ممکنه: تلاشی که verify شد ولی سفارشش دیگه قابل پرداخت نبود و درگاه همون لحظه پولش رو برگردوند | حالت استثنایی بخش ۱۰.۵ حالا خودکار حل می‌شه |
 | 36 | بخش ۳ «رزرو ۴ روزه»، `PlaceOrderRequest.reserve`، `Cart.consolidation`، `CheckoutContext.consolidation`، `CartReservation.timeline`، `PaymentResult.order.consolidatedInto`، `ReservationInfo`، `GET /me/reservation` (گام ۱۹) | سفارشی که مهلت گروهش بین ثبت و پرداخت تموم بشه بعد از پرداخت `PROCESSING` ـه (ارسال رایگان و گروهش می‌مونه)؛ سوییچ رزرو ِ سفارش پیوسته نادیده گرفته می‌شه؛ دو سفارش رزروی که پیش از شروع گروه ثبت شدن: اولین پرداخت گروه رو شروع می‌کنه و دومی به همون آدرس می‌پیونده، وگرنه `PROCESSING`. `consolidation` ِ سبد برای آدرس پیش‌فرض (مهمان همیشه `null`) و ِ تسویه برای آدرس انتخاب‌شده. سه کارت تایم‌لاین با تاریخ شمسی تهران. `consolidatedInto` = کد سفارش اصلی، برای خودش و سفارش عادی `null`. `groupOrderCodes` سفارش‌های پرداخت‌شده به ترتیب پرداخت، اولی اصلی. `active` روی کارت سفارش `false` یعنی مهلت تموم شده. `204` ِ `/me/reservation` برای مهلت تموم‌شده هم | رفتار لبه‌ها باید معلوم باشه؛ سبد آدرس نداره |
+| 37 | بخش ۳ «کد تخفیف»، `POST`/`DELETE /cart/discount-code`، `CartIssue`، `AppliedDiscount.amount`، `OrderTotals.discountCode`، `ApplyDiscountCodeRequest.code`، `PlaceOrderRequest` (گام ۲۰) | فرمول گرد کردن و مبنا (ردیف‌های مشمول)، ترتیب کامل شرط‌ها، ظرفیت با سفارش‌های پرداخت‌نشده‌ی در جریان، و آزاد شدن استفاده با انقضا. کد خالی ← `400` روی `code` (`DISCOUNT_CODE_REQUIRED`)، و متنی که نمی‌تونه کد باشه همون `422 DISCOUNT_CODE_INVALID`؛ ارقام فارسی لاتین می‌شن. کد تازه جای قبلی رو می‌گیره و کد ردشده به قبلی دست نمی‌زنه. `DISCOUNT_CODE_NOT_STARTED` به فهرست ۴۲۲ ِ `POST` اضافه شد. `DELETE` بدون کد هم `200`. `DISCOUNT_REMOVED` توضیح گرفت. `PlaceOrderRequest`: کد همیشه از سبد خونده می‌شه (فیلدی برای override نداره) | فرانت باید ترتیب پیام‌ها و رفتار ورودی رو بدونه؛ متن قبلی می‌گفت بدنه‌ی ثبت سفارش کد رو override می‌کنه، در حالی که فیلدی براش نیست |
 
-**پیام برای فرانت (گام ۰ و ۲۱):** ردیف‌های ۲، ۴، ۵، ۶، ۷، ۸، ۱۰، ۱۱، ۲۰، ۲۴، ۲۵، ۲۶، ۲۷، ۲۸، ۲۹، ۳۰، ۳۱، ۳۲، ۳۳، ۳۴، ۳۵ و ۳۶ رفتار فرانت رو عوض می‌کنن. `docs/FRONTEND_PURCHASE.md` (گام ۲۱) کل جریان رو برای فرانت توضیح می‌ده، مثل `FRONTEND_AUTH.md`.
+**پیام برای فرانت (گام ۰ و ۲۱):** ردیف‌های ۲، ۴، ۵، ۶، ۷، ۸، ۱۰، ۱۱، ۲۰، ۲۴، ۲۵، ۲۶، ۲۷، ۲۸، ۲۹، ۳۰، ۳۱، ۳۲، ۳۳، ۳۴، ۳۵، ۳۶ و ۳۷ رفتار فرانت رو عوض می‌کنن. `docs/FRONTEND_PURCHASE.md` (گام ۲۱) کل جریان رو برای فرانت توضیح می‌ده، مثل `FRONTEND_AUTH.md`.
 
 ---
 
@@ -2007,7 +2008,7 @@ Route: StartPaymentUc ← 201 با order و payment، یا 422 PAYMENT_GATEWAY_U
 
 ---
 
-### گام ۲۰: کد تخفیف (دور دوم) · L ⬜
+### گام ۲۰: کد تخفیف (دور دوم) · L ✅
 
 **می‌سازی:** بخش ۱۴ کامل: `V20__discount_codes.sql`، `DiscountCode`، `DiscountRedemption`، `DiscountDomainService`، `DiscountPolicy`، `ApplyDiscountCodeUc` و `RemoveDiscountCodeUc`، اعتبارسنجی دوباره در `sync` و ثبت سفارش، `HELD`، `CONFIRMED` و `RELEASED`، و سه کد seeder ِ توسعه.
 
@@ -2018,16 +2019,26 @@ Route: StartPaymentUc ← 201 با order و payment، یا 422 PAYMENT_GATEWAY_U
 2. ظرفیت = تأییدشده + نگه‌داشته‌شده. اگه فقط تأییدشده‌ها رو می‌شمردیم، دو سفارش همزمان چی کار می‌کردن؟
 
 **تموم شده یعنی:**
-- [ ] `KIVA10` روی ۳٬۴۸۰٬۰۰۰ ← ۳٬۴۸۰٬۰۰۰ − ۳۴۸٬۰۰۰ = ۳٬۱۳۲٬۰۰۰ (پست هنوز رایگانه).
-- [ ] گرد کردن: ۱۴۵٬۵۰۰ ← ۱۴۶٬۰۰۰. ۱۴۵٬۴۹۹ ← ۱۴۵٬۰۰۰.
-- [ ] `PAEEZ15` زیر ۲٬۰۰۰٬۰۰۰ ← `422 DISCOUNT_MIN_SUBTOTAL_NOT_MET` با `meta.minSubtotal` و پیام «این کد برای خرید بالای ۲٬۰۰۰٬۰۰۰ تومان فعاله».
-- [ ] `WELCOME` برای مهمان ← `DISCOUNT_LOGIN_REQUIRED`. برای کاربری با سفارش پرداخت‌شده ← `DISCOUNT_FIRST_ORDER_ONLY`. روی سبد ۱۰۰٬۰۰۰ تومانی ← ۱۰۰٬۰۰۰ تخفیف، و `payable` فقط هزینه‌ی ارسال.
-- [ ] کدی که کل مبلغ رو پوشش بده (`payable = 0`) ← `payment: null` و سفارش `PROCESSING`.
-- [ ] `usageLimit = 1` و دو سفارش همزمان ← یکی کد رو می‌گیره و دومی `409 PRICE_CHANGED` (بدون کد).
-- [ ] سفارش منقضی ← ردیف مصرف آزاد می‌شه و کد دوباره قابل استفاده‌ست.
-- [ ] کد منقضی‌شده تو سبد ← برداشته می‌شه با `DISCOUNT_REMOVED`، یک بار.
-- [ ] `excludeSaleItems` ← فقط کالاهای بدون تخفیف مبنان. هیچ کالای مجازی نباشه ← `DISCOUNT_NOT_APPLICABLE`.
-- [ ] `kiva10 ` و `KIVA۱۰` هر دو `KIVA10` حساب می‌شن.
+- [x] `KIVA10` روی ۳٬۴۸۰٬۰۰۰ ← ۳٬۴۸۰٬۰۰۰ − ۳۴۸٬۰۰۰ = ۳٬۱۳۲٬۰۰۰ (پست هنوز رایگانه).
+- [x] گرد کردن: ۱۴۵٬۵۰۰ ← ۱۴۶٬۰۰۰. ۱۴۵٬۴۹۹ ← ۱۴۵٬۰۰۰.
+- [x] `PAEEZ15` زیر ۲٬۰۰۰٬۰۰۰ ← `422 DISCOUNT_MIN_SUBTOTAL_NOT_MET` با `meta.minSubtotal` و پیام «این کد برای خرید بالای ۲٬۰۰۰٬۰۰۰ تومان فعاله».
+- [x] `WELCOME` برای مهمان ← `DISCOUNT_LOGIN_REQUIRED`. برای کاربری با سفارش پرداخت‌شده ← `DISCOUNT_FIRST_ORDER_ONLY`. روی سبد ۱۰۰٬۰۰۰ تومانی ← ۱۰۰٬۰۰۰ تخفیف، و `payable` فقط هزینه‌ی ارسال.
+- [x] کدی که کل مبلغ رو پوشش بده (`payable = 0`) ← `payment: null` و سفارش `PROCESSING`.
+- [x] `usageLimit = 1` و دو سفارش همزمان ← یکی کد رو می‌گیره و دومی `409 PRICE_CHANGED` (بدون کد).
+- [x] سفارش منقضی ← ردیف مصرف آزاد می‌شه و کد دوباره قابل استفاده‌ست.
+- [x] کد منقضی‌شده تو سبد ← برداشته می‌شه با `DISCOUNT_REMOVED`، یک بار.
+- [x] `excludeSaleItems` ← فقط کالاهای بدون تخفیف مبنان. هیچ کالای مجازی نباشه ← `DISCOUNT_NOT_APPLICABLE`.
+- [x] `kiva10 ` و `KIVA۱۰` هر دو `KIVA10` حساب می‌شن.
+
+**یادداشت‌های پیاده‌سازی:**
+- **جواب سؤال ۱:** کدی که بین سبد و ثبت سفارش نامعتبر می‌شه، فقط مبلغ رو عوض می‌کنه: سفارش بدون کد حساب می‌شه و چون `payable` با `expectedPayable` فرق داره، همون `409 PRICE_CHANGED` با `meta.payable` ِ تازه برمی‌گرده. مشتری قبل از پرداخت عدد درست رو می‌بینه و می‌تونه با همون مبلغ دوباره ثبت کنه، فرانت هم برای این حالت راه تازه‌ای لازم نداره (همون جریان تغییر قیمت). یه کد خطای تخفیف اینجا هم کانترکت رو عوض می‌کرد و هم مشتری رو بی‌دلیل از تسویه بیرون می‌برد.
+- **جواب سؤال ۲:** ظرفیت = `HELD` + `CONFIRMED`، شمرده‌شده زیر قفل ردیف کد (`FOR UPDATE`، قفل ۵). اگه فقط تأییدشده‌ها رو می‌شمردیم، دو سفارش همزمان (یا ده سفارش پشت هم، تا وقتی هیچ‌کدوم پرداخت نشده) هر دو «۰ از ۱» می‌دیدن و هر دو کد رو می‌گرفتن: کد یه‌بارمصرف چند بار مصرف می‌شد. تست «usageLimit 1 and two orders at the same moment» با یه `DiscountRedemptionRepository` ِ کند (۱٫۵ ثانیه) این رو قطعی نشون می‌ده.
+- دامنه‌ی `discount`: `DiscountCodeText` (trim، ارقام لاتین، حروف بزرگ، `[A-Z0-9_-]{2,32}`؛ خالی ← `400 DISCOUNT_CODE_REQUIRED` روی `code`، هر متن دیگه‌ای که کد نمی‌تونه باشه ← `422 DISCOUNT_CODE_INVALID`)، `DiscountCode` (`covers`: `excludeSaleItems`، و دسته‌ها **یا** محصول‌ها)، `DiscountRedemption` (`HELD` ← `CONFIRMED`/`RELEASED`، هر تغییر فقط از `HELD`)، `DiscountPolicy` (مبنا و فرمول گرد کردن، با `OrderPricing.lineTotalsOf` تا مبنا دقیقاً همون مبلغ ردیف‌ها باشه) و `DiscountDomainService` (`check` به ترتیب بخش ۱۴، `redeem`).
+- `OrderPricing.quote` حالا `CodeDiscount` می‌گیره (کد و مبلغش) و `OrderTotals.discountCode` رو پر می‌کنه؛ `OrderTotals` قانون «تخفیف کد بدون کد» رو رد می‌کنه. کد با `OrderTotalsPayload.discountCode` در `OrderPlaced` و read model (همون jsonb) ذخیره می‌شه؛ رویدادهای قدیمی null می‌خونن، پس ستون یا رویداد تازه‌ای لازم نشد.
+- سرویس اپلیکیشن `Discounts` (یه جا برای سبد، تسویه، ثبت، پرداخت و انقضا): `CartCommands` بعد از **هر** تغییر سبد (و ادغام) کد رو دوباره چک می‌کنه و نامعتبر ← `Cart.dropDiscountCode` با `DISCOUNT_REMOVED`، یک بار. `GetCartUc` و `GetCheckoutContextUc` فقط کد معتبر رو نشون می‌دن. `PlaceOrderUc` بعد از دفترچه‌ی آدرس (قفل ۳) ردیف کد رو قفل می‌کنه (قفل ۵) و قبل از موجودی (قفل ۷)؛ `PaymentConfirmation` استفاده رو `CONFIRMED` و `ExpireUnpaidOrderUc` `RELEASED` می‌کنه (هر دو زیر قفل پرداخت‌های سفارش، قفل ۶). `payable = 0` ← همون موقع `CONFIRMED`.
+- ادغام سبد: کد خود کاربر می‌مونه، وگرنه کد مهمان (کانترکت، `POST /cart/merge`)، و بعد برای کاربر دوباره چک می‌شه. پاک کردن سبد و ثبت سفارش کد رو هم برمی‌دارن.
+- «خرید اول» یعنی کاربر هیچ سفارش پرداخت‌شده‌ای نداره (`OrderQmRepository.purchasesOf`)، و موقع ثبت تصمیم گرفته می‌شه، نه موقع پرداخت.
+- `V20__discount_codes.sql`: `discountcode_tbl` با CHECKهای نوع و مقدار، `discountredemption_tbl` (FK به کد، بدون FK به کاربر و سفارش مثل `payment_tbl`، `UNIQUE ("codeId", "orderId")` و یکتایی سفارش)، و CHECK ِ `cart_tbl.discountCode` که حالا `_` هم می‌پذیره. `DevDiscountCodeSeeder` سه کد طرح رو مثل SQL ِ سرور ردیف می‌سازه (اجرای دوباره چیزی اضافه نمی‌کنه).
 
 ---
 
@@ -2152,6 +2163,7 @@ Route: StartPaymentUc ← 201 با order و payment، یا 422 PAYMENT_GATEWAY_U
 | ۲۰ مهر ۱۴۰۵ | ۱۷ | Purchase step 17 | `ListMyOrdersUc` (تازه‌ترین اول، تب‌ها با `OrderTab` ِ دامنه، شمارنده‌ی همه‌ی تب‌ها، `ORDER_FILTER_INVALID`)، `GetMyOrderUc` (ردیف‌ها، آدرس با `fullText`، جمع‌ها، آخرین تلاش پرداخت، تایم‌لاین با برچسب و دلیل شکست، عکس‌های قبل از ارسال `WAITING` با پیام انتظار)، `ReorderUc` (`CartDomainService.reorder` و `CartCommands`)، `webV1MyOrders.kt`، و `ordersCount`/`totalSpent`/`lastOrderAt` ِ `/admin/customers` با یه کوئری برای کل صفحه. `OrderSummaryDto.of` بین ثبت سفارش و لیست مشترک شد. سؤال‌ها با پیشنهاد خودم: سفارش `EXPIRED` در «لغوشده» ـه (دیگه چیزی براش اتفاق نمی‌افته و «جاری» یعنی چیزی که مشتری منتظرشه؛ mock هم همینه)؛ `totalSpent` جمع `payable` ِ سفارش‌های پرداخت‌شده‌ست و در فاز استرداد `refunded` ازش کم می‌شه (سفارش لغوشده‌ی پرداخت‌شده تو شمارش می‌مونه چون پولش یه بار اومده). یه تست ناپایدار خودم پیدا و درست شد: کیف‌ها تو یه لحظه‌ی ساعت تست به سبد می‌رفتن و شماره‌ی ردیف‌ها جابه‌جا می‌شد. ۱۰ تست تازه، ۱۸۵۵ کل. کانترکت: ردیف ۳۴ |
 | ۲۱ مهر ۱۴۰۵ | ۱۸ | Purchase step 18 | `ZarinpalGateway` (REST v4 با `ktor-client` CIO، اتصال ۵ و کل ۱۵ ثانیه، مبلغ به ریال، `request`/`verify`/`inquiry`/`reverse`)، نگاشت کدها به `GatewayFailure` (چک‌شده با مستندات رسمی)، `CardMask.of` و `GatewayRefId.of` برای پاسخ درگاه، و `kiva.payment.provider = zarinpal` حالا واقعاً آداپتر رو می‌سازه. حالت استثنایی بخش ۱۰.۵ ساخته شد: verify ِ موفق برای سفارشی که دیگه قابل پرداخت نیست ← `reverse` بیرون تراکنش و `REFUNDED` (`Payment.refund`، `PaymentDomainService.mayReverse`/`reversed`)؛ رد ← `SUCCEEDED` و ERROR برای پشتیبانی. درگاه آزمایشی هم `reverse` و «بی‌جواب برای یه نوع تماس» گرفت. سؤال‌ها با پیشنهاد خودم: `Rejected` یعنی پیکربندی ما خرابه (‎`-9` تا ‎`-19`، ‎`-41`، ‎`-62`) و هیچ پرداختی تا درست شدنش انجام نمی‌شه، پس ERROR و هشدار؛ `Declined` یعنی پرداخت خود مشتری (‎`-51`، ‎`-54`، ‎`-55`، …)، کار عادی و INFO؛ قاطی کردنشون یعنی یا هشدار بی‌فایده برای هر انصراف، یا سکوت وقتی merchant id خرابه. timeout ِ verify ۱۵ ثانیه‌ست؛ اگه verify بعد از timeout ِ ما در زرین‌پال موفق بشه، پرداخت `VERIFYING` می‌مونه و job تطبیق دوباره verify می‌کنه و ۱۰۱ (قبلاً verify شده) رو موفقیت حساب می‌کنه، پس هیچ پولی گم نمی‌شه. **مونده:** یه دور واقعی با sandbox و kiva-fe (تماس بیرونی، کار کاربر). ۱۶ تست تازه، ۱۸۷۱ کل. کانترکت: ردیف ۳۵ |
 | ۲۱ مهر ۱۴۰۵ | ۱۹ | Purchase step 19 | `V19__reservation_groups.sql` (`reservationgroup_tbl` با شاخص یکتای «یه `HOLDING` برای هر کاربر»، `reservationgroupid_seq` از ۱۰۰۱، `orderqm_tbl.reservationGroupId`، و `reservationEnabled = TRUE`). دامنه: `ReservationGroup` (`isHolding`، `takes`، `release`)، `AddressFingerprint`، `ReservationDomainService` (`groupTaking`، `onPaid`، `release`)، `OrderPlacement.holdingGroup` و ادغام در `OrderDomainService`، `ReservationStanding` در دستورهای سبد، `OrderReleasedFromReservation`، و `reservationGroupId` در `OrderPlaced` و `OrderPaid`. کاربردی: `Reservations` (یه جا برای سبد، تسویه، ثبت و کارت سفارش)، `consolidation` در سبد و تسویه، `PaymentConfirmation` زیر قفل ۴، `GetMyReservationUc`، `FindDueReservationGroupsUc` + `ReleaseReservationGroupUc` و job ِ `release-reservations` (هر دقیقه). HTTP: `JalaliDates` و `ReservationTexts` (تایم‌لاین، پیام ادغام و شمارش معکوس)، `GET /me/reservation`، `consolidatedInto`. seeder: «کلاچ مهتاب» غیرقابل رزرو. سؤال‌ها با پیشنهاد خودم: مهلت از پرداخت (سفارش پرداخت‌نشده گروه باز نمی‌کنه)؛ «همون آدرس» = همون `addressId` و همون محتوا (fingerprint)، پس ویرایش یعنی ادغام نه. خرابکاری: حذف fingerprint ← «the group's address edited since» و `ReservationGroupTest`؛ حذف `isHolding` از `takes` ← `OrderDomainServiceTest` و `ReservationDomainServiceTest`؛ حذف قفل گروه ← «two «رزرو» orders paid at the same moment»؛ آزاد کردن پیش از موعد ← «letting go - not before its time». پیامک یادآوری ساخته نشد (اختیاری). ۳۵ تست تازه، ۱۹۰۶ کل. کانترکت: ردیف ۳۶ |
+| ۲۱ مهر ۱۴۰۵ | ۲۰ | Purchase step 20 | `V20__discount_codes.sql` (`discountcode_tbl` و `discountredemption_tbl` با `UNIQUE ("codeId", "orderId")`، و `_` در کد سبد). دامنه‌ی `discount`: `DiscountCodeText`، `DiscountCode` (`covers`)، `DiscountRedemption` (`HELD` ← `CONFIRMED`/`RELEASED`)، `DiscountPolicy` (گرد کردن با ریاضی صحیح) و `DiscountDomainService` (ترتیب بخش ۱۴، `redeem`). `OrderPricing.quote` با `CodeDiscount`، و `OrderTotals.discountCode` (رویدادهای قدیمی null). سرویس `Discounts`: بعد از هر تغییر سبد ← `DISCOUNT_REMOVED`، ثبت سفارش با قفل ردیف کد (قفل ۵) ← کد نامعتبر = `PRICE_CHANGED`، پرداخت ← `CONFIRMED`، انقضا ← `RELEASED`. `POST`/`DELETE /cart/discount-code`، `Cart.discount`، `DevDiscountCodeSeeder` (`KIVA10`، `WELCOME`، `PAEEZ15`). ادغام: کد خود کاربر می‌مونه (کانترکت). خرابکاری: بدون `FOR UPDATE` ِ کد، شمردن فقط `CONFIRMED`، بدون چک دوباره‌ی سبد، بدون `RELEASED`، بدون `CONFIRMED`، گرد کردن رو به پایین، `excludeSaleItems` نادیده، ارقام فارسی، و «خرید اول» ِ حذف‌شده: هر کدوم حداقل یه تست رو قرمز کرد. خرابکاری اول (قفل کد) هیچ تستی رو قرمز نکرد، چون دو سفارش تست یه کیف می‌خریدن و قفل موجودی جلوشون رو می‌گرفت؛ تست حالا دو کیف از دو محصول می‌خره. ۴۷ تست تازه، ۱۹۵۳ کل، سبز با `--rerun-tasks`. کانترکت: ردیف ۳۷ |
 
 ---
 

@@ -10,6 +10,7 @@ import com.kiva.application.usecase.address.usecase.query.GetMyAddressUc
 import com.kiva.application.usecase.address.usecase.query.ListMyAddressesUc
 import com.kiva.application.usecase.cart.CartCommands
 import com.kiva.application.usecase.cart.usecase.command.AddCartItemUc
+import com.kiva.application.usecase.cart.usecase.command.ApplyDiscountCodeUc
 import com.kiva.application.usecase.cart.usecase.command.ChangeCartItemUc
 import com.kiva.application.usecase.cart.usecase.command.ChooseShippingMethodUc
 import com.kiva.application.usecase.cart.usecase.command.ClearCartUc
@@ -17,6 +18,7 @@ import com.kiva.application.usecase.cart.usecase.command.DeleteStaleGuestCartsUc
 import com.kiva.application.usecase.cart.usecase.command.MergeGuestCartUc
 import com.kiva.application.usecase.cart.usecase.command.OpenCartUc
 import com.kiva.application.usecase.cart.usecase.command.RemoveCartItemUc
+import com.kiva.application.usecase.cart.usecase.command.RemoveDiscountCodeUc
 import com.kiva.application.usecase.cart.usecase.command.SetCartReservationUc
 import com.kiva.application.usecase.cart.usecase.query.GetCartUc
 import com.kiva.application.usecase.checkout.usecase.command.HandleGatewayCallbackUc
@@ -26,11 +28,12 @@ import com.kiva.application.usecase.checkout.usecase.command.StartPaymentUc
 import com.kiva.application.usecase.checkout.usecase.query.GetCheckoutContextUc
 import com.kiva.application.usecase.checkout.usecase.query.GetPaymentInitUc
 import com.kiva.application.usecase.checkout.usecase.query.GetPaymentResultUc
+import com.kiva.application.usecase.discount.Discounts
 import com.kiva.application.usecase.idempotency.IdempotencyGuard
 import com.kiva.application.usecase.idempotency.usecase.command.DeleteOldIdempotencyKeysUc
 import com.kiva.application.usecase.order.usecase.command.ExpireUnpaidOrderUc
-import com.kiva.application.usecase.order.usecase.query.FindExpirableOrdersUc
 import com.kiva.application.usecase.order.usecase.command.ReorderUc
+import com.kiva.application.usecase.order.usecase.query.FindExpirableOrdersUc
 import com.kiva.application.usecase.order.usecase.query.GetMyOrderUc
 import com.kiva.application.usecase.order.usecase.query.GetOrderSummaryUc
 import com.kiva.application.usecase.order.usecase.query.ListMyOrdersUc
@@ -46,6 +49,7 @@ import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.address.AddressBookDomainService
 import com.kiva.domain.aggregate.cart.CartDomainService
 import com.kiva.domain.aggregate.cart.repository.CartRepository
+import com.kiva.domain.aggregate.discount.DiscountDomainService
 import com.kiva.domain.aggregate.inventory.InventoryDomainService
 import com.kiva.domain.aggregate.order.OrderDomainService
 import com.kiva.domain.aggregate.payment.PaymentDomainService
@@ -65,6 +69,8 @@ import com.kiva.infrastructure.persistence.exposed.AddressBookRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.AddressIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.CartRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ColorRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.DiscountCodeRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.DiscountRedemptionRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.GeoRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.IdempotencyStoreImpl
 import com.kiva.infrastructure.persistence.exposed.InventoryRepositoryImpl
@@ -78,11 +84,15 @@ import com.kiva.infrastructure.persistence.exposed.ReservationGroupRepositoryImp
 import com.kiva.infrastructure.persistence.exposed.ShopSettingsRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.UserRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.tbl.CartTbl
+import com.kiva.infrastructure.persistence.exposed.tbl.DiscountCodeTbl
+import com.kiva.infrastructure.persistence.exposed.tbl.DiscountRedemptionTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.EventStoreTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.OrderQmTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.ProductQmTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.ProductVariantQmTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.UserTbl
+import com.kiva.infrastructure.seed.DiscountCodeRow
+import com.kiva.infrastructure.seed.DiscountCodeRows
 import io.ktor.server.config.MapApplicationConfig
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
@@ -94,6 +104,7 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.like
+import org.jetbrains.exposed.v1.jdbc.deleteAll
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -127,7 +138,10 @@ class PurchaseTestStack(val clock: MutableClock) {
     val groups = ReservationGroupRepositoryImpl()
     val reservationDomain = ReservationDomainService(ReservationGroupIdGeneratorImpl())
     private val reservations = Reservations(groups, books, geo, orderQm, reservationDomain)
-    private val cartCommands = CartCommands(transactions, carts, cartDomain, offers, settings, reservations, clock)
+    val discountCodes = DiscountCodeRepositoryImpl()
+    val redemptions = DiscountRedemptionRepositoryImpl()
+    val discounts = Discounts(discountCodes, redemptions, orderQm, DiscountDomainService())
+    private val cartCommands = CartCommands(transactions, carts, cartDomain, offers, settings, reservations, discounts, clock)
     private val addressService = AddressBookDomainService(geo, AddressIdGeneratorImpl())
 
     val openCart = OpenCartUc(cartCommands, cartDomain)
@@ -136,22 +150,22 @@ class PurchaseTestStack(val clock: MutableClock) {
 
     val placeOrder = placeOrderWith(carts)
 
-    /** Placing orders as the app does, with [cartRepository] for the carts: for a test that slows one down. */
-    fun placeOrderWith(cartRepository: CartRepository) = PlaceOrderUc(
+    /** Placing orders as the app does, with [cartRepository] for the carts and [discounts]: for a test that slows one down. */
+    fun placeOrderWith(cartRepository: CartRepository, discounts: Discounts = this.discounts) = PlaceOrderUc(
         transactions, IdempotencyGuard(IdempotencyStoreImpl(), clock), cartRepository, offers, settings, books, addressService, geo, users,
         OrderDomainService(OrderIdGeneratorImpl()), orders, orderQm, InventoryDomainService(inventories), inventories, payments,
-        RandomPaymentIds(), gateways, auth.sms, reservations, clock,
+        RandomPaymentIds(), gateways, auth.sms, reservations, discounts, clock,
     )
     val startPayment = StartPaymentUc(transactions, payments, gateways, clock)
 
     val paymentDomain = PaymentDomainService(RandomPaymentIds())
     val paymentConfirmation =
-        PaymentConfirmation(transactions, payments, orders, users, paymentDomain, groups, reservationDomain, settings, gateways, auth.sms, clock)
+        PaymentConfirmation(transactions, payments, orders, users, paymentDomain, groups, reservationDomain, settings, gateways, auth.sms, discounts, clock)
     val handleCallback = HandleGatewayCallbackUc(transactions, payments, orders, paymentDomain, gateways, paymentConfirmation, clock)
     val startPaymentAttempt =
         StartPaymentAttemptUc(transactions, IdempotencyGuard(IdempotencyStoreImpl(), clock), payments, orders, orderQm, settings, paymentDomain, gateways, clock)
     val stock = InventoryDomainService(inventories)
-    val expireUnpaidOrder = ExpireUnpaidOrderUc(transactions, payments, orders, paymentDomain, stock, inventories, clock)
+    val expireUnpaidOrder = ExpireUnpaidOrderUc(transactions, payments, orders, paymentDomain, stock, inventories, discounts, clock)
     val reconcilePayment = ReconcilePaymentUc(transactions, payments, orders, paymentDomain, gateways, paymentConfirmation, clock)
     val idempotencyStore = IdempotencyStoreImpl()
     val deleteStaleGuestCarts = DeleteStaleGuestCartsUc(transactions, carts, clock)
@@ -169,7 +183,7 @@ class PurchaseTestStack(val clock: MutableClock) {
         GetPaymentInitUc(transactions, payments, orderQm),
     )
 
-    val getCart = GetCartUc(transactions, carts, offers, settings, reservations, clock)
+    val getCart = GetCartUc(transactions, carts, offers, settings, reservations, discounts, clock)
 
     val myOrderUseCases = MyOrderUseCases(
         ListMyOrdersUc(transactions, orderQm, settings, reservations, clock),
@@ -189,6 +203,8 @@ class PurchaseTestStack(val clock: MutableClock) {
         ChooseShippingMethodUc(cartCommands, cartDomain),
         SetCartReservationUc(cartCommands, cartDomain),
         MergeGuestCartUc(cartCommands, cartDomain),
+        ApplyDiscountCodeUc(cartCommands, cartDomain, discounts),
+        RemoveDiscountCodeUc(cartCommands, cartDomain),
     )
 
     val addressUseCases = AddressUseCases(
@@ -202,7 +218,7 @@ class PurchaseTestStack(val clock: MutableClock) {
 
     val checkoutUseCases = CheckoutUseCases(
         openCart,
-        GetCheckoutContextUc(transactions, carts, offers, settings, books, geo, users, gateways, reservations, clock),
+        GetCheckoutContextUc(transactions, carts, offers, settings, books, geo, users, gateways, reservations, discounts, clock),
         placeOrder,
         startPayment,
         GetOrderSummaryUc(transactions, orderQm, settings, reservations, clock),
@@ -250,6 +266,11 @@ class PurchaseTestStack(val clock: MutableClock) {
     }
 
     /** Guest carts, the test customers with their carts, addresses and keys, and every order of theirs. */
+    /** A discount code made as SQL makes it (the panel's aren't built). [deleteWhatWasStored] removes it. */
+    fun discountCode(row: DiscountCodeRow) {
+        transaction(db) { check(DiscountCodeRows.insertIfAbsent(row, clock.now)) { "Code ${row.code} is there already" } }
+    }
+
     fun deleteWhatWasStored() {
         transaction(db) {
             val userIds = UserTbl.select(UserTbl.id).where { UserTbl.phone like "0990%" }.map { it[UserTbl.id].value }
@@ -257,6 +278,9 @@ class PurchaseTestStack(val clock: MutableClock) {
             EventStoreTbl.deleteWhere { (aggregateName eq "ORDER") and (aggregateId inList orderIds.map { it.toString() }) }
             OrderQmTbl.deleteWhere { orderId inList orderIds }
             CartTbl.deleteWhere { userId.isNull() }
+            // A code with uses can't go; the uses go with their test orders, and then every code a test made.
+            DiscountRedemptionTbl.deleteWhere { DiscountRedemptionTbl.orderId inList orderIds }
+            DiscountCodeTbl.deleteAll()
         }
         // Payments stay: their log is append-only, and their orders' ids are never handed out again.
         auth.deleteTestUsers()

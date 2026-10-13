@@ -1,7 +1,9 @@
 package com.kiva.application.dto
 
 import com.kiva.application.repository.OfferQm
+import com.kiva.common.valueobject.Money
 import com.kiva.domain.aggregate.cart.model.valueobject.ReservationUnavailableReason
+import com.kiva.domain.aggregate.discount.model.valueobject.DiscountType
 import com.kiva.domain.aggregate.order.model.valueobject.FreeShippingProgress
 import com.kiva.domain.aggregate.order.model.valueobject.LineTotals
 import com.kiva.domain.aggregate.order.model.valueobject.OrderTotals
@@ -20,6 +22,7 @@ import java.time.LocalDate
  * @property items oldest first.
  * @property shippingMethod the method the totals use (the cart's own, unless the shop stopped offering it since).
  * @property freeShipping null when the shop offers no free shipping.
+ * @property discount the cart's discount code and what it takes off (round 2); null without one that applies.
  */
 data class CartDto(
     val id: String,
@@ -31,8 +34,12 @@ data class CartDto(
     val freeShipping: FreeShippingProgress?,
     val reservation: CartReservationDto,
     val consolidation: ConsolidationDto?,
+    val discount: AppliedDiscountDto?,
     val updatedAt: Instant,
 )
+
+/** The contract's AppliedDiscount: the code, its label, its kind and value, and what it takes off this cart. */
+data class AppliedDiscountDto(val code: String, val label: String, val type: DiscountType, val value: Int, val amount: Money)
 
 /**
  * The order joins the customer's held «رزرو ۴ روزه» (the contract's ReservationConsolidation): it ships with the group,

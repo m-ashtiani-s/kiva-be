@@ -4,12 +4,14 @@ import com.kiva.application.repository.OfferQmRepository
 import com.kiva.application.usecase.cart.CartCaller
 import com.kiva.application.usecase.cart.CartCommands
 import com.kiva.application.usecase.cart.usecase.command.AddCartItemUc
+import com.kiva.application.usecase.cart.usecase.command.ApplyDiscountCodeUc
 import com.kiva.application.usecase.cart.usecase.command.ChangeCartItemUc
 import com.kiva.application.usecase.cart.usecase.command.ChooseShippingMethodUc
 import com.kiva.application.usecase.cart.usecase.command.ClearCartUc
 import com.kiva.application.usecase.cart.usecase.command.MergeGuestCartUc
 import com.kiva.application.usecase.cart.usecase.command.OpenCartUc
 import com.kiva.application.usecase.cart.usecase.command.RemoveCartItemUc
+import com.kiva.application.usecase.cart.usecase.command.RemoveDiscountCodeUc
 import com.kiva.application.usecase.cart.usecase.command.SetCartReservationUc
 import com.kiva.application.usecase.cart.usecase.query.GetCartUc
 import com.kiva.common.valueobject.IranianMobileNumber
@@ -111,12 +113,12 @@ class WebV1CartOnDatabaseTest {
     private val domain = CartDomainService(RandomCartIds())
 
     private fun commands(repository: CartRepository = carts) =
-        CartCommands(transactions, repository, domain, offers, ShopSettingsRepositoryImpl(), stack.reservations, clock)
+        CartCommands(transactions, repository, domain, offers, ShopSettingsRepositoryImpl(), stack.reservations, stack.discounts, clock)
 
     private val useCases = commands().let { c ->
         CartUseCases(
             OpenCartUc(c, domain),
-            GetCartUc(transactions, carts, offers, ShopSettingsRepositoryImpl(), stack.reservations, clock),
+            GetCartUc(transactions, carts, offers, ShopSettingsRepositoryImpl(), stack.reservations, stack.discounts, clock),
             AddCartItemUc(c, domain),
             ChangeCartItemUc(c, domain),
             RemoveCartItemUc(c, domain),
@@ -124,6 +126,8 @@ class WebV1CartOnDatabaseTest {
             ChooseShippingMethodUc(c, domain),
             SetCartReservationUc(c, domain),
             MergeGuestCartUc(c, domain),
+            ApplyDiscountCodeUc(c, domain, stack.discounts),
+            RemoveDiscountCodeUc(c, domain),
         )
     }
 

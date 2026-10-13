@@ -1,6 +1,7 @@
 package com.kiva.domain.aggregate.order.model.valueobject
 
 import com.kiva.common.valueobject.Money
+import com.kiva.domain.aggregate.discount.model.valueobject.DiscountCodeText
 import com.kiva.domain.aggregate.order.PricingFixtures.date
 import com.kiva.domain.aggregate.order.PricingFixtures.post
 import com.kiva.domain.aggregate.order.PricingFixtures.toman
@@ -27,14 +28,21 @@ class PricingValueObjectsTest {
             shippingIsFree: Boolean = true,
             shippingFreeReason: ShippingFreeReason? = ShippingFreeReason.THRESHOLD,
             payable: Long = 3_480_000,
+            discountCode: String? = "KIVA10".takeIf { codeDiscount > 0 },
         ) = OrderTotals(
             itemsCount, linesCount, toman(itemsCompareAtTotal), toman(productDiscount), toman(subtotal), toman(codeDiscount),
-            toman(shippingCost), shippingIsFree, shippingFreeReason, toman(payable),
+            toman(shippingCost), shippingIsFree, shippingFreeReason, toman(payable), discountCode?.let(DiscountCodeText::constructFromPersisted),
         )
 
         @Test
         fun `totals that add up are kept, and the savings are both discounts`() {
             assertEquals(toman(948_000), totals(codeDiscount = 348_000, payable = 3_132_000).totalSavings)
+        }
+
+        @Test
+        fun `a code discount without its code is a bug, a code that takes 0 off is not`() {
+            assertFailsWith<IllegalArgumentException> { totals(codeDiscount = 348_000, payable = 3_132_000, discountCode = null) }
+            assertEquals("KIVA10", totals(discountCode = "KIVA10").discountCode?.value)
         }
 
         @Test

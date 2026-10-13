@@ -9,6 +9,7 @@ import com.kiva.domain.aggregate.cart.model.PurchaseOffer
 import com.kiva.domain.aggregate.cart.model.valueobject.CartOwner
 import com.kiva.domain.aggregate.cart.model.valueobject.CartQuantity
 import com.kiva.domain.aggregate.category.model.valueobject.CategoryId
+import com.kiva.domain.aggregate.discount.model.valueobject.DiscountCodeText
 import com.kiva.domain.aggregate.product.model.valueobject.MaxPerOrder
 import com.kiva.domain.aggregate.product.model.valueobject.ProductId
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
@@ -73,7 +74,7 @@ class CartRepositoryImplTest {
         ids.nextCartPublicId(), CartOwner.Guest(hash), lines.toList(), ShippingMethodCode.POST, reserve = false, createdOn = now, updatedOn = now,
     )
 
-    private fun Cart.values(): List<Any?> = listOf(publicId, owner, shippingMethod, reserve, createdOn, updatedOn)
+    private fun Cart.values(): List<Any?> = listOf(publicId, owner, shippingMethod, reserve, createdOn, updatedOn, discountCode)
 
     private fun Cart.lineValues(): List<List<Any?>> = lines.map { listOf(it.itemId, it.variantId, it.quantity, it.seenUnitPrice, it.seenPurchasable, it.addedOn) }
 
@@ -129,6 +130,7 @@ class CartRepositoryImplTest {
             cart.remove(drop.itemId, now.plusSeconds(5))
             cart.add(ids.nextCartItemId(), VariantId.constructFromPersisted(302), CartQuantity.constructFromPersisted(2), offers(205 to 2, 302 to 3), now.plusSeconds(5))
             cart.chooseShippingMethod(ShippingMethodCode.POST, ShopSettingsRepositoryImpl().get(), now.plusSeconds(5))
+            cart.applyDiscountCode(DiscountCodeText.constructFromPersisted("PAEEZ_15"), now.plusSeconds(5))
             repository.save(cart)
         }
 
@@ -136,7 +138,11 @@ class CartRepositoryImplTest {
         assertEquals(mapOf(205L to 3, 302L to 2), stored.lines.associate { it.variantId.value to it.quantity.value })
         assertEquals(keep.itemId, stored.lines.first { it.variantId.value == 205L }.itemId)
         assertEquals(ShippingMethodCode.POST, stored.shippingMethod)
+        assertEquals("PAEEZ_15", stored.discountCode?.value)
         assertEquals(now.plusSeconds(5), stored.updatedOn)
+
+        transaction(db) { repository.lockForUser(user)!!.also { it.removeDiscountCode(now.plusSeconds(6)) }.let(repository::save) }
+        assertNull(transaction(db) { repository.lockForUser(user) }!!.discountCode)
     }
 
     @Test

@@ -4,6 +4,7 @@ import com.kiva.application.port.GatewayFailure
 import com.kiva.application.port.GatewayReceipt
 import com.kiva.application.port.PaymentGateways
 import com.kiva.application.port.SmsSender
+import com.kiva.application.usecase.discount.Discounts
 import com.kiva.common.logging.getLogger
 import com.kiva.common.railway.Result
 import com.kiva.common.railway.unwrapOr
@@ -40,8 +41,9 @@ import kotlin.time.toJavaDuration
  * 2. [tx] The customer's reservations are locked, then every attempt of the order (section 11, locks 4 and 6), and the
  *    attempt must still be VERIFYING: whoever settled it first (a callback, or the job) wins, and this answer is
  *    dropped. Then PaymentDomainService settles it: confirmed, it succeeds and the order is paid, held for «رزرو ۴ روزه»
- *    or not as ReservationDomainService decides now (a new group is saved); refused, it fails and so does the order's
- *    try; no answer, it stays VERIFYING for the job to try again. The exchange goes into the payment log.
+ *    or not as ReservationDomainService decides now (a new group is saved), and its discount code's use is confirmed;
+ *    refused, it fails and so does the order's try; no answer, it stays VERIFYING for the job to try again. The
+ *    exchange goes into the payment log.
  * 3. After the commit, a paid order is told «پرداخت موفق». A failed SMS is only logged: the order is paid all the same.
  * 4. The exception of section 10.5: confirmed for an order that couldn't take it (a bug the rules keep from happening).
  *    The money is ours, so the attempt SUCCEEDED and an ERROR says so; then, while the gateway still allows it, the
@@ -59,6 +61,7 @@ class PaymentConfirmation(
     private val shopSettingsRepository: ShopSettingsRepository,
     private val paymentGateways: PaymentGateways,
     private val smsSender: SmsSender,
+    private val discounts: Discounts,
     private val clock: Clock,
 ) {
 
@@ -119,7 +122,7 @@ class PaymentConfirmation(
                     ReservationDomainService.OnPaid(held = false, groupId = null, started = null)
                 }
                 when (val confirmed = paymentDomainService.confirmed(payment, order, answer.receipt.refId, answer.receipt.cardMask, by, now, reservation)) {
-                    PaymentDomainService.Confirmed.Paid -> Unit
+                    PaymentDomainService.Confirmed.Paid -> discounts.confirmFor(order.id, now)
                     is PaymentDomainService.Confirmed.OrderNotPaid -> {
                         reverse = paymentDomainService.mayReverse(payment, order, now)
                         logger.error(

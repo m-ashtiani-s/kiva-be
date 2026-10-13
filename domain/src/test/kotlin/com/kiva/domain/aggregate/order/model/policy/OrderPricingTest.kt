@@ -1,6 +1,7 @@
 package com.kiva.domain.aggregate.order.model.policy
 
 import com.kiva.common.valueobject.Money
+import com.kiva.domain.aggregate.discount.DiscountFixtures
 import com.kiva.domain.aggregate.order.PricingFixtures.aidaCaramel
 import com.kiva.domain.aggregate.order.PricingFixtures.date
 import com.kiva.domain.aggregate.order.PricingFixtures.fridayJustAfterMidnight
@@ -43,7 +44,7 @@ class OrderPricingTest {
         reserve: Boolean = false,
         codeDiscount: Long? = null,
         consolidation: ShippingConsolidation? = null,
-    ): PurchaseQuote = OrderPricing.quote(lines, settings, method, now, reserve, codeDiscount?.let(::toman), consolidation)
+    ): PurchaseQuote = OrderPricing.quote(lines, settings, method, now, reserve, codeDiscount?.let(DiscountFixtures::codeDiscount), consolidation)
 
     // Roadmap section 7.5: the same numbers as the contract's examples and the frontend's sample orders.
     @Nested
@@ -96,6 +97,7 @@ class OrderPricingTest {
             assertEquals(toman(600_000), totals.productDiscount)
             assertEquals(toman(3_480_000), totals.subtotal)
             assertEquals(toman(348_000), totals.codeDiscount)
+            assertEquals("KIVA10", totals.discountCode?.value)
             assertEquals(Money.ZERO, totals.shippingCost)
             assertEquals(toman(3_132_000), totals.payable)
             assertEquals(toman(948_000), totals.totalSavings)

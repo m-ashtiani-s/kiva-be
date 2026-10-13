@@ -1,6 +1,10 @@
 package com.kiva.infrastructure.persistence.event.serializer
 
+import com.kiva.common.valueobject.Money
+import com.kiva.domain.aggregate.discount.model.valueobject.DiscountCodeText
 import com.kiva.domain.aggregate.order.entity.event.OrderDomainEvent
+import com.kiva.domain.aggregate.order.model.valueobject.OrderTotals
+import com.kiva.domain.aggregate.order.model.valueobject.ShippingFreeReason
 import com.kiva.infrastructure.persistence.event.InventoryEventSamples
 import com.kiva.infrastructure.persistence.event.OrderEventSamples
 import com.kiva.infrastructure.persistence.event.ProductEventSamples
@@ -88,7 +92,8 @@ class DomainEventSerializerOrderTest {
               "shippingMethod": "POST",
               "totals": {
                 "itemsCount": 2, "linesCount": 2, "itemsCompareAtTotal": 4080000, "productDiscount": 600000, "subtotal": 3480000,
-                "codeDiscount": 0, "shippingCost": 0, "shippingIsFree": true, "shippingFreeReason": "THRESHOLD", "payable": 3480000
+                "codeDiscount": 0, "shippingCost": 0, "shippingIsFree": true, "shippingFreeReason": "THRESHOLD", "payable": 3480000,
+                "discountCode": null
               },
               "reserveRequested": false,
               "holdUntil": "2026-10-12T08:15:00.123456789Z",
@@ -164,6 +169,24 @@ class DomainEventSerializerOrderTest {
             stored.forEach { (event, json) ->
                 assertEquals(Json.parseToJsonElement(json), Json.parseToJsonElement(DomainEventSerializer.serialize(event)), event.type.value)
             }
+        }
+
+        @Test
+        fun `totals stored before step 20 have no discountCode and read back with none, and a code's totals come back with it`() {
+            val placedBefore = orderPlacedJson.replace(",\n    \"discountCode\": null", "")
+            check("discountCode" !in placedBefore)
+            assertEquals(OrderEventSamples.orderPlaced, DomainEventSerializer.deserializeOrder(placedBefore, 1, "OrderPlaced"))
+
+            val withCode = OrderEventSamples.orderPlaced.copy(
+                totals = OrderTotals.constructFromPersisted(
+                    2, 2, Money.constructFromPersisted(4_080_000), Money.constructFromPersisted(600_000), Money.constructFromPersisted(3_480_000),
+                    Money.constructFromPersisted(348_000), Money.ZERO, true, ShippingFreeReason.THRESHOLD, Money.constructFromPersisted(3_132_000),
+                    DiscountCodeText.constructFromPersisted("KIVA10"),
+                ),
+            )
+            val json = DomainEventSerializer.serialize(withCode)
+            assertTrue("\"discountCode\":\"KIVA10\"" in json.replace(" ", ""), json)
+            assertEquals(withCode, DomainEventSerializer.deserializeOrder(json, 1, "OrderPlaced"))
         }
 
         @Test

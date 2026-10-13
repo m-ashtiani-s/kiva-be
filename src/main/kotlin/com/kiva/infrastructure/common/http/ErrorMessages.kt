@@ -52,6 +52,7 @@ object ErrorMessages {
         "CART_EMPTY" to "سبد خریدت خالیه",
         "CART_ITEM_NOT_FOUND" to "این کالا توی سبدت نیست",
         // --- discount ---
+        "DISCOUNT_CODE_REQUIRED" to "کد تخفیف رو وارد کن",
         "DISCOUNT_CODE_INVALID" to "این کد تخفیف معتبر نیست",
         "DISCOUNT_CODE_EXPIRED" to "مهلت این کد تخفیف تموم شده",
         "DISCOUNT_CODE_NOT_STARTED" to "این کد تخفیف هنوز فعال نشده",

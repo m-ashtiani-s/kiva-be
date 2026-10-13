@@ -3,11 +3,12 @@ package com.kiva.application.usecase.checkout.usecase.query
 import com.kiva.application.dto.CheckoutContextDto
 import com.kiva.application.port.PaymentGateways
 import com.kiva.application.repository.OfferQmRepository
-import com.kiva.application.usecase.reservation.Reservations
 import com.kiva.application.usecase.address.addressDtosOf
 import com.kiva.application.usecase.address.addressIdOf
 import com.kiva.application.usecase.address.defaultFirst
 import com.kiva.application.usecase.cart.cartDtoOf
+import com.kiva.application.usecase.discount.Discounts
+import com.kiva.application.usecase.reservation.Reservations
 import com.kiva.common.logging.getLogger
 import com.kiva.common.railway.FailureKind
 import com.kiva.common.railway.Result
@@ -48,6 +49,7 @@ class GetCheckoutContextUc(
     private val userRepository: UserRepository,
     private val paymentGateways: PaymentGateways,
     private val reservations: Reservations,
+    private val discounts: Discounts,
     private val clock: Clock,
 ) : QueryUseCase<GetCheckoutContextUc.Qry, CheckoutContextDto, GetCheckoutContextUc.Failure> {
 
@@ -81,9 +83,11 @@ class GetCheckoutContextUc(
             val now = clock.instant()
             // The order joins the customer's reservation only at its address: the one selected here.
             val standing = selected?.let { reservations.standingOf(query.userId, it.id, now) } ?: reservations.standingOf(query.userId, null, now).copy(joins = null)
+            val offers = offerQmRepository.findOffers(cart.lines.map { it.variantId })
+            val discount = discounts.appliedTo(cart, offers.mapValues { it.value.offer }, now)
             Result.success(
                 CheckoutContextDto(
-                    cart = cartDtoOf(cart, offerQmRepository.findOffers(cart.lines.map { it.variantId }), settings, now, standing),
+                    cart = cartDtoOf(cart, offers, settings, now, standing, discount),
                     addresses = geoRepository.addressDtosOf(addresses),
                     selectedAddressId = selected?.id?.value,
                     selectedMessenger = user.defaultMessenger,

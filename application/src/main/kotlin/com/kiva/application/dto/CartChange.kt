@@ -30,7 +30,8 @@ data class CartChange(
 
 /**
  * A CartIssue with the names its message needs; the Persian text is the HTTP layer's. The names are there even for a
- * line that is gone. A shipping method change names nothing: its message names the cart's method now.
+ * line that is gone. A shipping method change names nothing: its message names the cart's method now. A removed
+ * discount code names its [discountCode].
  */
 data class CartIssueDto(
     val code: CartIssueCode,
@@ -39,6 +40,7 @@ data class CartIssueDto(
     val colorName: String?,
     val previousValue: Long?,
     val currentValue: Long?,
+    val discountCode: String? = null,
 )
 
 /** The line a remove took out: what the client needs to add it back, and the names for the message. */

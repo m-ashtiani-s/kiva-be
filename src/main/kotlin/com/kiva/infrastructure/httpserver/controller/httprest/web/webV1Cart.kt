@@ -3,12 +3,14 @@ package com.kiva.infrastructure.httpserver.controller.httprest.web
 import com.kiva.application.dto.CartChange
 import com.kiva.application.dto.CartDto
 import com.kiva.application.usecase.cart.usecase.command.AddCartItemUc
+import com.kiva.application.usecase.cart.usecase.command.ApplyDiscountCodeUc
 import com.kiva.application.usecase.cart.usecase.command.ChangeCartItemUc
 import com.kiva.application.usecase.cart.usecase.command.ChooseShippingMethodUc
 import com.kiva.application.usecase.cart.usecase.command.ClearCartUc
 import com.kiva.application.usecase.cart.usecase.command.MergeGuestCartUc
 import com.kiva.application.usecase.cart.usecase.command.OpenCartUc
 import com.kiva.application.usecase.cart.usecase.command.RemoveCartItemUc
+import com.kiva.application.usecase.cart.usecase.command.RemoveDiscountCodeUc
 import com.kiva.application.usecase.cart.usecase.command.SetCartReservationUc
 import com.kiva.application.usecase.cart.usecase.query.GetCartUc
 import com.kiva.common.railway.Result
@@ -20,6 +22,7 @@ import com.kiva.infrastructure.httpserver.auth.accessPrincipal
 import com.kiva.infrastructure.httpserver.cart.cartCaller
 import com.kiva.infrastructure.httpserver.cart.sendNewCartToken
 import com.kiva.infrastructure.httpserver.controller.httprest.model.request.AddCartItemHttpRequest
+import com.kiva.infrastructure.httpserver.controller.httprest.model.request.ApplyDiscountCodeHttpRequest
 import com.kiva.infrastructure.httpserver.controller.httprest.model.request.ChooseShippingMethodHttpRequest
 import com.kiva.infrastructure.httpserver.controller.httprest.model.request.MergeCartHttpRequest
 import com.kiva.infrastructure.httpserver.controller.httprest.model.request.SetCartReservationHttpRequest
@@ -50,6 +53,8 @@ class CartUseCases(
     val chooseShippingMethod: ChooseShippingMethodUc,
     val setCartReservation: SetCartReservationUc,
     val mergeGuestCart: MergeGuestCartUc,
+    val applyDiscountCode: ApplyDiscountCodeUc,
+    val removeDiscountCode: RemoveDiscountCodeUc,
 )
 
 /** The path parameter every line route names its line by. */
@@ -101,6 +106,15 @@ fun Route.webV1Cart(useCases: CartUseCases) {
         put("/cart/reservation") {
             val request = call.receive<SetCartReservationHttpRequest>()
             call.respondCart(useCases, useCases.setCartReservation.execute(SetCartReservationUc.Cmd(call.cartCaller(), request.enabled)))
+        }
+
+        post("/cart/discount-code") {
+            val request = call.receive<ApplyDiscountCodeHttpRequest>()
+            call.respondCart(useCases, useCases.applyDiscountCode.execute(ApplyDiscountCodeUc.Cmd(call.cartCaller(), request.code)))
+        }
+
+        delete("/cart/discount-code") {
+            call.respondCart(useCases, useCases.removeDiscountCode.execute(RemoveDiscountCodeUc.Cmd(call.cartCaller())))
         }
     }
 

@@ -27,6 +27,7 @@ import com.kiva.domain.aggregate.cart.model.CartIssueCode.QUANTITY_REDUCED
 import com.kiva.domain.aggregate.cart.model.CartIssueCode.SHIPPING_METHOD_CHANGED
 import com.kiva.domain.aggregate.cart.model.CartIssueCode.VARIANT_UNAVAILABLE
 import com.kiva.domain.aggregate.cart.model.valueobject.ReservationUnavailableReason
+import com.kiva.domain.aggregate.discount.model.valueobject.DiscountCodeText
 import com.kiva.domain.aggregate.order.PricingFixtures.post
 import com.kiva.domain.aggregate.order.PricingFixtures.shopSettings
 import com.kiva.domain.aggregate.order.PricingFixtures.tipax
@@ -276,15 +277,67 @@ class CartTest {
         }
 
         @Test
-        fun `clearing takes the lines and the reservation, but keeps the shipping method`() {
-            val cart = userCart(line(itemId(1), NILA_BLACK, 2, 1_450_000), method = TIPAX, reserve = true)
+        fun `clearing takes the lines, the reservation and the discount code, but keeps the shipping method`() {
+            val cart = userCart(line(itemId(1), NILA_BLACK, 2, 1_450_000), method = TIPAX, reserve = true, discountCode = "KIVA10")
 
             cart.clear(at(2))
 
             assertTrue(cart.lines.isEmpty())
             assertFalse(cart.reserve)
+            assertNull(cart.discountCode)
+            assertTrue(cart.issues.isEmpty())
             assertEquals(TIPAX, cart.shippingMethod)
             assertEquals(at(2), cart.updatedOn)
+        }
+    }
+
+    @Nested
+    inner class DiscountCode {
+        private val kiva10 = DiscountCodeText.constructFromPersisted("KIVA10")
+
+        @Test
+        fun `a code applied takes the place of the one before`() {
+            val cart = userCart(line(itemId(1), NILA_BLACK, 1, 1_450_000), discountCode = "PAEEZ15")
+
+            cart.applyDiscountCode(kiva10, at(1))
+
+            assertEquals(kiva10, cart.discountCode)
+            assertEquals(at(1), cart.updatedOn)
+            assertTrue(cart.issues.isEmpty())
+        }
+
+        @Test
+        fun `taken off by the shopper - quietly`() {
+            val cart = userCart(line(itemId(1), NILA_BLACK, 1, 1_450_000), discountCode = "KIVA10")
+
+            cart.removeDiscountCode(at(1))
+            cart.removeDiscountCode(at(2))
+
+            assertNull(cart.discountCode)
+            assertTrue(cart.issues.isEmpty())
+        }
+
+        @Test
+        fun `one that no longer applies goes, told once with its code`() {
+            val cart = userCart(line(itemId(1), NILA_BLACK, 1, 1_450_000), discountCode = "KIVA10")
+
+            cart.dropDiscountCode(at(1))
+            cart.dropDiscountCode(at(2))
+
+            assertNull(cart.discountCode)
+            assertEquals(listOf(CartIssue(CartIssueCode.DISCOUNT_REMOVED, null, null, null, null, kiva10)), cart.issues)
+            assertEquals(at(1), cart.updatedOn)
+        }
+
+        @Test
+        fun `after a login the customer's own code stays, and without one the guest's comes along`() {
+            val kept = userCart(line(itemId(1), NILA_BLACK, 1, 1_450_000), discountCode = "PAEEZ15")
+            kept.absorb(guestCart(line(itemId(2), AIDA_BLACK, 1, 2_790_000), discountCode = "KIVA10"), offers(), settings, now)
+            assertEquals("PAEEZ15", kept.discountCode?.value)
+
+            val cart = userCart(line(itemId(1), NILA_BLACK, 1, 1_450_000))
+            cart.absorb(guestCart(line(itemId(2), AIDA_BLACK, 1, 2_790_000), discountCode = "KIVA10"), offers(), settings, now)
+            assertEquals(kiva10, cart.discountCode)
         }
     }
 

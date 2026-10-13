@@ -12,6 +12,7 @@ import com.kiva.domain.aggregate.cart.model.valueobject.CartQuantity
 import com.kiva.domain.aggregate.cart.model.valueobject.CartToken
 import com.kiva.domain.aggregate.cart.repository.CartIdGenerator
 import com.kiva.domain.aggregate.category.model.valueobject.CategoryId
+import com.kiva.domain.aggregate.discount.model.valueobject.DiscountCodeText
 import com.kiva.domain.aggregate.product.model.valueobject.MaxPerOrder
 import com.kiva.domain.aggregate.product.model.valueobject.PriceTag
 import com.kiva.domain.aggregate.product.model.valueobject.ProductId
@@ -90,16 +91,16 @@ object CartFixtures {
         addedOn: Instant = now,
     ): CartLine = CartLine.constructFromPersisted(itemId, variant(variantId), quantity(quantity), toman(seenUnitPrice), seenPurchasable, addedOn)
 
-    fun userCart(vararg lines: CartLine, method: ShippingMethodCode = ShippingMethodCode.POST, reserve: Boolean = false): Cart =
+    fun userCart(vararg lines: CartLine, method: ShippingMethodCode = ShippingMethodCode.POST, reserve: Boolean = false, discountCode: String? = null): Cart =
         Cart.constructFromPersisted(
             CartPublicId.constructFromPersisted("cart_user000001"), CartOwner.User(UserId.constructFromPersisted(7)),
-            lines.toList(), method, reserve, now, now,
+            lines.toList(), method, reserve, now, now, discountCode?.let(DiscountCodeText::constructFromPersisted),
         )
 
-    fun guestCart(vararg lines: CartLine, method: ShippingMethodCode = ShippingMethodCode.POST, reserve: Boolean = false): Cart =
+    fun guestCart(vararg lines: CartLine, method: ShippingMethodCode = ShippingMethodCode.POST, reserve: Boolean = false, discountCode: String? = null): Cart =
         Cart.constructFromPersisted(
             CartPublicId.constructFromPersisted("cart_guest00001"), CartOwner.Guest(TokenHash(ByteArray(TokenHash.LENGTH))),
-            lines.toList(), method, reserve, now, now,
+            lines.toList(), method, reserve, now, now, discountCode?.let(DiscountCodeText::constructFromPersisted),
         )
 
     /** Hands out ci_0000000101, ci_0000000102, … and cart_0000000001, …; tokens are fixed and valid. */

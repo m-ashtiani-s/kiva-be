@@ -14,6 +14,7 @@ import com.kiva.domain.aggregate.address.model.valueobject.UnitNumber
 import com.kiva.domain.aggregate.cart.CartFixtures
 import com.kiva.domain.aggregate.cart.model.PurchaseOffer
 import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
+import com.kiva.domain.aggregate.discount.model.CodeDiscount
 import com.kiva.domain.aggregate.order.OrderFixtures.now
 import com.kiva.domain.aggregate.order.entity.Order
 import com.kiva.domain.aggregate.order.model.OrderPlacement
@@ -95,6 +96,7 @@ object OrderFixtures {
         expectedPayable: Long? = null,
         unpaidOrdersHoldingUntil: List<Instant> = emptyList(),
         settings: ShopSettings = PricingFixtures.shopSettings(),
+        codeDiscount: CodeDiscount? = null,
     ): OrderPlacement = OrderPlacement(
         userId = sara,
         lines = lines,
@@ -109,6 +111,7 @@ object OrderFixtures {
         expectedPayable = expectedPayable?.let { Money.constructFromPersisted(it) },
         unpaidOrdersHoldingUntil = unpaidOrdersHoldingUntil,
         settings = settings,
+        codeDiscount = codeDiscount,
     )
 
     /** Hands out 1, 2, 3, … and remembers how many it did. */

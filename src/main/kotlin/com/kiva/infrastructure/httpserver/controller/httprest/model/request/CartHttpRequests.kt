@@ -14,6 +14,10 @@ data class UpdateCartItemHttpRequest(val quantity: Int? = null, val variantId: L
 @Serializable
 data class ChooseShippingMethodHttpRequest(val method: String)
 
+/** The contract's ApplyDiscountCodeRequest. A missing or blank code is the use case's 400 on `code`. */
+@Serializable
+data class ApplyDiscountCodeHttpRequest(val code: String? = null)
+
 /** The body of `PUT /cart/reservation`. */
 @Serializable
 data class SetCartReservationHttpRequest(val enabled: Boolean)

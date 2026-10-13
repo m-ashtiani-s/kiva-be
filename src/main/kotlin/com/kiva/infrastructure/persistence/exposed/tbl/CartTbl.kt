@@ -11,7 +11,7 @@ object CartTbl : LongIdTable(name = "cart_tbl", columnName = "pId") {
     val guestTokenHash = binary("guestTokenHash", 32).nullable().uniqueIndex()
     val shippingMethod = enumerationByName<ShippingMethodCode>("shippingMethod", 10)
     val reserve = bool("reserve")
-    /** Round 2 (step 20); nothing writes it yet. */
+    /** Round 2 (step 20): the code the shopper applied; V20 lets it have '_'. */
     val discountCode = varchar("discountCode", 32).nullable()
     val createdOn = timestampWithTimeZone("createdOn")
     val updatedOn = timestampWithTimeZone("updatedOn")

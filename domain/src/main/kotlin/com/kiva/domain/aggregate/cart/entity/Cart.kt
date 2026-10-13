@@ -12,6 +12,7 @@ import com.kiva.domain.aggregate.cart.model.valueobject.CartOwner
 import com.kiva.domain.aggregate.cart.model.valueobject.CartPublicId
 import com.kiva.domain.aggregate.cart.model.valueobject.CartQuantity
 import com.kiva.domain.aggregate.cart.model.valueobject.ReservationUnavailableReason
+import com.kiva.domain.aggregate.discount.model.valueobject.DiscountCodeText
 import com.kiva.domain.aggregate.order.model.policy.ShippingPolicy
 import com.kiva.domain.aggregate.order.model.valueobject.ShippingConsolidation
 import com.kiva.domain.aggregate.product.model.valueobject.ProductId
@@ -27,7 +28,9 @@ import java.time.Instant
  *   limit per order (CartLimitsPolicy); when that limit has to be cut, the older lines keep their share;
  * - a line that can't be bought any more (none left, or out of the shop) stays, so the shopper sees what happened,
  *   but counts in no money and blocks placing an order until it is removed;
- * - the «رزرو ۴ روزه» switch stays on only while a reservation is possible.
+ * - the «رزرو ۴ روزه» switch stays on only while a reservation is possible;
+ * - a discount code (round 2) stays only while it applies: the use case checks it with DiscountDomainService after every
+ *   change, and one that no longer applies goes, with DISCOUNT_REMOVED.
  *
  * It stores no price and no stock: every operation gets the catalog's current [PurchaseOffer]s, keyed by color. They
  * must cover every line of the cart and the color asked for.
@@ -45,6 +48,7 @@ class Cart private constructor(
     reserve: Boolean,
     val createdOn: Instant,
     updatedOn: Instant,
+    discountCode: DiscountCodeText?,
 ) {
     private val entries: MutableList<CartLine> = lines.sortedWith(OLDEST_FIRST).toMutableList()
     private val raised: MutableList<CartIssue> = mutableListOf()
@@ -59,6 +63,10 @@ class Cart private constructor(
 
     /** The last time the cart was used; old guest carts are cleaned up by it. */
     var updatedOn: Instant = updatedOn
+        private set
+
+    /** The discount code the shopper applied (round 2), checked to apply when it was applied and after every change. */
+    var discountCode: DiscountCodeText? = discountCode
         private set
 
     // Only this class writes lines, so a broken cart is a bug.
@@ -223,10 +231,14 @@ class Cart private constructor(
         return Result.success(line)
     }
 
-    /** Empties the cart: the lines go and the reservation switch goes off. The shipping method stays. */
+    /**
+     * Empties the cart: the lines go, the reservation switch goes off and the discount code goes (an order took it, or
+     * there is nothing left for it). The shipping method stays.
+     */
     fun clear(now: Instant) {
         entries.clear()
         reserve = false
+        discountCode = null
         updatedOn = now
     }
 
@@ -264,6 +276,28 @@ class Cart private constructor(
         return Result.success(Unit)
     }
 
+    // ============ the discount code (round 2) ============
+
+    /** Applies [code], in place of any other: DiscountDomainService found it applies to this cart now. */
+    fun applyDiscountCode(code: DiscountCodeText, now: Instant) {
+        discountCode = code
+        updatedOn = now
+    }
+
+    /** The shopper took the code off. Without one, nothing changes but the time. */
+    fun removeDiscountCode(now: Instant) {
+        discountCode = null
+        updatedOn = now
+    }
+
+    /** The code no longer applies (DiscountDomainService said why): it goes, and the shopper is told once. */
+    fun dropDiscountCode(now: Instant) {
+        val code = discountCode ?: return
+        discountCode = null
+        raised += CartIssue.discountRemoved(code)
+        updatedOn = now
+    }
+
     // ============ after login ============
 
     /**
@@ -272,7 +306,9 @@ class Cart private constructor(
      * id, so the shopper's page doesn't lose track of it. Then the limits are applied to the whole cart, oldest line
      * first, as in [sync]. The guest's shipping method and reservation switch win, since the shopper chose them just
      * now, but only when the guest cart holds something: an empty one was never used (every visit makes one) and has
-     * only the shop's default, so it leaves the customer's choices as they are. The guest cart's own issues come along.
+     * only the shop's default, so it leaves the customer's choices as they are. The discount code is the customer's when
+     * they had one, else the guest's (contract); the use case then checks it for the customer. The guest cart's own
+     * issues come along.
      */
     fun absorb(
         guest: Cart,
@@ -298,6 +334,7 @@ class Cart private constructor(
             shippingMethod = guest.shippingMethod
             reserve = guest.reserve
         }
+        if (discountCode == null) discountCode = guest.discountCode
         fitToLimits(offers, asked)
         dropReservationIfUnavailable(offers, settings, hasActiveReservation)
         updatedOn = now
@@ -367,7 +404,7 @@ class Cart private constructor(
 
         /** An empty cart, shipping by [shippingMethod] (the shop's default). */
         fun new(publicId: CartPublicId, owner: CartOwner, shippingMethod: ShippingMethodCode, now: Instant): Cart =
-            Cart(publicId, owner, emptyList(), shippingMethod, reserve = false, createdOn = now, updatedOn = now)
+            Cart(publicId, owner, emptyList(), shippingMethod, reserve = false, createdOn = now, updatedOn = now, discountCode = null)
 
         fun constructFromPersisted(
             publicId: CartPublicId,
@@ -377,7 +414,8 @@ class Cart private constructor(
             reserve: Boolean,
             createdOn: Instant,
             updatedOn: Instant,
-        ): Cart = Cart(publicId, owner, lines, shippingMethod, reserve, createdOn, updatedOn)
+            discountCode: DiscountCodeText? = null,
+        ): Cart = Cart(publicId, owner, lines, shippingMethod, reserve, createdOn, updatedOn, discountCode)
     }
 
     sealed class Failure(code: String, kind: FailureKind, field: String? = null, meta: Map<String, Any> = emptyMap()) :

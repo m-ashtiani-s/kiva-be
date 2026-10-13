@@ -2,12 +2,14 @@ package com.kiva.infrastructure.httpserver.controller.httprest.web
 
 import com.kiva.application.usecase.cart.CartCommands
 import com.kiva.application.usecase.cart.usecase.command.AddCartItemUc
+import com.kiva.application.usecase.cart.usecase.command.ApplyDiscountCodeUc
 import com.kiva.application.usecase.cart.usecase.command.ChangeCartItemUc
 import com.kiva.application.usecase.cart.usecase.command.ChooseShippingMethodUc
 import com.kiva.application.usecase.cart.usecase.command.ClearCartUc
 import com.kiva.application.usecase.cart.usecase.command.MergeGuestCartUc
 import com.kiva.application.usecase.cart.usecase.command.OpenCartUc
 import com.kiva.application.usecase.cart.usecase.command.RemoveCartItemUc
+import com.kiva.application.usecase.cart.usecase.command.RemoveDiscountCodeUc
 import com.kiva.application.usecase.cart.usecase.command.SetCartReservationUc
 import com.kiva.common.valueobject.IranianMobileNumber
 import com.kiva.common.valueobject.UserId
@@ -103,7 +105,7 @@ class WebV1CartMergeOnDatabaseTest {
     private val domain = stack.cartDomainService
 
     private fun commands(repository: CartRepository = carts) =
-        CartCommands(transactions, repository, domain, OfferQmRepositoryImpl(), ShopSettingsRepositoryImpl(), stack.reservations, clock)
+        CartCommands(transactions, repository, domain, OfferQmRepositoryImpl(), ShopSettingsRepositoryImpl(), stack.reservations, stack.discounts, clock)
 
     private val cartUseCases = commands().let { c ->
         CartUseCases(
@@ -116,6 +118,8 @@ class WebV1CartMergeOnDatabaseTest {
             ChooseShippingMethodUc(c, domain),
             SetCartReservationUc(c, domain),
             MergeGuestCartUc(c, domain),
+            ApplyDiscountCodeUc(c, domain, stack.discounts),
+            RemoveDiscountCodeUc(c, domain),
         )
     }
 

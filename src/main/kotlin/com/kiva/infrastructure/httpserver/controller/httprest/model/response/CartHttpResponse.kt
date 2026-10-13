@@ -1,12 +1,13 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.model.response
 
+import com.kiva.application.dto.AppliedDiscountDto
 import com.kiva.application.dto.CartDto
 import com.kiva.application.dto.CartIssueDto
 import com.kiva.application.dto.CartItemDto
 import com.kiva.application.dto.CartReservationDto
 import com.kiva.application.dto.ConsolidationDto
-import com.kiva.domain.aggregate.cart.model.valueobject.ReservationUnavailableReason
 import com.kiva.application.dto.RemovedItemDto
+import com.kiva.domain.aggregate.cart.model.valueobject.ReservationUnavailableReason
 import com.kiva.domain.aggregate.order.model.valueobject.FreeShippingProgress
 import com.kiva.domain.aggregate.order.model.valueobject.OrderTotals
 import com.kiva.domain.aggregate.order.model.valueobject.ShippingQuote
@@ -23,11 +24,7 @@ import kotlinx.serialization.json.JsonEncoder
 import kotlinx.serialization.json.JsonUnquotedLiteral
 import java.math.BigDecimal
 
-/**
- * Contract schema `Cart`, built from GetCartUc's CartDto and the command's issues.
- *
- * Not built yet, always `null`: [discount] (discount codes, step 20).
- */
+/** Contract schema `Cart`, built from GetCartUc's CartDto and the command's issues. */
 @Serializable
 data class CartHttpResponse(
     val id: String,
@@ -60,7 +57,7 @@ data class CartHttpResponse(
                 freeShipping = cart.freeShipping?.let { FreeShippingProgressHttpResponse.from(it, nameOf(it.method)) },
                 reservation = CartReservationHttpResponse.from(cart.reservation),
                 consolidation = cart.consolidation?.let(ReservationConsolidationHttpResponse::from),
-                discount = null,
+                discount = cart.discount?.let(AppliedDiscountHttpResponse::from),
                 issues = issues.map { CartIssueHttpResponse(it.code.name, it.itemId, CartTexts.issue(it, chosenName), it.previousValue, it.currentValue) },
                 // A guest is asked to log in with their mobile number before paying.
                 checkoutRequiresLogin = cart.isGuest,
@@ -292,9 +289,13 @@ data class ReservationConsolidationHttpResponse(
     }
 }
 
-/** Contract schema `AppliedDiscount`; made from step 20. */
+/** Contract schema `AppliedDiscount`: the cart's code, and what it takes off now. */
 @Serializable
-data class AppliedDiscountHttpResponse(val code: String, val label: String, val type: String, val value: Int, val amount: Long)
+data class AppliedDiscountHttpResponse(val code: String, val label: String, val type: String, val value: Int, val amount: Long) {
+    companion object {
+        fun from(discount: AppliedDiscountDto) = AppliedDiscountHttpResponse(discount.code, discount.label, discount.type.name, discount.value, discount.amount.toman)
+    }
+}
 
 /** Contract schema `CartIssue`. */
 @Serializable

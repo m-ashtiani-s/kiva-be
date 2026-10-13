@@ -2,11 +2,12 @@ package com.kiva.infrastructure.di
 
 import com.kiva.domain.aggregate.address.AddressBookDomainService
 import com.kiva.domain.aggregate.cart.CartDomainService
+import com.kiva.domain.aggregate.discount.DiscountDomainService
 import com.kiva.domain.aggregate.inventory.InventoryDomainService
 import com.kiva.domain.aggregate.order.OrderDomainService
 import com.kiva.domain.aggregate.payment.PaymentDomainService
-import com.kiva.domain.aggregate.reservation.ReservationDomainService
 import com.kiva.domain.aggregate.product.ProductDomainService
+import com.kiva.domain.aggregate.reservation.ReservationDomainService
 import org.koin.dsl.module
 
 /** Domain services, built from the ports in daoModule. */
@@ -26,4 +27,5 @@ val domainServiceModule = module(createdAtStart = true) {
     single { OrderDomainService(orderIdGenerator = get()) }
     single { PaymentDomainService(paymentIdGenerator = get()) }
     single { ReservationDomainService(reservationGroupIdGenerator = get()) }
+    single { DiscountDomainService() }
 }

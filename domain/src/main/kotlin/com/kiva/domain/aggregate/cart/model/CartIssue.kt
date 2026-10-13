@@ -2,6 +2,7 @@ package com.kiva.domain.aggregate.cart.model
 
 import com.kiva.domain.aggregate.cart.entity.CartLine
 import com.kiva.domain.aggregate.cart.model.valueobject.CartItemId
+import com.kiva.domain.aggregate.discount.model.valueobject.DiscountCodeText
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
 
 /**
@@ -11,6 +12,7 @@ import com.kiva.domain.aggregate.product.model.valueobject.VariantId
  * @property itemId the line it is about; for a line that is gone (cut to 0, or merged into another), its old id.
  * @property variantId the color of that line, so the message can name the bag even when the line is gone.
  * @property previousValue and [currentValue]: the price or the quantity before and after, when the code has them.
+ * @property discountCode the code a DISCOUNT_REMOVED is about, so the message can name it.
  */
 data class CartIssue(
     val code: CartIssueCode,
@@ -18,6 +20,7 @@ data class CartIssue(
     val variantId: VariantId?,
     val previousValue: Long?,
     val currentValue: Long?,
+    val discountCode: DiscountCodeText? = null,
 ) {
     companion object {
         internal fun priceChanged(line: CartLine, previous: Long, current: Long): CartIssue = CartIssue(
@@ -35,12 +38,12 @@ data class CartIssue(
             CartIssue(CartIssueCode.QUANTITY_REDUCED, itemId, variantId, previous.toLong(), current.toLong())
 
         internal fun shippingMethodChanged(): CartIssue = CartIssue(CartIssueCode.SHIPPING_METHOD_CHANGED, null, null, null, null)
+
+        internal fun discountRemoved(code: DiscountCodeText): CartIssue = CartIssue(CartIssueCode.DISCOUNT_REMOVED, null, null, null, null, code)
     }
 }
 
-/**
- * Values from the contract's `CartIssue.code`. Its `DISCOUNT_REMOVED` comes with discount codes in round 2 (step 20).
- */
+/** Values from the contract's `CartIssue.code`. */
 enum class CartIssueCode {
     /** The price went up since the shopper saw it. */
     PRICE_INCREASED,
@@ -59,4 +62,7 @@ enum class CartIssueCode {
 
     /** The method the cart had is no longer offered; the cart moved to the shop's default. */
     SHIPPING_METHOD_CHANGED,
+
+    /** The cart's discount code doesn't apply any more (expired, used up, the cart changed): it was taken off (round 2). */
+    DISCOUNT_REMOVED,
 }

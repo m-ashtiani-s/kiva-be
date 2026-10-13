@@ -36,7 +36,8 @@ import java.time.Instant
  * 5. the customer doesn't have too many unpaid orders holding stock (429 RATE_LIMITED);
  * 6. every line can be bought: in the shop (PRODUCT_UNAVAILABLE), enough left (OUT_OF_STOCK), within the product's
  *    limit (QUANTITY_EXCEEDS_LIMIT), each naming the cart's lines;
- * 7. the payable is what the customer saw (409 PRICE_CHANGED, with the payable now);
+ * 7. the payable is what the customer saw (409 PRICE_CHANGED, with the payable now). A discount code that stopped
+ *    applying since the cart is not an error of its own: the order is priced without it, so the payable changed;
  * 8. then the order gets its id and code, and is placed.
  *
  * What comes before these is the use case's, because the domain can't know it: the idempotency key, an empty cart,
@@ -68,6 +69,7 @@ class OrderDomainService(private val orderIdGenerator: OrderIdGenerator) {
             chosenMethod = placement.shippingMethod,
             now = now,
             reserve = reserve,
+            codeDiscount = placement.codeDiscount,
             consolidation = consolidation,
         )
         val payable = quote.totals.payable

@@ -36,6 +36,10 @@ class CartTextsTest {
             "روش ارسالی که انتخاب کرده بودی دیگه در دسترس نیست؛ «پست معمولی» انتخاب شد.",
             CartTexts.issue(CartIssueDto(CartIssueCode.SHIPPING_METHOD_CHANGED, null, null, null, null, null), "پست معمولی"),
         )
+        assertEquals(
+            "کد تخفیف «KIVA10» دیگه روی سبدت اعمال نمی‌شه و برداشته شد.",
+            CartTexts.issue(CartIssueDto(CartIssueCode.DISCOUNT_REMOVED, null, null, null, null, null, "KIVA10"), "پست معمولی"),
+        )
         CartIssueCode.entries.forEach { code -> assert(CartTexts.issue(issue(code, 1), "پست معمولی").isNotBlank()) }
     }
 

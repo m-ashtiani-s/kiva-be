@@ -1,22 +1,16 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
-import com.kiva.infrastructure.persistence.exposed.GeoRepositoryImpl
-import com.kiva.infrastructure.persistence.exposed.AddressBookRepositoryImpl
-import com.kiva.infrastructure.persistence.exposed.ReservationGroupRepositoryImpl
-import com.kiva.infrastructure.persistence.exposed.ReservationGroupIdGeneratorImpl
-import com.kiva.domain.aggregate.reservation.ReservationDomainService
-import com.kiva.application.usecase.reservation.Reservations
 import com.kiva.application.port.OtpCodes
 import com.kiva.application.port.SmsSender
 import com.kiva.application.usecase.account.usecase.command.ConfirmPhoneChangeUc
 import com.kiva.application.usecase.account.usecase.command.RequestPhoneChangeUc
 import com.kiva.application.usecase.account.usecase.command.UpdateMyProfileUc
-import com.kiva.application.usecase.auth.OtpIssuer
 import com.kiva.application.usecase.account.usecase.query.GetMeUc
 import com.kiva.application.usecase.admin.usecase.command.CheckPanelAccessUc
 import com.kiva.application.usecase.admin.usecase.command.SetUserRolesUc
 import com.kiva.application.usecase.admin.usecase.query.FindCustomersUc
 import com.kiva.application.usecase.admin.usecase.query.GetCustomerUc
+import com.kiva.application.usecase.auth.OtpIssuer
 import com.kiva.application.usecase.auth.usecase.command.BootstrapAdminUc
 import com.kiva.application.usecase.auth.usecase.command.LogoutUc
 import com.kiva.application.usecase.auth.usecase.command.RefreshSessionUc
@@ -25,11 +19,15 @@ import com.kiva.application.usecase.auth.usecase.command.VerifyLoginCodeUc
 import com.kiva.application.usecase.cart.CartCommands
 import com.kiva.application.usecase.cart.usecase.command.MergeGuestCartUc
 import com.kiva.application.usecase.cart.usecase.query.GetCartUc
+import com.kiva.application.usecase.discount.Discounts
+import com.kiva.application.usecase.reservation.Reservations
 import com.kiva.common.valueobject.IranianMobileNumber
-import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
 import com.kiva.domain.aggregate.cart.CartDomainService
+import com.kiva.domain.aggregate.discount.DiscountDomainService
+import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpPurpose
+import com.kiva.domain.aggregate.reservation.ReservationDomainService
 import com.kiva.infrastructure.MutableClock
 import com.kiva.infrastructure.TestDatabase
 import com.kiva.infrastructure.auth.HmacOtpCodes
@@ -40,12 +38,18 @@ import com.kiva.infrastructure.common.persistence.ExposedTransactionManager
 import com.kiva.infrastructure.httpserver.API_V1
 import com.kiva.infrastructure.httpserver.auth.configureAuthentication
 import com.kiva.infrastructure.httpserver.configureHttp
+import com.kiva.infrastructure.persistence.exposed.AddressBookRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.AdminCustomerRepositoryImpl
-import com.kiva.infrastructure.persistence.exposed.OrderQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.AuthSessionRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.CartRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.DiscountCodeRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.DiscountRedemptionRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.GeoRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.OfferQmRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.OrderQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.OtpChallengeRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.ReservationGroupIdGeneratorImpl
+import com.kiva.infrastructure.persistence.exposed.ReservationGroupRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.SecurityEventLogImpl
 import com.kiva.infrastructure.persistence.exposed.ShopSettingsRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.UserRepositoryImpl
@@ -105,9 +109,11 @@ class AuthTestStack(val clock: MutableClock, maxSmsPerHour: Int = 300, val otpCo
         ReservationGroupRepositoryImpl(), AddressBookRepositoryImpl(), GeoRepositoryImpl(), OrderQmRepositoryImpl(),
         ReservationDomainService(ReservationGroupIdGeneratorImpl()),
     )
-    val cartCommands = CartCommands(transactions, carts, cartDomainService, OfferQmRepositoryImpl(), ShopSettingsRepositoryImpl(), reservations, clock)
+    val discounts = Discounts(DiscountCodeRepositoryImpl(), DiscountRedemptionRepositoryImpl(), OrderQmRepositoryImpl(), DiscountDomainService())
+    val cartCommands =
+        CartCommands(transactions, carts, cartDomainService, OfferQmRepositoryImpl(), ShopSettingsRepositoryImpl(), reservations, discounts, clock)
     val mergeGuestCart = MergeGuestCartUc(cartCommands, cartDomainService)
-    val getCart = GetCartUc(transactions, carts, OfferQmRepositoryImpl(), ShopSettingsRepositoryImpl(), reservations, clock)
+    val getCart = GetCartUc(transactions, carts, OfferQmRepositoryImpl(), ShopSettingsRepositoryImpl(), reservations, discounts, clock)
 
     val authUseCases = AuthUseCases(send, verify, getMe, refresh, logout, mergeGuestCart, getCart)
 

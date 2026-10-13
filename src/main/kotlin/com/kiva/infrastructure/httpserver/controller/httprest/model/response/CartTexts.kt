@@ -42,6 +42,7 @@ object CartTexts {
                     "تعداد $item به ${(issue.currentValue ?: 0L).toPersianNumber()} عدد کم شد؛ بیشتر از این نمی‌شه خرید."
                 }
             CartIssueCode.SHIPPING_METHOD_CHANGED -> "روش ارسالی که انتخاب کرده بودی دیگه در دسترس نیست؛ «$shippingMethodName» انتخاب شد."
+            CartIssueCode.DISCOUNT_REMOVED -> "کد تخفیف ${issue.discountCode?.let { "«$it» " }.orEmpty()}دیگه روی سبدت اعمال نمی‌شه و برداشته شد."
         }
     }
 

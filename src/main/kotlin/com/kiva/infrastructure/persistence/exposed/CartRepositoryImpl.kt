@@ -9,6 +9,7 @@ import com.kiva.domain.aggregate.cart.model.valueobject.CartOwner
 import com.kiva.domain.aggregate.cart.model.valueobject.CartPublicId
 import com.kiva.domain.aggregate.cart.model.valueobject.CartQuantity
 import com.kiva.domain.aggregate.cart.repository.CartRepository
+import com.kiva.domain.aggregate.discount.model.valueobject.DiscountCodeText
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
 import com.kiva.domain.aggregate.session.model.valueobject.TokenHash
 import com.kiva.infrastructure.persistence.exposed.tbl.CartItemTbl
@@ -148,6 +149,7 @@ class CartRepositoryImpl : CartRepository {
         this[CartTbl.publicId] = cart.publicId.value
         this[CartTbl.shippingMethod] = cart.shippingMethod
         this[CartTbl.reserve] = cart.reserve
+        this[CartTbl.discountCode] = cart.discountCode?.value
         this[CartTbl.updatedOn] = cart.updatedOn.utc()
     }
 
@@ -170,6 +172,7 @@ class CartRepositoryImpl : CartRepository {
             reserve = this[CartTbl.reserve],
             createdOn = this[CartTbl.createdOn].toInstant(),
             updatedOn = this[CartTbl.updatedOn].toInstant(),
+            discountCode = this[CartTbl.discountCode]?.let(DiscountCodeText::constructFromPersisted),
         )
     }
 

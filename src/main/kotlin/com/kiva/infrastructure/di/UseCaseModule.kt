@@ -21,9 +21,8 @@ import com.kiva.application.usecase.auth.usecase.command.RefreshSessionUc
 import com.kiva.application.usecase.auth.usecase.command.SendLoginCodeUc
 import com.kiva.application.usecase.auth.usecase.command.VerifyLoginCodeUc
 import com.kiva.application.usecase.cart.CartCommands
-import com.kiva.application.usecase.idempotency.IdempotencyGuard
-import com.kiva.application.usecase.idempotency.usecase.command.DeleteOldIdempotencyKeysUc
 import com.kiva.application.usecase.cart.usecase.command.AddCartItemUc
+import com.kiva.application.usecase.cart.usecase.command.ApplyDiscountCodeUc
 import com.kiva.application.usecase.cart.usecase.command.ChangeCartItemUc
 import com.kiva.application.usecase.cart.usecase.command.ChooseShippingMethodUc
 import com.kiva.application.usecase.cart.usecase.command.ClearCartUc
@@ -31,6 +30,7 @@ import com.kiva.application.usecase.cart.usecase.command.DeleteStaleGuestCartsUc
 import com.kiva.application.usecase.cart.usecase.command.MergeGuestCartUc
 import com.kiva.application.usecase.cart.usecase.command.OpenCartUc
 import com.kiva.application.usecase.cart.usecase.command.RemoveCartItemUc
+import com.kiva.application.usecase.cart.usecase.command.RemoveDiscountCodeUc
 import com.kiva.application.usecase.cart.usecase.command.SetCartReservationUc
 import com.kiva.application.usecase.cart.usecase.query.GetCartUc
 import com.kiva.application.usecase.catalog.usecase.query.GetCategoryUc
@@ -44,8 +44,11 @@ import com.kiva.application.usecase.checkout.usecase.command.StartPaymentUc
 import com.kiva.application.usecase.checkout.usecase.query.GetCheckoutContextUc
 import com.kiva.application.usecase.checkout.usecase.query.GetPaymentInitUc
 import com.kiva.application.usecase.checkout.usecase.query.GetPaymentResultUc
+import com.kiva.application.usecase.discount.Discounts
 import com.kiva.application.usecase.geo.usecase.query.ListCitiesOfProvinceUc
 import com.kiva.application.usecase.geo.usecase.query.ListProvincesUc
+import com.kiva.application.usecase.idempotency.IdempotencyGuard
+import com.kiva.application.usecase.idempotency.usecase.command.DeleteOldIdempotencyKeysUc
 import com.kiva.application.usecase.inventory.usecase.command.AdjustInventoryUc
 import com.kiva.application.usecase.order.usecase.command.ExpireUnpaidOrderUc
 import com.kiva.application.usecase.order.usecase.command.ReorderUc
@@ -54,10 +57,6 @@ import com.kiva.application.usecase.order.usecase.query.GetMyOrderUc
 import com.kiva.application.usecase.order.usecase.query.GetOrderSummaryUc
 import com.kiva.application.usecase.order.usecase.query.ListMyOrdersUc
 import com.kiva.application.usecase.payment.PaymentConfirmation
-import com.kiva.application.usecase.reservation.Reservations
-import com.kiva.application.usecase.reservation.usecase.command.ReleaseReservationGroupUc
-import com.kiva.application.usecase.reservation.usecase.query.FindDueReservationGroupsUc
-import com.kiva.application.usecase.reservation.usecase.query.GetMyReservationUc
 import com.kiva.application.usecase.payment.usecase.command.ReconcilePaymentUc
 import com.kiva.application.usecase.payment.usecase.query.FindStalePaymentsUc
 import com.kiva.application.usecase.product.usecase.command.CreateProductUc
@@ -65,6 +64,10 @@ import com.kiva.application.usecase.product.usecase.query.FindProductsUc
 import com.kiva.application.usecase.product.usecase.query.FindRelatedProductsUc
 import com.kiva.application.usecase.product.usecase.query.GetProductFacetsUc
 import com.kiva.application.usecase.product.usecase.query.GetProductUc
+import com.kiva.application.usecase.reservation.Reservations
+import com.kiva.application.usecase.reservation.usecase.command.ReleaseReservationGroupUc
+import com.kiva.application.usecase.reservation.usecase.query.FindDueReservationGroupsUc
+import com.kiva.application.usecase.reservation.usecase.query.GetMyReservationUc
 import com.kiva.infrastructure.config.AppConfig
 import org.koin.dsl.module
 
@@ -93,12 +96,15 @@ val useCaseModule = module(createdAtStart = true) {
             reservationDomainService = get(),
         )
     }
+    single {
+        Discounts(discountCodeRepository = get(), discountRedemptionRepository = get(), orderQmRepository = get(), discountDomainService = get())
+    }
 
     // --- cart ---
     single {
         CartCommands(
             transactionManager = get(), cartRepository = get(), cartDomainService = get(), offerQmRepository = get(),
-            shopSettingsRepository = get(), reservations = get(), clock = get(),
+            shopSettingsRepository = get(), reservations = get(), discounts = get(), clock = get(),
         )
     }
     single { OpenCartUc(cartCommands = get(), cartDomainService = get()) }
@@ -108,11 +114,13 @@ val useCaseModule = module(createdAtStart = true) {
     single { ClearCartUc(cartCommands = get(), cartDomainService = get()) }
     single { ChooseShippingMethodUc(cartCommands = get(), cartDomainService = get()) }
     single { SetCartReservationUc(cartCommands = get(), cartDomainService = get()) }
+    single { ApplyDiscountCodeUc(cartCommands = get(), cartDomainService = get(), discounts = get()) }
+    single { RemoveDiscountCodeUc(cartCommands = get(), cartDomainService = get()) }
     single { MergeGuestCartUc(cartCommands = get(), cartDomainService = get()) }
     single {
         GetCartUc(
             transactionManager = get(), cartRepository = get(), offerQmRepository = get(), shopSettingsRepository = get(), reservations = get(),
-            clock = get(),
+            discounts = get(), clock = get(),
         )
     }
 
@@ -120,7 +128,8 @@ val useCaseModule = module(createdAtStart = true) {
     single {
         GetCheckoutContextUc(
             transactionManager = get(), cartRepository = get(), offerQmRepository = get(), shopSettingsRepository = get(),
-            addressBookRepository = get(), geoRepository = get(), userRepository = get(), paymentGateways = get(), reservations = get(), clock = get(),
+            addressBookRepository = get(), geoRepository = get(), userRepository = get(), paymentGateways = get(), reservations = get(),
+            discounts = get(), clock = get(),
         )
     }
     single {
@@ -129,7 +138,7 @@ val useCaseModule = module(createdAtStart = true) {
             addressBookRepository = get(), addressBookDomainService = get(), geoRepository = get(), userRepository = get(),
             orderDomainService = get(), orderRepository = get(), orderQmRepository = get(), inventoryDomainService = get(),
             inventoryRepository = get(), paymentRepository = get(), paymentIdGenerator = get(), paymentGateways = get(), smsSender = get(),
-            reservations = get(), clock = get(),
+            reservations = get(), discounts = get(), clock = get(),
         )
     }
     single { StartPaymentUc(transactionManager = get(), paymentRepository = get(), paymentGateways = get(), clock = get()) }
@@ -140,7 +149,7 @@ val useCaseModule = module(createdAtStart = true) {
         PaymentConfirmation(
             transactionManager = get(), paymentRepository = get(), orderRepository = get(), userRepository = get(), paymentDomainService = get(),
             reservationGroupRepository = get(), reservationDomainService = get(), shopSettingsRepository = get(), paymentGateways = get(), smsSender = get(),
-            clock = get(),
+            discounts = get(), clock = get(),
         )
     }
     single {
@@ -167,7 +176,7 @@ val useCaseModule = module(createdAtStart = true) {
     single {
         ExpireUnpaidOrderUc(
             transactionManager = get(), paymentRepository = get(), orderRepository = get(), paymentDomainService = get(), inventoryDomainService = get(),
-            inventoryRepository = get(), clock = get(),
+            inventoryRepository = get(), discounts = get(), clock = get(),
         )
     }
     single { FindStalePaymentsUc(transactionManager = get(), paymentRepository = get(), clock = get()) }

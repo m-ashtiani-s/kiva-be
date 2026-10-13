@@ -2,7 +2,9 @@ package com.kiva.domain.aggregate.cart
 
 import com.kiva.common.logging.getLogger
 import com.kiva.common.railway.Result
+import com.kiva.common.railway.ResultFailure
 import com.kiva.common.railway.bind
+import com.kiva.common.railway.onSuccess
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.cart.entity.Cart
 import com.kiva.domain.aggregate.cart.entity.CartLine
@@ -14,6 +16,8 @@ import com.kiva.domain.aggregate.cart.model.valueobject.CartOwner
 import com.kiva.domain.aggregate.cart.model.valueobject.CartQuantity
 import com.kiva.domain.aggregate.cart.model.valueobject.CartToken
 import com.kiva.domain.aggregate.cart.repository.CartIdGenerator
+import com.kiva.domain.aggregate.discount.model.CodeDiscount
+import com.kiva.domain.aggregate.discount.model.valueobject.DiscountCodeText
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
 import com.kiva.domain.aggregate.settings.entity.ShopSettings
 import com.kiva.domain.aggregate.settings.model.valueobject.ShippingMethodCode
@@ -174,6 +178,31 @@ class CartDomainService(private val cartIdGenerator: CartIdGenerator) {
         logger.info("setReservation cart=${cart.publicId.value} enabled=$enabled")
         cart.sync(offers, settings, now, standing.hasActiveReservation)
         return cart.setReservation(enabled, offers, settings, now, standing.hasActiveReservation)
+    }
+
+    /**
+     * Applies a discount code (`POST /cart/discount-code`, round 2): the cart is brought up to date first, so the code is
+     * checked against today's prices and stock; then [check] (DiscountDomainService, with what the use case read) says
+     * whether it applies to the cart as it is now. Refused, the cart keeps the code it had.
+     */
+    fun <F : ResultFailure> applyDiscountCode(
+        cart: Cart,
+        code: DiscountCodeText,
+        offers: Map<VariantId, PurchaseOffer>,
+        settings: ShopSettings,
+        now: Instant,
+        standing: ReservationStanding = ReservationStanding.NONE,
+        check: (Cart) -> Result<CodeDiscount, F>,
+    ): Result<CodeDiscount, F> {
+        logger.info("applyDiscountCode cart=${cart.publicId.value} code=${code.value}")
+        cart.sync(offers, settings, now, standing.hasActiveReservation)
+        return check(cart).onSuccess { cart.applyDiscountCode(code, now) }
+    }
+
+    /** Takes the discount code off (`DELETE /cart/discount-code`); it only takes something away, so nothing else is told. */
+    fun removeDiscountCode(cart: Cart, now: Instant) {
+        logger.info("removeDiscountCode cart=${cart.publicId.value} code=${cart.discountCode?.value}")
+        cart.removeDiscountCode(now)
     }
 
     /**
