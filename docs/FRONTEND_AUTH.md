@@ -19,9 +19,10 @@ POST /api/v1/auth/otp/send            { "phone": "0912 123 4567" }
 200 { "phone": "09121234567", "codeLength": 5, "expiresInSeconds": 300, "resendAvailableInSeconds": 120 }
 
 // 2) verify. credentials: 'include' is required, or the browser drops the session cookie.
-POST /api/v1/auth/otp/verify          { "phone": "09121234567", "code": "۴۸۲۱۳" }
+//    guestCartToken: the X-Cart-Token the guest has, if any; its cart is merged into the customer's.
+POST /api/v1/auth/otp/verify          { "phone": "09121234567", "code": "۴۸۲۱۳", "guestCartToken": "gct_…" }
 200 { "accessToken": "eyJ…", "tokenType": "Bearer", "expiresIn": 900, "refreshExpiresIn": 2592000,
-      "isNewUser": true, "user": { … }, "cart": null }
+      "isNewUser": true, "user": { … }, "cart": { "id": "cart_…", "isGuest": false, "items": [ … ], "issues": [ … ], … } }
 Set-Cookie: kiva_rt=…; Max-Age=2592000; Path=/api/v1/auth; Secure; HttpOnly; SameSite=Strict
 ```
 
@@ -30,6 +31,7 @@ Set-Cookie: kiva_rt=…; Max-Age=2592000; Path=/api/v1/auth; Secure; HttpOnly; S
 - تایمر «ارسال دوباره» از `resendAvailableInSeconds` میاد.
 - اگه `isNewUser` بود، مرحله‌ی «دوست داری چی صدات کنیم؟» رو نشون بده و اسم رو با `PATCH /me` ذخیره کن.
 - `refreshExpiresIn` برای مشتری ۳۰ روزه و برای کارمند پنل ۱۲ ساعت. فقط برای اطلاعه و لازم نیست چیزی باهاش بسازی.
+- **سبد:** `X-Cart-Token` ِ مهمان رو به‌عنوان `guestCartToken` بفرست. `cart` ِ پاسخ همیشه هست (حتی خالی): سبد کاربر بعد از ادغام، همگام‌سازی‌شده مثل `GET /cart`، پس `issues` ـش رو مثل همون‌جا نشون بده. بعد از پاسخ موفق، توکن مهمان رو دور بریز. ادغام فقط با کد درست انجام می‌شه، و توکنی که سبدی نداره (یا بدشکله) ورود رو خراب نمی‌کنه. اگه ادغام تو verify انجام نشد، `POST /cart/merge` همون کار رو می‌کنه و تکرارش بی‌خطره.
 
 ## ۲. توکن‌ها و `credentials`
 
@@ -145,5 +147,4 @@ accessToken = null
 |---|---|
 | حذف حساب (`POST /me/deletion/request`، `DELETE /me`) | بعد از فاز سفارش |
 | `GET /me/dashboard` | فاز سفارش |
-| ادغام سبد مهمان (`guestCartToken`) | فاز سبد. تا اون موقع `cart` همیشه `null` ـه |
 | لیست دستگاه‌ها و خروج از یه دستگاه خاص | تو کانترکت endpoint نداره |

@@ -28,9 +28,14 @@ private const val ZWNJ = '‌' // نیم‌فاصله
  *
  * Without this, "كيف" typed on an Arabic keyboard would never find "کیف".
  */
-fun String.normalizePersian(): String =
-    normalizeDigits()
-        .replace('ي', 'ی')
+fun String.normalizePersian(): String = normalizeDigits().normalizePersianLetters()
+
+/**
+ * [normalizePersian] without the digits: for text the shop shows back as the customer wrote it, such as an address
+ * line, where «پلاک ۱۲» must stay «پلاک ۱۲». The contract normalizes digits only in data fields (numbers, codes, amounts).
+ */
+fun String.normalizePersianLetters(): String =
+    replace('ي', 'ی')
         .replace('ى', 'ی')
         .replace('ك', 'ک')
         .replace(Regex("$ZWNJ+"), ZWNJ.toString())       // several half-spaces in a row -> one

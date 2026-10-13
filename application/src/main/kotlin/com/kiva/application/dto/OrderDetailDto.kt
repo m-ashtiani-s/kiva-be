@@ -1,0 +1,83 @@
+package com.kiva.application.dto
+
+import com.kiva.common.valueobject.Money
+import com.kiva.domain.aggregate.order.model.valueobject.OrderStatus
+import com.kiva.domain.aggregate.order.model.valueobject.OrderTotals
+import com.kiva.domain.aggregate.payment.model.valueobject.PaymentFailureReason
+import com.kiva.domain.aggregate.payment.model.valueobject.PaymentOutcome
+import com.kiva.domain.aggregate.settings.model.valueobject.PaymentGatewayCode
+import com.kiva.domain.aggregate.user.model.valueobject.MessengerChannel
+import java.time.Instant
+
+/**
+ * One order's page (the contract's OrderDetail): its card, and everything it was placed with, as it was then. Without
+ * the Persian words: the labels of the timeline, the address's full text and the waiting messages are the HTTP layer's.
+ *
+ * @property payment its latest attempt to pay; null for an order that had nothing to pay.
+ * @property timeline one entry per event, oldest first.
+ */
+data class OrderDetailDto(
+    val summary: OrderSummaryDto,
+    val items: List<Item>,
+    val address: Address,
+    val totals: OrderTotals,
+    val payment: Payment?,
+    val messenger: Messenger,
+    val timeline: List<TimelineEntry>,
+    val customerNote: String?,
+    val gift: Gift?,
+) {
+    /**
+     * One line, as bought. The color's [Color.isLight] and [Color.sortOrder] are the palette's now; its name and hex
+     * those of the purchase.
+     */
+    data class Item(
+        val lineId: Int,
+        val productId: Long,
+        val variantId: Long,
+        val sku: String,
+        val name: String,
+        val slug: String,
+        val color: Color,
+        val imageUrl: String?,
+        val quantity: Int,
+        val unitPrice: Money,
+        val unitCompareAtPrice: Money?,
+        val lineTotal: Money,
+    )
+
+    data class Color(val key: String, val name: String, val hex: String, val isLight: Boolean, val sortOrder: Int)
+
+    /** Where it goes, as it was when placed. Personal data: [toString] shows none of it. */
+    data class Address(
+        val provinceName: String,
+        val cityName: String,
+        val addressLine: String,
+        val plaque: String?,
+        val unit: String?,
+        val postalCode: String,
+        val recipientName: String,
+        val recipientPhone: String,
+    ) {
+        override fun toString(): String = "Address(****)"
+    }
+
+    /** @property gatewayName as the shop's settings call it now. */
+    data class Payment(
+        val gateway: PaymentGatewayCode,
+        val gatewayName: String,
+        val outcome: PaymentOutcome,
+        val refId: String?,
+        val paidOn: Instant?,
+        val cardMask: String?,
+    )
+
+    /** Where the photos before shipping go. Personal data: [toString] shows the channel only. */
+    data class Messenger(val channel: MessengerChannel, val phone: String, val note: String?) {
+        override fun toString(): String = "Messenger(channel=$channel)"
+    }
+
+    data class TimelineEntry(val status: OrderStatus, val at: Instant, val failureReason: PaymentFailureReason?)
+
+    data class Gift(val message: String?, val hidePrices: Boolean)
+}

@@ -5,6 +5,8 @@ import com.kiva.application.usecase.auth.usecase.command.LogoutUc
 import com.kiva.application.usecase.auth.usecase.command.RefreshSessionUc
 import com.kiva.application.usecase.auth.usecase.command.SendLoginCodeUc
 import com.kiva.application.usecase.auth.usecase.command.VerifyLoginCodeUc
+import com.kiva.application.usecase.cart.usecase.command.MergeGuestCartUc
+import com.kiva.application.usecase.cart.usecase.query.GetCartUc
 import com.kiva.common.railway.unwrapOr
 import com.kiva.infrastructure.common.http.KivaJson
 import com.kiva.infrastructure.common.http.respondFailure
@@ -18,6 +20,7 @@ import com.kiva.infrastructure.httpserver.controller.httprest.model.request.Send
 import com.kiva.infrastructure.httpserver.controller.httprest.model.request.VerifyOtpHttpRequest
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.AuthHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.AuthTokensHttpResponse
+import com.kiva.infrastructure.httpserver.controller.httprest.model.response.CartHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.SendOtpHttpResponse
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.plugins.BadRequestException
@@ -36,13 +39,15 @@ import kotlinx.serialization.SerializationException
 /** The limit per client address on asking for codes; registered by configureHttp. */
 val OTP_SEND_RATE_LIMIT = RateLimitName("otp-send")
 
-/** The use cases of login, as the routes need them. */
+/** The use cases of login, as the routes need them; a login's answer has the customer's cart, merged. */
 class AuthUseCases(
     val sendLoginCode: SendLoginCodeUc,
     val verifyLoginCode: VerifyLoginCodeUc,
     val getMe: GetMeUc,
     val refreshSession: RefreshSessionUc,
     val logout: LogoutUc,
+    val mergeGuestCart: MergeGuestCartUc,
+    val getCart: GetCartUc,
 )
 
 /**
@@ -61,7 +66,9 @@ fun Route.webV1Auth(useCases: AuthUseCases, allowedOrigins: List<String>) {
         }
     }
 
-    // The session's refresh token goes only into the cookie; the body has the access token and the user.
+    // The session's refresh token goes only into the cookie; the body has the access token, the user and their cart.
+    // The guest's cart is merged only after the login committed, in a transaction of its own: a wrong code merges
+    // nothing, and the cart can never roll a login back. The merge has no failure of its own.
     post("/auth/otp/verify") {
         val request = call.receive<VerifyOtpHttpRequest>()
         val command = VerifyLoginCodeUc.Cmd(
@@ -72,10 +79,12 @@ fun Route.webV1Auth(useCases: AuthUseCases, allowedOrigins: List<String>) {
             ip = call.request.origin.remoteAddress,
         )
         val session = useCases.verifyLoginCode.execute(command).unwrapOr { return@post call.respondFailure(it) }
+        val merged = useCases.mergeGuestCart.execute(MergeGuestCartUc.Cmd(session.userId, request.guestCartToken)).unwrapOr { it }
+        val cart = useCases.getCart.execute(GetCartUc.Qry(merged.cartId.value)).unwrapOr { return@post call.respondFailure(it) }
         val user = useCases.getMe.execute(GetMeUc.Qry(session.userId)).unwrapOr { return@post call.respondFailure(it) }
 
         session.refreshToken?.let { call.response.setRefreshCookie(it, session.refreshTokenMaxAge) }
-        call.respond(AuthHttpResponse.of(session, user))
+        call.respond(AuthHttpResponse.of(session, user, CartHttpResponse.from(cart, merged.issues)))
     }
 
     // No body: the cookie is the whole request. A refused cookie is dropped, so the browser doesn't keep sending it.

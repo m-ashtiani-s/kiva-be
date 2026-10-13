@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: KIVA Store API — کیوا
-  version: 1.5.0
+  version: 1.7.0
   contact:
     name: KIVA Engineering
     email: support@kiva.ir
@@ -33,9 +33,9 @@ info:
     | فیلدهای بی‌مقدار | همه‌ی فیلدهای تعریف‌شده‌ی پاسخ **همیشه** فرستاده می‌شوند؛ فیلدی که مقدار ندارد `null` است (نه حذف‌شده). فیلدی که می‌تواند بی‌مقدار باشد در این سند `nullable` است. |
     | خطا | `application/problem+json` (RFC 7807) + فیلد ماشینی `code` (لیست کامل در `ErrorCode`) + `message` فارسی قابل نمایش به کاربر + `errors[]` برای خطای فیلدها |
     | 400 در برابر 422 | `400 VALIDATION_ERROR` = ورودی از نظر شکل/فرمت غلط است. `422` = ورودی درست است ولی قانون کسب‌وکار اجازه نمی‌دهد (مثل `DISCOUNT_MIN_SUBTOTAL_NOT_MET`). |
-    | Idempotency | `POST /orders`، `POST /payments/{id}/retry` و `POST /me/orders/{code}/payments` هدر `Idempotency-Key` (UUID) می‌گیرند؛ تکرار با همان کلید همان پاسخ را برمی‌گرداند. |
+    | Idempotency | `POST /orders`، `POST /payments/{id}/retry` و `POST /me/orders/{code}/payments` هدر `Idempotency-Key` (UUID) می‌گیرند. تکرار با همان کلید و همان بدنه همان سفارش و همان تراکنش را برمی‌گرداند (با وضعیت **فعلی** آن‌ها، پس پاسخ از نظر معنی یکی است، نه بایت‌به‌بایت). همان کلید با بدنه‌ی دیگر `409 IDEMPOTENCY_KEY_REUSED`. درخواستی که شکست خورد و چیزی نساخت ثبت نمی‌شود و تکرارش دوباره اجرا می‌شود. کلید ۲۴ ساعت نگه داشته می‌شود. هدر نیامده یا UUID نیست = `400 VALIDATION_ERROR` روی فیلد `Idempotency-Key`. |
     | کش | `GET /config`، `/home`، `/categories`، `/colors`، `/faq`، `/geo/*` و بلاگ با `ETag` + `Cache-Control: public, max-age=300` کش می‌شوند. |
-    | Rate limit | ورود و کدهای تأیید: جدول «محدودیت‌ها» در بخش ۲. پیگیری مهمان: ۱۰ بار در ۱۰ دقیقه برای هر IP. پاسخ `429` همیشه با هدر `Retry-After` (ثانیه) و `meta.retryAfterSeconds`. |
+    | Rate limit | ورود و کدهای تأیید: جدول «محدودیت‌ها» در بخش ۲. پیگیری مهمان: ۱۰ بار در ۱۰ دقیقه برای هر IP. سفارش پرداخت‌نشده و تلاش پرداخت: بخش ۳. پاسخ `429` همیشه با هدر `Retry-After` (ثانیه) و `meta.retryAfterSeconds`. |
 
     ## ۲. احراز هویت
 
@@ -55,7 +55,8 @@ info:
       `/auth/refresh` و `/auth/logout` فقط از originهای مجاز پذیرفته می‌شوند (هدر `Origin`)؛ وگرنه `403 FORBIDDEN`.
     * اگر `isNewUser = true` بود، کلاینت مرحله‌ی اختیاری «دوست داری چی صدات کنیم؟» را نشان می‌دهد و با `PATCH /me` نام را ذخیره می‌کند.
     * **سبد مهمان:** افزودن به سبد بدون ورود مجاز است. سرور در اولین درخواست سبد یک `X-Cart-Token` برمی‌گرداند؛ کلاینت آن را نگه می‌دارد.
-      موقع verify، اگر `guestCartToken` ارسال شود سبد مهمان با سبد کاربر **ادغام** می‌شود (از فاز سبد؛ تا آن موقع `cart` در پاسخ `null` است).
+      با Bearer معتبر، سبد کاربر برمی‌گردد و `X-Cart-Token` نادیده گرفته می‌شود.
+      موقع verify، اگر `guestCartToken` ارسال شود سبد مهمان با سبد کاربر **ادغام** می‌شود و سبد مهمان از بین می‌رود. `cart` ِ پاسخ verify همیشه سبد کاربر بعد از ادغام است.
     * نیازمند ورود: پرداخت، علاقه‌مندی‌ها، ثبت نظر، حساب کاربری. پیگیری سفارش (track) بدون ورود است.
     * **ورود اختیاری:** endpointهایی که `security` آن‌ها `[{}, bearerAuth]` است با و بی ورود کار می‌کنند. بدون هدر `Authorization` = مهمان.
       ولی اگر هدر فرستاده شود و توکن منقضی یا نامعتبر باشد، جواب `401` است (`TOKEN_EXPIRED` یا `UNAUTHORIZED`) و درخواست **هرگز بی‌صدا مهمان حساب نمی‌شود**.
@@ -95,25 +96,43 @@ info:
     * **محاسبه‌ی جمع سبد** (دقیقاً مطابق طرح سبد و تسویه):
       `itemsCompareAtTotal` (قیمت کالاها = جمع قیمت قبل از تخفیف) − `productDiscount` (تخفیف محصولات) = `subtotal`
       ← − `codeDiscount` (کد تخفیف) + `shippingCost` = `payable` (مبلغ قابل پرداخت، هرگز منفی نیست).
-    * **کد تخفیف:** نوع درصدی روی `subtotal` محاسبه و به نزدیک‌ترین ۱٬۰۰۰ تومان گرد می‌شود؛ نوع مبلغی حداکثر به اندازه‌ی `subtotal`. شرط‌ها: حداقل خرید، فقط خرید اول، بازه‌ی زمانی، سقف تخفیف، سقف استفاده.
-    * **موجودی:** موجودی دقیق هیچ‌وقت لو نمی‌رود؛ فقط وقتی کمتر از `lowStockThreshold` (پیش‌فرض ۵) است، `availableQuantity` برگردانده می‌شود («فقط ۳ عدد باقی مونده»). سقف تعداد در سبد = موجودی ورینت.
+    * **کد تخفیف:** مبنا جمع ردیف‌های قابل خریدی است که کد شاملشان می‌شود (کد بدون محدودیت دسته/محصول/«بدون کالاهای تخفیف‌خورده» = کل `subtotal`).
+      نوع درصدی: `floor((مبنا × درصد + 50000) / 100000) × 1000`، یعنی به نزدیک‌ترین ۱٬۰۰۰ تومان، نیمه به بالا (۱۴۵٬۵۰۰ ← ۱۴۶٬۰۰۰؛ ۱۴۵٬۴۹۹ ← ۱۴۵٬۰۰۰)، بعد حداکثر `maxDiscount`؛
+      نوع مبلغی حداکثر به اندازه‌ی مبنا. شرط‌ها به این ترتیب (اولین شرط ناموفق جواب است): وجود و فعال بودن، شروع، پایان، ورود (کد با سقف هر کاربر، خرید اول یا «فقط با ورود» برای مهمان نیست)،
+      خرید اول (کاربری که سفارش پرداخت‌شده دارد)، سقف استفاده (کل و هر کاربر؛ سفارش‌های پرداخت‌نشده‌ی در جریان هم شمرده می‌شوند)، حداقل خرید، و دست‌کم یک ردیف مشمول.
+      کد سبد بعد از هر تغییر سبد دوباره بررسی می‌شود و اگر دیگر معتبر نباشد با `DISCOUNT_REMOVED` (یک بار) برداشته می‌شود. استفاده‌ی سفارشی که منقضی شود آزاد می‌شود.
+    * **موجودی:** موجودی دقیق هیچ‌وقت لو نمی‌رود؛ فقط وقتی کمتر از `lowStockThreshold` (پیش‌فرض ۵) است، `availableQuantity` برگردانده می‌شود («فقط ۳ عدد باقی مونده»).
+    * **سقف خرید هر محصول** (`maxPerOrder`، پیش‌فرض ۵) مال **محصول** است، نه هر رنگ: جمع تعداد همه‌ی رنگ‌های یک محصول در سبد و در سفارش از آن بیشتر نمی‌شود.
+      پس سقف هر ردیف سبد (`CartItem.maxQuantity`) = min(موجودی آن رنگ، `maxPerOrder` − تعداد بقیه‌ی رنگ‌های همان محصول در سبد).
+    * **ردیف غیرقابل خرید:** اگر رنگی ناموجود شود یا از فروشگاه خارج شود، ردیفش در سبد می‌ماند (`CartItem.purchasable = false`) ولی در جمع پول حساب نمی‌شود،
+      و ثبت سفارش تا وقتی حذف نشود رد می‌شود.
+    * **نگه‌داری موجودی برای پرداخت:** با `POST /orders` موجودی برای ۱۵ دقیقه (`paymentPendingMinutes`) کنار گذاشته می‌شود و با پرداخت موفق تا ارسال کنار می‌ماند.
+      اگر پرداخت تا آن موقع انجام نشود سفارش `EXPIRED` و موجودی آزاد می‌شود؛ ولی اگر مشتری در همین ۱۵ دقیقه به درگاه رفته و هنوز برنگشته، موجودی تا پایان همان پرداخت
+      (حداکثر ۲۰ دقیقه بعد از پایان مهلت) نگه داشته می‌شود. تلاش پرداخت تازه فقط تا پایان مهلت مجاز است و پرداخت دوباره مهلت را تمدید نمی‌کند.
+    * **سقف سفارش پرداخت‌نشده:** هر کاربر حداکثر ۳ سفارش پرداخت‌نشده دارد که موجودی نگه داشته‌اند؛ سفارش چهارم `429 RATE_LIMITED` می‌گیرد.
+      هر سفارش حداکثر ۱۰ تلاش پرداخت دارد.
     * **ناموجودها** در لیست محصولات به انتهای لیست می‌روند، مگر در مرتب‌سازی قیمتی.
     * **رزرو ۴ روزه:** سوییچ «رزرو ۴ روزه» در سبد و تسویه، **کنار** روش ارسال (پست/تیپاکس) است و جای آن را نمی‌گیرد.
       مبلغ کامل (با هزینه‌ی ارسال) پرداخت می‌شود و سفارش `RESERVED` می‌ماند؛ هر خرید دیگری در این مدت به همان سفارش می‌پیوندد و هزینه‌ی ارسال ندارد.
       * **شروع و پایان مهلت:** مهلت از لحظه‌ی **پرداخت موفق** اولین سفارش (سفارش اصلی) شروع می‌شود و `reservationHoldDays` (۴) روز بعد تمام می‌شود.
         این زمان برای کل گروه ثابت است و با پیوستن سفارش‌های بعدی تمدید نمی‌شود.
-      * **پیوستن (ادغام):** اگر کاربر رزرو فعال داشته باشد و سفارش جدید را **به همان آدرس** ثبت کند، سفارش جدید خودکار به گروه می‌پیوندد:
-        هزینه‌ی ارسالش صفر می‌شود (`freeReason = RESERVATION_CONSOLIDATION`)، روش ارسالش همان روش سفارش اصلی است، و بعد از پرداخت آن هم `RESERVED` می‌شود.
-        تصمیم ادغام هنگام `POST /orders` گرفته می‌شود و اگر مهلت در فاصله‌ی ثبت تا پرداخت (حداکثر ۱۵ دقیقه) تمام شود، ارسال رایگان همچنان حفظ می‌شود.
+      * **پیوستن (ادغام):** اگر کاربر رزرو فعال داشته باشد و سفارش جدید را **به همان آدرس** ثبت کند، سفارش جدید خودکار به گروه می‌پیوندد.
+        «همان آدرس» یعنی همان آدرس ذخیره‌شده‌ی سفارش اصلی (`addressId`)، به شرطی که از شروع رزرو ویرایش نشده باشد؛ اگر ویرایش شده باشد سفارش تازه ادغام نمی‌شود.
+        هزینه‌ی ارسال سفارش پیوسته صفر می‌شود (`freeReason = RESERVATION_CONSOLIDATION`)، روش ارسالش همان روش سفارش اصلی است، و بعد از پرداخت آن هم `RESERVED` می‌شود.
+        تصمیم ادغام هنگام `POST /orders` گرفته می‌شود و اگر مهلت در فاصله‌ی ثبت تا پرداخت (حداکثر ۱۵ دقیقه) تمام شود، ارسال رایگان همچنان حفظ می‌شود
+        و سفارش بعد از پرداخت مستقیم `PROCESSING` می‌شود (همراه گروه ارسال می‌شود). سوییچ رزرو ِ سفارشی که می‌پیوندد نادیده گرفته می‌شود.
       * **فقط یک رزرو فعال:** هر کاربر در هر لحظه حداکثر یک رزرو فعال دارد. وقتی رزرو فعال دارد سوییچ رزرو در دسترس نیست
         (`reservation.available = false`، `unavailableReason = HAS_ACTIVE_RESERVATION`): سفارش به همان آدرس ادغام می‌شود و سفارش به آدرس دیگر عادی ارسال می‌شود.
+        اگر دو سفارش رزروی پیش از شروع رزرو ثبت شده باشند، اولین پرداخت رزرو را شروع می‌کند و دومی هنگام پرداخت، اگر به همان آدرس باشد، به آن می‌پیوندد
+        و وگرنه `PROCESSING` می‌شود.
       * **کالای غیرقابل‌رزرو:** اگر حتی یک کالای سبد `reservable = false` باشد، رزرو در دسترس نیست (`ITEM_NOT_RESERVABLE`).
       * **پایان مهلت:** همه‌ی سفارش‌های گروه **خودکار** از `RESERVED` به `PROCESSING` می‌روند (عکس قبل از ارسال، سپس ارسال گروهی با **یک کد رهگیری**).
       * **لغو:** هر سفارش گروه تا قبل از `SHIPPED` قابل لغو است (بازگشت کامل وجه). لغو سفارش اصلی گروه یا مهلتش را از بین نمی‌برد و
         ارسال رایگان سفارش‌های پیوسته حفظ می‌شود. هزینه‌ی ارسال سفارش اصلی بعد از پیوستن سفارش‌های دیگر دوباره محاسبه نمی‌شود.
     * **عکس قبل از ارسال (امضای کیوا):** انتخاب پیام‌رسان (روبیکا/تلگرام/بله) و شماره‌ی آن در تسویه **اجباری** است. اپراتور قبل از بسته‌بندی عکس/ویدیو را آپلود و ارسال می‌کند؛ یک نسخه برای همیشه در جزئیات سفارش می‌ماند. تا قبل از `SHIPPED` مشتری می‌تواند تأیید کند، تغییر رنگ/مدل بخواهد یا لغو کند (بازگشت کامل وجه).
     * **بازگشت کالا:** تا ۷ روز بعد از تحویل. اگر مشکل از کیوا باشد (`NOT_AS_PICTURED`، `MANUFACTURING_DEFECT`، ...) هزینه‌ی برگشت با کیواست؛ در `CHANGED_MIND` با مشتری.
-    * **جمعه‌ها** ارسال نداریم (`nonShippingWeekdays`).
+    * **جمعه‌ها** ارسال نداریم (`nonShippingWeekdays`). سفارشی که جمعه (به وقت تهران) ثبت می‌شود شنبه ارسال می‌شود، و `estimatedDelivery`
+      از روز ارسال شمرده می‌شود: `minDays` تا `maxDays` روز کاری بعد از آن، بدون جمعه‌ها. پس سفارش جمعه یک روز دیرتر از سفارش پنجشنبه می‌رسد.
 
     ## ۴. چرخه‌ی وضعیت سفارش
 
@@ -352,9 +371,13 @@ paths:
       tags: [Addresses]
       operationId: listProvinces
       summary: "لیست استان‌ها (به‌همراه شهرها)"
+      description: |
+        ۳۱ استان به ترتیب الفبا، هر کدام با شهرهایش به ترتیب الفبا. فهرست فقط با به‌روزرسانی سرور عوض می‌شود،
+        پس با `ETag` و `Cache-Control: public, max-age=300` کش می‌شود؛ درخواست با `If-None-Match` برابر `304` بدون بدنه می‌گیرد.
       parameters:
         - name: includeCities
           in: query
+          description: '`false` = فقط استان‌ها (`cities: null`). مقداری غیر از `true` و `false` ← `400` روی همین فیلد.'
           schema: { type: boolean, default: true }
       responses:
         '200':
@@ -366,12 +389,17 @@ paths:
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/Province' }
+        '304':
+          description: تغییری نکرده (`If-None-Match` همان `ETag` فعلی است)؛ بدون بدنه
         '400': { $ref: '#/components/responses/ValidationError' }
   /geo/provinces/{provinceId}/cities:
     get:
       tags: [Addresses]
       operationId: listCitiesOfProvince
       summary: "شهرهای یک استان"
+      description: |
+        شهرهای استان به ترتیب الفبا. مثل `GET /geo/provinces` با `ETag` و `Cache-Control: public, max-age=300` کش می‌شود.
+        استانی که وجود ندارد، یا شناسه‌ای که عدد مثبت نیست، `404 NOT_FOUND` می‌گیرد.
       parameters:
         - name: provinceId
           in: path
@@ -380,11 +408,15 @@ paths:
       responses:
         '200':
           description: OK
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
           content:
             application/json:
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/City' }
+        '304':
+          description: تغییری نکرده (`If-None-Match` همان `ETag` فعلی است)؛ بدون بدنه
         '404': { $ref: '#/components/responses/NotFound' }
 
   # ================================================================
@@ -989,7 +1021,16 @@ paths:
       description: |
         پاسخ همه‌ی محاسبات را آماده دارد: جمع‌ها، تخفیف‌ها، هزینه‌ی هر روش ارسال، نوار پیشرفت ارسال رایگان،
         مبلغ صرفه‌جویی، وضعیت رزرو و `issues` (تغییر قیمت/ناموجود شدن از آخرین بازدید).
-        اگر توکن مهمان نیامده باشد یک سبد خالی ساخته و توکن آن در هدر `X-Cart-Token` برگردانده می‌شود.
+
+        **کدام سبد:** با Bearer معتبر، سبد کاربر (`X-Cart-Token` نادیده گرفته می‌شود). بدون Bearer، سبد مهمانِ همان `X-Cart-Token`.
+        سبد مهمان تازه **فقط** وقتی ساخته می‌شود که توکن نیامده باشد یا ناشناخته یا بدشکل باشد؛ توکن تازه در هدر `X-Cart-Token` برمی‌گردد.
+        Bearer منقضی یا نامعتبر `401` می‌گیرد و هرگز مهمان حساب نمی‌شود. همین قاعده برای همه‌ی endpointهای سبد است.
+
+        **همگام‌سازی:** هر خواندن سبد، ردیف‌ها را با قیمت و موجودی فعلی فروشگاه مقایسه می‌کند. تعداد بیشتر از سقف کم می‌شود (وقتی سقف خرید محصول بین رنگ‌هایش
+        کم بیاید، ردیف قدیمی‌تر سهمش را نگه می‌دارد و ردیفی که جایی برایش نماند حذف می‌شود)، روش ارسال غیرفعال‌شده
+        به روش پیش‌فرض برمی‌گردد، و `issues` همه‌ی این تغییرها را می‌گوید. هر issue فقط **یک بار** برمی‌گردد، چون همین خواندن «دیده شد» را ثبت می‌کند.
+
+        این endpoint را فقط از مرورگر صدا بزنید، نه از رندر سمت سرور (SSR)؛ وگرنه هر بازدید یک سبد خالی مهمان می‌سازد.
       security: [{}, { bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/CartToken'
@@ -1005,12 +1046,15 @@ paths:
       tags: [Cart]
       operationId: clearCart
       summary: "خالی کردن سبد"
+      description: ردیف‌ها، کد تخفیف و سوییچ رزرو پاک می‌شوند؛ روش ارسال انتخاب‌شده می‌ماند.
       security: [{}, { bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/CartToken'
       responses:
         '200':
           description: سبد خالی
+          headers:
+            X-Cart-Token: { $ref: '#/components/headers/XCartToken' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Cart' }
@@ -1020,8 +1064,8 @@ paths:
       operationId: addCartItem
       summary: "افزودن به سبد (اگر همان ورینت/رنگ موجود باشد تعداد جمع می‌شود)"
       description: |
-        تعداد نهایی هر ردیف حداکثر برابر موجودی ورینت است؛ اگر درخواست بیشتر باشد به سقف کاهش داده می‌شود و
-        `Cart.issues` شامل `QUANTITY_REDUCED` خواهد بود (کلاینت تُست «حداکثر موجودی: n عدد» را نشان می‌دهد).
+        تعداد نهایی هر ردیف حداکثر `maxQuantity` آن است: min(موجودی آن رنگ، `maxPerOrder` − تعداد بقیه‌ی رنگ‌های همان محصول در سبد).
+        اگر درخواست بیشتر باشد به سقف کاهش داده می‌شود و `Cart.issues` شامل `QUANTITY_REDUCED` خواهد بود (کلاینت تُست «حداکثر موجودی: n عدد» را نشان می‌دهد).
         برای «افزودن سریع» از کارت محصول، `variantId` رنگِ فعال روی کارت ارسال می‌شود.
       security: [{}, { bearerAuth: [] }]
       parameters:
@@ -1039,9 +1083,16 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/CartMutationResponse' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '404':
+          description: "`VARIANT_NOT_FOUND` — رنگی با این شناسه نیست"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422':
-          description: "`OUT_OF_STOCK` یا `PRODUCT_UNAVAILABLE`"
+          description: |
+            `OUT_OF_STOCK` این رنگ موجودی ندارد ·
+            `PRODUCT_UNAVAILABLE` محصول یا این رنگش در فروشگاه نیست ·
+            `QUANTITY_EXCEEDS_LIMIT` سقف خرید این محصول را رنگ‌های دیگرش در سبد پر کرده‌اند، با وجود موجودی (`meta.maxPerOrder`)
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -1051,6 +1102,15 @@ paths:
       tags: [Cart]
       operationId: updateCartItem
       summary: "تغییر تعداد یا رنگ یک ردیف سبد"
+      description: |
+        حداقل یکی از `quantity` و `variantId` لازم است؛ وگرنه `400` روی `quantity` (`QUANTITY_OR_VARIANT_REQUIRED`). با هر دو، اول رنگ و بعد تعداد روی ردیفی که می‌ماند.
+        `itemId` بدشکل مثل ردیفی که در این سبد نیست `404 CART_ITEM_NOT_FOUND` می‌گیرد.
+
+        **تعداد:** برخلاف افزودن، کم نمی‌شود و رد می‌شود: بیشتر از موجودی رنگ ← `QUANTITY_EXCEEDS_STOCK`؛ در موجودی جا می‌شود ولی از سقف خرید محصول
+        (با حساب بقیه‌ی رنگ‌هایش در سبد) بیشتر است ← `QUANTITY_EXCEEDS_LIMIT`.
+
+        **رنگ** [پیشنهادی]: رنگ تازه باید مال همان محصول باشد، وگرنه `400` روی `variantId` (`VARIANT_ID_INVALID`). اگر رنگ تازه از قبل ردیف دارد، دو ردیف **یکی** می‌شوند
+        (تعدادها جمع، تا سقف؛ بیشتر از سقف با `QUANTITY_REDUCED` کم می‌شود) و `affectedItemId` شناسه‌ی ردیفی است که می‌ماند.
       security: [{}, { bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/CartToken'
@@ -1063,12 +1123,22 @@ paths:
       responses:
         '200':
           description: OK
+          headers:
+            X-Cart-Token: { $ref: '#/components/headers/XCartToken' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/CartMutationResponse' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '404':
+          description: "`CART_ITEM_NOT_FOUND` — این ردیف در این سبد نیست"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422':
-          description: "`QUANTITY_EXCEEDS_STOCK` (با `meta.availableQuantity`)"
+          description: |
+            `QUANTITY_EXCEEDS_STOCK` (`meta.availableQuantity` = همان `maxQuantity` ردیف؛ موجودی دقیق لو نمی‌رود) ·
+            `QUANTITY_EXCEEDS_LIMIT` (`meta.maxQuantity`) ·
+            `OUT_OF_STOCK` رنگ تازه موجودی ندارد ·
+            `PRODUCT_UNAVAILABLE` محصول یا رنگ تازه در فروشگاه نیست
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -1085,10 +1155,16 @@ paths:
       responses:
         '200':
           description: OK
+          headers:
+            X-Cart-Token: { $ref: '#/components/headers/XCartToken' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/CartMutationResponse' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '404':
+          description: "`CART_ITEM_NOT_FOUND` — این ردیف در این سبد نیست"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
   /cart/items/{itemId}/move-to-wishlist:
     post:
       tags: [Cart]
@@ -1125,11 +1201,13 @@ paths:
       responses:
         '200':
           description: OK
+          headers:
+            X-Cart-Token: { $ref: '#/components/headers/XCartToken' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Cart' }
         '422':
-          description: "`SHIPPING_METHOD_UNAVAILABLE`"
+          description: "`SHIPPING_METHOD_UNAVAILABLE` — این روش غیرفعال است، یا سبد به رزرو فعال می‌پیوندد و فقط روش ارسال گروه مجاز است"
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -1157,6 +1235,8 @@ paths:
       responses:
         '200':
           description: OK
+          headers:
+            X-Cart-Token: { $ref: '#/components/headers/XCartToken' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Cart' }
@@ -1171,6 +1251,10 @@ paths:
       tags: [Cart]
       operationId: applyDiscountCode
       summary: "اعمال کد تخفیف"
+      description: |
+        کد trim، ارقامش لاتین و حروفش بزرگ می‌شود (`kiva10 ` و `KIVA۱۰` هر دو `KIVA10`) و جای کد قبلی سبد را می‌گیرد. سبد اول همگام‌سازی می‌شود.
+        کد خالی ← `400` روی `code` (`DISCOUNT_CODE_REQUIRED`)؛ متنی که هیچ کدی نمی‌تواند باشد ← همان `422 DISCOUNT_CODE_INVALID`.
+        کدی که رد شود کد قبلی سبد را دست نمی‌زند. ترتیب `422`ها در «قوانین کسب‌وکار».
       security: [{}, { bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/CartToken'
@@ -1182,6 +1266,8 @@ paths:
       responses:
         '200':
           description: اعمال شد — `Cart.discount` شامل کد، برچسب و مبلغ است
+          headers:
+            X-Cart-Token: { $ref: '#/components/headers/XCartToken' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Cart' }
@@ -1190,7 +1276,7 @@ paths:
           description: |
             `DISCOUNT_CODE_INVALID` «این کد تخفیف معتبر نیست»،
             `DISCOUNT_MIN_SUBTOTAL_NOT_MET` «این کد برای خرید بالای ۲٬۰۰۰٬۰۰۰ تومان فعاله» (`meta.minSubtotal`)،
-            `DISCOUNT_CODE_EXPIRED`، `DISCOUNT_FIRST_ORDER_ONLY`، `DISCOUNT_USAGE_LIMIT_REACHED`، `DISCOUNT_LOGIN_REQUIRED`، `DISCOUNT_NOT_APPLICABLE`
+            `DISCOUNT_CODE_NOT_STARTED`، `DISCOUNT_CODE_EXPIRED`، `DISCOUNT_FIRST_ORDER_ONLY`، `DISCOUNT_USAGE_LIMIT_REACHED`، `DISCOUNT_LOGIN_REQUIRED`، `DISCOUNT_NOT_APPLICABLE`
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -1198,12 +1284,15 @@ paths:
       tags: [Cart]
       operationId: removeDiscountCode
       summary: "حذف کد تخفیف"
+      description: سبد بدون کد هم `200` می‌گیرد.
       security: [{}, { bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/CartToken'
       responses:
         '200':
           description: OK
+          headers:
+            X-Cart-Token: { $ref: '#/components/headers/XCartToken' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Cart' }
@@ -1212,6 +1301,18 @@ paths:
       tags: [Cart]
       operationId: mergeGuestCart
       summary: "ادغام سبد مهمان در سبد کاربر (اگر در verify انجام نشده باشد)"
+      description: |
+        همان ادغامی که `POST /auth/otp/verify` با `guestCartToken` انجام می‌دهد:
+        * هر ردیف مهمان به سبد کاربر اضافه می‌شود؛ رنگ مشترک تعدادش جمع می‌شود (در ردیف کاربر) و بیشتر از سقف با `QUANTITY_REDUCED` (در `issues`) کم می‌شود.
+          رنگی که فقط مهمان داشت با همان `id` منتقل می‌شود. وقتی سقف خرید محصول کم بیاید، ردیف قدیمی‌تر (زودتر اضافه‌شده، در هر کدام از دو سبد)
+          سهمش را نگه می‌دارد و ردیفی که جایی برایش نماند حذف می‌شود (`QUANTITY_REDUCED` به `0`).
+        * روش ارسال و سوییچ رزرو سبد مهمان برنده‌اند (مشتری همین الان روی صفحه‌ی سبد انتخابشان کرده)، ولی فقط وقتی سبد مهمان ردیفی دارد:
+          سبد مهمان خالی (که هر بازدید می‌سازد) چیزی انتخاب نکرده و روش ارسال و سوییچ رزرو کاربر سر جایشان می‌مانند. کد تخفیف: اگر کاربر کد داشت همان می‌ماند، وگرنه کد مهمان (بعد از اعتبارسنجی دوباره).
+        * سبد مهمان (خالی یا نه) حذف می‌شود و توکنش دیگر کار نمی‌کند.
+        * هر دو سبد مثل `GET /cart` همگام‌سازی می‌شوند، پس `issues` ِ پاسخ تغییرهای از آخرین بازدید هر دو سبد و کم شدن‌های خود ادغام را دارد (هر کدام یک بار).
+
+        توکنی که سبدی ندارد (قبلاً ادغام شده، پاک شده، ساختگی یا بدشکل است) هیچ کاری نمی‌کند و خطا هم نمی‌دهد: `200` با سبد کاربر بدون ادغام
+        (همگام‌سازی‌شده مثل `GET /cart`). پس تکرار ادغام (بعد از verify، یا از دو تب) بی‌خطر است. `400` فقط وقتی `guestCartToken` نیامده یا رشته نیست.
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -1243,12 +1344,17 @@ paths:
         شامل سبد (با جمع‌ها)، آدرس‌های ذخیره‌شده و آدرس پیش‌فرض، پیام‌رسان پیش‌فرض و شماره‌ی آخرین استفاده‌شده،
         گزینه‌های ارسال با قیمت محاسبه‌شده، وضعیت رزرو (تاریخ ارسال بعد از ۴ روز)، درگاه‌های فعال،
         و اگر کاربر رزرو فعال داشته باشد پیشنهاد **پیوستن به سفارش رزروی** (`consolidation`).
-        اگر سبد خالی باشد `422 CART_EMPTY`.
+        سبد مثل `GET /cart` همگام‌سازی می‌شود، پس `cart.issues` تغییرهای از آخرین بازدید را دارد (هر کدام یک بار).
+        `shippingOptions`، `reservation` و `consolidation` ِ بالای پاسخ همان‌های `cart` اند.
+        اگر سبد هیچ ردیفی نداشته باشد `422 CART_EMPTY`. ردیفی که قابل خرید نیست (`purchasable = false`) هم ردیف است: صفحه نشانش می‌دهد و `POST /orders` ردش می‌کند.
+        ترتیب خطاها مثل `POST /orders`: اول `CART_EMPTY`، بعد `addressId`.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: addressId
           in: query
-          description: برای محاسبه‌ی مجدد (مثلاً امکان ادغام با رزرو فقط برای همان آدرس است)
+          description: |
+            برای محاسبه‌ی مجدد (مثلاً امکان ادغام با رزرو فقط برای همان آدرس است). نیامده = آدرس پیش‌فرض.
+            آدرسی که مال این کاربر نیست، وجود ندارد یا عدد نیست `400` روی فیلد `addressId` با کد `ADDRESS_NOT_FOUND` می‌گیرد (هر سه یکی، تا معلوم نشود آدرس کس دیگری وجود دارد).
           schema: { type: integer }
       responses:
         '200':
@@ -1269,12 +1375,42 @@ paths:
       operationId: placeOrder
       summary: "ثبت سفارش و دریافت لینک درگاه پرداخت"
       description: |
-        ترتیب اعتبارسنجی (مطابق طرح): ۱) آدرس ← ۲) پیام‌رسان (اجباری؛ `MESSENGER_REQUIRED`) و شماره‌ی آن ← ۳) روش ارسال ← ۴) درگاه.
-        موجودی ورینت‌ها برای مدت `payment.expiresAt` (۱۵ دقیقه) رزرو موقت می‌شود.
-        اگر `expectedPayable` با مبلغ محاسبه‌شده‌ی سرور فرق کند `409 PRICE_CHANGED` برمی‌گردد تا کاربر مبلغ جدید را ببیند.
-        اگر مبلغ قابل پرداخت صفر باشد (کد تخفیف کامل)، `payment = null` و سفارش مستقیماً پرداخت‌شده است.
-        رزرو: اگر `reserve = true` باشد ولی رزرو در دسترس نباشد `422 RESERVATION_UNAVAILABLE`. اگر کاربر رزرو فعال به همین آدرس داشته باشد،
-        سفارش بدون توجه به `reserve` به گروه رزرو می‌پیوندد (هزینه‌ی ارسال صفر) — قوانین کامل در بخش «قوانین کسب‌وکار».
+        قیمت‌ها و همه‌ی مبلغ‌ها را سرور حساب می‌کند. `expectedPayable` فقط برای مقایسه است و هیچ عددی که کلاینت می‌فرستد پول جابه‌جا نمی‌کند.
+
+        **اول، شکل ورودی** (`400 VALIDATION_ERROR`، همه‌ی خطاها با هم): هدر `Idempotency-Key`، دقیقاً یکی از `addressId` و `newAddress`
+        (خطاهای `newAddress` با پیشوند `newAddress.` در `errors[].field`، مثل `newAddress.postalCode`)، مقدار enumها، طول یادداشت‌ها، و `expectedPayable ≥ 0`.
+        کدهای فیلد: هیچ آدرسی ← `addressId` با `ADDRESS_REQUIRED`، هر دو ← `addressId` با `ADDRESS_AMBIGUOUS`؛ `shippingMethod` یا `paymentGateway` نیامده ←
+        `SHIPPING_METHOD_REQUIRED` و `PAYMENT_GATEWAY_REQUIRED`؛ `preShipmentMessenger.channel` بیرون از فهرست ← `MESSENGER_CHANNEL_INVALID`؛
+        `expectedPayable` منفی ← `MONEY_NEGATIVE`؛ `gift.message` و `customerNote` و `preShipmentMessenger.username`/`note` با کدهای طولشان.
+
+        **بعد، قانون‌ها به این ترتیب** (اولین موردی که برقرار نباشد برمی‌گردد):
+        1. سبد هیچ ردیفی ندارد ← `422 CART_EMPTY`
+        2. `addressId` وجود ندارد یا مال کاربر دیگری است ← `422 ADDRESS_NOT_FOUND`. برای `newAddress`: استان یا شهر ناموجود ← `400` روی `newAddress.provinceId` یا
+           `newAddress.cityId` (`PROVINCE_NOT_FOUND`، `CITY_NOT_FOUND`)، شهرِ استان دیگر ← `422 CITY_NOT_IN_PROVINCE`
+        3. `preShipmentMessenger` نیامده یا `channel` ندارد ← `422 MESSENGER_REQUIRED`؛ شماره‌ی پیام‌رسان نیامده یا غلط است ← `422 MESSENGER_PHONE_INVALID`
+        4. روش ارسال غیرفعال است (یا سفارش به رزرو فعال می‌پیوندد و روش، روش گروه نیست) ← `422 SHIPPING_METHOD_UNAVAILABLE`
+        5. مبلغ قابل پرداخت بیشتر از صفر است و درگاه انتخابی در دسترس نیست ← `422 PAYMENT_GATEWAY_UNAVAILABLE` (بدون `meta.orderCode`: سفارشی ساخته نشده)
+        6. `acceptTerms` نیست ← `422 TERMS_NOT_ACCEPTED`
+        7. `reserve = true` ولی رزرو در دسترس نیست ← `422 RESERVATION_UNAVAILABLE` (`meta.reason`)
+        8. کاربر ۳ سفارش پرداخت‌نشده دارد که هنوز موجودی نگه داشته‌اند (مهلت پرداختشان تمام نشده) ← `429 RATE_LIMITED`
+        9. ردیفی از فروشگاه خارج شده ← `422 PRODUCT_UNAVAILABLE`؛ ردیفی موجودی کافی ندارد ← `422 OUT_OF_STOCK`؛ رنگ‌های یک محصول با هم بیشتر از سقف خرید آن محصول‌اند
+           (سقف بعد از افزودن به سبد کم شده) ← `422 QUANTITY_EXCEEDS_LIMIT`. هر سه با `meta.itemIds` (شناسه‌ی ردیف‌های سبد)، و به همین ترتیب.
+        10. کد تخفیف سبد دیگر معتبر نیست ← سفارش بدون کد حساب می‌شود (و چون مبلغ عوض شده، قدم بعد `PRICE_CHANGED` می‌دهد)
+        11. `expectedPayable` با مبلغ سرور فرق دارد ← `409 PRICE_CHANGED` (`meta.payable` = مبلغ تازه)
+
+        هر کدام از این‌ها رد شود **هیچ چیزی** ذخیره نمی‌شود: سبد سر جایش است و موجودی کنار گذاشته نشده.
+
+        **ثبت:** موجودی ردیف‌ها تا `payment.expiresAt` (۱۵ دقیقه) کنار گذاشته می‌شود و سبد خالی می‌شود. بعد سرور جلسه‌ی پرداخت را در درگاه باز می‌کند:
+        * موفق ← `201`، سفارش `PENDING_PAYMENT`، کاربر را به `payment.redirect` بفرستید.
+        * درگاه جواب نداد یا رد کرد ← `422 PAYMENT_GATEWAY_UNAVAILABLE` **با** `meta.orderCode` و `meta.paymentId`. سفارش ساخته شده و موجودی‌اش کنار گذاشته شده؛
+          ادامه با `POST /payments/{paymentId}/retry` (همان درگاه یا درگاه دیگر)، نه با ثبت دوباره. وجود `meta.orderCode` این حالت را از قدم ۵ جدا می‌کند.
+        * مبلغ قابل پرداخت صفر (کد تخفیف کامل) ← `201` با `payment = null`؛ سفارش مستقیماً پرداخت‌شده است.
+
+        **تکرار با همان `Idempotency-Key`:** همان سفارش و همان پرداخت برمی‌گردد، از جمله همان `422 PAYMENT_GATEWAY_UNAVAILABLE`، با وضعیت **فعلی** سفارش (شاید دیگر پرداخت شده باشد).
+        تکرار هیچ‌وقت جلسه‌ی تازه‌ای در درگاه باز نمی‌کند؛ `payment.redirect` همان قبلی است. درخواستی که رد شد (۴۰۰، ۴۰۹، ۴۲۲ ِ قبل از ثبت، ۴۲۹) کلید را مصرف نمی‌کند.
+        دو درخواست همزمان از یک سبد (دو تب، با دو کلید): یکی ثبت می‌شود و دیگری `422 CART_EMPTY` می‌گیرد.
+
+        **رزرو:** اگر کاربر رزرو فعال به همین آدرس داشته باشد، سفارش بدون توجه به `reserve` به گروه رزرو می‌پیوندد (هزینه‌ی ارسال صفر) — قوانین کامل در بخش «قوانین کسب‌وکار».
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -1292,12 +1428,24 @@ paths:
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '409':
-          description: "`PRICE_CHANGED` (با `meta.payable`) یا `IDEMPOTENCY_KEY_REUSED`"
+          description: "`PRICE_CHANGED` (با `meta.payable`) یا `IDEMPOTENCY_KEY_REUSED` (همان کلید با بدنه‌ی دیگر)"
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
         '422':
-          description: "`CART_EMPTY`، `OUT_OF_STOCK`، `MESSENGER_REQUIRED`، `MESSENGER_PHONE_INVALID`، `ADDRESS_NOT_FOUND`، `SHIPPING_METHOD_UNAVAILABLE`، `TERMS_NOT_ACCEPTED`، `PAYMENT_GATEWAY_UNAVAILABLE`"
+          description: |
+            `CART_EMPTY`، `ADDRESS_NOT_FOUND`، `CITY_NOT_IN_PROVINCE` (`newAddress`)، `MESSENGER_REQUIRED`، `MESSENGER_PHONE_INVALID`، `SHIPPING_METHOD_UNAVAILABLE`، `TERMS_NOT_ACCEPTED`،
+            `RESERVATION_UNAVAILABLE` (`meta.reason`)، `PRODUCT_UNAVAILABLE`، `OUT_OF_STOCK` و `QUANTITY_EXCEEDS_LIMIT` (`meta.itemIds`)،
+            `PAYMENT_GATEWAY_UNAVAILABLE` (قبل از ثبت بدون meta؛ بعد از ثبت با `meta.orderCode` و `meta.paymentId`)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '429':
+          description: |
+            `RATE_LIMITED` — کاربر ۳ سفارش پرداخت‌نشده دارد که هنوز موجودی نگه داشته‌اند.
+            `Retry-After` و `meta.retryAfterSeconds` = ثانیه‌های باقی‌مانده تا پایان مهلت پرداخت زودترین‌شان.
+          headers:
+            Retry-After: { $ref: '#/components/headers/RetryAfter' }
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -1309,6 +1457,16 @@ paths:
       description: |
         پارامترهای مخصوص هر درگاه را می‌گیرد (زرین‌پال: `Authority`, `Status` — سامان: `RefNum`, `State`, `ResNum` — ملت: `RefId`, `ResCode`, `SaleOrderId`, `SaleReferenceId`)،
         تراکنش را verify می‌کند و با `302` کاربر را به `https://kiva.ir/checkout/result?paymentId=...` هدایت می‌کند.
+
+        * تراکنش از روی شناسه‌ای که خود درگاه داده (زرین‌پال: `Authority`) پیدا می‌شود، و verify سرور به سرور با مبلغی انجام می‌شود که سرور خودش ذخیره کرده، نه با چیزی از این درخواست.
+        * verify فقط وقتی انجام می‌شود که سفارش هنوز در انتظار پرداخت باشد. اگر سفارش منقضی شده یا با تلاش دیگری پرداخت شده، verify **نمی‌شود**،
+          تراکنش `FAILED` می‌شود و درگاه مبلغ را خودش به کارت برمی‌گرداند.
+        * اگر تلاش دیگری از **همین سفارش** همان لحظه در حال verify است، این تلاش فعلاً verify نمی‌شود و `PENDING` می‌ماند (هیچ‌وقت دو تلاش یک سفارش با هم verify نمی‌شوند).
+          سرور بعداً خودش تمامش می‌کند: اگر آن تلاش موفق شد این یکی `FAILED` می‌شود و درگاه مبلغش را برمی‌گرداند، وگرنه همین یکی verify می‌شود.
+        * این مسیر هیچ‌وقت JSON یا صفحه‌ی خطا نشان نمی‌دهد و **همیشه** `302` است. تراکنش پیدا نشد (یا پارامترها مال این درگاه نیست، یا درگاهی است که هنوز
+          پیاده‌سازی نشده مثل `saman` و `mellat`، یا خطای داخلی پیش آمد) ← هدایت به همان صفحه‌ی نتیجه **بدون** `paymentId`؛ وضعیت سفارش در «سفارش‌های من» دیده می‌شود.
+        * صدا زدن دوباره (refresh، یا GET و POST با هم) چیزی را عوض نمی‌کند و همان هدایت را تکرار می‌کند.
+        * مقصد هدایت ثابت است و از تنظیمات سرور می‌آید؛ فقط `paymentId` به آن اضافه می‌شود.
       parameters:
         - $ref: '#/components/parameters/GatewayPath'
       responses:
@@ -1337,6 +1495,10 @@ paths:
       tags: [Checkout & Payment]
       operationId: getPaymentResult
       summary: "نتیجه‌ی پرداخت برای صفحه‌ی موفقیت (کد سفارش، مراحل بعدی) یا خطا"
+      description: |
+        `status = PENDING` روی صفحه‌ی نتیجه یعنی «verify در جریان است» (مثلاً درگاه دیر جواب داده). کلاینت هر ۳ ثانیه و حداکثر ۳۰ ثانیه دوباره می‌پرسد.
+        اگر بعد از آن هم `PENDING` بود، سرور خودش پرداخت را با درگاه پیگیری و تمام می‌کند و نتیجه در «سفارش‌های من» دیده می‌شود.
+        تراکنش کاربر دیگر `404 PAYMENT_NOT_FOUND` می‌گیرد، مثل تراکنشی که وجود ندارد، و همین‌طور شناسه‌ای که شکل `pay_…` ندارد.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/PaymentId'
@@ -1346,13 +1508,27 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PaymentResult' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '404':
+          description: "`PAYMENT_NOT_FOUND`"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '401': { $ref: '#/components/responses/Unauthorized' }
   /payments/{paymentId}/retry:
     post:
       tags: [Checkout & Payment]
       operationId: retryPayment
       summary: "پرداخت مجدد سفارش پرداخت‌نشده (در صورت شکست/انصراف) — امکان تغییر درگاه"
+      description: |
+        یک تراکنش تازه به مبلغ `totals.payable` سفارش ساخته می‌شود؛ `gateway` نیامده (یا بدنه‌ای نیامده) = درگاه همین تراکنش. `gateway` نامعتبر ← `400` روی `gateway`.
+        `expiresAt` همان پایان مهلت پرداخت سفارش است و **تمدید نمی‌شود**؛ بعد از آن `PAYMENT_EXPIRED`.
+        تلاش‌های قبلی لغو نمی‌شوند: اگر تلاشی قدیمی (مثلاً در تب دیگر) اول پرداخت شود همان برنده است، و تلاش‌های بعدی verify نمی‌شوند و درگاه مبلغشان را برمی‌گرداند.
+        هر سفارش حداکثر ۱۰ تلاش پرداخت دارد. تکرار با همان `Idempotency-Key` همان تراکنش را برمی‌گرداند (مثل `POST /orders`)؛ کلید مال همین نوع درخواست است،
+        پس همان UUID روی `POST /me/orders/{orderCode}/payments` کلید دیگری است.
+
+        ترتیب قانون‌ها: تراکنش مال کاربر نیست یا شناسه شکل `pay_…` ندارد (`404`) ← `ORDER_ALREADY_PAID` ← `PAYMENT_EXPIRED` ← درگاه در دسترس نیست
+        (`PAYMENT_GATEWAY_UNAVAILABLE` **بدون** `meta`، تراکنشی ساخته نشد) ← ۱۰ تلاش (`429`). اگر تراکنش ساخته شد ولی درگاه جواب نداد،
+        `422 PAYMENT_GATEWAY_UNAVAILABLE` **با** `meta.orderCode` و `meta.paymentId` (همان رفتار `POST /orders`)؛ ادامه با retry ِ همین `paymentId`.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/PaymentId'
@@ -1370,15 +1546,32 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PaymentInit' }
-        '422':
-          description: "`ORDER_ALREADY_PAID` یا `PAYMENT_EXPIRED` (موجودی آزاد شده)"
+        '409':
+          description: "`IDEMPOTENCY_KEY_REUSED` (همان کلید با بدنه‌ی دیگر)"
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
-
+        '422':
+          description: "`ORDER_ALREADY_PAID`، `PAYMENT_EXPIRED` (مهلت پرداخت تمام شده و موجودی آزاد شده یا می‌شود) یا `PAYMENT_GATEWAY_UNAVAILABLE` (درگاه انتخابی در دسترس نیست یا جواب نداد)"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '429':
+          description: |
+            `RATE_LIMITED` — این سفارش ۱۰ تلاش پرداخت داشته است.
+            `Retry-After` و `meta.retryAfterSeconds` = ثانیه‌های باقی‌مانده تا پایان مهلت پرداخت سفارش؛ بعد از آن سفارش منقضی می‌شود و با «خرید دوباره» می‌شود از نو سفارش داد.
+          headers:
+            Retry-After: { $ref: '#/components/headers/RetryAfter' }
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '404':
+          description: "`PAYMENT_NOT_FOUND` — تراکنشی با این شناسه برای این کاربر نیست"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
   # ================================================================
   #  TRACKING (public)
   # ================================================================
@@ -1628,6 +1821,7 @@ paths:
       tags: [Addresses]
       operationId: listMyAddresses
       summary: "آدرس‌های من (آدرس پیش‌فرض اول)"
+      description: آدرس پیش‌فرض اول، بعد بقیه به ترتیب ثبت (قدیمی‌ترین اول). وقتی دفترچه آدرسی دارد، دقیقاً یکی از آن‌ها پیش‌فرض است.
       security: [{ bearerAuth: [] }]
       responses:
         '200':
@@ -1642,6 +1836,10 @@ paths:
       tags: [Addresses]
       operationId: createAddress
       summary: "افزودن آدرس جدید"
+      description: |
+        اولین آدرس همیشه پیش‌فرض می‌شود؛ آدرس‌های بعدی فقط با `setAsDefault: true` (و پیش‌فرض قبلی دیگر پیش‌فرض نیست).
+        همه‌ی خطاهای فیلدها با هم در یک `400` می‌آیند. استان یا شهری که در فهرست نیست `400` روی همان فیلد است
+        (`PROVINCE_NOT_FOUND`، `CITY_NOT_FOUND`)؛ شهر واقعیِ استانی دیگر `422 CITY_NOT_IN_PROVINCE`.
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -1675,13 +1873,20 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Address' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '404':
+          description: "`ADDRESS_NOT_FOUND` — این آدرس در دفترچه‌ی این کاربر نیست (آدرس کاربر دیگر هم همین جواب را می‌گیرد)"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '401': { $ref: '#/components/responses/Unauthorized' }
     put:
       tags: [Addresses]
       operationId: updateAddress
       summary: "ویرایش آدرس"
-      description: سفارش‌های قبلی تغییر نمی‌کنند چون یک snapshot از آدرس در سفارش ذخیره شده است.
+      description: |
+        همه‌ی فیلدها دوباره فرستاده می‌شوند (جایگزینی کامل). سفارش‌های قبلی تغییر نمی‌کنند چون یک snapshot از آدرس در سفارش ذخیره شده است.
+        `setAsDefault: true` این آدرس را پیش‌فرض می‌کند؛ `false` هیچ‌وقت پیش‌فرض بودن را برنمی‌دارد، چون همیشه یکی باید پیش‌فرض باشد
+        (پیش‌فرض فقط با پیش‌فرض کردن آدرسی دیگر عوض می‌شود).
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/AddressId'
@@ -1697,7 +1902,16 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Address' }
         '400': { $ref: '#/components/responses/ValidationError' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '404':
+          description: "`ADDRESS_NOT_FOUND` — این آدرس در دفترچه‌ی این کاربر نیست (آدرس کاربر دیگر هم همین جواب را می‌گیرد)"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422':
+          description: "`CITY_NOT_IN_PROVINCE`"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '401': { $ref: '#/components/responses/Unauthorized' }
     delete:
       tags: [Addresses]
@@ -1708,7 +1922,11 @@ paths:
         - $ref: '#/components/parameters/AddressId'
       responses:
         '204': { $ref: '#/components/responses/NoContent' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '404':
+          description: "`ADDRESS_NOT_FOUND` — این آدرس در دفترچه‌ی این کاربر نیست (آدرس کاربر دیگر هم همین جواب را می‌گیرد)"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '401': { $ref: '#/components/responses/Unauthorized' }
   /me/addresses/{addressId}/default:
     post:
@@ -1726,9 +1944,12 @@ paths:
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/Address' }
-
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '404':
+          description: "`ADDRESS_NOT_FOUND` — این آدرس در دفترچه‌ی این کاربر نیست (آدرس کاربر دیگر هم همین جواب را می‌گیرد)"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
   # ================================================================
   #  WISHLIST
   # ================================================================
@@ -1893,6 +2114,11 @@ paths:
       tags: [Orders]
       operationId: listMyOrders
       summary: "سفارش‌های من (فیلتر همه / جاری / تحویل شده)"
+      description: |
+        تازه‌ترین سفارش اول (ترتیب دیگری ندارد)؛ پیش‌فرض ۲۰ در هر صفحه. `counts` شمارنده‌ی همه‌ی تب‌هاست، هر تبی که نمایش داده شود.
+        هر وضعیت دقیقاً در یک تب است: `current` = `PENDING_PAYMENT`، `PAYMENT_FAILED`، `RESERVED`، `PROCESSING`، `PHOTO_SENT`، `CHANGE_REQUESTED`، `SHIPPED` ·
+        `delivered` = `DELIVERED`، `RETURN_REQUESTED`، `RETURNED` · `cancelled` = `EXPIRED`، `CANCELLED`، `REFUNDED`.
+        سفارشی که پرداخت‌نشده منقضی شد در `cancelled` است. `filter` نامعتبر ← `400` روی `filter` با `ORDER_FILTER_INVALID`.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: filter
@@ -1913,6 +2139,10 @@ paths:
       tags: [Orders]
       operationId: getMyOrder
       summary: "جزئیات کامل سفارش (کالاها، عکس‌ها و ویدیوهای قبل از ارسال، آدرس، خلاصه پرداخت، تایم‌لاین)"
+      description: |
+        سفارش کاربر دیگر، سفارشی که نیست و کدی که شکل `KV-…` ندارد هر سه `404 ORDER_NOT_FOUND`.
+        `payment` آخرین تلاش پرداخت سفارش است (`null` برای سفارشی که مبلغی نداشت). `items[].image` تا آپلود مدیا `null` است؛
+        `items[].color` نام و hex ِ لحظه‌ی خرید را دارد و `isLight`/`sortOrder` ِ پالت فعلی را.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/OrderCode'
@@ -1930,9 +2160,10 @@ paths:
       operationId: payMyOrder
       summary: "پرداخت سفارش «در انتظار پرداخت» یا مانده‌ی پرداخت آن از حساب کاربری — امکان تغییر درگاه"
       description: |
-        مثل `POST /payments/{paymentId}/retry`، ولی با کد سفارش؛ چون صفحه‌ی سفارش `paymentId` ندارد.
+        مثل `POST /payments/{paymentId}/retry`، ولی با کد سفارش؛ چون صفحه‌ی سفارش `paymentId` ندارد. همان ترتیب قانون‌ها و همان دو حالت `PAYMENT_GATEWAY_UNAVAILABLE`؛
+        `gateway` نیامده = درگاه آخرین تلاش سفارش. کد سفارش کاربر دیگر یا کد بدشکل ← `404 ORDER_NOT_FOUND`.
         فقط وقتی مجاز است که `actions.canPay = true` باشد. یک تراکنش جدید ساخته می‌شود: برای سفارش پرداخت‌نشده به مبلغ `totals.payable`،
-        و برای سفارش پرداخت‌شده‌ای که بعد از درخواست تغییر مانده‌ی پرداخت دارد به مبلغ `totals.balanceDue`.
+        و برای سفارش پرداخت‌شده‌ای که بعد از درخواست تغییر مانده‌ی پرداخت دارد به مبلغ `totals.balanceDue` (فاز بعد؛ تا آن موقع سفارش پرداخت‌شده `ORDER_ALREADY_PAID` می‌گیرد).
         بازگشت از درگاه مثل تسویه است: `https://kiva.ir/checkout/result?paymentId=...`
       security: [{ bearerAuth: [] }]
       parameters:
@@ -1951,14 +2182,30 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PaymentInit' }
+        '409':
+          description: "`IDEMPOTENCY_KEY_REUSED` (همان کلید با بدنه‌ی دیگر)"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422':
           description: "`ORDER_ALREADY_PAID`، `PAYMENT_EXPIRED` (موجودی آزاد شده) یا `PAYMENT_GATEWAY_UNAVAILABLE`"
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '429':
+          description: "`RATE_LIMITED` — این سفارش ۱۰ تلاش پرداخت داشته است (مثل `POST /payments/{paymentId}/retry`)"
+          headers:
+            Retry-After: { $ref: '#/components/headers/RetryAfter' }
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '404':
+          description: "`ORDER_NOT_FOUND` — سفارشی با این کد برای این کاربر نیست"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
   /me/orders/{orderCode}/media:
     get:
       tags: [Orders]
@@ -2066,6 +2313,10 @@ paths:
       tags: [Orders]
       operationId: reorder
       summary: "خرید دوباره — افزودن کالاهای موجود این سفارش به سبد [پیشنهادی]"
+      description: |
+        هر رنگ سفارش با همان تعداد، مثل `POST /cart/items` (بیشتر از سقف کم می‌شود با `QUANTITY_REDUCED`). `addedCount` تعداد کیف‌هایی است که واقعاً اضافه شد.
+        `skipped`: ناموجود ← `OUT_OF_STOCK`، بیرون از فروشگاه یا حذف‌شده ← `UNAVAILABLE`، سبد همین الان سقف آن را دارد ← `ALREADY_AT_MAX`؛ `name` نام لحظه‌ی خرید است.
+        هیچ‌وقت به‌خاطر ناموجودی خطا نمی‌دهد. سفارش کاربر دیگر یا کد بدشکل ← `404 ORDER_NOT_FOUND`.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/OrderCode'
@@ -2121,7 +2372,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ReservationInfo' }
         '204':
-          description: رزرو فعالی ندارد
+          description: رزرو فعالی ندارد (یا مهلتش تمام شده و سفارش‌هایش در حال رفتن به `PROCESSING` اند)
         '401': { $ref: '#/components/responses/Unauthorized' }
   /me/tracking:
     get:
@@ -4582,13 +4833,16 @@ components:
       name: X-Cart-Token
       in: header
       required: false
-      description: توکن سبد مهمان. برای کاربر واردشده لازم نیست.
+      description: توکن سبد مهمان. برای کاربر واردشده لازم نیست و با Bearer معتبر نادیده گرفته می‌شود.
       schema: { type: string, example: 'gct_7f3a9c2e1b' }
     IdempotencyKey:
       name: Idempotency-Key
       in: header
       required: true
-      description: UUID یکتا برای هر تلاش ثبت؛ جلوگیری از ثبت دوباره‌ی سفارش با دابل‌کلیک یا قطع شبکه
+      description: |
+        UUID یکتا برای هر تلاش ثبت؛ جلوگیری از ثبت دوباره‌ی سفارش با دابل‌کلیک یا قطع شبکه.
+        کلاینت برای هر تلاش تازه کلید تازه می‌سازد و فقط برای تکرار همان درخواست (مثلاً بعد از قطع شبکه) همان کلید را می‌فرستد.
+        نیامده یا UUID نیست = `400 VALIDATION_ERROR` روی فیلد `Idempotency-Key`. قواعد کامل در «قراردادهای کلی».
       schema: { type: string, format: uuid }
     IfMatch:
       name: If-Match
@@ -4625,7 +4879,7 @@ components:
       description: نسخه‌ی منبع برای کش شرطی (`If-None-Match`)
       schema: { type: string, example: 'W/"a1b2c3"' }
     XCartToken:
-      description: توکن سبد مهمان (فقط وقتی سبد جدید ساخته شده یا توکن عوض شده)
+      description: توکن سبد مهمان (فقط وقتی سبد جدید ساخته شده یا توکن عوض شده). روی پاسخ خطا هیچ‌وقت نمی‌آید، چون سبد تازه‌ی درخواستِ شکست‌خورده نگه داشته نمی‌شود
       schema: { type: string, example: 'gct_7f3a9c2e1b' }
     RetryAfter:
       description: چند ثانیه‌ی دیگر می‌توان دوباره تلاش کرد
@@ -5523,7 +5777,8 @@ components:
           description: موبایل یا ایمیل (در طرح فرم هست؛ برای کاربر واردشده پیش‌فرض موبایل حساب)
           example: '09123456789'
         text: { type: string, minLength: 10, maxLength: 1000, example: از کیفیت، رنگ و اندازه‌اش خیلی راضی‌ام. }
-        orderItemId: { type: integer, nullable: true, description: اتصال به خرید → تگ «خریدار» }
+        orderCode: { type: string, allOf: [{ $ref: '#/components/schemas/OrderCode' }], nullable: true, description: 'همراه `orderItemId`؛ شماره‌ی ردیف فقط داخل سفارش خودش یکتاست' }
+        orderItemId: { type: integer, nullable: true, description: 'اتصال به خرید → تگ «خریدار» (همراه `orderCode`؛ مثل `ReviewablePurchase`)' }
         mediaIds:
           type: array
           maxItems: 5
@@ -5642,7 +5897,7 @@ components:
       properties:
         method: { $ref: '#/components/schemas/ShippingMethodCode' }
         name: { type: string, example: پست معمولی }
-        description: { type: string, example: تحویل ۳ تا ۵ روز کاری }
+        description: { type: string, description: 'ساخته‌شده از `estimatedDelivery.minDays` و `maxDays`', example: تحویل ۳ تا ۵ روز کاری }
         icon: { $ref: '#/components/schemas/IconName' }
         baseCost: { allOf: [{ $ref: '#/components/schemas/Money' }], description: قیمت پایه (برای نمایش خط‌خورده وقتی رایگان است), example: 75000 }
         cost: { allOf: [{ $ref: '#/components/schemas/Money' }], example: 0 }
@@ -5666,7 +5921,7 @@ components:
     # ============ CART ============
     CartItem:
       type: object
-      required: [id, productId, variantId, product, color, quantity, unitPrice, lineTotal, stock]
+      required: [id, productId, variantId, product, color, quantity, unitPrice, lineTotal, stock, purchasable]
       properties:
         id: { type: string, example: 'ci_8d2f1a' }
         productId: { type: integer, example: 2 }
@@ -5681,9 +5936,26 @@ components:
             category: { $ref: '#/components/schemas/CategoryRef' }
             url: { type: string, example: '/product/nila-crossbody?color=olive' }
         color: { $ref: '#/components/schemas/Color' }
-        image: { $ref: '#/components/schemas/MediaAsset' }
+        image:
+          type: object
+          allOf: [{ $ref: '#/components/schemas/MediaAsset' }]
+          nullable: true
+          description: عکس رنگ ردیف (همیشه فرستاده می‌شود)؛ تا وقتی عکسی آپلود نشده `null` است، مثل `ProductSummary.image`
         quantity: { type: integer, minimum: 1, example: 1 }
-        maxQuantity: { type: integer, description: سقف دکمه‌ی + (موجودی ورینت), example: 9 }
+        maxQuantity:
+          type: integer
+          description: |
+            سقف دکمه‌ی + = min(موجودی این رنگ، `maxPerOrder` محصول − تعداد بقیه‌ی رنگ‌های همان محصول در سبد، ۲۰).
+            سقف خرید مال محصول است و بین رنگ‌هایش تقسیم می‌شود؛ ردیف غیرقابل خرید هم سهمش را نگه می‌دارد، تا برگشتنش رنگی را که مشتری دارد می‌خرد کم نکند.
+            هیچ ردیفی بیشتر از ۲۰ عدد ندارد (افزودن ۱۵ و بعد ۱۰ با `QUANTITY_REDUCED` روی ۲۰ می‌ماند).
+            هیچ‌وقت از `maxPerOrder` بیشتر نیست، پس موجودی دقیق را لو نمی‌دهد. برای ردیف غیرقابل خرید `0`.
+          example: 5
+        purchasable:
+          type: boolean
+          description: |
+            این ردیف الان قابل خرید است (محصول و رنگ در فروشگاه‌اند و موجودی دارند). ردیف غیرقابل خرید در سبد می‌ماند تا مشتری ببیند یا حذفش کند،
+            ولی در جمع‌های پول (`totals` به‌جز `itemsCount` و `linesCount`) حساب نمی‌شود و تا وقتی در سبد است `POST /orders` رد می‌شود.
+          example: true
         unitPrice: { allOf: [{ $ref: '#/components/schemas/Money' }], example: 1450000 }
         unitCompareAtPrice: { type: integer, allOf: [{ $ref: '#/components/schemas/Money' }], nullable: true, example: 1750000 }
         lineTotal: { allOf: [{ $ref: '#/components/schemas/Money' }], example: 1450000 }
@@ -5694,7 +5966,11 @@ components:
         addedAt: { type: string, format: date-time }
     CartIssue:
       type: object
-      description: مشکلاتی که از آخرین مشاهده‌ی سبد پیش آمده (نمایش نوار هشدار)
+      description: |
+        مشکلاتی که از آخرین مشاهده‌ی سبد پیش آمده (نمایش نوار هشدار). هر کدام فقط یک بار می‌آید.
+        `QUANTITY_REDUCED` با `currentValue = 0` یعنی ردیف حذف شد: سقف خرید محصول (بعد از کم شدن سقف یا ادغام سبد) جایی برایش نگذاشت؛
+        `itemId` شناسه‌ی همان ردیفی است که دیگر در سبد نیست.
+        `DISCOUNT_REMOVED`: کد تخفیف سبد دیگر معتبر نیست (منقضی شد، ظرفیتش پر شد، یا سبد دیگر شرطش را ندارد) و برداشته شد؛ `itemId` نال است و پیام کد را نام می‌برد.
       required: [code, message]
       properties:
         code:
@@ -5709,10 +5985,13 @@ components:
       description: |
         `itemsCompareAtTotal` قیمت کالاها ← `productDiscount` تخفیف محصولات ← `subtotal` ←
         `codeDiscount` کد تخفیف ← `shippingCost` ارسال ← `payable` مبلغ قابل پرداخت
+
+        همه‌ی مبلغ‌ها فقط از ردیف‌های قابل خرید (`CartItem.purchasable = true`) حساب می‌شوند. سبدی که ردیف قابل خرید ندارد همه‌ی مبلغ‌هایش ۰ است
+        و `shippingIsFree = false`. `itemsCount` و `linesCount` همه‌ی ردیف‌ها را می‌شمرند، چون بج سبد همان چیزی را نشان می‌دهد که در سبد دیده می‌شود.
       required: [itemsCount, itemsCompareAtTotal, productDiscount, subtotal, codeDiscount, shippingCost, payable, currency]
       properties:
-        itemsCount: { type: integer, description: جمع تعداد (بج سبد), example: 2 }
-        linesCount: { type: integer, example: 2 }
+        itemsCount: { type: integer, description: جمع تعداد همه‌ی ردیف‌ها (بج سبد), example: 2 }
+        linesCount: { type: integer, description: تعداد همه‌ی ردیف‌ها, example: 2 }
         itemsCompareAtTotal: { allOf: [{ $ref: '#/components/schemas/Money' }], description: «قیمت کالاها» (جمع قیمت‌های قبل از تخفیف), example: 4080000 }
         productDiscount: { allOf: [{ $ref: '#/components/schemas/Money' }], description: «تخفیف محصولات», example: 600000 }
         subtotal: { allOf: [{ $ref: '#/components/schemas/Money' }], description: جمع سبد بعد از تخفیف محصولات (مبنای کد تخفیف و ارسال رایگان), example: 3480000 }
@@ -5729,7 +6008,10 @@ components:
         method: { $ref: '#/components/schemas/ShippingMethodCode' }
         eligible: { type: boolean, example: false }
         remaining: { allOf: [{ $ref: '#/components/schemas/Money' }], description: «فقط ۱٬۵۵۰٬۰۰۰ تومان تا ارسال رایگان با پست», example: 1550000 }
-        progressPercent: { type: number, example: 48.3 }
+        progressPercent:
+          type: number
+          description: '`subtotal` نسبت به `threshold`، با یک رقم اعشار (نیمه به بالا). `100` فقط وقتی `eligible`: تا وقتی حتی ۱ تومان مانده، حداکثر `99.9`'
+          example: 48.3
         message: { type: string, example: فقط ۱٬۵۵۰٬۰۰۰ تومان تا ارسال رایگان با پست }
     AppliedDiscount:
       type: object
@@ -5738,7 +6020,7 @@ components:
         label: { type: string, example: ۱۰٪ تخفیف روی کل سبد }
         type: { type: string, enum: [PERCENT, FIXED] }
         value: { type: integer, example: 10 }
-        amount: { allOf: [{ $ref: '#/components/schemas/Money' }], example: 348000 }
+        amount: { allOf: [{ $ref: '#/components/schemas/Money' }], description: مبلغی که کد از همین سبد کم می‌کند (همان `totals.codeDiscount`), example: 348000 }
     CartReservation:
       type: object
       description: وضعیت سوییچ «رزرو ۴ روزه» در سبد/تسویه
@@ -5758,7 +6040,9 @@ components:
         shipAfterDate: { type: string, format: date, description: «ارسال بعد از سه‌شنبه ۱۵ مهر», example: '2026-10-09' }
         timeline:
           type: array
-          description: سه کارت تایم‌لاین رزرو
+          description: |
+            سه کارت تایم‌لاین رزرو، با تاریخ شمسی تهران: «امروز، ۲۰ مهر» · «تا {روز هفته} {روز} {ماه}» (همان `shipAfterDate`) · «بعد از ۴ روز».
+            وقتی رزرو در تنظیمات سایت خاموش است (`RESERVATION_DISABLED`) خالی است
           items:
             type: object
             properties:
@@ -5770,7 +6054,7 @@ components:
       properties:
         reservedOrderCode: { $ref: '#/components/schemas/OrderCode' }
         expiresAt: { type: string, format: date-time }
-        addressId: { type: integer, description: فقط ارسال به همین آدرس ادغام می‌شود }
+        addressId: { type: integer, description: 'فقط ارسال به همین آدرس ادغام می‌شود، و فقط اگر از شروع رزرو ویرایش نشده باشد' }
         shippingWaived: { type: boolean, example: true }
         shippingMethod:
           allOf: [{ $ref: '#/components/schemas/ShippingMethodCode' }]
@@ -5784,15 +6068,22 @@ components:
         isGuest: { type: boolean, example: true }
         items:
           type: array
+          description: به ترتیب افزودن، قدیمی‌ترین اول
           items: { $ref: '#/components/schemas/CartItem' }
         totals: { $ref: '#/components/schemas/CartTotals' }
-        shippingMethod: { $ref: '#/components/schemas/ShippingMethodCode' }
+        shippingMethod:
+          allOf: [{ $ref: '#/components/schemas/ShippingMethodCode' }]
+          description: روش ارسال انتخاب‌شده. سبد تازه با روش پیش‌فرض فروشگاه (`POST`) شروع می‌شود؛ اگر روش انتخاب‌شده غیرفعال شود، به همان برمی‌گردد (`SHIPPING_METHOD_CHANGED`).
         shippingOptions:
           type: array
           items: { $ref: '#/components/schemas/ShippingOptionQuote' }
-        freeShipping: { $ref: '#/components/schemas/FreeShippingProgress' }
+        freeShipping:
+          type: object
+          allOf: [{ $ref: '#/components/schemas/FreeShippingProgress' }]
+          nullable: true
+          description: نوار «تا ارسال رایگان». `null` وقتی فروشگاه هیچ روش ارسال فعالی با ارسال رایگان ندارد
         reservation: { $ref: '#/components/schemas/CartReservation' }
-        consolidation: { type: object, allOf: [{ $ref: '#/components/schemas/ReservationConsolidation' }], nullable: true }
+        consolidation: { type: object, allOf: [{ $ref: '#/components/schemas/ReservationConsolidation' }], nullable: true, description: 'برای آدرس پیش‌فرض کاربر (سبد آدرس ندارد)؛ برای مهمان همیشه `null`' }
         discount: { type: object, allOf: [{ $ref: '#/components/schemas/AppliedDiscount' }], nullable: true }
         issues:
           type: array
@@ -5813,7 +6104,11 @@ components:
             variantId: { type: integer, example: 205 }
             quantity: { type: integer, example: 1 }
             name: { type: string, example: کراس‌بادی نیلا }
-        message: { type: string, nullable: true, example: کراس‌بادی نیلا — زیتونی (۱ عدد) به سبد اضافه شد }
+        message:
+          type: string
+          nullable: true
+          description: تُست بعد از افزودن («… (۱ عدد) به سبد اضافه شد») یا حذف («… از سبد حذف شد»)؛ `null` برای تغییر ردیف، و برای افزودنی که ردیف جای بیشتری نداشت (`issues` دلیلش را می‌گوید)
+          example: کراس‌بادی نیلا — زیتونی (۱ عدد) به سبد اضافه شد
     AddCartItemRequest:
       type: object
       required: [variantId]
@@ -5829,7 +6124,7 @@ components:
       type: object
       required: [code]
       properties:
-        code: { type: string, minLength: 2, maxLength: 32, description: حساس به حروف نیست؛ سرور UPPERCASE و trim می‌کند, example: KIVA10 }
+        code: { type: string, minLength: 2, maxLength: 32, description: حساس به حروف نیست؛ سرور trim و UPPERCASE می‌کند و ارقام فارسی/عربی را لاتین, example: KIVA10 }
 
     # ============ CHECKOUT ============
     PaymentGateway:
@@ -5841,8 +6136,8 @@ components:
         logoUrl: { type: string, format: uri, nullable: true }
         brandColor: { type: string, example: '#F2C230' }
         initial: { type: string, description: حرف داخل لوگوی جایگزین, example: ز }
-        isDefault: { type: boolean, example: true }
-        available: { type: boolean, example: true }
+        isDefault: { type: boolean, description: 'درگاهی که تسویه اول انتخاب می‌کند، و همیشه یکی از درگاه‌های `available`: پیش‌فرض فروشگاه اگر در دسترس است، وگرنه اولین درگاه در دسترس. بدون درگاه در دسترس، هیچ‌کدام', example: true }
+        available: { type: boolean, description: 'در تنظیمات فروشگاه فعال است **و** سرور برایش آداپتر دارد. فقط همین‌ها در `POST /orders` پذیرفته می‌شوند', example: true }
     CheckoutContext:
       type: object
       required: [cart, addresses, messengers, shippingOptions, paymentGateways]
@@ -5850,10 +6145,12 @@ components:
         cart: { $ref: '#/components/schemas/Cart' }
         addresses:
           type: array
+          description: آدرس پیش‌فرض اول، بعد بقیه از قدیمی‌ترین (مثل `GET /me/addresses`)
           items: { $ref: '#/components/schemas/Address' }
-        selectedAddressId: { type: integer, nullable: true, example: 42 }
+        selectedAddressId: { type: integer, nullable: true, description: 'آدرسی که تسویه با آن شروع می‌شود: `addressId` ِ درخواست، وگرنه آدرس پیش‌فرض. `null` وقتی کاربر هیچ آدرسی ندارد: فرانت فرم آدرس تازه (`newAddress` در `POST /orders`) را باز می‌کند', example: 42 }
         messengers:
           type: array
+          description: روبیکا، تلگرام و بله، به همین ترتیب
           items: { $ref: '#/components/schemas/MessengerOption' }
         selectedMessenger: { type: string, allOf: [{ $ref: '#/components/schemas/PhotoMessengerChannel' }], nullable: true, description: پیام‌رسان پیش‌فرض پروفایل یا آخرین انتخاب }
         messengerPhone: { allOf: [{ $ref: '#/components/schemas/PhoneNumber' }], description: آخرین شماره‌ی استفاده‌شده یا موبایل حساب }
@@ -5861,13 +6158,14 @@ components:
           type: array
           items: { $ref: '#/components/schemas/ShippingOptionQuote' }
         reservation: { $ref: '#/components/schemas/CartReservation' }
-        consolidation: { type: object, allOf: [{ $ref: '#/components/schemas/ReservationConsolidation' }], nullable: true }
+        consolidation: { type: object, allOf: [{ $ref: '#/components/schemas/ReservationConsolidation' }], nullable: true, description: 'برای آدرس انتخاب‌شده (`selectedAddressId`)' }
         paymentGateways:
           type: array
+          description: همه‌ی درگاه‌های فروشگاه به ترتیب، در دسترس یا نه (`available`)؛ دقیقاً یکی `isDefault` اگر حداقل یکی در دسترس است
           items: { $ref: '#/components/schemas/PaymentGateway' }
         giftWrap:
           type: object
-          description: '[پیشنهادی] بسته‌بندی هدیه'
+          description: '[پیشنهادی] بسته‌بندی هدیه. فعلاً `{available: false, price: 0}`'
           properties:
             available: { type: boolean, example: true }
             price: { allOf: [{ $ref: '#/components/schemas/Money' }], example: 45000 }
@@ -5878,36 +6176,41 @@ components:
       properties:
         title: { type: string, maxLength: 30, nullable: true, description: '[پیشنهادی] «خانه»، «محل کار»', example: خانه }
         provinceId: { type: integer, example: 8 }
-        cityId: { type: integer, example: 301 }
-        addressLine: { type: string, minLength: 10, maxLength: 300, description: خیابان، کوچه، پلاک، واحد, example: 'خیابان ولیعصر، بالاتر از پارک ساعی، کوچه نسترن، پلاک ۱۲، واحد ۴' }
-        plaque: { type: string, maxLength: 10, nullable: true, description: '[پیشنهادی]', example: '12' }
-        unit: { type: string, maxLength: 10, nullable: true, description: '[پیشنهادی]', example: '4' }
-        postalCode: { $ref: '#/components/schemas/PostalCode' }
+        cityId: { type: integer, example: 394 }
+        addressLine: { type: string, minLength: 10, maxLength: 300, description: 'خیابان، کوچه، پلاک، واحد. ارقام همان‌طور که تایپ شده‌اند می‌مانند؛ حروف عربی (ي، ك) و فاصله‌های اضافه یکدست می‌شوند.', example: 'خیابان ولیعصر، بالاتر از پارک ساعی، کوچه نسترن، پلاک ۱۲، واحد ۴' }
+        plaque: { type: string, maxLength: 10, nullable: true, description: '[پیشنهادی] خالی = null. ارقامش لاتین ذخیره می‌شود.', example: '12' }
+        unit: { type: string, maxLength: 10, nullable: true, description: '[پیشنهادی] خالی = null. ارقامش لاتین ذخیره می‌شود.', example: '4' }
+        postalCode: { allOf: [{ $ref: '#/components/schemas/PostalCode' }], description: 'ارقام فارسی، فاصله و «-» پذیرفته و حذف می‌شوند («۱۹۶۵۸-۴۳۱۱۷» ← 1965843117)؛ بعد دقیقاً ۱۰ رقم.' }
         recipientName: { type: string, minLength: 3, maxLength: 80, example: سارا محمدی }
         recipientPhone: { $ref: '#/components/schemas/PhoneNumber' }
         isSelfRecipient: { type: boolean, description: «گیرنده خودم هستم», example: true }
         location:
           type: object
           nullable: true
-          description: '[پیشنهادی] انتخاب روی نقشه برای پیک'
+          description: '[پیشنهادی] انتخاب روی نقشه برای پیک. هر دو با هم یا هیچ‌کدام؛ وگرنه `LOCATION_INVALID`.'
           properties:
             lat: { type: number, format: double, example: 35.7575 }
             lng: { type: number, format: double, example: 51.4107 }
-        setAsDefault: { type: boolean, default: false }
+        setAsDefault: { type: boolean, default: false, description: '`true` = پیش‌فرض شود. `false` پیش‌فرض بودن را برنمی‌دارد. اولین آدرس همیشه پیش‌فرض است.' }
     PlaceOrderRequest:
       type: object
-      required: [preShipmentMessenger, shippingMethod, paymentGateway, acceptTerms]
+      required: [shippingMethod, paymentGateway]
       description: |
-        دقیقاً یکی از `addressId` یا `newAddress` باید ارسال شود.
-        سبد، کد تخفیف و وضعیت رزرو از سبد کاربر خوانده می‌شوند (و در صورت ارسال در این بدنه، override می‌شوند).
+        دقیقاً یکی از `addressId` یا `newAddress` باید ارسال شود؛ هیچ‌کدام یا هر دو = `400`. خطاهای `newAddress` با پیشوند `newAddress.` در `errors[].field` می‌آیند.
+        سبد و کد تخفیف همیشه از سبد کاربر خوانده می‌شوند؛ وضعیت رزرو هم، مگر `reserve` در این بدنه بیاید.
+        `preShipmentMessenger` اجباری است، ولی با قانون کسب‌وکار (`422 MESSENGER_REQUIRED` / `MESSENGER_PHONE_INVALID`)، نه با شکل ورودی (`400`)؛ ترتیب کامل در `POST /orders`.
       properties:
         addressId: { type: integer, nullable: true, example: 42 }
         newAddress: { type: object, allOf: [{ $ref: '#/components/schemas/AddressInput' }], nullable: true }
-        saveNewAddress: { type: boolean, default: true, description: «ذخیره این آدرس در حساب کاربری» }
+        saveNewAddress:
+          type: boolean
+          default: true
+          description: «ذخیره این آدرس در حساب کاربری». اگر دفترچه‌ی آدرس پر باشد (۲۰ آدرس)، سفارش ثبت می‌شود و آدرس ذخیره نمی‌شود.
         preShipmentMessenger:
           type: object
-          description: «عکس کیفت رو قبل از ارسال کجا بفرستیم؟» — اجباری (امضای کیوا)
-          required: [channel, phone]
+          description: |
+            «عکس کیفت رو قبل از ارسال کجا بفرستیم؟» — اجباری (امضای کیوا).
+            نیامده یا بدون `channel` ← `422 MESSENGER_REQUIRED`؛ `phone` نیامده یا غلط ← `422 MESSENGER_PHONE_INVALID`. مقدار `channel` خارج از فهرست ← `400`.
           properties:
             channel: { $ref: '#/components/schemas/PhotoMessengerChannel' }
             phone: { $ref: '#/components/schemas/PhoneNumber' }
@@ -5915,7 +6218,7 @@ components:
             note: { type: string, maxLength: 200, nullable: true, description: «توضیح برای عکس», example: از داخل کیف هم عکس بگیرید }
             saveAsDefault: { type: boolean, default: true }
         shippingMethod: { $ref: '#/components/schemas/ShippingMethodCode' }
-        reserve: { type: boolean, nullable: true, description: رزرو ۴ روزه (اگر null از سبد خوانده می‌شود) }
+        reserve: { type: boolean, nullable: true, description: 'رزرو ۴ روزه (اگر null از سبد خوانده می‌شود). وقتی سفارش به رزرو فعال می‌پیوندد (`consolidation`) نادیده گرفته می‌شود' }
         paymentGateway: { $ref: '#/components/schemas/PaymentGatewayCode' }
         customerNote: { type: string, maxLength: 300, nullable: true, description: '[پیشنهادی] توضیح سفارش' }
         gift:
@@ -5923,14 +6226,16 @@ components:
           nullable: true
           description: '[پیشنهادی] سفارش هدیه'
           properties:
-            wrap: { type: boolean, example: true }
+            wrap: { type: boolean, description: 'تا وقتی `CheckoutContext.giftWrap.available = false` است نادیده گرفته می‌شود (بدون هزینه)', example: true }
             message: { type: string, maxLength: 200, example: تولدت مبارک! }
             hidePrices: { type: boolean, default: true }
         expectedPayable:
           allOf: [{ $ref: '#/components/schemas/Money' }]
-          description: مبلغی که کاربر روی دکمه‌ی پرداخت دیده؛ برای تشخیص تغییر قیمت
+          description: |
+            مبلغی که کاربر روی دکمه‌ی پرداخت دیده؛ برای تشخیص تغییر قیمت (`409 PRICE_CHANGED`). فقط برای مقایسه است و هیچ‌وقت مبلغ پرداخت را تعیین نمی‌کند.
+            به‌شدت توصیه می‌شود همیشه فرستاده شود؛ اگر نیاید مقایسه‌ای انجام نمی‌شود و سفارش با مبلغ فعلی سرور ثبت می‌شود.
           example: 1595000
-        acceptTerms: { type: boolean, description: «با پرداخت، قوانین کیوا رو می‌پذیری», example: true }
+        acceptTerms: { type: boolean, default: false, description: '«با پرداخت، قوانین کیوا رو می‌پذیری». نیامده = نپذیرفته (`422 TERMS_NOT_ACCEPTED`)', example: true }
     PaymentInit:
       type: object
       required: [paymentId, gateway, amount, redirect]
@@ -5949,7 +6254,7 @@ components:
               type: object
               additionalProperties: { type: string }
               example: {}
-        expiresAt: { type: string, format: date-time, description: پایان رزرو موقت موجودی }
+        expiresAt: { type: string, format: date-time, description: 'پایان مهلت پرداخت سفارش و رزرو موقت موجودی (ثبت سفارش + ۱۵ دقیقه). برای همه‌ی تلاش‌های پرداخت یک سفارش یکی است و تمدید نمی‌شود.' }
     PlaceOrderResponse:
       type: object
       required: [order]
@@ -5958,30 +6263,36 @@ components:
         payment: { type: object, allOf: [{ $ref: '#/components/schemas/PaymentInit' }], nullable: true }
     PaymentStatus:
       type: string
+      description: |
+        `PENDING` مشتری هنوز از درگاه برنگشته یا verify در جریان است ·
+        `SUCCEEDED` پرداخت تأیید شد · `FAILED` درگاه رد کرد، verify رد شد، یا سفارش دیگر قابل پرداخت نبود (مبلغ را درگاه برمی‌گرداند) ·
+        `CANCELLED` مشتری در درگاه انصراف داد · `EXPIRED` مهلت پرداخت سفارش تمام شد، یا مشتری بیش از ۲۰ دقیقه در درگاه ماند و برنگشت و درگاه می‌گوید پرداخت نشده · `REFUNDED` وجه برگشت داده شد (از جمله تلاشی که verify شد ولی سفارشش دیگر قابل پرداخت نبود و درگاه همان لحظه مبلغ را برگرداند)
       enum: [PENDING, SUCCEEDED, FAILED, CANCELLED, EXPIRED, REFUNDED]
     PaymentResult:
       type: object
       required: [paymentId, status, amount, gateway]
       properties:
         paymentId: { type: string, example: 'pay_01J9X2K7' }
-        status: { $ref: '#/components/schemas/PaymentStatus' }
+        status:
+          allOf: [{ $ref: '#/components/schemas/PaymentStatus' }]
+          description: روی صفحه‌ی نتیجه `PENDING` یعنی verify در جریان است؛ کلاینت هر ۳ ثانیه و حداکثر ۳۰ ثانیه دوباره می‌پرسد.
         amount: { $ref: '#/components/schemas/Money' }
         gateway: { $ref: '#/components/schemas/PaymentGatewayCode' }
         referenceId: { type: string, nullable: true, description: شماره پیگیری بانکی, example: '201843917' }
         cardMask: { type: string, nullable: true, example: '6037-99**-****-1234' }
         paidAt: { type: string, format: date-time, nullable: true }
-        failureReason: { type: string, nullable: true, example: تراکنش توسط کاربر لغو شد }
-        canRetry: { type: boolean, example: false }
+        failureReason: { type: string, nullable: true, description: 'فقط برای تلاش ناموفق؛ برای `SUCCEEDED` و `PENDING` همیشه `null`', example: تراکنش توسط کاربر لغو شد }
+        canRetry: { type: boolean, description: 'پرداخت موفق نیست، در حال verify هم نیست (صفحه منتظر نتیجه‌اش می‌ماند)، و سفارش هنوز در مهلت پرداخت است (`POST /payments/{paymentId}/retry`)', example: false }
         order:
           type: object
           properties:
             code: { $ref: '#/components/schemas/OrderCode' }
             status: { $ref: '#/components/schemas/OrderStatus' }
             reserved: { type: boolean, example: false }
-            consolidatedInto: { type: string, allOf: [{ $ref: '#/components/schemas/OrderCode' }], nullable: true }
+            consolidatedInto: { type: string, allOf: [{ $ref: '#/components/schemas/OrderCode' }], nullable: true, description: 'کد سفارش اصلی رزروی که این سفارش به آن پیوسته و همراهش ارسال می‌شود؛ برای خود سفارش اصلی و سفارش عادی `null`' }
         nextSteps:
           type: array
-          description: سه قدم صفحه‌ی موفقیت
+          description: سه قدم صفحه‌ی موفقیت؛ فقط برای `SUCCEEDED`، وگرنه خالی
           items: { type: string }
           example:
             - سفارشت در حال آماده‌سازیه.
@@ -6014,14 +6325,14 @@ components:
     ReservationInfo:
       type: object
       properties:
-        active: { type: boolean, example: true }
+        active: { type: boolean, description: 'در `GET /me/reservation` همیشه `true`؛ روی کارت سفارش `false` یعنی مهلت تمام شده و سفارش به‌زودی `PROCESSING` می‌شود', example: true }
         orderCode: { $ref: '#/components/schemas/OrderCode' }
         startedAt: { type: string, format: date-time, description: لحظه‌ی پرداخت موفق سفارش اصلی (شروع مهلت) }
         expiresAt: { type: string, format: date-time, description: 'startedAt + reservationHoldDays؛ برای کل گروه ثابت است و تمدید نمی‌شود. برای شمارنده «۲ روز و ۱۴ ساعت و ۵ دقیقه مانده»' }
         remainingSeconds: { type: integer, example: 223500 }
         groupOrderCodes:
           type: array
-          description: سفارش‌هایی که به این رزرو پیوسته‌اند
+          description: سفارش‌های پرداخت‌شده‌ی این رزرو به ترتیب پرداخت؛ اولی سفارش اصلی است
           items: { $ref: '#/components/schemas/OrderCode' }
         message: { type: string, example: تا سه‌شنبه ۱۵ مهر هر خریدی کنی، با همین سفارش و بدون هزینه ارسال جدید فرستاده می‌شه. }
     Shipment:
@@ -6040,7 +6351,7 @@ components:
         productId: { type: integer, example: 4 }
         name: { type: string, example: کیف دستی آیدا }
         colorKey: { $ref: '#/components/schemas/ColorKey' }
-        imageUrl: { type: string, format: uri }
+        imageUrl: { type: string, format: uri, nullable: true, description: 'عکس رنگ؛ تا آپلود مدیا `null`، مثل ردیف سبد' }
         quantity: { type: integer, example: 1 }
     PreShipmentMediaSummary:
       type: object
@@ -6094,7 +6405,7 @@ components:
       type: object
       required: [id, productId, variantId, name, color, quantity, unitPrice, lineTotal]
       properties:
-        id: { type: integer, example: 9001 }
+        id: { type: integer, description: 'شماره‌ی ردیف در همین سفارش (۱ تا n)؛ فقط داخل سفارش یکتاست', example: 1 }
         productId: { type: integer, example: 4 }
         variantId: { type: integer, example: 402 }
         sku: { type: string, example: KV-1004-CAR }
@@ -6114,7 +6425,7 @@ components:
         itemsCompareAtTotal: { allOf: [{ $ref: '#/components/schemas/Money' }], example: 4080000 }
         productDiscount: { allOf: [{ $ref: '#/components/schemas/Money' }], example: 600000 }
         subtotal: { allOf: [{ $ref: '#/components/schemas/Money' }], example: 3480000 }
-        discountCode: { type: string, nullable: true, example: null }
+        discountCode: { type: string, nullable: true, description: کد تخفیفی که سفارش با آن ثبت شد (`codeDiscount` مال آن است), example: null }
         codeDiscount: { allOf: [{ $ref: '#/components/schemas/Money' }], example: 0 }
         shippingCost: { allOf: [{ $ref: '#/components/schemas/Money' }], example: 0 }
         shippingFreeReason: { type: string, nullable: true, example: THRESHOLD }
@@ -6132,6 +6443,8 @@ components:
         provinceName: { type: string, example: تهران }
         cityName: { type: string, example: تهران }
         addressLine: { type: string, example: 'خیابان ولیعصر، بالاتر از پارک ساعی، کوچه نسترن، پلاک ۱۲، واحد ۴' }
+        plaque: { type: string, nullable: true, example: '12' }
+        unit: { type: string, nullable: true, example: '4' }
         postalCode: { $ref: '#/components/schemas/PostalCode' }
         recipientName: { type: string, example: سارا محمدی }
         recipientPhone: { $ref: '#/components/schemas/PhoneNumber' }
@@ -6212,6 +6525,7 @@ components:
             preShipmentMediaDetail: { $ref: '#/components/schemas/PreShipmentMedia' }
             timeline:
               type: array
+              description: رویدادهای سفارش، قدیمی‌ترین اول. هر تلاش پرداخت ناموفق یک ردیف `PAYMENT_FAILED` ِ خودش را دارد.
               items: { $ref: '#/components/schemas/OrderEvent' }
             customerNote: { type: string, nullable: true }
             gift:
@@ -6463,7 +6777,7 @@ components:
       properties:
         phone: { $ref: '#/components/schemas/PhoneNumber' }
         code: { type: string, pattern: '^\d{5}$', example: '48213', description: ارقام فارسی هم پذیرفته می‌شوند }
-        guestCartToken: { type: string, nullable: true, description: برای ادغام سبد مهمان (از فاز سبد), example: 'gct_7f3a9c2e1b' }
+        guestCartToken: { type: string, nullable: true, description: 'برای ادغام سبد مهمان در سبد کاربر (مثل `POST /cart/merge`)، فقط بعد از کد درست؛ کد اشتباه سبد مهمان را دست نمی‌زند. توکنی که سبدی ندارد (یا بدشکل است) نادیده گرفته می‌شود و ورود را خراب نمی‌کند.', example: 'gct_7f3a9c2e1b' }
         device:
           type: object
           nullable: true
@@ -6487,7 +6801,9 @@ components:
           properties:
             isNewUser: { type: boolean, description: true → مرحله‌ی «به کیوا خوش اومدی! دوست داری چی صدات کنیم؟» }
             user: { $ref: '#/components/schemas/User' }
-            cart: { type: object, allOf: [{ $ref: '#/components/schemas/Cart' }], nullable: true, description: سبد بعد از ادغام (تا فاز سبد همیشه null) }
+            cart:
+              allOf: [{ $ref: '#/components/schemas/Cart' }]
+              description: سبد کاربر بعد از ادغام سبد مهمان (اگر `guestCartToken` آمده بود)؛ همیشه هست، حتی خالی. مثل `GET /cart` همگام‌سازی می‌شود، پس `issues` تغییرهای از آخرین بازدید را دارد (یک بار). کلاینت بعد از آن توکن مهمان را دور می‌ریزد.
     PhoneChangeResponse:
       allOf:
         - $ref: '#/components/schemas/AuthTokens'
@@ -6567,7 +6883,7 @@ components:
       type: object
       required: [id, name]
       properties:
-        id: { type: integer, example: 301 }
+        id: { type: integer, example: 394 }
         name: { type: string, example: تهران }
         provinceId: { type: integer, example: 8 }
     Province:
@@ -6578,6 +6894,8 @@ components:
         name: { type: string, example: تهران }
         cities:
           type: array
+          nullable: true
+          description: شهرهای استان به ترتیب الفبا؛ `null` وقتی با `includeCities=false` خواسته شده
           items: { $ref: '#/components/schemas/City' }
     Address:
       type: object
@@ -6587,7 +6905,7 @@ components:
         title: { type: string, nullable: true, example: خانه }
         provinceId: { type: integer, example: 8 }
         provinceName: { type: string, example: تهران }
-        cityId: { type: integer, example: 301 }
+        cityId: { type: integer, example: 394 }
         cityName: { type: string, example: تهران }
         addressLine: { type: string, example: 'خیابان ولیعصر، بالاتر از پارک ساعی، کوچه نسترن، پلاک ۱۲، واحد ۴' }
         plaque: { type: string, nullable: true }
@@ -6603,7 +6921,7 @@ components:
           properties:
             lat: { type: number, format: double }
             lng: { type: number, format: double }
-        fullText: { type: string, description: «استان، شهر، آدرس», example: 'تهران، تهران، خیابان ولیعصر، بالاتر از پارک ساعی، کوچه نسترن، پلاک ۱۲، واحد ۴' }
+        fullText: { type: string, description: '«استان، شهر، آدرس»، و اگر فرستاده شده‌اند «پلاک …» و «واحد …» (با ارقام فارسی)', example: 'تهران، تهران، خیابان ولیعصر، بالاتر از پارک ساعی، کوچه نسترن، پلاک ۱۲، واحد ۴' }
         createdAt: { type: string, format: date-time }
 
     # ============ WISHLIST ============
@@ -6674,7 +6992,7 @@ components:
       properties:
         code: { $ref: '#/components/schemas/ShippingMethodCode' }
         name: { type: string, example: تیپاکس }
-        description: { type: string, example: تحویل ۱ تا ۲ روز کاری }
+        description: { type: string, description: 'ساخته‌شده از `minDays` و `maxDays`، پس همیشه با آن‌ها جور است. فقط خواندنی: در PUT نادیده گرفته می‌شود.', example: تحویل ۱ تا ۲ روز کاری }
         baseCost: { allOf: [{ $ref: '#/components/schemas/Money' }], example: 145000 }
         minDays: { type: integer, example: 1 }
         maxDays: { type: integer, example: 2 }
@@ -7775,9 +8093,9 @@ components:
         phone: { $ref: '#/components/schemas/PhoneNumber' }
         fullName: { type: string, nullable: true }
         email: { type: string, nullable: true }
-        ordersCount: { type: integer }
-        totalSpent: { $ref: '#/components/schemas/Money' }
-        lastOrderAt: { type: string, format: date-time, nullable: true }
+        ordersCount: { type: integer, description: 'سفارش‌هایی که پولشان رسیده (پرداخت‌شده، از جمله لغو و مرجوعی بعدی)؛ پرداخت‌نشده و منقضی نه' }
+        totalSpent: { allOf: [{ $ref: '#/components/schemas/Money' }], description: 'جمع `payable` ِ همان سفارش‌ها (در فاز استرداد، مبلغ برگشتی از آن کم می‌شود)' }
+        lastOrderAt: { type: string, format: date-time, nullable: true, description: 'زمان ثبت آخرین همان سفارش‌ها؛ بدون خرید `null`' }
         defaultMessenger: { type: string, allOf: [{ $ref: '#/components/schemas/PhotoMessengerChannel' }], nullable: true }
         marketingSmsOptIn: { type: boolean }
         roles:

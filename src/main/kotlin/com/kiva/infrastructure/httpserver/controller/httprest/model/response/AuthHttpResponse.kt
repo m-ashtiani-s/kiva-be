@@ -3,7 +3,6 @@ package com.kiva.infrastructure.httpserver.controller.httprest.model.response
 import com.kiva.application.dto.IssuedSession
 import com.kiva.application.dto.UserDto
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonObject
 
 /**
  * The contract's AuthResponse: AuthTokens plus the user. The refresh token is not here; it goes in the HttpOnly
@@ -11,7 +10,8 @@ import kotlinx.serialization.json.JsonObject
  *
  * @property expiresIn the access token's lifetime, in seconds.
  * @property refreshExpiresIn the cookie's lifetime, in seconds: the same as its Max-Age.
- * @property cart the cart after merging a guest's: always null until the cart phase.
+ * @property cart the customer's cart after merging the guest's (MergeGuestCartUc), brought up to date as when they look
+ *   at it; always there, even empty.
  */
 @Serializable
 data class AuthHttpResponse(
@@ -21,20 +21,20 @@ data class AuthHttpResponse(
     val refreshExpiresIn: Long,
     val isNewUser: Boolean,
     val user: UserHttpResponse,
-    val cart: JsonObject?,
+    val cart: CartHttpResponse,
 ) {
     // The access token is a secret, if this is ever printed.
     override fun toString(): String = "AuthHttpResponse(user=${user.id}, isNewUser=$isNewUser, accessToken=<hidden>)"
 
     companion object {
-        fun of(session: IssuedSession, user: UserDto) = AuthHttpResponse(
+        fun of(session: IssuedSession, user: UserDto, cart: CartHttpResponse) = AuthHttpResponse(
             accessToken = session.accessToken,
             tokenType = "Bearer",
             expiresIn = session.accessTokenExpiresIn.seconds,
             refreshExpiresIn = session.refreshTokenMaxAge.seconds,
             isNewUser = session.isNewUser,
             user = UserHttpResponse.from(user),
-            cart = null,
+            cart = cart,
         )
     }
 }

@@ -41,6 +41,9 @@ dependencies {
     implementation(libs.ktor.server.forwarded.header)
     implementation(libs.jsoup)
     implementation(libs.ktor.serialization.kotlinx.json)
+    // The payment gateway (Zarinpal), called server to server.
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.cio)
 
     // --- Koin ---
     implementation(platform(libs.koin.bom))
@@ -63,6 +66,7 @@ dependencies {
     // --- Test ---
     testImplementation(kotlin("test"))
     testImplementation(libs.ktor.server.test.host)
+    testImplementation(libs.ktor.client.mock)
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)

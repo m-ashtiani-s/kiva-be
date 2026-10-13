@@ -1,5 +1,6 @@
 package com.kiva.application.dto
 
+import com.kiva.application.repository.OrderQmRepository
 import com.kiva.common.valueobject.Money
 import com.kiva.domain.aggregate.user.entity.User
 import java.time.Instant
@@ -7,7 +8,9 @@ import java.time.Instant
 /**
  * A customer as the panel lists them (the contract's AdminCustomer).
  *
- * @property ordersCount, totalSpent, lastOrderAt from the customer's orders; 0, 0 and null until the orders phase.
+ * @property ordersCount the customer's orders the money came in for (OrderRepository's Purchases);
+ * @property totalSpent what they paid for them (their payable; the refunds of a later phase will come off it);
+ * @property lastOrderAt when the latest of them was placed; null when they bought nothing.
  */
 data class AdminCustomerDto(
     val id: Long,
@@ -23,14 +26,14 @@ data class AdminCustomerDto(
     val createdOn: Instant,
 ) {
     companion object {
-        fun from(user: User) = AdminCustomerDto(
+        fun from(user: User, purchases: OrderQmRepository.Purchases?) = AdminCustomerDto(
             id = user.id.value,
             phone = user.phone.value,
             fullName = listOfNotNull(user.firstName?.value, user.lastName?.value).joinToString(" ").ifEmpty { null },
             email = user.email?.value,
-            ordersCount = 0,
-            totalSpent = Money.ZERO,
-            lastOrderAt = null,
+            ordersCount = purchases?.ordersCount ?: 0,
+            totalSpent = purchases?.totalSpent ?: Money.ZERO,
+            lastOrderAt = purchases?.lastOrderOn,
             defaultMessenger = user.defaultMessenger?.name,
             marketingSmsOptIn = user.marketingSmsOptIn,
             roles = user.roles.values.map { it.name },

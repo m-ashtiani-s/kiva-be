@@ -1,5 +1,6 @@
 package com.kiva.infrastructure.di
 
+import com.kiva.application.port.SmsSender
 import com.kiva.application.usecase.account.usecase.query.GetMeUc
 import com.kiva.application.usecase.auth.usecase.command.SendLoginCodeUc
 import com.kiva.application.usecase.auth.usecase.command.VerifyLoginCodeUc
@@ -7,11 +8,16 @@ import com.kiva.application.usecase.inventory.usecase.command.AdjustInventoryUc
 import com.kiva.domain.aggregate.inventory.InventoryDomainService
 import com.kiva.domain.aggregate.product.ProductDomainService
 import com.kiva.infrastructure.TestDatabase
+import com.kiva.infrastructure.auth.sms.FarazSmsConfig
+import com.kiva.infrastructure.auth.sms.FarazSmsSender
 import com.kiva.infrastructure.config.AppConfig
 import com.kiva.infrastructure.config.AuthConfig
 import com.kiva.infrastructure.config.DatasourceConfig
+import com.kiva.infrastructure.config.SmsConfig
+import com.kiva.infrastructure.config.SmsProvider
 import org.junit.jupiter.api.Test
 import org.koin.dsl.koinApplication
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 
 class AppModulesTest {
@@ -33,6 +39,17 @@ class AppModulesTest {
             assertNotNull(app.koin.get<SendLoginCodeUc>())
             assertNotNull(app.koin.get<VerifyLoginCodeUc>())
             assertNotNull(app.koin.get<GetMeUc>())
+        } finally {
+            app.close()
+        }
+    }
+
+    @Test
+    fun `with Faraz SMS the sender behind the port is Faraz's, and building it calls nobody`() {
+        val faraz = SmsConfig(SmsProvider.FARAZ, FarazSmsConfig("https://api.iranpayamak.com", "TestOnlyFarazKey0123456789", "90008361", "vdXmsAfAQs"))
+        val app = koinApplication { modules(appModules(config.copy(sms = faraz), TestDatabase.database)) }
+        try {
+            assertIs<FarazSmsSender>(app.koin.get<SmsSender>())
         } finally {
             app.close()
         }

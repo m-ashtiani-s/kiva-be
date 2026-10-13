@@ -21,6 +21,7 @@ internal object DevCatalogData {
      *
      * @property material the prototype's own words for it; [materialSlug] is the material of the list behind them.
      * @property colors in the prototype's order; the first is the default.
+     * @property reservable can be held with «رزرو ۴ روزه» (the frontend's mock has the party clutch as not).
      */
     data class Bag(
         val sku: String,
@@ -35,6 +36,7 @@ internal object DevCatalogData {
         val colors: List<String>,
         val stockPerColor: Int,
         val isNew: Boolean,
+        val reservable: Boolean = true,
     )
 
     // In the prototype's order, so on an empty database product 1 is KV-1001, as there.
@@ -89,7 +91,7 @@ internal object DevCatalogData {
         ),
         Bag(
             "KV-1013", "mahtab-clutch", "کلاچ مهتاب", "party", "CLUTCH", "velvet", "مخمل با زنجیر طلایی",
-            1_150_000, 1_390_000, listOf("white", "pink", "black", "lilac", "cream", "red"), stockPerColor = 8, isNew = false,
+            1_150_000, 1_390_000, listOf("white", "pink", "black", "lilac", "cream", "red"), stockPerColor = 8, isNew = false, reservable = false,
         ),
         Bag(
             "KV-1014", "aseman-tote-bag", "توت آسمان", "tote", "TOTE", "faux-leather", "چرم مصنوعی",

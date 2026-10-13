@@ -201,7 +201,7 @@ class HttpEdgeTest {
             assertEquals(
                 json(
                     """{"status":400,"code":"VALIDATION_ERROR","message":"چند تا از فیلدها رو باید درست کنی","errors":[
-                         {"field":"newAddress.postalCode","code":"POSTAL_CODE_INVALID","message":"این مقدار درست نیست"},
+                         {"field":"newAddress.postalCode","code":"POSTAL_CODE_INVALID","message":"کد پستی باید ۱۰ رقم باشه"},
                          {"field":"newAddress.recipientPhone","code":"PHONE_INVALID","message":"موبایل معتبر وارد کن"}],"meta":null}""",
                 ),
                 response.problem(),

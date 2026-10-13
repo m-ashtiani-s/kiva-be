@@ -11,10 +11,10 @@ import com.kiva.common.railway.ResultFailure
 import com.kiva.common.text.normalizeDigits
 import com.kiva.common.transaction.TransactionManager
 import com.kiva.common.usecase.QueryUseCase
-import com.kiva.common.valueobject.Money
 import com.kiva.domain.aggregate.category.repository.CategoryRepository
 import com.kiva.domain.aggregate.color.repository.ColorRepository
 import com.kiva.domain.aggregate.product.model.valueobject.ProductId
+import com.kiva.domain.aggregate.settings.repository.ShopSettingsRepository
 import java.time.Clock
 
 /**
@@ -30,7 +30,7 @@ class FindRelatedProductsUc(
     private val categoryRepository: CategoryRepository,
     private val colorRepository: ColorRepository,
     private val clock: Clock,
-    private val freeShippingThreshold: Money,
+    private val shopSettingsRepository: ShopSettingsRepository,
 ) : QueryUseCase<FindRelatedProductsUc.Qry, List<ProductCardDto>, FindRelatedProductsUc.Failure> {
 
     private val logger = getLogger()
@@ -51,6 +51,7 @@ class FindRelatedProductsUc(
             val related = productQmRepository.findRelated(productId, limit) ?: return@inTransaction Result.failure(Failure.ProductNotFound)
             val categories = categoryRepository.findAll().associateBy { it.slug }
             val palette = colorRepository.findAll().associateBy { it.key }
+            val freeShippingThreshold = shopSettingsRepository.get().freeShippingThreshold
             Result.success(related.map { ProductCards.cardOf(it, categories.getValue(it.categorySlug), palette, now, freeShippingThreshold) })
         }
     }

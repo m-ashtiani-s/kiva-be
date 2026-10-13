@@ -5,33 +5,53 @@ import com.kiva.application.port.SmsSender
 import com.kiva.application.usecase.account.usecase.command.ConfirmPhoneChangeUc
 import com.kiva.application.usecase.account.usecase.command.RequestPhoneChangeUc
 import com.kiva.application.usecase.account.usecase.command.UpdateMyProfileUc
-import com.kiva.application.usecase.auth.OtpIssuer
 import com.kiva.application.usecase.account.usecase.query.GetMeUc
 import com.kiva.application.usecase.admin.usecase.command.CheckPanelAccessUc
 import com.kiva.application.usecase.admin.usecase.command.SetUserRolesUc
 import com.kiva.application.usecase.admin.usecase.query.FindCustomersUc
 import com.kiva.application.usecase.admin.usecase.query.GetCustomerUc
+import com.kiva.application.usecase.auth.OtpIssuer
 import com.kiva.application.usecase.auth.usecase.command.BootstrapAdminUc
 import com.kiva.application.usecase.auth.usecase.command.LogoutUc
 import com.kiva.application.usecase.auth.usecase.command.RefreshSessionUc
 import com.kiva.application.usecase.auth.usecase.command.SendLoginCodeUc
 import com.kiva.application.usecase.auth.usecase.command.VerifyLoginCodeUc
+import com.kiva.application.usecase.cart.CartCommands
+import com.kiva.application.usecase.cart.usecase.command.MergeGuestCartUc
+import com.kiva.application.usecase.cart.usecase.query.GetCartUc
+import com.kiva.application.usecase.discount.Discounts
+import com.kiva.application.usecase.reservation.Reservations
 import com.kiva.common.valueobject.IranianMobileNumber
+import com.kiva.domain.aggregate.cart.CartDomainService
+import com.kiva.domain.aggregate.discount.DiscountDomainService
+import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpPurpose
+import com.kiva.domain.aggregate.reservation.ReservationDomainService
 import com.kiva.infrastructure.MutableClock
 import com.kiva.infrastructure.TestDatabase
 import com.kiva.infrastructure.auth.HmacOtpCodes
 import com.kiva.infrastructure.auth.JwtAccessTokens
 import com.kiva.infrastructure.auth.RandomSessionTokens
+import com.kiva.infrastructure.cart.RandomCartIds
 import com.kiva.infrastructure.common.persistence.ExposedTransactionManager
 import com.kiva.infrastructure.httpserver.API_V1
 import com.kiva.infrastructure.httpserver.auth.configureAuthentication
 import com.kiva.infrastructure.httpserver.configureHttp
+import com.kiva.infrastructure.persistence.exposed.AddressBookRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.AdminCustomerRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.AuthSessionRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.CartRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.DiscountCodeRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.DiscountRedemptionRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.GeoRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.OfferQmRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.OrderQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.OtpChallengeRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.ReservationGroupIdGeneratorImpl
+import com.kiva.infrastructure.persistence.exposed.ReservationGroupRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.SecurityEventLogImpl
+import com.kiva.infrastructure.persistence.exposed.ShopSettingsRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.UserRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.tbl.AuthSessionTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.OtpChallengeTbl
@@ -51,8 +71,9 @@ import java.util.Collections
 
 /**
  * The login use cases over kiva_test, wired as the app wires them, with a test clock, an SMS sender that remembers
- * what it sent, and fixed secrets. Every test phone starts with 0990; [deleteTestUsers] removes their sessions, codes
- * and accounts. [otpCodes] are the real ones unless a test needs to know the codes in advance.
+ * what it sent, and fixed secrets. Every test phone starts with 0990; [deleteTestUsers] removes their sessions, codes,
+ * accounts and carts. [otpCodes] are the real ones unless a test needs to know the codes in advance. A login's answer
+ * has the customer's cart, so the cart's merge is wired too.
  */
 class AuthTestStack(val clock: MutableClock, maxSmsPerHour: Int = 300, val otpCodes: OtpCodes = HmacOtpCodes(OTP_PEPPER)) {
 
@@ -75,12 +96,26 @@ class AuthTestStack(val clock: MutableClock, maxSmsPerHour: Int = 300, val otpCo
     val logout = LogoutUc(transactions, sessions, sessionTokens, events, clock)
     val updateProfile = UpdateMyProfileUc(transactions, users, clock)
     val checkPanelAccess = CheckPanelAccessUc(transactions, sessions, users, events, clock)
-    val findCustomers = FindCustomersUc(transactions, AdminCustomerRepositoryImpl())
-    val getCustomer = GetCustomerUc(transactions, AdminCustomerRepositoryImpl())
+    val findCustomers = FindCustomersUc(transactions, AdminCustomerRepositoryImpl(), OrderQmRepositoryImpl())
+    val getCustomer = GetCustomerUc(transactions, AdminCustomerRepositoryImpl(), OrderQmRepositoryImpl())
     val setUserRoles = SetUserRolesUc(transactions, users, sessions, events, clock)
     val bootstrapAdmin = BootstrapAdminUc(transactions, users, sessions, events, clock)
     val requestPhoneChange = RequestPhoneChangeUc(transactions, users, sessions, otpIssuer, sms, clock)
     val confirmPhoneChange = ConfirmPhoneChangeUc(transactions, codes, users, sessions, otpCodes, sessionTokens, accessTokens, sms, events, clock)
+
+    private val carts = CartRepositoryImpl()
+    val cartDomainService = CartDomainService(RandomCartIds())
+    val reservations = Reservations(
+        ReservationGroupRepositoryImpl(), AddressBookRepositoryImpl(), GeoRepositoryImpl(), OrderQmRepositoryImpl(),
+        ReservationDomainService(ReservationGroupIdGeneratorImpl()),
+    )
+    val discounts = Discounts(DiscountCodeRepositoryImpl(), DiscountRedemptionRepositoryImpl(), OrderQmRepositoryImpl(), DiscountDomainService())
+    val cartCommands =
+        CartCommands(transactions, carts, cartDomainService, OfferQmRepositoryImpl(), ShopSettingsRepositoryImpl(), reservations, discounts, clock)
+    val mergeGuestCart = MergeGuestCartUc(cartCommands, cartDomainService)
+    val getCart = GetCartUc(transactions, carts, OfferQmRepositoryImpl(), ShopSettingsRepositoryImpl(), reservations, discounts, clock)
+
+    val authUseCases = AuthUseCases(send, verify, getMe, refresh, logout, mergeGuestCart, getCart)
 
     fun app(trustedProxyHops: Int = 0, allowedOrigins: List<String> = listOf(ORIGIN), block: suspend ApplicationTestBuilder.() -> Unit) =
         testApplication {
@@ -90,7 +125,7 @@ class AuthTestStack(val clock: MutableClock, maxSmsPerHour: Int = 300, val otpCo
                 configureAuthentication(accessTokens)
                 routing {
                     route(API_V1) {
-                        webV1Auth(AuthUseCases(send, verify, getMe, refresh, logout), allowedOrigins)
+                        webV1Auth(authUseCases, allowedOrigins)
                         webV1Me(MeUseCases(getMe, updateProfile, requestPhoneChange, confirmPhoneChange))
                         webV1AdminCustomers(AdminCustomerUseCases(checkPanelAccess, findCustomers, getCustomer, setUserRoles))
                     }
@@ -102,6 +137,7 @@ class AuthTestStack(val clock: MutableClock, maxSmsPerHour: Int = 300, val otpCo
     /** The code the last SMS to [phone] carried. */
     fun lastCodeSentTo(phone: String): OtpCode = sms.sent.last { it.first.value == phone }.second
 
+    // Their carts go with the accounts: cart_tbl's foreign key is ON DELETE CASCADE.
     fun deleteTestUsers() {
         transaction(db) {
             val userIds = UserTbl.select(UserTbl.id).where { UserTbl.phone like TEST_PHONES }.map { it[UserTbl.id].value }
@@ -132,6 +168,9 @@ class RecordingSmsSender : SmsSender {
     /** Warnings that an account moved, as (old phone, end of the new number). */
     val notices: MutableList<Pair<IranianMobileNumber, String>> = Collections.synchronizedList(mutableListOf())
 
+    /** «پرداخت موفق» messages, as (phone, order). */
+    val paid: MutableList<Pair<IranianMobileNumber, OrderCode>> = Collections.synchronizedList(mutableListOf())
+
     @Volatile
     var down = false
 
@@ -143,5 +182,10 @@ class RecordingSmsSender : SmsSender {
     override suspend fun sendPhoneChangedNotice(oldPhone: IranianMobileNumber, newPhoneEnding: String) {
         check(!down) { "the SMS provider is down" }
         notices += oldPhone to newPhoneEnding
+    }
+
+    override suspend fun sendOrderPaid(to: IranianMobileNumber, orderCode: OrderCode) {
+        check(!down) { "the SMS provider is down" }
+        paid += to to orderCode
     }
 }

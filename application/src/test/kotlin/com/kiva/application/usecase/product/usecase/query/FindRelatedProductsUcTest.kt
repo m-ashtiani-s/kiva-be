@@ -10,6 +10,7 @@ import com.kiva.application.repository.VariantQm
 import com.kiva.application.util.MockTransactionManager
 import com.kiva.application.util.factory.CategoryFactory
 import com.kiva.application.util.factory.ColorFactory
+import com.kiva.application.util.factory.ShopSettingsFactory
 import com.kiva.common.pagination.Page
 import com.kiva.common.pagination.Pageable
 import com.kiva.common.railway.Result
@@ -102,7 +103,7 @@ class FindRelatedProductsUcTest {
     }
 
     private val useCase = FindRelatedProductsUc(
-        transactionManager, readModel, categories, colors, Clock.fixed(now, ZoneOffset.UTC), Money.constructFromPersisted(3_000_000),
+        transactionManager, readModel, categories, colors, Clock.fixed(now, ZoneOffset.UTC), ShopSettingsFactory.repositoryOf(),
     )
 
     @Test

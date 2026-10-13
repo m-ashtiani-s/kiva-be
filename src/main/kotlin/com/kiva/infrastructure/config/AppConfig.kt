@@ -1,7 +1,10 @@
 package com.kiva.infrastructure.config
 
 import com.kiva.common.valueobject.IranianMobileNumber
-import com.kiva.common.valueobject.Money
+import com.kiva.infrastructure.auth.sms.FarazSmsConfig
+import com.kiva.infrastructure.payment.PaymentConfig
+import com.kiva.infrastructure.payment.PaymentProvider
+import com.kiva.infrastructure.payment.ZarinpalConfig
 import io.ktor.server.config.ApplicationConfig
 import java.util.Base64
 
@@ -13,6 +16,8 @@ data class AppConfig(
     val seed: SeedConfig = SeedConfig(enabled = false),
     val http: HttpConfig = HttpConfig(allowedOrigins = emptyList()),
     val sms: SmsConfig = SmsConfig(SmsProvider.LOG),
+    val payment: PaymentConfig = PaymentConfig.DEFAULT,
+    val jobs: JobsConfig = JobsConfig(enabled = false),
 ) {
     companion object {
         fun from(config: ApplicationConfig): AppConfig {
@@ -30,17 +35,26 @@ data class AppConfig(
                     maxSmsPerHour = config.property("kiva.auth.maxSmsPerHour").getString().toInt(),
                     bootstrapAdminPhoneRaw = config.propertyOrNull("kiva.auth.bootstrapAdminPhone")?.getString(),
                 ),
-                shop = ShopConfig(
-                    freeShippingThreshold = Money.constructFromPersisted(config.property("kiva.shop.freeShippingThreshold").getString().toLong()),
-                    siteUrl = config.property("kiva.shop.siteUrl").getString(),
-                ),
+                shop = ShopConfig(siteUrl = config.property("kiva.shop.siteUrl").getString()),
                 // Strict: a typo such as "yes" stops the boot instead of quietly meaning false.
                 seed = SeedConfig(enabled = config.property("kiva.seed.enabled").getString().toBooleanStrict()),
                 http = HttpConfig.of(
                     config.property("kiva.http.allowedOrigins").getString(),
                     trustedProxyHops = config.property("kiva.http.trustedProxyHops").getString().toInt(),
                 ),
-                sms = SmsConfig(SmsProvider.of(config.property("kiva.sms.provider").getString())),
+                sms = SmsConfig.from(config),
+                payment = PaymentConfig(
+                    provider = PaymentProvider.of(config.property("kiva.payment.provider").getString()),
+                    callbackBaseUrl = config.property("kiva.payment.callbackBaseUrl").getString(),
+                    resultUrl = config.property("kiva.payment.resultUrl").getString(),
+                    zarinpal = ZarinpalConfig(
+                        merchantId = config.propertyOrNull("kiva.payment.zarinpal.merchantId")?.getString()?.trim()?.takeUnless { it.isEmpty() },
+                        // Strict, like the seed switch: a typo stops the boot instead of quietly meaning the real host.
+                        sandbox = config.property("kiva.payment.zarinpal.sandbox").getString().toBooleanStrict(),
+                    ),
+                ),
+                // Strict too: a typo must not quietly stop expiring orders.
+                jobs = JobsConfig(enabled = config.property("kiva.jobs.enabled").getString().toBooleanStrict()),
             )
         }
     }
@@ -117,12 +131,39 @@ class AuthConfig(
     }
 }
 
-/** Where SMS go. Only [SmsProvider.LOG] until a real provider is chosen, before launch. */
-data class SmsConfig(val provider: SmsProvider)
+/** Where SMS go: the log in development, Faraz SMS on the server. [faraz] only with [SmsProvider.FARAZ]. */
+data class SmsConfig(val provider: SmsProvider, val faraz: FarazSmsConfig? = null) {
+    init {
+        require((provider == SmsProvider.FARAZ) == (faraz != null)) { "Faraz SMS's settings go with kiva.sms.provider = faraz, and only with it" }
+    }
+
+    companion object {
+        /** The provider, and with `faraz` its settings: without its key (`KIVA_FARAZ_API_KEY`) the app doesn't start. */
+        fun from(config: ApplicationConfig): SmsConfig {
+            val provider = SmsProvider.of(config.property("kiva.sms.provider").getString())
+            if (provider != SmsProvider.FARAZ) return SmsConfig(provider)
+            fun optional(name: String) = config.propertyOrNull("kiva.sms.faraz.$name")?.getString()?.trim()?.takeUnless { it.isEmpty() }
+            return SmsConfig(
+                provider,
+                FarazSmsConfig(
+                    baseUrl = config.property("kiva.sms.faraz.baseUrl").getString().trim(),
+                    apiKey = requireNotNull(optional("apiKey")) { "kiva.sms.provider is faraz, but KIVA_FARAZ_API_KEY is not set" },
+                    lineNumber = config.property("kiva.sms.faraz.lineNumber").getString().trim(),
+                    codePattern = config.property("kiva.sms.faraz.codePattern").getString().trim(),
+                    phoneChangedPattern = optional("phoneChangedPattern"),
+                    orderPaidPattern = optional("orderPaidPattern"),
+                ),
+            )
+        }
+    }
+}
 
 enum class SmsProvider {
     /** Writes codes to the log instead of sending them. Development only. */
     LOG,
+
+    /** Faraz SMS (farazsms.com), through approved patterns. */
+    FARAZ,
     ;
 
     companion object {
@@ -134,14 +175,13 @@ enum class SmsProvider {
 }
 
 /**
- * Shop rules from config, until the admin settings keep them.
+ * The shop's own address. Its rules (shipping costs, free shipping, ...) are in the database, not here: see ShopSettings.
  *
  * @property siteUrl the shop's own address (`https://kiva.ir`), for the canonical and share links of pages.
  */
-data class ShopConfig(val freeShippingThreshold: Money, val siteUrl: String) {
+data class ShopConfig(val siteUrl: String) {
     companion object {
-        /** The contract's numbers. */
-        val DEFAULT = ShopConfig(freeShippingThreshold = Money.constructFromPersisted(3_000_000), siteUrl = "https://kiva.ir")
+        val DEFAULT = ShopConfig(siteUrl = "https://kiva.ir")
     }
 }
 
@@ -171,6 +211,13 @@ data class HttpConfig(val allowedOrigins: List<String>, val trustedProxyHops: In
 
 /** @property enabled run DevCatalogSeeder on startup. Local development only. */
 data class SeedConfig(val enabled: Boolean)
+
+/**
+ * The scheduled jobs (`kiva.jobs`, roadmap section 15): expiring unpaid orders, reconciling payments and the clean-ups.
+ * On in the app; off where the app is built without boot (tests call the jobs' use cases themselves, with a clock of
+ * their own).
+ */
+data class JobsConfig(val enabled: Boolean)
 
 data class DatasourceConfig(
     val url: String,

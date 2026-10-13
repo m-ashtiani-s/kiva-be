@@ -5,7 +5,6 @@ import com.kiva.application.usecase.product.usecase.query.FindProductsUc
 import com.kiva.application.usecase.product.usecase.query.FindRelatedProductsUc
 import com.kiva.application.usecase.product.usecase.query.GetProductFacetsUc
 import com.kiva.application.usecase.product.usecase.query.GetProductUc
-import com.kiva.common.valueobject.Money
 import com.kiva.infrastructure.TestDatabase
 import com.kiva.infrastructure.common.persistence.ExposedTransactionManager
 import com.kiva.infrastructure.httpserver.API_V1
@@ -14,7 +13,9 @@ import com.kiva.infrastructure.persistence.exposed.CategoryRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ColorRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.MaterialRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ProductQmRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.ShopSettingsRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.StoredCatalog
+import com.kiva.infrastructure.persistence.exposed.tbl.ShopSettingsTbl
 import com.kiva.infrastructure.seed.DevCatalogData
 import com.kiva.infrastructure.seed.SeededCatalog
 import io.ktor.client.request.get
@@ -34,6 +35,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.update
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -41,6 +44,7 @@ import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
@@ -56,7 +60,7 @@ class WebV1ProductsOnDatabaseTest {
     private val others = StoredCatalog()
     private val findProductsUc = FindProductsUc(
         ExposedTransactionManager(db), ProductQmRepositoryImpl(), CategoryRepositoryImpl(), ColorRepositoryImpl(), MaterialRepositoryImpl(),
-        clock, Money.constructFromPersisted(3_000_000),
+        clock, ShopSettingsRepositoryImpl(),
     )
     private val getProductFacetsUc = GetProductFacetsUc(
         ExposedTransactionManager(db), ProductQmRepositoryImpl(), CategoryRepositoryImpl(), ColorRepositoryImpl(), MaterialRepositoryImpl(),
@@ -64,11 +68,11 @@ class WebV1ProductsOnDatabaseTest {
     )
     private val findRelatedProductsUc = FindRelatedProductsUc(
         ExposedTransactionManager(db), ProductQmRepositoryImpl(), CategoryRepositoryImpl(), ColorRepositoryImpl(), clock,
-        Money.constructFromPersisted(3_000_000),
+        ShopSettingsRepositoryImpl(),
     )
     private val getProductUc = GetProductUc(
         ExposedTransactionManager(db), ProductQmRepositoryImpl(), CategoryRepositoryImpl(), MaterialRepositoryImpl(), ColorRepositoryImpl(),
-        clock, Money.constructFromPersisted(3_000_000),
+        clock, ShopSettingsRepositoryImpl(),
     )
 
     @BeforeEach
@@ -301,4 +305,29 @@ class WebV1ProductsOnDatabaseTest {
 
     private suspend fun HttpResponse.slugs(): List<String> =
         Json.parseToJsonElement(bodyAsText()).jsonArray.map { it.jsonObject["slug"]!!.jsonPrimitive.content }
+
+    // ============ purchase step 2: the threshold comes from the shop's settings ============
+
+    private suspend fun ApplicationTestBuilder.badgesOf(slug: String): List<String> =
+        page(slug).body()["badges"]!!.jsonArray.map { it.jsonObject["code"]!!.jsonPrimitive.content }
+
+    private fun setFreeShippingThreshold(toman: Long) {
+        transaction(db) { ShopSettingsTbl.update { it[freeShippingThreshold] = toman } }
+    }
+
+    @Test
+    fun `the free-shipping badge follows the threshold in the database at once, without a restart`() = withApp {
+        // «کیف دستی گلاره» costs 3,150,000.
+        assertTrue("FREE_SHIPPING" in badgesOf("gelareh-handbag"))
+
+        setFreeShippingThreshold(3_200_000)
+        try {
+            assertFalse("FREE_SHIPPING" in badgesOf("gelareh-handbag"))
+            // The list's card too: it reads the same setting.
+            val card = client.get("$API_V1/products") { parameter("q", "گلاره") }.body()["items"]!!.jsonArray.single().jsonObject
+            assertFalse("FREE_SHIPPING" in card["badges"]!!.jsonArray.map { it.jsonObject["code"]!!.jsonPrimitive.content })
+        } finally {
+            setFreeShippingThreshold(3_000_000)
+        }
+    }
 }

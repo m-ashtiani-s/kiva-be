@@ -16,6 +16,7 @@ import com.kiva.application.util.MockTransactionManager
 import com.kiva.application.util.factory.CategoryFactory
 import com.kiva.application.util.factory.ColorFactory
 import com.kiva.application.util.factory.MaterialFactory
+import com.kiva.application.util.factory.ShopSettingsFactory
 import com.kiva.common.pagination.Page
 import com.kiva.common.pagination.Pageable
 import com.kiva.common.railway.ResultFailure
@@ -110,7 +111,7 @@ class FindProductsUcTest {
     }
 
     private val useCase = FindProductsUc(
-        transactionManager, readModel, categories, colors, materials, Clock.fixed(now, ZoneOffset.UTC), Money.constructFromPersisted(3_000_000),
+        transactionManager, readModel, categories, colors, materials, Clock.fixed(now, ZoneOffset.UTC), ShopSettingsFactory.repositoryOf(),
     )
 
     private val firstPage = Pageable.makeNew(1, 24, ProductSorts.NEWEST, ProductSorts.names, 60).getOrNull()!!

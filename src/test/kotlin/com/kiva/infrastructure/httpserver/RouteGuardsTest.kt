@@ -54,6 +54,8 @@ import kotlin.test.assertTrue
  * 2. Every endpoint under `/api/v1/admin` takes exactly the roles of its `x-roles` in the contract (api/kiva-openapi.yml),
  *    and an admin endpoint the contract doesn't have is an error. That requireRoles enforces the roles it is given is
  *    tested on its own (RequireRolesOnDatabaseTest).
+ * 3. Every endpoint the app has whose contract operation says `security: [{ bearerAuth: [] }]` refuses a call without a
+ *    token, wherever it lives: `/checkout`, `/orders`, `/payments/...` and `/cart/merge` are covered the day they exist.
  */
 class RouteGuardsTest {
 
@@ -106,18 +108,35 @@ class RouteGuardsTest {
         val guarded = endpoints.filter { it.path.isUnder("$API_V1/me") || it.path.isUnder("$API_V1/admin") }
         assertTrue(Endpoint(HttpMethod.Get, "$API_V1/me", null) in guarded, "GET /me not found, so the walk is broken: $endpoints")
 
-        val open = guarded.filter { endpoint ->
-            val response = client.request(endpoint.path.replace(Regex("\\{[^}]+}"), "1")) {
-                method = endpoint.method
-                if (endpoint.method in listOf(HttpMethod.Post, HttpMethod.Put, HttpMethod.Patch)) {
-                    contentType(ContentType.Application.Json)
-                    setBody("{}")
-                }
-            }
-            response.status != HttpStatusCode.Unauthorized
-        }
+        val open = guarded.filter { answersWithoutLogin(it) }
 
         assertEquals(emptyList(), open, "These answer without a login")
+    }
+
+    @Test
+    fun `every endpoint the contract says needs a login refuses a call without a token`() = withTheApp { endpoints ->
+        val needLogin = contractBearerOperations()
+        assertTrue("GET /me/addresses" in needLogin && "POST /orders" in needLogin, "Read only $needLogin; the parser is broken")
+        assertTrue("GET /cart" !in needLogin, "GET /cart takes an optional login, so it must not be read as needing one")
+
+        val guarded = endpoints.filter { "${it.method.value} ${it.path.removePrefix(API_V1)}" in needLogin }
+        assertTrue(Endpoint(HttpMethod.Delete, "$API_V1/me/addresses/{addressId}", null) in guarded, "The address routes weren't found: $guarded")
+
+        val open = guarded.filter { answersWithoutLogin(it) }
+
+        assertEquals(emptyList(), open, "These answer without a login")
+    }
+
+    /** Calls [endpoint] with no Authorization header (a JSON `{}` body where it takes one); true unless it answers 401. */
+    private suspend fun ApplicationTestBuilder.answersWithoutLogin(endpoint: Endpoint): Boolean {
+        val response = client.request(endpoint.path.replace(Regex("\\{[^}]+}"), "1")) {
+            method = endpoint.method
+            if (endpoint.method in listOf(HttpMethod.Post, HttpMethod.Put, HttpMethod.Patch)) {
+                contentType(ContentType.Application.Json)
+                setBody("{}")
+            }
+        }
+        return response.status != HttpStatusCode.Unauthorized
     }
 
     @Test
@@ -178,9 +197,29 @@ class RouteGuardsTest {
         return roles
     }
 
+    /**
+     * `METHOD /path` of every operation of the contract that needs a login: `security: [{ bearerAuth: [] }]` exactly.
+     * An optional login (`[{}, { bearerAuth: [] }]`) doesn't count.
+     */
+    private fun contractBearerOperations(): Set<String> {
+        val operations = mutableSetOf<String>()
+        var path: String? = null
+        var method: String? = null
+        File("api/kiva-openapi.yml").readLines().forEach { line ->
+            PATH.matchEntire(line)?.let {
+                path = it.groupValues[1]
+                method = null
+            }
+            METHOD.matchEntire(line)?.let { method = it.groupValues[1].uppercase() }
+            if (BEARER_ONLY.matches(line)) operations += "$method $path"
+        }
+        return operations
+    }
+
     private companion object {
         val PATH = Regex("^ {2}(/\\S*):\\s*$")
         val METHOD = Regex("^ {4}(get|post|put|patch|delete):\\s*$")
         val X_ROLES = Regex("^ {6}x-roles:\\s*\\[(.*)]\\s*$")
+        val BEARER_ONLY = Regex("^ {6}security:\\s*\\[\\{\\s*bearerAuth:\\s*\\[]\\s*}]\\s*$")
     }
 }

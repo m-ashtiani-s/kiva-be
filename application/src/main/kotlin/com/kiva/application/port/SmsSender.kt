@@ -1,6 +1,7 @@
 package com.kiva.application.port
 
 import com.kiva.common.valueobject.IranianMobileNumber
+import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpPurpose
 
@@ -23,4 +24,11 @@ interface SmsSender {
      * Only the end of the new number is in the text ([newPhoneEnding], e.g. `4567`). Throws like [sendCode].
      */
     suspend fun sendPhoneChangedNotice(oldPhone: IranianMobileNumber, newPhoneEnding: String)
+
+    /**
+     * «پرداخت موفق»: tells [to] that the order [orderCode] is paid, with the link to follow it (contract section 5).
+     * Sent after the payment is committed; when it fails, only the log knows: the order is paid all the same. Throws
+     * like [sendCode].
+     */
+    suspend fun sendOrderPaid(to: IranianMobileNumber, orderCode: OrderCode)
 }

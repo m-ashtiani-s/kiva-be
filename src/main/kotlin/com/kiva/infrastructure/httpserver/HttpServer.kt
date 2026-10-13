@@ -4,6 +4,12 @@ import com.kiva.application.usecase.account.usecase.command.ConfirmPhoneChangeUc
 import com.kiva.application.usecase.account.usecase.command.RequestPhoneChangeUc
 import com.kiva.application.usecase.account.usecase.command.UpdateMyProfileUc
 import com.kiva.application.usecase.account.usecase.query.GetMeUc
+import com.kiva.application.usecase.address.usecase.command.AddAddressUc
+import com.kiva.application.usecase.address.usecase.command.DeleteAddressUc
+import com.kiva.application.usecase.address.usecase.command.SetDefaultAddressUc
+import com.kiva.application.usecase.address.usecase.command.UpdateAddressUc
+import com.kiva.application.usecase.address.usecase.query.GetMyAddressUc
+import com.kiva.application.usecase.address.usecase.query.ListMyAddressesUc
 import com.kiva.application.usecase.admin.usecase.command.CheckPanelAccessUc
 import com.kiva.application.usecase.admin.usecase.command.SetUserRolesUc
 import com.kiva.application.usecase.admin.usecase.query.FindCustomersUc
@@ -12,33 +18,72 @@ import com.kiva.application.usecase.auth.usecase.command.LogoutUc
 import com.kiva.application.usecase.auth.usecase.command.RefreshSessionUc
 import com.kiva.application.usecase.auth.usecase.command.SendLoginCodeUc
 import com.kiva.application.usecase.auth.usecase.command.VerifyLoginCodeUc
+import com.kiva.application.usecase.cart.usecase.command.AddCartItemUc
+import com.kiva.application.usecase.cart.usecase.command.ApplyDiscountCodeUc
+import com.kiva.application.usecase.cart.usecase.command.ChangeCartItemUc
+import com.kiva.application.usecase.cart.usecase.command.ChooseShippingMethodUc
+import com.kiva.application.usecase.cart.usecase.command.ClearCartUc
+import com.kiva.application.usecase.cart.usecase.command.MergeGuestCartUc
+import com.kiva.application.usecase.cart.usecase.command.OpenCartUc
+import com.kiva.application.usecase.cart.usecase.command.RemoveCartItemUc
+import com.kiva.application.usecase.cart.usecase.command.RemoveDiscountCodeUc
+import com.kiva.application.usecase.cart.usecase.command.SetCartReservationUc
+import com.kiva.application.usecase.cart.usecase.query.GetCartUc
 import com.kiva.application.usecase.catalog.usecase.query.GetCategoryUc
 import com.kiva.application.usecase.catalog.usecase.query.ListCategoriesUc
 import com.kiva.application.usecase.catalog.usecase.query.ListColorsUc
 import com.kiva.application.usecase.catalog.usecase.query.ListMaterialsUc
+import com.kiva.application.usecase.checkout.usecase.command.HandleGatewayCallbackUc
+import com.kiva.application.usecase.checkout.usecase.command.PlaceOrderUc
+import com.kiva.application.usecase.checkout.usecase.command.StartPaymentAttemptUc
+import com.kiva.application.usecase.checkout.usecase.command.StartPaymentUc
+import com.kiva.application.usecase.checkout.usecase.query.GetCheckoutContextUc
+import com.kiva.application.usecase.checkout.usecase.query.GetPaymentInitUc
+import com.kiva.application.usecase.checkout.usecase.query.GetPaymentResultUc
+import com.kiva.application.usecase.geo.usecase.query.ListCitiesOfProvinceUc
+import com.kiva.application.usecase.geo.usecase.query.ListProvincesUc
+import com.kiva.application.usecase.order.usecase.command.ReorderUc
+import com.kiva.application.usecase.order.usecase.query.GetMyOrderUc
+import com.kiva.application.usecase.order.usecase.query.GetOrderSummaryUc
+import com.kiva.application.usecase.order.usecase.query.ListMyOrdersUc
 import com.kiva.application.usecase.product.usecase.query.FindProductsUc
 import com.kiva.application.usecase.product.usecase.query.FindRelatedProductsUc
 import com.kiva.application.usecase.product.usecase.query.GetProductFacetsUc
 import com.kiva.application.usecase.product.usecase.query.GetProductUc
+import com.kiva.application.usecase.reservation.usecase.query.GetMyReservationUc
 import com.kiva.domain.aggregate.otp.model.policy.OtpPolicy
 import com.kiva.infrastructure.common.http.KivaJson
-import com.kiva.infrastructure.config.AppConfig
 import com.kiva.infrastructure.common.http.configureStatusPages
+import com.kiva.infrastructure.config.AppConfig
+import com.kiva.infrastructure.httpserver.controller.httprest.web.AddressUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminCustomerUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AuthUseCases
+import com.kiva.infrastructure.httpserver.controller.httprest.web.CartUseCases
+import com.kiva.infrastructure.httpserver.controller.httprest.web.CheckoutUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.MeUseCases
-import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminCustomers
+import com.kiva.infrastructure.httpserver.controller.httprest.web.MyOrderUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.OTP_SEND_RATE_LIMIT
+import com.kiva.infrastructure.httpserver.controller.httprest.web.PaymentUseCases
+import com.kiva.infrastructure.httpserver.controller.httprest.web.devFakeGateway
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Addresses
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminCustomers
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Auth
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Cart
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Catalog
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Checkout
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Geo
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Me
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1MyOrders
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Payments
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Products
 import com.kiva.infrastructure.httpserver.route.healthRoutes
+import com.kiva.infrastructure.payment.FakePaymentGateway
+import com.kiva.infrastructure.payment.PaymentProvider
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
-import io.ktor.http.HttpHeaders
-import io.ktor.http.HttpMethod
 import io.ktor.server.plugins.callid.CallId
 import io.ktor.server.plugins.callid.callIdMdc
 import io.ktor.server.plugins.calllogging.CallLogging
@@ -49,6 +94,7 @@ import io.ktor.server.plugins.origin
 import io.ktor.server.plugins.ratelimit.RateLimit
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
+import org.koin.ktor.ext.get
 import org.koin.ktor.ext.inject
 import org.slf4j.event.Level
 import java.util.UUID
@@ -134,6 +180,37 @@ fun Application.configureRouting() {
     val getProductFacetsUc by inject<GetProductFacetsUc>()
     val getProductUc by inject<GetProductUc>()
     val findRelatedProductsUc by inject<FindRelatedProductsUc>()
+    val listProvincesUc by inject<ListProvincesUc>()
+    val listCitiesOfProvinceUc by inject<ListCitiesOfProvinceUc>()
+    val listMyAddressesUc by inject<ListMyAddressesUc>()
+    val getMyAddressUc by inject<GetMyAddressUc>()
+    val addAddressUc by inject<AddAddressUc>()
+    val updateAddressUc by inject<UpdateAddressUc>()
+    val deleteAddressUc by inject<DeleteAddressUc>()
+    val setDefaultAddressUc by inject<SetDefaultAddressUc>()
+    val openCartUc by inject<OpenCartUc>()
+    val getCartUc by inject<GetCartUc>()
+    val addCartItemUc by inject<AddCartItemUc>()
+    val changeCartItemUc by inject<ChangeCartItemUc>()
+    val removeCartItemUc by inject<RemoveCartItemUc>()
+    val clearCartUc by inject<ClearCartUc>()
+    val chooseShippingMethodUc by inject<ChooseShippingMethodUc>()
+    val setCartReservationUc by inject<SetCartReservationUc>()
+    val applyDiscountCodeUc by inject<ApplyDiscountCodeUc>()
+    val removeDiscountCodeUc by inject<RemoveDiscountCodeUc>()
+    val mergeGuestCartUc by inject<MergeGuestCartUc>()
+    val getCheckoutContextUc by inject<GetCheckoutContextUc>()
+    val placeOrderUc by inject<PlaceOrderUc>()
+    val startPaymentUc by inject<StartPaymentUc>()
+    val getOrderSummaryUc by inject<GetOrderSummaryUc>()
+    val getPaymentInitUc by inject<GetPaymentInitUc>()
+    val handleGatewayCallbackUc by inject<HandleGatewayCallbackUc>()
+    val getPaymentResultUc by inject<GetPaymentResultUc>()
+    val startPaymentAttemptUc by inject<StartPaymentAttemptUc>()
+    val listMyOrdersUc by inject<ListMyOrdersUc>()
+    val getMyOrderUc by inject<GetMyOrderUc>()
+    val reorderUc by inject<ReorderUc>()
+    val getMyReservationUc by inject<GetMyReservationUc>()
     val sendLoginCodeUc by inject<SendLoginCodeUc>()
     val verifyLoginCodeUc by inject<VerifyLoginCodeUc>()
     val refreshSessionUc by inject<RefreshSessionUc>()
@@ -150,12 +227,31 @@ fun Application.configureRouting() {
 
     routing {
         healthRoutes()
+        // Outside /api/v1: the pretend bank's page is not the shop's, and exists only with the fake gateway.
+        if (config.payment.provider == PaymentProvider.FAKE) devFakeGateway(get<FakePaymentGateway>())
         route(API_V1) {
-            webV1Auth(AuthUseCases(sendLoginCodeUc, verifyLoginCodeUc, getMeUc, refreshSessionUc, logoutUc), config.http.allowedOrigins)
+            webV1Auth(
+                AuthUseCases(sendLoginCodeUc, verifyLoginCodeUc, getMeUc, refreshSessionUc, logoutUc, mergeGuestCartUc, getCartUc),
+                config.http.allowedOrigins,
+            )
             webV1Me(MeUseCases(getMeUc, updateMyProfileUc, requestPhoneChangeUc, confirmPhoneChangeUc))
             webV1AdminCustomers(AdminCustomerUseCases(checkPanelAccessUc, findCustomersUc, getCustomerUc, setUserRolesUc))
             webV1Catalog(listColorsUc, listMaterialsUc, listCategoriesUc, getCategoryUc)
             webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, config.shop.siteUrl)
+            webV1Geo(listProvincesUc, listCitiesOfProvinceUc)
+            webV1Addresses(AddressUseCases(listMyAddressesUc, getMyAddressUc, addAddressUc, updateAddressUc, deleteAddressUc, setDefaultAddressUc))
+            webV1Cart(
+                CartUseCases(
+                    openCartUc, getCartUc, addCartItemUc, changeCartItemUc, removeCartItemUc, clearCartUc, chooseShippingMethodUc,
+                    setCartReservationUc, mergeGuestCartUc, applyDiscountCodeUc, removeDiscountCodeUc,
+                ),
+            )
+            webV1Checkout(CheckoutUseCases(openCartUc, getCheckoutContextUc, placeOrderUc, startPaymentUc, getOrderSummaryUc, getPaymentInitUc))
+            webV1Payments(
+                PaymentUseCases(handleGatewayCallbackUc, getPaymentResultUc, startPaymentAttemptUc, startPaymentUc, getPaymentInitUc),
+                config.payment.resultUrl,
+            )
+            webV1MyOrders(MyOrderUseCases(listMyOrdersUc, getMyOrderUc, reorderUc, getCartUc, getMyReservationUc))
         }
     }
 }

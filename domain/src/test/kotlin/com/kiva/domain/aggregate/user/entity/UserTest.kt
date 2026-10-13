@@ -45,6 +45,17 @@ class UserTest {
         return failure.causes.map { it.field to it.code }
     }
 
+    @Test
+    fun `an order's messenger is kept as the default, the rest of the profile as it was`() {
+        val user = newUser()
+        val messengerPhone = IranianMobileNumber.constructFromPersisted("09121112233")
+
+        val kept = user.keepMessenger(MessengerChannel.TELEGRAM, messengerPhone)
+
+        assertEquals(listOf(MessengerChannel.TELEGRAM, messengerPhone), listOf(kept.defaultMessenger, kept.defaultMessengerPhone))
+        assertEquals(listOf(user.id, user.phone, user.version), listOf(kept.id, kept.phone, kept.version))
+    }
+
     @Nested
     inner class Registering {
         @Test
