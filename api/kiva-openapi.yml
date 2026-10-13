@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: KIVA Store API — کیوا
-  version: 1.6.0
+  version: 1.7.0
   contact:
     name: KIVA Engineering
     email: support@kiva.ir
