@@ -12,6 +12,7 @@ import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /** Reading the settings at boot: a missing or weak secret, or a value that can't be right, stops the app with a clear message. */
@@ -186,6 +187,68 @@ class AppConfigTest {
         assertTrue("KIVA_PAYMENT_RESULT_URL" in refusal("kiva.payment.resultUrl" to "https://kiva.ir/checkout/result/"))
         assertTrue("KIVA_PAYMENT_RESULT_URL" in refusal("kiva.payment.resultUrl" to "kiva.ir/checkout/result"))
         assertFailsWith<IllegalArgumentException> { read("kiva.payment.zarinpal.sandbox" to "yes") }
+    }
+
+    // ============ SMS ============
+
+    /** Not a real key: the real one is only ever in the environment of the server. */
+    private val smsKey = "TestOnlyFarazKey0123456789abcdefABCDEF"
+
+    private val faraz = arrayOf(
+        "kiva.sms.provider" to "faraz",
+        "kiva.sms.faraz.baseUrl" to "https://api.iranpayamak.com",
+        "kiva.sms.faraz.apiKey" to smsKey,
+        "kiva.sms.faraz.lineNumber" to "90008361",
+        "kiva.sms.faraz.codePattern" to "vdXmsAfAQs",
+    )
+
+    @Test
+    fun `faraz is read with its patterns, the optional ones absent until they are approved`() {
+        val sms = read(*faraz).sms
+
+        assertEquals(SmsProvider.FARAZ, sms.provider)
+        val settings = assertNotNull(sms.faraz)
+        assertEquals(listOf("https://api.iranpayamak.com", smsKey, "90008361", "vdXmsAfAQs"), listOf(settings.baseUrl, settings.apiKey, settings.lineNumber, settings.codePattern))
+        assertEquals(null, settings.phoneChangedPattern)
+        assertEquals(null, settings.orderPaidPattern)
+        assertEquals("aB3dE5fG7h", read(*faraz, "kiva.sms.faraz.orderPaidPattern" to "aB3dE5fG7h").sms.faraz?.orderPaidPattern)
+        assertEquals(null, read().sms.faraz, "the log provider has no Faraz settings")
+    }
+
+    @Test
+    fun `faraz without its key, or with a broken address, line or pattern, stops the boot`() {
+        assertTrue("KIVA_FARAZ_API_KEY" in refusal(*faraz, "kiva.sms.faraz.apiKey" to null))
+        assertTrue("KIVA_FARAZ_API_KEY" in refusal(*faraz, "kiva.sms.faraz.apiKey" to "   "))
+        assertTrue("baseUrl" in refusal(*faraz, "kiva.sms.faraz.baseUrl" to "https://api.iranpayamak.com/"))
+        assertTrue("lineNumber" in refusal(*faraz, "kiva.sms.faraz.lineNumber" to "line one"))
+        assertTrue("pattern" in refusal(*faraz, "kiva.sms.faraz.codePattern" to "vdX msA"))
+        assertTrue("faraz" in refusal("kiva.sms.provider" to "kavenegar"), "the message lists the providers there are")
+    }
+
+    @Test
+    fun `the SMS key never shows when the settings are printed`() {
+        val printed = read(*faraz).toString()
+
+        assertFalse(smsKey in printed)
+        assertTrue("apiKey=<hidden>" in printed)
+    }
+
+    @Test
+    fun `application conf has Faraz's address, line and login pattern, and its key only from the environment`() {
+        val file = ConfigFactory.parseResources("application.conf")
+        val noEnvironment = ConfigResolveOptions.noSystem()
+        val secrets = mapOf(
+            "kiva.auth.otpPepper" to valid.getValue("kiva.auth.otpPepper"),
+            "kiva.auth.jwtSecret" to valid.getValue("kiva.auth.jwtSecret"),
+            "kiva.sms.provider" to "faraz",
+        )
+
+        val withoutKey = HoconApplicationConfig(ConfigFactory.parseMap(secrets).withFallback(file).resolve(noEnvironment))
+        assertTrue("KIVA_FARAZ_API_KEY" in assertFailsWith<IllegalArgumentException> { AppConfig.from(withoutKey) }.message.orEmpty())
+
+        val withKey = HoconApplicationConfig(ConfigFactory.parseMap(secrets + ("kiva.sms.faraz.apiKey" to smsKey)).withFallback(file).resolve(noEnvironment))
+        val settings = assertNotNull(AppConfig.from(withKey).sms.faraz)
+        assertEquals(listOf("https://api.iranpayamak.com", "90008361", "vdXmsAfAQs"), listOf(settings.baseUrl, settings.lineNumber, settings.codePattern))
     }
 
     @Test

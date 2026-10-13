@@ -46,13 +46,31 @@ openssl rand -base64 32
 | --- | --- |
 | `KIVA_OTP_PEPPER` | Required. The key of the login codes' HMAC: base64 of at least 32 random bytes. |
 | `KIVA_JWT_SECRET` | Required. The key access tokens are signed with: base64 of at least 32 random bytes, not the pepper. |
-| `KIVA_SMS_PROVIDER` | `log` (the default) writes login codes to the log instead of sending them: development only. |
+| `KIVA_SMS_PROVIDER` | `log` (the default) writes login codes to the log instead of sending them: development only. `faraz` sends them through Faraz SMS (below). |
 | `KIVA_TRUSTED_PROXY_HOPS` | `1` only behind the shop's own nginx; `0` (the default) everywhere else. |
 | `KIVA_BOOTSTRAP_ADMIN_PHONE` | Optional. This phone becomes ADMIN on startup, only while there is no ADMIN at all; remove it after the first start. |
 | `KIVA_ALLOWED_ORIGINS` | Comma-separated frontends a browser may call the API from. Defaults to `localhost` and `127.0.0.1` on ports 3100 (kiva-fe), 3200 (the admin panel), 5173 and 3000; on a server, the shop's own `https://` addresses, the panel's (`https://admin.kiva.ir`) included. |
 
 With the `log` provider, the code of `POST /api/v1/auth/otp/send` (and the two codes of a phone change) is in the log,
 on a `WARN` line from `LogSmsSender`. Tests use their own fixed secrets and need none of these.
+
+### SMS through Faraz SMS
+
+With `KIVA_SMS_PROVIDER=faraz`, every SMS is a pattern approved in the Faraz SMS panel, sent through its web service
+(`POST https://api.iranpayamak.com/ws/v1/sms/pattern`, the key in the `Api-Key` header; docs.iranpayamak.com). A message
+whose pattern isn't set is not sent, and a `WARN` says so.
+
+| Variable | What |
+| --- | --- |
+| `KIVA_FARAZ_API_KEY` | Required with `faraz`: the panel's access key. A secret: in the run configuration or the server's secret store, never in git; it is in no log line and not in any `toString`. The app doesn't start without it. |
+| `KIVA_FARAZ_CODE_PATTERN` | The pattern of login and phone-change codes, «کد ورود: %code% / وبسایت کیوا». Default `vdXmsAfAQs`. Its variable is `code`. |
+| `KIVA_FARAZ_LINE_NUMBER` | The line patterns are sent from (the panel's «خطوط»). Default `90008361`, the panel's shared service line. |
+| `KIVA_FARAZ_PHONE_CHANGED_PATTERN` | Optional: «your account moved to the number ending in …», to the old phone after a phone change. Its variable is `ending`. |
+| `KIVA_FARAZ_ORDER_PAID_PATTERN` | Optional: «پرداخت موفق». Its variable is `order` (the order's code, `KV-218340`); the link to follow it goes in the pattern's own text, `https://kiva.ir/track?order=%order%`. |
+| `KIVA_FARAZ_BASE_URL` | The web service's address, default `https://api.iranpayamak.com`. |
+
+A code that can't be sent makes `POST /auth/otp/send` answer 500, and the log says why (the provider's own words, with
+no number or code in them).
 
 ### Logging in from a local frontend
 

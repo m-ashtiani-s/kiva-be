@@ -10,6 +10,7 @@ import com.kiva.domain.aggregate.product.model.valueobject.HtmlSanitizer
 import com.kiva.infrastructure.auth.HmacOtpCodes
 import com.kiva.infrastructure.auth.JwtAccessTokens
 import com.kiva.infrastructure.auth.RandomSessionTokens
+import com.kiva.infrastructure.auth.sms.FarazSmsSender
 import com.kiva.infrastructure.auth.sms.LogSmsSender
 import com.kiva.infrastructure.common.html.JsoupHtmlSanitizer
 import com.kiva.infrastructure.common.persistence.ExposedTransactionManager
@@ -41,6 +42,7 @@ fun infrastructureModule(config: AppConfig, database: Database) = module {
     single<SmsSender> {
         when (config.sms.provider) {
             SmsProvider.LOG -> LogSmsSender()
+            SmsProvider.FARAZ -> FarazSmsSender(checkNotNull(config.sms.faraz), CIO.create())
         }
     }
     // The scheduled jobs; started by Application.start once the app has started, when kiva.jobs.enabled.

@@ -1,6 +1,7 @@
 package com.kiva.infrastructure.config
 
 import com.kiva.common.valueobject.IranianMobileNumber
+import com.kiva.infrastructure.auth.sms.FarazSmsConfig
 import com.kiva.infrastructure.payment.PaymentConfig
 import com.kiva.infrastructure.payment.PaymentProvider
 import com.kiva.infrastructure.payment.ZarinpalConfig
@@ -41,7 +42,7 @@ data class AppConfig(
                     config.property("kiva.http.allowedOrigins").getString(),
                     trustedProxyHops = config.property("kiva.http.trustedProxyHops").getString().toInt(),
                 ),
-                sms = SmsConfig(SmsProvider.of(config.property("kiva.sms.provider").getString())),
+                sms = SmsConfig.from(config),
                 payment = PaymentConfig(
                     provider = PaymentProvider.of(config.property("kiva.payment.provider").getString()),
                     callbackBaseUrl = config.property("kiva.payment.callbackBaseUrl").getString(),
@@ -130,12 +131,39 @@ class AuthConfig(
     }
 }
 
-/** Where SMS go. Only [SmsProvider.LOG] until a real provider is chosen, before launch. */
-data class SmsConfig(val provider: SmsProvider)
+/** Where SMS go: the log in development, Faraz SMS on the server. [faraz] only with [SmsProvider.FARAZ]. */
+data class SmsConfig(val provider: SmsProvider, val faraz: FarazSmsConfig? = null) {
+    init {
+        require((provider == SmsProvider.FARAZ) == (faraz != null)) { "Faraz SMS's settings go with kiva.sms.provider = faraz, and only with it" }
+    }
+
+    companion object {
+        /** The provider, and with `faraz` its settings: without its key (`KIVA_FARAZ_API_KEY`) the app doesn't start. */
+        fun from(config: ApplicationConfig): SmsConfig {
+            val provider = SmsProvider.of(config.property("kiva.sms.provider").getString())
+            if (provider != SmsProvider.FARAZ) return SmsConfig(provider)
+            fun optional(name: String) = config.propertyOrNull("kiva.sms.faraz.$name")?.getString()?.trim()?.takeUnless { it.isEmpty() }
+            return SmsConfig(
+                provider,
+                FarazSmsConfig(
+                    baseUrl = config.property("kiva.sms.faraz.baseUrl").getString().trim(),
+                    apiKey = requireNotNull(optional("apiKey")) { "kiva.sms.provider is faraz, but KIVA_FARAZ_API_KEY is not set" },
+                    lineNumber = config.property("kiva.sms.faraz.lineNumber").getString().trim(),
+                    codePattern = config.property("kiva.sms.faraz.codePattern").getString().trim(),
+                    phoneChangedPattern = optional("phoneChangedPattern"),
+                    orderPaidPattern = optional("orderPaidPattern"),
+                ),
+            )
+        }
+    }
+}
 
 enum class SmsProvider {
     /** Writes codes to the log instead of sending them. Development only. */
     LOG,
+
+    /** Faraz SMS (farazsms.com), through approved patterns. */
+    FARAZ,
     ;
 
     companion object {
