@@ -10,6 +10,7 @@ import com.kiva.domain.aggregate.order.model.valueobject.CustomerNote
 import com.kiva.domain.aggregate.order.model.valueobject.GiftNote
 import com.kiva.domain.aggregate.order.model.valueobject.OrderItemSnapshot
 import com.kiva.domain.aggregate.order.model.valueobject.PreShipmentMessenger
+import com.kiva.domain.aggregate.reservation.entity.ReservationGroup
 import com.kiva.domain.aggregate.settings.entity.ShopSettings
 import com.kiva.domain.aggregate.settings.model.valueobject.ShippingMethodCode
 import java.time.Instant
@@ -24,7 +25,8 @@ import java.time.Instant
  * @property reserve «رزرو ۴ روزه», as the request or else the cart has it.
  * @property expectedPayable what the customer saw on the pay button; null when the client didn't send it (no compare).
  * @property unpaidOrdersHoldingUntil when each of the customer's unpaid orders that still hold stock stops holding it.
- * @property hasActiveReservation round 2: the customer has a reservation holding.
+ * @property holdingGroup the customer's reservation group still marked HOLDING (round 2), if any: an order to its own
+ *   address joins it, and while it holds no new reservation can be asked for.
  */
 data class OrderPlacement(
     val userId: UserId,
@@ -40,7 +42,7 @@ data class OrderPlacement(
     val expectedPayable: Money?,
     val unpaidOrdersHoldingUntil: List<Instant>,
     val settings: ShopSettings,
-    val hasActiveReservation: Boolean = false,
+    val holdingGroup: ReservationGroup? = null,
 ) {
     /** A line of the cart: how many, the shop's offer of its color now, and what the catalog shows of it. */
     data class Line(val itemId: CartItemId, val quantity: Quantity, val offer: PurchaseOffer, val item: OrderItemSnapshot)

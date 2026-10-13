@@ -7,12 +7,16 @@ import com.kiva.domain.aggregate.order.entity.event.OrderPlaced
 import com.kiva.domain.aggregate.order.model.valueobject.CustomerNote
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
 import com.kiva.domain.aggregate.order.model.valueobject.OrderId
+import com.kiva.domain.aggregate.reservation.model.valueobject.ReservationGroupId
 import com.kiva.domain.aggregate.settings.model.valueobject.ShippingMethodCode
 import com.kiva.infrastructure.persistence.event.serializer.payload.EventPayload
 import kotlinx.serialization.Serializable
 import java.time.Instant
 
-/** The whole order as it was placed. It holds the customer's address and numbers: never printed whole. */
+/**
+ * The whole order as it was placed. It holds the customer's address and numbers: never printed whole.
+ * [reservationGroupId] came with step 19: an event stored before has none, and reads back as null.
+ */
 @Serializable
 data class OrderPlacedPayload(
     val id: String,
@@ -31,6 +35,7 @@ data class OrderPlacedPayload(
     val holdUntil: String,
     val customerNote: String?,
     val gift: GiftNotePayload?,
+    val reservationGroupId: Long? = null,
 ) : EventPayload<OrderPlaced> {
 
     constructor(event: OrderPlaced) : this(
@@ -50,6 +55,7 @@ data class OrderPlacedPayload(
         holdUntil = event.holdUntil.toString(),
         customerNote = event.customerNote?.value,
         gift = event.gift?.let(::GiftNotePayload),
+        reservationGroupId = event.reservationGroupId?.value,
     )
 
     override fun toDomainEvent(): OrderPlaced = OrderPlaced(
@@ -68,6 +74,7 @@ data class OrderPlacedPayload(
         holdUntil = Instant.parse(holdUntil),
         customerNote = customerNote?.let { CustomerNote.constructFromPersisted(it) },
         gift = gift?.toDomain(),
+        reservationGroupId = reservationGroupId?.let { ReservationGroupId.constructFromPersisted(it) },
         id = EventId.constructFromPersisted(id),
     )
 

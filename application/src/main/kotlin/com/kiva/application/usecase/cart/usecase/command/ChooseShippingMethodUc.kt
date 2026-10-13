@@ -32,7 +32,7 @@ class ChooseShippingMethodUc(
             .unwrapOr { return Result.failure(Failure.InvalidInput(listOf(it))) }
 
         return cartCommands.run(command.caller) { context ->
-            cartDomainService.chooseShippingMethod(context.cart, method, context.offers, context.settings, context.now)
+            cartDomainService.chooseShippingMethod(context.cart, method, context.offers, context.settings, context.now, context.standing)
                 .mapOnSuccess { CartCommands.Done() }
                 .mapOnFailure { Failure.Refused(it) }
         }

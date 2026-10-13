@@ -1,5 +1,11 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
+import com.kiva.infrastructure.persistence.exposed.GeoRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.AddressBookRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.ReservationGroupRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.ReservationGroupIdGeneratorImpl
+import com.kiva.domain.aggregate.reservation.ReservationDomainService
+import com.kiva.application.usecase.reservation.Reservations
 import com.kiva.application.port.OtpCodes
 import com.kiva.application.port.SmsSender
 import com.kiva.application.usecase.account.usecase.command.ConfirmPhoneChangeUc
@@ -95,9 +101,13 @@ class AuthTestStack(val clock: MutableClock, maxSmsPerHour: Int = 300, val otpCo
 
     private val carts = CartRepositoryImpl()
     val cartDomainService = CartDomainService(RandomCartIds())
-    val cartCommands = CartCommands(transactions, carts, cartDomainService, OfferQmRepositoryImpl(), ShopSettingsRepositoryImpl(), clock)
+    val reservations = Reservations(
+        ReservationGroupRepositoryImpl(), AddressBookRepositoryImpl(), GeoRepositoryImpl(), OrderQmRepositoryImpl(),
+        ReservationDomainService(ReservationGroupIdGeneratorImpl()),
+    )
+    val cartCommands = CartCommands(transactions, carts, cartDomainService, OfferQmRepositoryImpl(), ShopSettingsRepositoryImpl(), reservations, clock)
     val mergeGuestCart = MergeGuestCartUc(cartCommands, cartDomainService)
-    val getCart = GetCartUc(transactions, carts, OfferQmRepositoryImpl(), ShopSettingsRepositoryImpl(), clock)
+    val getCart = GetCartUc(transactions, carts, OfferQmRepositoryImpl(), ShopSettingsRepositoryImpl(), reservations, clock)
 
     val authUseCases = AuthUseCases(send, verify, getMe, refresh, logout, mergeGuestCart, getCart)
 

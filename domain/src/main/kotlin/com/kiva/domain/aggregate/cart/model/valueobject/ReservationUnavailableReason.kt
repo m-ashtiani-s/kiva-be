@@ -5,7 +5,7 @@ package com.kiva.domain.aggregate.cart.model.valueobject
  * `meta.reason` of RESERVATION_UNAVAILABLE). Checked in this order.
  */
 enum class ReservationUnavailableReason {
-    /** The shop has switched reservations off (until step 19 always). */
+    /** The shop has switched reservations off (a setting; on since V19). */
     RESERVATION_DISABLED,
 
     /** Round 2: the customer already has a reservation holding; an order to the same address joins it instead. */

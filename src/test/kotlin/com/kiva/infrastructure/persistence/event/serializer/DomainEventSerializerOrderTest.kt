@@ -93,7 +93,8 @@ class DomainEventSerializerOrderTest {
               "reserveRequested": false,
               "holdUntil": "2026-10-12T08:15:00.123456789Z",
               "customerNote": "لطفاً قبل از ارسال زنگ بزنید",
-              "gift": { "message": "تولدت مبارک!", "hidePrices": true }
+              "gift": { "message": "تولدت مبارک!", "hidePrices": true },
+              "reservationGroupId": 1001
             }
         """.trimIndent()
 
@@ -118,7 +119,8 @@ class DomainEventSerializerOrderTest {
               "occurredByUserId": 0,
               "paymentId": "pay_0000000000B2",
               "amount": 3480000,
-              "heldForReservation": false
+              "heldForReservation": true,
+              "reservationGroupId": 1001
             }
         """.trimIndent()
 
@@ -132,11 +134,22 @@ class DomainEventSerializerOrderTest {
             }
         """.trimIndent()
 
+        private val orderReleasedFromReservationJson = """
+            {
+              "id": "5d0f3a2c-8b1e-4c7d-9a6f-000000000005",
+              "orderId": 42,
+              "sequence": 4,
+              "occurredOn": "2026-10-12T08:00:00.123456789Z",
+              "occurredByUserId": 0
+            }
+        """.trimIndent()
+
         private val stored = listOf(
             OrderEventSamples.orderPlaced to orderPlacedJson,
             OrderEventSamples.orderPaymentFailed to orderPaymentFailedJson,
             OrderEventSamples.orderPaid to orderPaidJson,
             OrderEventSamples.orderExpired to orderExpiredJson,
+            OrderEventSamples.orderReleasedFromReservation to orderReleasedFromReservationJson,
         )
 
         @Test
@@ -151,6 +164,22 @@ class DomainEventSerializerOrderTest {
             stored.forEach { (event, json) ->
                 assertEquals(Json.parseToJsonElement(json), Json.parseToJsonElement(DomainEventSerializer.serialize(event)), event.type.value)
             }
+        }
+
+        @Test
+        fun `an order placed and paid before step 19 has no reservationGroupId, and reads back with none`() {
+            val placedBefore = orderPlacedJson.replace(",\n  \"reservationGroupId\": 1001", "")
+            val paidBefore = orderPaidJson.replace(",\n  \"reservationGroupId\": 1001", "").replace("\"heldForReservation\": true", "\"heldForReservation\": false")
+            check("reservationGroupId" !in placedBefore + paidBefore)
+
+            assertEquals(
+                OrderEventSamples.orderPlaced.copy(reservationGroupId = null),
+                DomainEventSerializer.deserializeOrder(placedBefore, 1, "OrderPlaced"),
+            )
+            assertEquals(
+                OrderEventSamples.orderPaid.copy(heldForReservation = false, reservationGroupId = null),
+                DomainEventSerializer.deserializeOrder(paidBefore, 1, "OrderPaid"),
+            )
         }
 
         @Test

@@ -14,8 +14,8 @@ import com.kiva.domain.aggregate.cart.CartDomainService
 import com.kiva.domain.aggregate.cart.entity.Cart
 
 /**
- * Turns the «رزرو ۴ روزه» switch on or off (`PUT /cart/reservation`). On only while a reservation is possible, so
- * RESERVATION_UNAVAILABLE (with `meta.reason`) until step 19 switches reservations on; off always.
+ * Turns the «رزرو ۴ روزه» switch on or off (`PUT /cart/reservation`). On only while a reservation is possible, else
+ * RESERVATION_UNAVAILABLE (with `meta.reason`); off always.
  */
 class SetCartReservationUc(
     private val cartCommands: CartCommands,
@@ -29,7 +29,7 @@ class SetCartReservationUc(
     override suspend fun execute(command: Cmd): Result<CartChange, Failure> {
         logger.info("SetCartReservationUc.execute caller=${command.caller} enabled=${command.enabled}")
         return cartCommands.run(command.caller) { context ->
-            cartDomainService.setReservation(context.cart, command.enabled, context.offers, context.settings, context.now)
+            cartDomainService.setReservation(context.cart, command.enabled, context.offers, context.settings, context.now, context.standing)
                 .mapOnSuccess { CartCommands.Done() }
                 .mapOnFailure { Failure.Refused(it) }
         }

@@ -35,6 +35,7 @@ data class PaymentResultDto(
      *
      * @property shippingMethodName the method's name as the shop's settings call it now, for the next steps.
      * @property messengerChannel where the photos before shipping go, for the next steps.
+     * @property consolidatedInto the order that started the reservation this one ships with, when it isn't this one.
      */
-    data class Order(val code: String, val status: OrderStatus, val shippingMethodName: String, val messengerChannel: MessengerChannel)
+    data class Order(val code: String, val status: OrderStatus, val shippingMethodName: String, val messengerChannel: MessengerChannel, val consolidatedInto: String? = null)
 }

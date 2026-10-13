@@ -3,6 +3,7 @@ package com.kiva.application.usecase.order.usecase.query
 import com.kiva.application.dto.OrderListDto
 import com.kiva.application.dto.OrderSummaryDto
 import com.kiva.application.repository.OrderQmRepository
+import com.kiva.application.usecase.reservation.Reservations
 import com.kiva.common.logging.getLogger
 import com.kiva.common.pagination.Pageable
 import com.kiva.common.railway.FailureKind
@@ -24,6 +25,7 @@ class ListMyOrdersUc(
     private val transactionManager: TransactionManager,
     private val orderQmRepository: OrderQmRepository,
     private val shopSettingsRepository: ShopSettingsRepository,
+    private val reservations: Reservations,
     private val clock: Clock,
 ) : QueryUseCase<ListMyOrdersUc.Qry, OrderListDto, ListMyOrdersUc.Failure> {
 
@@ -45,7 +47,9 @@ class ListMyOrdersUc(
         return transactionManager.inTransaction {
             val settings = shopSettingsRepository.get()
             val now = clock.instant()
-            val page = orderQmRepository.listOfCustomer(query.userId, tab?.statuses, query.pageable).map { OrderSummaryDto.of(it, settings, now) }
+            val orders = orderQmRepository.listOfCustomer(query.userId, tab?.statuses, query.pageable)
+            val held = reservations.infosOf(orders.items, now)
+            val page = orders.map { OrderSummaryDto.of(it, settings, now, held[it.orderId]) }
             val byStatus = orderQmRepository.countByStatusOfCustomer(query.userId)
             fun countOf(tab: OrderTab) = byStatus.filterKeys { OrderTab.of(it) == tab }.values.sum()
             val counts = OrderListDto.Counts(

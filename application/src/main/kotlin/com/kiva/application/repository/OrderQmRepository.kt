@@ -7,6 +7,7 @@ import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
 import com.kiva.domain.aggregate.order.model.valueobject.OrderId
 import com.kiva.domain.aggregate.order.model.valueobject.OrderStatus
+import com.kiva.domain.aggregate.reservation.model.valueobject.ReservationGroupId
 import java.time.Instant
 
 /**
@@ -46,6 +47,12 @@ interface OrderQmRepository {
      * the money, and when the latest was placed. A customer who bought nothing is left out.
      */
     fun purchasesOf(userIds: Collection<UserId>): Map<UserId, Purchases>
+
+    /** The orders held in [groupId] (RESERVED): what letting the group go releases. */
+    fun findHeldIn(groupId: ReservationGroupId): List<OrderId>
+
+    /** The codes of the paid orders in each of [groupIds], oldest first: a reservation's `groupOrderCodes`. */
+    fun paidCodesIn(groupIds: Collection<ReservationGroupId>): Map<ReservationGroupId, List<OrderCode>>
 
     /** @property lastOrderOn when the latest of these orders was placed. */
     data class Purchases(val ordersCount: Int, val totalSpent: Money, val lastOrderOn: Instant)

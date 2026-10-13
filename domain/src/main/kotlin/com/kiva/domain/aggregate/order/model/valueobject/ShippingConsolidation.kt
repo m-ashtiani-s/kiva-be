@@ -4,6 +4,6 @@ import com.kiva.domain.aggregate.settings.model.valueobject.ShippingMethodCode
 
 /**
  * Round 2: the order joins the shopper's held reservation group and ships with it. Only the group's [method] can be
- * chosen, and it costs nothing. Until step 19 nobody makes one, so the pricing gets null.
+ * chosen, and it costs nothing.
  */
 data class ShippingConsolidation(val method: ShippingMethodCode)

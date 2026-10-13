@@ -8,6 +8,7 @@ import com.kiva.domain.aggregate.cart.entity.Cart
 import com.kiva.domain.aggregate.cart.entity.CartLine
 import com.kiva.domain.aggregate.cart.model.PurchaseOffer
 import com.kiva.domain.aggregate.cart.model.Reordered
+import com.kiva.domain.aggregate.cart.model.ReservationStanding
 import com.kiva.domain.aggregate.cart.model.valueobject.CartItemId
 import com.kiva.domain.aggregate.cart.model.valueobject.CartOwner
 import com.kiva.domain.aggregate.cart.model.valueobject.CartQuantity
@@ -24,6 +25,9 @@ import java.time.Instant
  *   ([Cart.sync]), so its rules are checked against today's stock and prices and the shopper hears what changed;
  * - a change that only takes something away (remove, clear) comes first, so the shopper isn't told about a line they
  *   just threw out.
+ *
+ * Round 2: every command takes the customer's [ReservationStanding] (a guest's is NONE), so the switch is never on
+ * while they hold a reservation, and an order from the cart that joins it ships only with the group's method.
  *
  * It also hands new carts and lines their random ids. It never saves and never opens a transaction; the use case
  * locks the cart, calls this, and saves, all in its one transaction. The issues are on the cart ([Cart.issues]).
@@ -47,9 +51,9 @@ class CartDomainService(private val cartIdGenerator: CartIdGenerator) {
     }
 
     /** Looking at the cart (`GET /cart`): brings it up to date and records it as seen. */
-    fun openCart(cart: Cart, offers: Map<VariantId, PurchaseOffer>, settings: ShopSettings, now: Instant) {
+    fun openCart(cart: Cart, offers: Map<VariantId, PurchaseOffer>, settings: ShopSettings, now: Instant, standing: ReservationStanding = ReservationStanding.NONE) {
         logger.info("openCart cart=${cart.publicId.value}")
-        cart.sync(offers, settings, now)
+        cart.sync(offers, settings, now, standing.hasActiveReservation)
     }
 
     fun addItem(
@@ -59,9 +63,10 @@ class CartDomainService(private val cartIdGenerator: CartIdGenerator) {
         offers: Map<VariantId, PurchaseOffer>,
         settings: ShopSettings,
         now: Instant,
+        standing: ReservationStanding = ReservationStanding.NONE,
     ): Result<CartItemId, Cart.Failure> {
         logger.info("addItem cart=${cart.publicId.value} variantId=${variantId.value} quantity=${quantity.value}")
-        cart.sync(offers, settings, now)
+        cart.sync(offers, settings, now, standing.hasActiveReservation)
         return cart.add(cartIdGenerator.nextCartItemId(), variantId, quantity, offers, now)
     }
 
@@ -78,9 +83,10 @@ class CartDomainService(private val cartIdGenerator: CartIdGenerator) {
         offers: Map<VariantId, PurchaseOffer>,
         settings: ShopSettings,
         now: Instant,
+        standing: ReservationStanding = ReservationStanding.NONE,
     ): Reordered {
         logger.info("reorder cart=${cart.publicId.value} lines=${lines.map { (variantId, quantity) -> "${variantId.value}x${quantity.value}" }}")
-        cart.sync(offers, settings, now)
+        cart.sync(offers, settings, now, standing.hasActiveReservation)
         var added = 0
         val skipped = mutableListOf<Reordered.Skipped>()
         lines.forEach { (variantId, quantity) ->
@@ -115,10 +121,11 @@ class CartDomainService(private val cartIdGenerator: CartIdGenerator) {
         offers: Map<VariantId, PurchaseOffer>,
         settings: ShopSettings,
         now: Instant,
+        standing: ReservationStanding = ReservationStanding.NONE,
     ): Result<CartItemId, Cart.Failure> {
         require(quantity != null || variantId != null) { "A change needs a quantity or a color" }
         logger.info("changeItem cart=${cart.publicId.value} itemId=${itemId.value} quantity=${quantity?.value} variantId=${variantId?.value}")
-        cart.sync(offers, settings, now)
+        cart.sync(offers, settings, now, standing.hasActiveReservation)
         val afterColor = if (variantId != null) cart.changeColor(itemId, variantId, offers, now) else Result.success(itemId)
         return if (quantity == null) afterColor else afterColor.bind { cart.changeQuantity(it, quantity, offers, now) }
     }
@@ -130,16 +137,17 @@ class CartDomainService(private val cartIdGenerator: CartIdGenerator) {
         offers: Map<VariantId, PurchaseOffer>,
         settings: ShopSettings,
         now: Instant,
+        standing: ReservationStanding = ReservationStanding.NONE,
     ): Result<CartLine, Cart.Failure> {
         logger.info("removeItem cart=${cart.publicId.value} itemId=${itemId.value}")
-        return cart.remove(itemId, now).also { if (it.isSuccess) cart.sync(offers, settings, now) }
+        return cart.remove(itemId, now).also { if (it.isSuccess) cart.sync(offers, settings, now, standing.hasActiveReservation) }
     }
 
     /** Empties the cart, then brings what is left (its shipping method) up to date. */
-    fun clearCart(cart: Cart, offers: Map<VariantId, PurchaseOffer>, settings: ShopSettings, now: Instant) {
+    fun clearCart(cart: Cart, offers: Map<VariantId, PurchaseOffer>, settings: ShopSettings, now: Instant, standing: ReservationStanding = ReservationStanding.NONE) {
         logger.info("clearCart cart=${cart.publicId.value}")
         cart.clear(now)
-        cart.sync(offers, settings, now)
+        cart.sync(offers, settings, now, standing.hasActiveReservation)
     }
 
     fun chooseShippingMethod(
@@ -148,10 +156,11 @@ class CartDomainService(private val cartIdGenerator: CartIdGenerator) {
         offers: Map<VariantId, PurchaseOffer>,
         settings: ShopSettings,
         now: Instant,
+        standing: ReservationStanding = ReservationStanding.NONE,
     ): Result<Unit, Cart.Failure> {
         logger.info("chooseShippingMethod cart=${cart.publicId.value} method=$method")
-        cart.sync(offers, settings, now)
-        return cart.chooseShippingMethod(method, settings, now)
+        cart.sync(offers, settings, now, standing.hasActiveReservation)
+        return cart.chooseShippingMethod(method, settings, now, standing.consolidation)
     }
 
     fun setReservation(
@@ -160,10 +169,11 @@ class CartDomainService(private val cartIdGenerator: CartIdGenerator) {
         offers: Map<VariantId, PurchaseOffer>,
         settings: ShopSettings,
         now: Instant,
+        standing: ReservationStanding = ReservationStanding.NONE,
     ): Result<Unit, Cart.Failure> {
         logger.info("setReservation cart=${cart.publicId.value} enabled=$enabled")
-        cart.sync(offers, settings, now)
-        return cart.setReservation(enabled, offers, settings, now)
+        cart.sync(offers, settings, now, standing.hasActiveReservation)
+        return cart.setReservation(enabled, offers, settings, now, standing.hasActiveReservation)
     }
 
     /**
@@ -172,12 +182,19 @@ class CartDomainService(private val cartIdGenerator: CartIdGenerator) {
      * login's answer shows the cart, so what changed since the last look is told there, once.
      * [offers] must cover the lines of both. The use case deletes the guest cart.
      */
-    fun mergeGuestCart(cart: Cart, guest: Cart?, offers: Map<VariantId, PurchaseOffer>, settings: ShopSettings, now: Instant) {
+    fun mergeGuestCart(
+        cart: Cart,
+        guest: Cart?,
+        offers: Map<VariantId, PurchaseOffer>,
+        settings: ShopSettings,
+        now: Instant,
+        standing: ReservationStanding = ReservationStanding.NONE,
+    ) {
         logger.info("mergeGuestCart cart=${cart.publicId.value} guestCart=${guest?.publicId?.value} guestLines=${guest?.lines?.size}")
-        cart.sync(offers, settings, now)
+        cart.sync(offers, settings, now, standing.hasActiveReservation)
         if (guest == null) return
-        guest.sync(offers, settings, now)
-        cart.absorb(guest, offers, settings, now)
+        guest.sync(offers, settings, now, standing.hasActiveReservation)
+        cart.absorb(guest, offers, settings, now, standing.hasActiveReservation)
     }
 
     /** A guest's new cart and the token that reaches it. [token]'s toString hides it. */

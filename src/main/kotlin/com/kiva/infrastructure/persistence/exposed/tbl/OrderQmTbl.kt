@@ -31,6 +31,8 @@ object OrderQmTbl : LongIdTable(name = "orderqm_tbl", columnName = "pId") {
     val shippingMethod = enumerationByName<ShippingMethodCode>("shippingMethod", 10)
     val messengerChannel = enumerationByName<MessengerChannel>("messengerChannel", 10)
     val reserveRequested = bool("reserveRequested")
+    // V19: the reservation group the order ships with (joined when placed, or held in when paid).
+    val reservationGroupId = long("reservationGroupId").nullable()
     val lines = jsonb<List<OrderLinePayload>>("lines", Json)
     val address = jsonb<AddressSnapshotPayload>("address", Json)
     val messenger = jsonb<PreShipmentMessengerPayload>("messenger", Json)

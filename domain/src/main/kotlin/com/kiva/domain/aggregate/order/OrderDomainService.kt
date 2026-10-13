@@ -17,6 +17,7 @@ import com.kiva.domain.aggregate.order.model.policy.OrderCodePolicy
 import com.kiva.domain.aggregate.order.model.policy.OrderPricing
 import com.kiva.domain.aggregate.order.model.policy.PaymentPolicy
 import com.kiva.domain.aggregate.order.model.policy.ShippingPolicy
+import com.kiva.domain.aggregate.order.model.valueobject.ShippingConsolidation
 import com.kiva.domain.aggregate.order.repository.OrderIdGenerator
 import java.time.Duration
 import java.time.Instant
@@ -25,7 +26,9 @@ import java.time.Instant
  * Placing an order, the way the business wants it done (roadmap step 13), so no use case can get the order of the
  * rules wrong. The contract tells the customer one thing at a time, the most basic first:
  *
- * 1. how it ships: the method must be on offer (SHIPPING_METHOD_UNAVAILABLE);
+ * 0. round 2: an order to the address of the customer's held reservation joins it ([OrderPlacement.holdingGroup]): it
+ *    ships with the group's method, free, and its own «رزرو ۴ روزه» is ignored;
+ * 1. how it ships: the method must be on offer (SHIPPING_METHOD_UNAVAILABLE), the group's only when it joins one;
  * 2. how it is paid: with something to pay, the gateway must be available (PAYMENT_GATEWAY_UNAVAILABLE, before any order
  *    exists);
  * 3. the terms are accepted (TERMS_NOT_ACCEPTED);
@@ -53,7 +56,10 @@ class OrderDomainService(private val orderIdGenerator: OrderIdGenerator) {
         val lines = placement.lines
         if (lines.isEmpty()) return Result.failure(PlaceOrderFailure.CartEmpty)
 
-        if (placement.shippingMethod !in ShippingPolicy.offeredMethods(settings, consolidation = null)) {
+        val joins = placement.holdingGroup?.takeIf { it.takes(placement.address, now) }
+        val consolidation = joins?.let { ShippingConsolidation(it.shippingMethod) }
+        val reserve = placement.reserve && joins == null
+        if (placement.shippingMethod !in ShippingPolicy.offeredMethods(settings, consolidation)) {
             return Result.failure(PlaceOrderFailure.ShippingMethodUnavailable)
         }
         val quote = OrderPricing.quote(
@@ -61,13 +67,14 @@ class OrderDomainService(private val orderIdGenerator: OrderIdGenerator) {
             settings = settings,
             chosenMethod = placement.shippingMethod,
             now = now,
-            reserve = placement.reserve,
+            reserve = reserve,
+            consolidation = consolidation,
         )
         val payable = quote.totals.payable
         if (payable > Money.ZERO && !placement.gatewayAvailable) return Result.failure(PlaceOrderFailure.GatewayUnavailable)
         if (!placement.acceptTerms) return Result.failure(PlaceOrderFailure.TermsNotAccepted)
-        if (placement.reserve) {
-            ReservationPolicy.unavailableReason(settings, lines.map { it.offer }, placement.hasActiveReservation)
+        if (reserve) {
+            ReservationPolicy.unavailableReason(settings, lines.map { it.offer }, hasActiveReservation = placement.holdingGroup?.isHolding(now) == true)
                 ?.let { return Result.failure(PlaceOrderFailure.ReservationUnavailable(it)) }
         }
         PaymentPolicy.refusalToPlace(placement.unpaidOrdersHoldingUntil, now)?.let { return Result.failure(PlaceOrderFailure.TooManyUnpaidOrders(it)) }
@@ -98,12 +105,13 @@ class OrderDomainService(private val orderIdGenerator: OrderIdGenerator) {
             messenger = placement.messenger,
             shippingMethod = placement.shippingMethod,
             totals = quote.totals,
-            reserveRequested = placement.reserve,
+            reserveRequested = reserve,
             customerNote = placement.customerNote,
             gift = placement.gift,
             paymentPending = Duration.ofMinutes(settings.paymentPendingMinutes.toLong()),
             by = placement.userId,
             now = now,
+            reservationGroupId = joins?.id,
         ).mapOnFailure { failure ->
             // Checked just above, so only a bug gets here.
             error("An order checked line by line was refused: ${failure.code}")

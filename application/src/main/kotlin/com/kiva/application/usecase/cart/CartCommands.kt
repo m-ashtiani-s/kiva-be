@@ -5,6 +5,7 @@ import com.kiva.application.dto.CartIssueDto
 import com.kiva.application.dto.RemovedItemDto
 import com.kiva.application.repository.OfferQm
 import com.kiva.application.repository.OfferQmRepository
+import com.kiva.application.usecase.reservation.Reservations
 import com.kiva.common.railway.Result
 import com.kiva.common.railway.ResultFailure
 import com.kiva.common.railway.unwrapOr
@@ -14,6 +15,7 @@ import com.kiva.domain.aggregate.cart.CartDomainService
 import com.kiva.domain.aggregate.cart.entity.Cart
 import com.kiva.domain.aggregate.cart.entity.CartLine
 import com.kiva.domain.aggregate.cart.model.PurchaseOffer
+import com.kiva.domain.aggregate.cart.model.ReservationStanding
 import com.kiva.domain.aggregate.cart.model.valueobject.CartItemId
 import com.kiva.domain.aggregate.cart.model.valueobject.CartToken
 import com.kiva.domain.aggregate.cart.repository.CartRepository
@@ -30,7 +32,8 @@ import java.time.Instant
  * 1. finds the caller's cart and locks its row: a customer's, made on their first request (two first requests at once
  *    make one cart); a guest's by the hash of their token, or a new one with a new token when the token is missing,
  *    malformed or unknown. A Bearer token always wins over a cart token: a customer never reaches a guest cart this way;
- * 2. reads the shop's settings and the offers of the cart's colors, and of [run]'s `alsoOffersOf`, in one query;
+ * 2. reads the shop's settings and the offers of the cart's colors, and of [run]'s `alsoOffersOf`, in one query, and,
+ *    for a customer, what their «رزرو ۴ روزه» means for the cart (Reservations; a guest's is none);
  * 3. lets the use case make its change through CartDomainService;
  * 4. saves, and describes what happened ([CartChange]).
  *
@@ -42,10 +45,14 @@ class CartCommands(
     private val cartDomainService: CartDomainService,
     private val offerQmRepository: OfferQmRepository,
     private val shopSettingsRepository: ShopSettingsRepository,
+    private val reservations: Reservations,
     private val clock: Clock,
 ) {
-    /** What a command's own change works with. [offers] cover every line of [cart] and the colors asked for. */
-    class Context(val cart: Cart, val offers: Map<VariantId, PurchaseOffer>, val settings: ShopSettings, val now: Instant)
+    /**
+     * What a command's own change works with. [offers] cover every line of [cart] and the colors asked for; [standing] is
+     * the customer's reservation as it bears on the cart (none for a guest).
+     */
+    class Context(val cart: Cart, val offers: Map<VariantId, PurchaseOffer>, val settings: ShopSettings, val now: Instant, val standing: ReservationStanding)
 
     /** What the change says it did, besides the issues the cart collected. */
     data class Done(val affectedItemId: CartItemId? = null, val addedQuantity: Int? = null, val removedLine: CartLine? = null)
@@ -60,7 +67,8 @@ class CartCommands(
         val (cart, newToken) = lockOrCreate(caller, settings, now)
         val offers = offerQmRepository.findOffers(cart.lines.map { it.variantId } + alsoOffersOf)
 
-        val done = change(Context(cart, offers.mapValues { it.value.offer }, settings, now)).unwrapOr { return@inTransaction Result.failure(it) }
+        val standing = (caller as? CartCaller.Customer)?.let { reservations.standingOf(it.userId, addressId = null, now).forCart() } ?: ReservationStanding.NONE
+        val done = change(Context(cart, offers.mapValues { it.value.offer }, settings, now, standing)).unwrapOr { return@inTransaction Result.failure(it) }
         cartRepository.save(cart)
 
         Result.success(changeOf(cart, newToken, offers, done))
@@ -83,7 +91,8 @@ class CartCommands(
             val guest = guestToken?.let { CartToken.makeNew(it).getOrNull() }?.let { cartRepository.lockForGuest(it.hash()) }
             val offers = offerQmRepository.findOffers((cart.lines + guest?.lines.orEmpty()).map { it.variantId })
 
-            change(Context(cart, offers.mapValues { it.value.offer }, settings, now), guest)
+            val standing = reservations.standingOf(userId, addressId = null, now).forCart()
+            change(Context(cart, offers.mapValues { it.value.offer }, settings, now, standing), guest)
             guest?.let(cartRepository::delete)
             cartRepository.save(cart)
 

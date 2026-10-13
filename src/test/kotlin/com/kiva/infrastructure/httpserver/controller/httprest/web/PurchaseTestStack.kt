@@ -37,6 +37,10 @@ import com.kiva.application.usecase.order.usecase.query.ListMyOrdersUc
 import com.kiva.application.usecase.payment.PaymentConfirmation
 import com.kiva.application.usecase.payment.usecase.command.ReconcilePaymentUc
 import com.kiva.application.usecase.payment.usecase.query.FindStalePaymentsUc
+import com.kiva.application.usecase.reservation.Reservations
+import com.kiva.application.usecase.reservation.usecase.command.ReleaseReservationGroupUc
+import com.kiva.application.usecase.reservation.usecase.query.FindDueReservationGroupsUc
+import com.kiva.application.usecase.reservation.usecase.query.GetMyReservationUc
 import com.kiva.common.valueobject.IranianMobileNumber
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.address.AddressBookDomainService
@@ -45,6 +49,7 @@ import com.kiva.domain.aggregate.cart.repository.CartRepository
 import com.kiva.domain.aggregate.inventory.InventoryDomainService
 import com.kiva.domain.aggregate.order.OrderDomainService
 import com.kiva.domain.aggregate.payment.PaymentDomainService
+import com.kiva.domain.aggregate.reservation.ReservationDomainService
 import com.kiva.infrastructure.MutableClock
 import com.kiva.infrastructure.cart.RandomCartIds
 import com.kiva.infrastructure.common.persistence.ExposedTransactionManager
@@ -68,6 +73,8 @@ import com.kiva.infrastructure.persistence.exposed.OrderIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.OrderQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.OrderRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.PaymentRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.ReservationGroupIdGeneratorImpl
+import com.kiva.infrastructure.persistence.exposed.ReservationGroupRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ShopSettingsRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.UserRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.tbl.CartTbl
@@ -117,7 +124,10 @@ class PurchaseTestStack(val clock: MutableClock) {
     private val inventories = InventoryRepositoryImpl()
     val gateways = PaymentGateways(listOf(gateway))
     private val cartDomain = CartDomainService(RandomCartIds())
-    private val cartCommands = CartCommands(transactions, carts, cartDomain, offers, settings, clock)
+    val groups = ReservationGroupRepositoryImpl()
+    val reservationDomain = ReservationDomainService(ReservationGroupIdGeneratorImpl())
+    private val reservations = Reservations(groups, books, geo, orderQm, reservationDomain)
+    private val cartCommands = CartCommands(transactions, carts, cartDomain, offers, settings, reservations, clock)
     private val addressService = AddressBookDomainService(geo, AddressIdGeneratorImpl())
 
     val openCart = OpenCartUc(cartCommands, cartDomain)
@@ -130,12 +140,13 @@ class PurchaseTestStack(val clock: MutableClock) {
     fun placeOrderWith(cartRepository: CartRepository) = PlaceOrderUc(
         transactions, IdempotencyGuard(IdempotencyStoreImpl(), clock), cartRepository, offers, settings, books, addressService, geo, users,
         OrderDomainService(OrderIdGeneratorImpl()), orders, orderQm, InventoryDomainService(inventories), inventories, payments,
-        RandomPaymentIds(), gateways, auth.sms, clock,
+        RandomPaymentIds(), gateways, auth.sms, reservations, clock,
     )
     val startPayment = StartPaymentUc(transactions, payments, gateways, clock)
 
     val paymentDomain = PaymentDomainService(RandomPaymentIds())
-    val paymentConfirmation = PaymentConfirmation(transactions, payments, orders, users, paymentDomain, gateways, auth.sms, clock)
+    val paymentConfirmation =
+        PaymentConfirmation(transactions, payments, orders, users, paymentDomain, groups, reservationDomain, settings, gateways, auth.sms, clock)
     val handleCallback = HandleGatewayCallbackUc(transactions, payments, orders, paymentDomain, gateways, paymentConfirmation, clock)
     val startPaymentAttempt =
         StartPaymentAttemptUc(transactions, IdempotencyGuard(IdempotencyStoreImpl(), clock), payments, orders, orderQm, settings, paymentDomain, gateways, clock)
@@ -145,25 +156,27 @@ class PurchaseTestStack(val clock: MutableClock) {
     val idempotencyStore = IdempotencyStoreImpl()
     val deleteStaleGuestCarts = DeleteStaleGuestCartsUc(transactions, carts, clock)
     val deleteOldIdempotencyKeys = DeleteOldIdempotencyKeysUc(transactions, idempotencyStore, clock)
+    val releaseReservationGroup = ReleaseReservationGroupUc(transactions, groups, orders, orderQm, reservationDomain, clock)
 
     /** The jobs as the scheduler runs them; a test calls one run of each, with its own clock. */
     val jobs = PurchaseJobs(
         FindExpirableOrdersUc(transactions, orderQm, clock), expireUnpaidOrder, FindStalePaymentsUc(transactions, payments, clock), reconcilePayment,
-        deleteStaleGuestCarts, deleteOldIdempotencyKeys,
+        deleteStaleGuestCarts, deleteOldIdempotencyKeys, FindDueReservationGroupsUc(transactions, groups, clock), releaseReservationGroup,
     )
 
     val paymentUseCases = PaymentUseCases(
-        handleCallback, GetPaymentResultUc(transactions, payments, orderQm, settings, clock), startPaymentAttempt, startPayment,
+        handleCallback, GetPaymentResultUc(transactions, payments, orderQm, settings, groups, clock), startPaymentAttempt, startPayment,
         GetPaymentInitUc(transactions, payments, orderQm),
     )
 
-    val getCart = GetCartUc(transactions, carts, offers, settings, clock)
+    val getCart = GetCartUc(transactions, carts, offers, settings, reservations, clock)
 
     val myOrderUseCases = MyOrderUseCases(
-        ListMyOrdersUc(transactions, orderQm, settings, clock),
-        GetMyOrderUc(transactions, orderQm, payments, settings, ColorRepositoryImpl(), clock),
+        ListMyOrdersUc(transactions, orderQm, settings, reservations, clock),
+        GetMyOrderUc(transactions, orderQm, payments, settings, ColorRepositoryImpl(), reservations, clock),
         ReorderUc(transactions, orderQm, cartCommands, cartDomain),
         getCart,
+        GetMyReservationUc(transactions, reservations, clock),
     )
 
     val cartUseCases = CartUseCases(
@@ -189,10 +202,10 @@ class PurchaseTestStack(val clock: MutableClock) {
 
     val checkoutUseCases = CheckoutUseCases(
         openCart,
-        GetCheckoutContextUc(transactions, carts, offers, settings, books, geo, users, gateways, clock),
+        GetCheckoutContextUc(transactions, carts, offers, settings, books, geo, users, gateways, reservations, clock),
         placeOrder,
         startPayment,
-        GetOrderSummaryUc(transactions, orderQm, settings, clock),
+        GetOrderSummaryUc(transactions, orderQm, settings, reservations, clock),
         GetPaymentInitUc(transactions, payments, orderQm),
     )
 

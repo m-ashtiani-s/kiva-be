@@ -47,7 +47,7 @@ fun infrastructureModule(config: AppConfig, database: Database) = module {
     single {
         PurchaseJobs(
             findExpirableOrders = get(), expireUnpaidOrder = get(), findStalePayments = get(), reconcilePayment = get(),
-            deleteStaleGuestCarts = get(), deleteOldIdempotencyKeys = get(),
+            deleteStaleGuestCarts = get(), deleteOldIdempotencyKeys = get(), findDueReservationGroups = get(), releaseReservationGroup = get(),
         )
     }
     single { JobScheduler(get<PurchaseJobs>().all(), clock = get()) }

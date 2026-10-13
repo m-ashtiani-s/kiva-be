@@ -33,7 +33,7 @@ object OrderPricing {
      *   the order joins a reservation, which ships with its group.
      * @param codeDiscount round 2: what the discount code takes off, already worked out from the lines it covers, so
      *   never more than the subtotal. Null (no code) until then.
-     * @param consolidation round 2: the order joins a held reservation. Null until then.
+     * @param consolidation the order joins the customer's held reservation; null otherwise.
      */
     fun quote(
         lines: List<PricedLine>,

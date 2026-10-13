@@ -21,7 +21,7 @@ class ClearCartUc(
     override suspend fun execute(command: Cmd): Result<CartChange, Nothing> {
         logger.info("ClearCartUc.execute caller=${command.caller}")
         return cartCommands.run(command.caller) { context ->
-            cartDomainService.clearCart(context.cart, context.offers, context.settings, context.now)
+            cartDomainService.clearCart(context.cart, context.offers, context.settings, context.now, context.standing)
             Result.success(CartCommands.Done())
         }
     }

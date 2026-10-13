@@ -34,7 +34,7 @@ class MergeGuestCartUc(
     override suspend fun execute(command: Cmd): Result<CartChange, Nothing> {
         logger.info("MergeGuestCartUc.execute $command")
         return cartCommands.runMerge(command.userId, command.guestCartToken) { context, guest ->
-            cartDomainService.mergeGuestCart(context.cart, guest, context.offers, context.settings, context.now)
+            cartDomainService.mergeGuestCart(context.cart, guest, context.offers, context.settings, context.now, context.standing)
         }
     }
 }

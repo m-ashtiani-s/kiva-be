@@ -2,6 +2,7 @@ package com.kiva.infrastructure.httpserver.controller.httprest.model.response
 
 import com.kiva.application.dto.OrderSummaryDto
 import com.kiva.application.dto.PaymentInitDto
+import com.kiva.application.dto.ReservationInfoDto
 import com.kiva.domain.aggregate.order.model.valueobject.OrderActions
 import kotlinx.serialization.Serializable
 
@@ -10,8 +11,8 @@ import kotlinx.serialization.Serializable
 data class PlaceOrderHttpResponse(val order: OrderSummaryHttpResponse, val payment: PaymentInitHttpResponse?)
 
 /**
- * Contract schema `OrderSummary`: an order's card. In this phase [reservation] is always `null` (round 2), the shipment
- * only waits, the photos before shipping are still to come, and [balanceDue] is 0 (no change requests yet).
+ * Contract schema `OrderSummary`: an order's card. [reservation] only for an order held with «رزرو ۴ روزه». In this phase
+ * the shipment only waits, the photos before shipping are still to come, and [balanceDue] is 0 (no change requests yet).
  */
 @Serializable
 data class OrderSummaryHttpResponse(
@@ -57,7 +58,7 @@ data class OrderSummaryHttpResponse(
                         OrderProgressStepHttpResponse(key, label, icon, state, if (index == 0 && current != null) order.paidOn?.toString() else null)
                     },
                 ),
-                reservation = null,
+                reservation = order.reservation?.let(ReservationInfoHttpResponse::from),
                 shipment = ShipmentHttpResponse(
                     carrier = order.shippingMethod.name,
                     carrierName = order.shippingMethodName,
@@ -97,7 +98,7 @@ data class OrderProgressHttpResponse(val currentStepIndex: Int, val steps: List<
 @Serializable
 data class OrderProgressStepHttpResponse(val key: String, val label: String, val icon: String, val state: String, val at: String?)
 
-/** Contract schema `ReservationInfo`; made from step 19. */
+/** Contract schema `ReservationInfo`: a held «رزرو ۴ روزه», its countdown and its orders. */
 @Serializable
 data class ReservationInfoHttpResponse(
     val active: Boolean,
@@ -107,7 +108,19 @@ data class ReservationInfoHttpResponse(
     val remainingSeconds: Long,
     val groupOrderCodes: List<String>,
     val message: String,
-)
+) {
+    companion object {
+        fun from(info: ReservationInfoDto) = ReservationInfoHttpResponse(
+            active = info.active,
+            orderCode = info.orderCode,
+            startedAt = info.startedAt.toString(),
+            expiresAt = info.expiresAt.toString(),
+            remainingSeconds = info.remainingSeconds,
+            groupOrderCodes = info.groupOrderCodes,
+            message = ReservationTexts.holdsUntil(info.expiresAt),
+        )
+    }
+}
 
 /** Contract schema `Shipment`. */
 @Serializable

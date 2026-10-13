@@ -3,14 +3,18 @@ package com.kiva.application.usecase.cart
 import com.kiva.application.dto.CartDto
 import com.kiva.application.dto.CartItemDto
 import com.kiva.application.dto.CartReservationDto
+import com.kiva.application.dto.ConsolidationDto
 import com.kiva.application.repository.OfferQm
+import com.kiva.application.usecase.reservation.Reservations
 import com.kiva.common.valueobject.Quantity
 import com.kiva.domain.aggregate.cart.entity.Cart
 import com.kiva.domain.aggregate.cart.entity.CartLine
 import com.kiva.domain.aggregate.order.model.PricedLine
 import com.kiva.domain.aggregate.order.model.policy.DeliveryWindowPolicy
+import com.kiva.domain.aggregate.order.model.policy.OrderCodePolicy
 import com.kiva.domain.aggregate.order.model.policy.OrderPricing
 import com.kiva.domain.aggregate.order.model.policy.ShopCalendar
+import com.kiva.domain.aggregate.order.model.valueobject.ShippingConsolidation
 import com.kiva.domain.aggregate.product.model.policy.StockPolicy
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
 import com.kiva.domain.aggregate.settings.entity.ShopSettings
@@ -22,18 +26,30 @@ import java.time.Instant
  * OrderPricing (the same call a new order makes), the limits from the cart, the stock from StockPolicy. Only what is
  * seen: never the exact stock.
  *
+ * Round 2: an order from the cart that joins the customer's held reservation ([standing]'s `joins`) is quoted the way it
+ * will be placed: by the group's method, shipping free; the cart's own method stays, for when the reservation ends.
+ *
  * @param offers the offers of every line's color.
+ * @param standing the customer's reservation, for the address the order would go to (Reservations); none for a guest.
  */
-internal fun cartDtoOf(cart: Cart, offers: Map<VariantId, OfferQm>, settings: ShopSettings, now: Instant): CartDto {
+internal fun cartDtoOf(
+    cart: Cart,
+    offers: Map<VariantId, OfferQm>,
+    settings: ShopSettings,
+    now: Instant,
+    standing: Reservations.Standing = Reservations.Standing.NONE,
+): CartDto {
     val purchaseOffers = offers.mapValues { it.value.offer }
+    val joins = standing.joins
     val quote = OrderPricing.quote(
         lines = cart.lines.map { line -> offerOf(line, offers).offer.let { PricedLine(it.priceTag, Quantity.constructFromPersisted(line.quantity.value), it.isPurchasable) } },
         settings = settings,
         chosenMethod = cart.shippingMethod,
         now = now,
-        reserve = cart.reserve,
+        reserve = cart.reserve && joins == null,
+        consolidation = joins?.let { ShippingConsolidation(it.shippingMethod) },
     )
-    val unavailableReason = cart.reservationUnavailableReason(purchaseOffers, settings)
+    val unavailableReason = cart.reservationUnavailableReason(purchaseOffers, settings, hasActiveReservation = standing.holding != null)
 
     return CartDto(
         id = cart.publicId.value,
@@ -67,6 +83,14 @@ internal fun cartDtoOf(cart: Cart, offers: Map<VariantId, OfferQm>, settings: Sh
             holdDays = settings.reservationHoldDays,
             shipAfterDate = DeliveryWindowPolicy.shipAfterDate(ShopCalendar.dateOf(now), settings.reservationHoldDays),
         ),
+        consolidation = joins?.let { group ->
+            ConsolidationDto(
+                reservedOrderCode = OrderCodePolicy.codeOf(group.rootOrderId).value,
+                expiresAt = group.expiresOn,
+                addressId = checkNotNull(group.addressId) { "Group ${group.code.value} has no address, yet an order joins it" }.value,
+                shippingMethod = group.shippingMethod,
+            )
+        },
         updatedAt = cart.updatedOn,
     )
 }

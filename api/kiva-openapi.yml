@@ -115,9 +115,12 @@ info:
       * **پیوستن (ادغام):** اگر کاربر رزرو فعال داشته باشد و سفارش جدید را **به همان آدرس** ثبت کند، سفارش جدید خودکار به گروه می‌پیوندد.
         «همان آدرس» یعنی همان آدرس ذخیره‌شده‌ی سفارش اصلی (`addressId`)، به شرطی که از شروع رزرو ویرایش نشده باشد؛ اگر ویرایش شده باشد سفارش تازه ادغام نمی‌شود.
         هزینه‌ی ارسال سفارش پیوسته صفر می‌شود (`freeReason = RESERVATION_CONSOLIDATION`)، روش ارسالش همان روش سفارش اصلی است، و بعد از پرداخت آن هم `RESERVED` می‌شود.
-        تصمیم ادغام هنگام `POST /orders` گرفته می‌شود و اگر مهلت در فاصله‌ی ثبت تا پرداخت (حداکثر ۱۵ دقیقه) تمام شود، ارسال رایگان همچنان حفظ می‌شود.
+        تصمیم ادغام هنگام `POST /orders` گرفته می‌شود و اگر مهلت در فاصله‌ی ثبت تا پرداخت (حداکثر ۱۵ دقیقه) تمام شود، ارسال رایگان همچنان حفظ می‌شود
+        و سفارش بعد از پرداخت مستقیم `PROCESSING` می‌شود (همراه گروه ارسال می‌شود). سوییچ رزرو ِ سفارشی که می‌پیوندد نادیده گرفته می‌شود.
       * **فقط یک رزرو فعال:** هر کاربر در هر لحظه حداکثر یک رزرو فعال دارد. وقتی رزرو فعال دارد سوییچ رزرو در دسترس نیست
         (`reservation.available = false`، `unavailableReason = HAS_ACTIVE_RESERVATION`): سفارش به همان آدرس ادغام می‌شود و سفارش به آدرس دیگر عادی ارسال می‌شود.
+        اگر دو سفارش رزروی پیش از شروع رزرو ثبت شده باشند، اولین پرداخت رزرو را شروع می‌کند و دومی هنگام پرداخت، اگر به همان آدرس باشد، به آن می‌پیوندد
+        و وگرنه `PROCESSING` می‌شود.
       * **کالای غیرقابل‌رزرو:** اگر حتی یک کالای سبد `reservable = false` باشد، رزرو در دسترس نیست (`ITEM_NOT_RESERVABLE`).
       * **پایان مهلت:** همه‌ی سفارش‌های گروه **خودکار** از `RESERVED` به `PROCESSING` می‌روند (عکس قبل از ارسال، سپس ارسال گروهی با **یک کد رهگیری**).
       * **لغو:** هر سفارش گروه تا قبل از `SHIPPED` قابل لغو است (بازگشت کامل وجه). لغو سفارش اصلی گروه یا مهلتش را از بین نمی‌برد و
@@ -2360,7 +2363,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ReservationInfo' }
         '204':
-          description: رزرو فعالی ندارد
+          description: رزرو فعالی ندارد (یا مهلتش تمام شده و سفارش‌هایش در حال رفتن به `PROCESSING` اند)
         '401': { $ref: '#/components/responses/Unauthorized' }
   /me/tracking:
     get:
@@ -6027,7 +6030,9 @@ components:
         shipAfterDate: { type: string, format: date, description: «ارسال بعد از سه‌شنبه ۱۵ مهر», example: '2026-10-09' }
         timeline:
           type: array
-          description: سه کارت تایم‌لاین رزرو. وقتی رزرو در تنظیمات سایت خاموش است (`RESERVATION_DISABLED`) خالی است
+          description: |
+            سه کارت تایم‌لاین رزرو، با تاریخ شمسی تهران: «امروز، ۲۰ مهر» · «تا {روز هفته} {روز} {ماه}» (همان `shipAfterDate`) · «بعد از ۴ روز».
+            وقتی رزرو در تنظیمات سایت خاموش است (`RESERVATION_DISABLED`) خالی است
           items:
             type: object
             properties:
@@ -6068,7 +6073,7 @@ components:
           nullable: true
           description: نوار «تا ارسال رایگان». `null` وقتی فروشگاه هیچ روش ارسال فعالی با ارسال رایگان ندارد
         reservation: { $ref: '#/components/schemas/CartReservation' }
-        consolidation: { type: object, allOf: [{ $ref: '#/components/schemas/ReservationConsolidation' }], nullable: true }
+        consolidation: { type: object, allOf: [{ $ref: '#/components/schemas/ReservationConsolidation' }], nullable: true, description: 'برای آدرس پیش‌فرض کاربر (سبد آدرس ندارد)؛ برای مهمان همیشه `null`' }
         discount: { type: object, allOf: [{ $ref: '#/components/schemas/AppliedDiscount' }], nullable: true }
         issues:
           type: array
@@ -6143,7 +6148,7 @@ components:
           type: array
           items: { $ref: '#/components/schemas/ShippingOptionQuote' }
         reservation: { $ref: '#/components/schemas/CartReservation' }
-        consolidation: { type: object, allOf: [{ $ref: '#/components/schemas/ReservationConsolidation' }], nullable: true }
+        consolidation: { type: object, allOf: [{ $ref: '#/components/schemas/ReservationConsolidation' }], nullable: true, description: 'برای آدرس انتخاب‌شده (`selectedAddressId`)' }
         paymentGateways:
           type: array
           description: همه‌ی درگاه‌های فروشگاه به ترتیب، در دسترس یا نه (`available`)؛ دقیقاً یکی `isDefault` اگر حداقل یکی در دسترس است
@@ -6203,7 +6208,7 @@ components:
             note: { type: string, maxLength: 200, nullable: true, description: «توضیح برای عکس», example: از داخل کیف هم عکس بگیرید }
             saveAsDefault: { type: boolean, default: true }
         shippingMethod: { $ref: '#/components/schemas/ShippingMethodCode' }
-        reserve: { type: boolean, nullable: true, description: رزرو ۴ روزه (اگر null از سبد خوانده می‌شود) }
+        reserve: { type: boolean, nullable: true, description: 'رزرو ۴ روزه (اگر null از سبد خوانده می‌شود). وقتی سفارش به رزرو فعال می‌پیوندد (`consolidation`) نادیده گرفته می‌شود' }
         paymentGateway: { $ref: '#/components/schemas/PaymentGatewayCode' }
         customerNote: { type: string, maxLength: 300, nullable: true, description: '[پیشنهادی] توضیح سفارش' }
         gift:
@@ -6274,7 +6279,7 @@ components:
             code: { $ref: '#/components/schemas/OrderCode' }
             status: { $ref: '#/components/schemas/OrderStatus' }
             reserved: { type: boolean, example: false }
-            consolidatedInto: { type: string, allOf: [{ $ref: '#/components/schemas/OrderCode' }], nullable: true }
+            consolidatedInto: { type: string, allOf: [{ $ref: '#/components/schemas/OrderCode' }], nullable: true, description: 'کد سفارش اصلی رزروی که این سفارش به آن پیوسته و همراهش ارسال می‌شود؛ برای خود سفارش اصلی و سفارش عادی `null`' }
         nextSteps:
           type: array
           description: سه قدم صفحه‌ی موفقیت؛ فقط برای `SUCCEEDED`، وگرنه خالی
@@ -6310,14 +6315,14 @@ components:
     ReservationInfo:
       type: object
       properties:
-        active: { type: boolean, example: true }
+        active: { type: boolean, description: 'در `GET /me/reservation` همیشه `true`؛ روی کارت سفارش `false` یعنی مهلت تمام شده و سفارش به‌زودی `PROCESSING` می‌شود', example: true }
         orderCode: { $ref: '#/components/schemas/OrderCode' }
         startedAt: { type: string, format: date-time, description: لحظه‌ی پرداخت موفق سفارش اصلی (شروع مهلت) }
         expiresAt: { type: string, format: date-time, description: 'startedAt + reservationHoldDays؛ برای کل گروه ثابت است و تمدید نمی‌شود. برای شمارنده «۲ روز و ۱۴ ساعت و ۵ دقیقه مانده»' }
         remainingSeconds: { type: integer, example: 223500 }
         groupOrderCodes:
           type: array
-          description: سفارش‌هایی که به این رزرو پیوسته‌اند
+          description: سفارش‌های پرداخت‌شده‌ی این رزرو به ترتیب پرداخت؛ اولی سفارش اصلی است
           items: { $ref: '#/components/schemas/OrderCode' }
         message: { type: string, example: تا سه‌شنبه ۱۵ مهر هر خریدی کنی، با همین سفارش و بدون هزینه ارسال جدید فرستاده می‌شه. }
     Shipment:

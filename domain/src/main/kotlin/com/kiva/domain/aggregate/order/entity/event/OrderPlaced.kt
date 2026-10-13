@@ -12,6 +12,7 @@ import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
 import com.kiva.domain.aggregate.order.model.valueobject.OrderId
 import com.kiva.domain.aggregate.order.model.valueobject.OrderTotals
 import com.kiva.domain.aggregate.order.model.valueobject.PreShipmentMessenger
+import com.kiva.domain.aggregate.reservation.model.valueobject.ReservationGroupId
 import com.kiva.domain.aggregate.settings.model.valueobject.ShippingMethodCode
 import java.time.Instant
 
@@ -21,7 +22,9 @@ import java.time.Instant
  * When it was placed is [occurredOn].
  *
  * @property holdUntil the end of the time to pay and of the stock hold (`PaymentInit.expiresAt`); never moved.
- * @property reserveRequested «رزرو ۴ روزه» was asked for (round 2).
+ * @property reserveRequested «رزرو ۴ روزه» was asked for, for an order of its own (never with [reservationGroupId]).
+ * @property reservationGroupId the customer's held reservation it joins, shipping free with it (round 2); decided when
+ *   placed, and kept even if the group's time ends before the order is paid. Null in events stored before step 19.
  */
 data class OrderPlaced(
     override val orderId: OrderId,
@@ -39,6 +42,7 @@ data class OrderPlaced(
     val holdUntil: Instant,
     val customerNote: CustomerNote?,
     val gift: GiftNote?,
+    val reservationGroupId: ReservationGroupId? = null,
     override val id: EventId = EventId.generate(),
 ) : OrderDomainEvent() {
     override val type: EventType get() = TYPE

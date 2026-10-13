@@ -8,9 +8,9 @@ import java.time.Instant
  * Which buttons an order's card shows. From the facts the order list has (its read model), not from the aggregate:
  * a list never reads the event store.
  *
- * In this phase only «پرداخت» can show, for an unpaid order before its time to pay ends. Cancelling, a change request,
- * approving the photos, returns and reviews are later phases, so their buttons stay off: no button without an
- * endpoint behind it. Joining a reservation is round 2.
+ * In this phase «پرداخت» shows for an unpaid order before its time to pay ends, and «افزودن محصول» for an order held
+ * with «رزرو ۴ روزه» (its next order to the same address joins it). Cancelling, a change request, approving the photos,
+ * returns and reviews are later phases, so their buttons stay off: no button without an endpoint behind it.
  */
 object OrderActionsPolicy {
 
@@ -20,7 +20,7 @@ object OrderActionsPolicy {
         canApproveMedia = false,
         canReturn = false,
         canPay = PaymentPolicy.canStartPayment(status, holdUntil, now),
-        canAddToReservation = false,
+        canAddToReservation = status == OrderStatus.RESERVED,
         canReview = false,
     )
 }

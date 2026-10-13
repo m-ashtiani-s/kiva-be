@@ -27,7 +27,7 @@ object ShippingPolicy {
      * @param hasPurchasableLines false for a cart whose lines are all out of stock or gone: nothing ships, so every
      *   option costs 0 and none is «free».
      * @param shipDate the day the order would leave the shop (DeliveryWindowPolicy.shipDate); delivery is counted from it.
-     * @param consolidation round 2; null until then.
+     * @param consolidation the order joins the customer's held reservation; null otherwise.
      */
     fun optionsFor(
         settings: ShopSettings,

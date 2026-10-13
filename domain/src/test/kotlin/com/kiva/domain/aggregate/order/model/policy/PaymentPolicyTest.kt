@@ -75,13 +75,14 @@ class PaymentPolicyTest {
     }
 
     @Test
-    fun `only «پرداخت» shows in this phase, for an unpaid order in time`() {
+    fun `in this phase only «پرداخت» shows, for an unpaid order in time, and «افزودن به رزرو» for a RESERVED one`() {
         val none = OrderActions(false, false, false, false, false, false, false)
 
         assertEquals(none.copy(canPay = true), OrderActionsPolicy.actionsOf(OrderStatus.PENDING_PAYMENT, holdUntil, at(14)))
         assertEquals(none.copy(canPay = true), OrderActionsPolicy.actionsOf(OrderStatus.PAYMENT_FAILED, holdUntil, at(14)))
         assertEquals(none, OrderActionsPolicy.actionsOf(OrderStatus.PENDING_PAYMENT, holdUntil, at(15)))
-        OrderStatus.entries.filter { !it.isAwaitingPayment }.forEach {
+        assertEquals(none.copy(canAddToReservation = true), OrderActionsPolicy.actionsOf(OrderStatus.RESERVED, holdUntil, now))
+        OrderStatus.entries.filter { !it.isAwaitingPayment && it != OrderStatus.RESERVED }.forEach {
             assertEquals(none, OrderActionsPolicy.actionsOf(it, holdUntil, now), "$it")
         }
     }

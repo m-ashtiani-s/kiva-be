@@ -20,6 +20,9 @@ import com.kiva.domain.aggregate.payment.model.PaymentLogEntry
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentFailureReason
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentStatus
 import com.kiva.domain.aggregate.payment.repository.PaymentRepository
+import com.kiva.domain.aggregate.reservation.ReservationDomainService
+import com.kiva.domain.aggregate.reservation.repository.ReservationGroupRepository
+import com.kiva.domain.aggregate.settings.repository.ShopSettingsRepository
 import com.kiva.domain.aggregate.user.repository.UserRepository
 import java.time.Clock
 import java.time.Duration
@@ -34,10 +37,11 @@ import kotlin.time.toJavaDuration
  * come back from (step 16). One place, so both settle an attempt the same way (Rule 15).
  *
  * 1. Outside any transaction: the gateway confirms the session, with the amount **we** stored for the attempt.
- * 2. [tx] Every attempt of the order is locked, and the attempt must still be VERIFYING: whoever settled it first
- *    (a callback, or the job) wins, and this answer is dropped. Then PaymentDomainService settles it: confirmed, it
- *    succeeds and the order is paid; refused, it fails and so does the order's try; no answer, it stays VERIFYING for
- *    the job to try again. The exchange goes into the payment log.
+ * 2. [tx] The customer's reservations are locked, then every attempt of the order (section 11, locks 4 and 6), and the
+ *    attempt must still be VERIFYING: whoever settled it first (a callback, or the job) wins, and this answer is
+ *    dropped. Then PaymentDomainService settles it: confirmed, it succeeds and the order is paid, held for «رزرو ۴ روزه»
+ *    or not as ReservationDomainService decides now (a new group is saved); refused, it fails and so does the order's
+ *    try; no answer, it stays VERIFYING for the job to try again. The exchange goes into the payment log.
  * 3. After the commit, a paid order is told «پرداخت موفق». A failed SMS is only logged: the order is paid all the same.
  * 4. The exception of section 10.5: confirmed for an order that couldn't take it (a bug the rules keep from happening).
  *    The money is ours, so the attempt SUCCEEDED and an ERROR says so; then, while the gateway still allows it, the
@@ -50,6 +54,9 @@ class PaymentConfirmation(
     private val orderRepository: OrderRepository,
     private val userRepository: UserRepository,
     private val paymentDomainService: PaymentDomainService,
+    private val reservationGroupRepository: ReservationGroupRepository,
+    private val reservationDomainService: ReservationDomainService,
+    private val shopSettingsRepository: ShopSettingsRepository,
     private val paymentGateways: PaymentGateways,
     private val smsSender: SmsSender,
     private val clock: Clock,
@@ -92,6 +99,7 @@ class PaymentConfirmation(
     }
 
     private fun settle(read: Payment, orderCode: OrderCode, answer: Answer, took: Duration, by: UserId): Settled {
+        reservationGroupRepository.lockFor(read.userId)
         val payment = paymentRepository.lockAttemptsOf(read.orderId).firstOrNull { it.publicId == read.publicId }
             ?: error("Payment ${read.publicId.value} was read a moment ago, yet it isn't there")
         if (payment.status != PaymentStatus.VERIFYING) {
@@ -104,7 +112,13 @@ class PaymentConfirmation(
         var reverse = false
         val entry = when (answer) {
             is Answer.Confirmed -> {
-                when (val confirmed = paymentDomainService.confirmed(payment, order, answer.receipt.refId, answer.receipt.cardMask, by, now)) {
+                val reservation = if (order.isAwaitingPayment) {
+                    reservationDomainService.onPaid(order, reservationGroupRepository.findHolding(order.userId), shopSettingsRepository.get(), now)
+                        .also { decided -> decided.started?.let(reservationGroupRepository::add) }
+                } else {
+                    ReservationDomainService.OnPaid(held = false, groupId = null, started = null)
+                }
+                when (val confirmed = paymentDomainService.confirmed(payment, order, answer.receipt.refId, answer.receipt.cardMask, by, now, reservation)) {
                     PaymentDomainService.Confirmed.Paid -> Unit
                     is PaymentDomainService.Confirmed.OrderNotPaid -> {
                         reverse = paymentDomainService.mayReverse(payment, order, now)

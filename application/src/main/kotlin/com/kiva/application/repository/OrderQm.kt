@@ -11,6 +11,7 @@ import com.kiva.domain.aggregate.order.model.valueobject.OrderStatus
 import com.kiva.domain.aggregate.order.model.valueobject.OrderTotals
 import com.kiva.domain.aggregate.order.model.valueobject.PreShipmentMessenger
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentFailureReason
+import com.kiva.domain.aggregate.reservation.model.valueobject.ReservationGroupId
 import com.kiva.domain.aggregate.settings.model.valueobject.ShippingMethodCode
 import java.time.Instant
 
@@ -32,6 +33,7 @@ data class OrderQm(
     val holdUntil: Instant,
     val shippingMethod: ShippingMethodCode,
     val reserveRequested: Boolean,
+    val reservationGroupId: ReservationGroupId?,
     val lines: List<OrderLine>,
     val address: AddressSnapshot,
     val messenger: PreShipmentMessenger,

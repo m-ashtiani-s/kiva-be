@@ -11,6 +11,7 @@ import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
 import com.kiva.domain.aggregate.order.model.valueobject.OrderId
 import com.kiva.domain.aggregate.order.model.valueobject.OrderStatus
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentFailureReason
+import com.kiva.domain.aggregate.reservation.model.valueobject.ReservationGroupId
 import com.kiva.infrastructure.common.persistence.SortOrders
 import com.kiva.infrastructure.common.persistence.paginate
 import com.kiva.infrastructure.persistence.exposed.tbl.OrderQmTbl
@@ -92,6 +93,20 @@ class OrderQmRepositoryImpl : OrderQmRepository {
             }
     }
 
+    override fun findHeldIn(groupId: ReservationGroupId): List<OrderId> =
+        OrderQmTbl.select(OrderQmTbl.orderId)
+            .where { (OrderQmTbl.reservationGroupId eq groupId.value) and (OrderQmTbl.status eq OrderStatus.RESERVED) }
+            .orderBy(OrderQmTbl.orderId)
+            .map { OrderId.constructFromPersisted(it[OrderQmTbl.orderId]) }
+
+    override fun paidCodesIn(groupIds: Collection<ReservationGroupId>): Map<ReservationGroupId, List<OrderCode>> {
+        if (groupIds.isEmpty()) return emptyMap()
+        return OrderQmTbl.select(OrderQmTbl.reservationGroupId, OrderQmTbl.code)
+            .where { (OrderQmTbl.reservationGroupId inList groupIds.map { it.value }) and (OrderQmTbl.status inList OrderStatus.entries.filter { it.isPaid }) }
+            .orderBy(OrderQmTbl.paidOn to SortOrder.ASC, OrderQmTbl.orderId to SortOrder.ASC)
+            .groupBy({ ReservationGroupId.constructFromPersisted(it[OrderQmTbl.reservationGroupId]!!) }, { OrderCode.constructFromPersisted(it[OrderQmTbl.code]) })
+    }
+
     private fun ResultRow.toOrderQm(): OrderQm = OrderQm(
         orderId = OrderId.constructFromPersisted(this[OrderQmTbl.orderId]),
         code = OrderCode.constructFromPersisted(this[OrderQmTbl.code]),
@@ -102,6 +117,7 @@ class OrderQmRepositoryImpl : OrderQmRepository {
         holdUntil = this[OrderQmTbl.holdUntil].toInstant(),
         shippingMethod = this[OrderQmTbl.shippingMethod],
         reserveRequested = this[OrderQmTbl.reserveRequested],
+        reservationGroupId = this[OrderQmTbl.reservationGroupId]?.let { ReservationGroupId.constructFromPersisted(it) },
         lines = this[OrderQmTbl.lines].map { it.toDomain() },
         address = this[OrderQmTbl.address].toDomain(),
         messenger = this[OrderQmTbl.messenger].toDomain(),

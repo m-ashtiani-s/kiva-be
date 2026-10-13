@@ -7,6 +7,7 @@ import com.kiva.common.valueobject.Money
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.order.model.valueobject.OrderId
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentPublicId
+import com.kiva.domain.aggregate.reservation.model.valueobject.ReservationGroupId
 import java.time.Instant
 
 /**
@@ -19,7 +20,9 @@ import java.time.Instant
  * @property paymentId the attempt that paid it; null for an order with nothing to pay, paid the moment it was placed.
  * @property amount exactly the order's payable.
  * @property heldForReservation the order is held with «رزرو ۴ روزه» (RESERVED); otherwise it is being prepared
- *   (PROCESSING). Always false until round 2.
+ *   (PROCESSING).
+ * @property reservationGroupId the reservation group it is held in (one it started, or joined); null when it isn't in
+ *   one, and in events stored before step 19.
  */
 data class OrderPaid(
     override val orderId: OrderId,
@@ -29,6 +32,7 @@ data class OrderPaid(
     val paymentId: PaymentPublicId?,
     val amount: Money,
     val heldForReservation: Boolean,
+    val reservationGroupId: ReservationGroupId? = null,
     override val id: EventId = EventId.generate(),
 ) : OrderDomainEvent() {
     override val type: EventType get() = TYPE

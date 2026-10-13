@@ -1,6 +1,7 @@
 package com.kiva.application.usecase.checkout.usecase.query
 
 import com.kiva.application.dto.PaymentResultDto
+import com.kiva.application.repository.OrderQm
 import com.kiva.application.repository.OrderQmRepository
 import com.kiva.common.logging.getLogger
 import com.kiva.common.railway.FailureKind
@@ -14,6 +15,7 @@ import com.kiva.domain.aggregate.order.model.policy.PaymentPolicy
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentPublicId
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentStatus
 import com.kiva.domain.aggregate.payment.repository.PaymentRepository
+import com.kiva.domain.aggregate.reservation.repository.ReservationGroupRepository
 import com.kiva.domain.aggregate.settings.repository.ShopSettingsRepository
 import java.time.Clock
 
@@ -27,6 +29,7 @@ class GetPaymentResultUc(
     private val paymentRepository: PaymentRepository,
     private val orderQmRepository: OrderQmRepository,
     private val shopSettingsRepository: ShopSettingsRepository,
+    private val reservationGroupRepository: ReservationGroupRepository,
     private val clock: Clock,
 ) : QueryUseCase<GetPaymentResultUc.Qry, PaymentResultDto, GetPaymentResultUc.Failure> {
 
@@ -61,10 +64,16 @@ class GetPaymentResultUc(
                     paidOn = if (succeeded) payment.settledOn else null,
                     failureReason = payment.failureReason,
                     canRetry = PaymentPolicy.canRetry(payment.status, order.status, order.holdUntil, clock.instant()),
-                    order = PaymentResultDto.Order(order.code.value, order.status, methodName, order.messenger.channel),
+                    order = PaymentResultDto.Order(order.code.value, order.status, methodName, order.messenger.channel, consolidatedInto = consolidatedInto(order)),
                 ),
             )
         }
+    }
+
+    /** The order that started the reservation this order ships with, when it isn't that order itself. */
+    private fun consolidatedInto(order: OrderQm): String? {
+        val group = order.reservationGroupId?.let(reservationGroupRepository::find) ?: return null
+        return OrderCodePolicy.codeOf(group.rootOrderId).value.takeIf { group.rootOrderId != order.orderId }
     }
 
     sealed class Failure(code: String, kind: FailureKind) : ResultFailure(code, kind) {

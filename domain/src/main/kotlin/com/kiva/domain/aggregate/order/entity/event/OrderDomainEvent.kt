@@ -10,8 +10,8 @@ import com.kiva.domain.aggregate.order.model.valueobject.OrderId
  * Everything that can happen to an order. The stream's id is the order's numeric id (`ORDER/42`); its timeline
  * (`OrderDetail.timeline`) is made of these events.
  *
- * This phase has the purchase only: placed, a payment failed, paid, expired. The later phases (the photo before
- * shipping, shipping, cancelling, returns) and round 2 (leaving a reservation) add their events here.
+ * This phase has the purchase: placed, a payment failed, paid, expired, and let go of by its reservation. The later
+ * phases (the photo before shipping, shipping, cancelling, returns) add their events here.
  *
  * The `type` of each event is stored with it and read back to pick the class, so a type in use is never renamed.
  */

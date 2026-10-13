@@ -4,6 +4,7 @@ import com.kiva.application.dto.OrderDetailDto
 import com.kiva.application.dto.OrderSummaryDto
 import com.kiva.application.repository.OrderQm
 import com.kiva.application.repository.OrderQmRepository
+import com.kiva.application.usecase.reservation.Reservations
 import com.kiva.common.logging.getLogger
 import com.kiva.common.railway.FailureKind
 import com.kiva.common.railway.Result
@@ -31,6 +32,7 @@ class GetMyOrderUc(
     private val paymentRepository: PaymentRepository,
     private val shopSettingsRepository: ShopSettingsRepository,
     private val colorRepository: ColorRepository,
+    private val reservations: Reservations,
     private val clock: Clock,
 ) : QueryUseCase<GetMyOrderUc.Qry, OrderDetailDto, GetMyOrderUc.Failure> {
 
@@ -59,7 +61,7 @@ class GetMyOrderUc(
         val palette = colorRepository.findAll().associateBy { it.key }
         val latest = paymentRepository.findAttemptsOf(order.orderId).lastOrNull()
         return OrderDetailDto(
-            summary = OrderSummaryDto.of(order, settings, clock.instant()),
+            summary = clock.instant().let { now -> OrderSummaryDto.of(order, settings, now, reservations.infosOf(listOf(order), now)[order.orderId]) },
             items = order.lines.map { line ->
                 val color = line.item.color
                 // A color taken out of the palette since keeps its name and hex, as bought, and sorts last.

@@ -11,12 +11,14 @@ import com.kiva.domain.aggregate.order.OrderFixtures.item
 import com.kiva.domain.aggregate.order.OrderFixtures.messenger
 import com.kiva.domain.aggregate.order.OrderFixtures.now
 import com.kiva.domain.aggregate.order.OrderFixtures.placedOrder
+import com.kiva.domain.aggregate.order.OrderFixtures.placement
 import com.kiva.domain.aggregate.order.OrderFixtures.sara
 import com.kiva.domain.aggregate.order.PricingFixtures
 import com.kiva.domain.aggregate.order.entity.event.OrderExpired
 import com.kiva.domain.aggregate.order.entity.event.OrderPaid
 import com.kiva.domain.aggregate.order.entity.event.OrderPaymentFailed
 import com.kiva.domain.aggregate.order.entity.event.OrderPlaced
+import com.kiva.domain.aggregate.order.entity.event.OrderReleasedFromReservation
 import com.kiva.domain.aggregate.order.model.PricedLine
 import com.kiva.domain.aggregate.order.model.policy.OrderPricing
 import com.kiva.domain.aggregate.order.model.valueobject.GiftNote
@@ -37,6 +39,8 @@ import com.kiva.domain.aggregate.product.model.valueobject.MaxPerOrder
 import com.kiva.domain.aggregate.product.model.valueobject.PriceTag
 import com.kiva.domain.aggregate.product.model.valueobject.ProductId
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
+import com.kiva.domain.aggregate.reservation.ReservationFixtures
+import com.kiva.domain.aggregate.reservation.model.valueobject.ReservationGroupId
 import com.kiva.domain.aggregate.settings.model.valueobject.ShippingMethodCode.POST
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -53,6 +57,7 @@ class OrderTest {
     private val firstAttempt = PaymentPublicId.constructFromPersisted("pay_0000000000A1")
     private val secondAttempt = PaymentPublicId.constructFromPersisted("pay_0000000000B2")
     private val golden = Money.constructFromPersisted(3_480_000)
+    private val sg1001 = ReservationGroupId.constructFromPersisted(1001)
 
     private fun Order.eventTypes(): List<String> = getRecordedEvents().map { it.type.value }
 
@@ -169,13 +174,38 @@ class OrderTest {
         }
 
         @Test
-        fun `held for a reservation it is RESERVED - the event says it, as decided`() {
+        fun `held for a reservation it is RESERVED in its group - the event says it, as decided`() {
             val order = placedOrder()
 
-            order.markPaid(firstAttempt, golden, heldForReservation = true, by = UserId.SYSTEM, now = at(3))
+            order.markPaid(firstAttempt, golden, heldForReservation = true, by = UserId.SYSTEM, now = at(3), reservationGroupId = sg1001)
 
             assertEquals(RESERVED, order.status)
-            assertTrue(assertIs<OrderPaid>(order.getRecordedEvents().last()).heldForReservation)
+            assertEquals(sg1001, order.reservationGroupId)
+            val paid = assertIs<OrderPaid>(order.getRecordedEvents().last())
+            assertTrue(paid.heldForReservation)
+            assertEquals(sg1001, paid.reservationGroupId)
+        }
+
+        @Test
+        fun `held without a group, or paid into a group other than the one it joined, is a bug`() {
+            val joined = placedOrder(placement().copy(holdingGroup = ReservationFixtures.group()))
+            val other = ReservationGroupId.constructFromPersisted(1002)
+
+            assertFailsWith<IllegalArgumentException> { placedOrder().markPaid(firstAttempt, golden, true, UserId.SYSTEM, at(3)) }
+            assertFailsWith<IllegalArgumentException> { joined.markPaid(firstAttempt, joined.totals.payable, true, UserId.SYSTEM, at(3), other) }
+        }
+
+        @Test
+        fun `a held order let go of is PROCESSING - any other order, or letting go twice, changes nothing`() {
+            val held = placedOrder().also { it.markPaid(firstAttempt, golden, true, UserId.SYSTEM, at(3), sg1001) }
+            val notHeld = placedOrder().also { it.markPaid(firstAttempt, golden, false, UserId.SYSTEM, at(3)) }
+            val unpaid = placedOrder()
+
+            listOf(held, notHeld, unpaid, held).forEach { it.releaseFromReservation(UserId.SYSTEM, at(60)) }
+
+            assertEquals(listOf(PROCESSING, PROCESSING, PENDING_PAYMENT), listOf(held.status, notHeld.status, unpaid.status))
+            assertIs<OrderReleasedFromReservation>(held.getRecordedEvents().last())
+            assertEquals(listOf(3, 2, 1), listOf(held, notHeld, unpaid).map { it.getRecordedEvents().size })
         }
 
         @Test

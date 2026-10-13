@@ -20,6 +20,7 @@ import com.kiva.domain.aggregate.order.entity.event.OrderExpired
 import com.kiva.domain.aggregate.order.entity.event.OrderPaid
 import com.kiva.domain.aggregate.order.entity.event.OrderPaymentFailed
 import com.kiva.domain.aggregate.order.entity.event.OrderPlaced
+import com.kiva.domain.aggregate.order.entity.event.OrderReleasedFromReservation
 import com.kiva.domain.aggregate.order.model.valueobject.AddressSnapshot
 import com.kiva.domain.aggregate.order.model.valueobject.CustomerNote
 import com.kiva.domain.aggregate.order.model.valueobject.GiftNote
@@ -36,6 +37,7 @@ import com.kiva.domain.aggregate.product.model.valueobject.ProductId
 import com.kiva.domain.aggregate.product.model.valueobject.ProductName
 import com.kiva.domain.aggregate.product.model.valueobject.Sku
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
+import com.kiva.domain.aggregate.reservation.model.valueobject.ReservationGroupId
 import com.kiva.domain.aggregate.settings.model.valueobject.ShippingMethodCode
 import com.kiva.domain.aggregate.user.model.valueobject.MessengerChannel
 import java.time.Instant
@@ -87,6 +89,9 @@ object OrderEventSamples {
 
     private val phone = IranianMobileNumber.constructFromPersisted("09121234567")
 
+    /** The reservation group the golden order joined and is held in. */
+    private val sg1001 = ReservationGroupId.constructFromPersisted(1001)
+
     private val goldenTotals = OrderTotals.constructFromPersisted(
         itemsCount = 2, linesCount = 2, itemsCompareAtTotal = toman(4_080_000), productDiscount = toman(600_000), subtotal = toman(3_480_000),
         codeDiscount = Money.ZERO, shippingCost = Money.ZERO, shippingIsFree = true, shippingFreeReason = ShippingFreeReason.THRESHOLD,
@@ -113,6 +118,7 @@ object OrderEventSamples {
         holdUntil = Instant.parse("2026-10-12T08:15:00.123456789Z"),
         customerNote = CustomerNote.constructFromPersisted("لطفاً قبل از ارسال زنگ بزنید"),
         gift = GiftNote.constructFromPersisted("تولدت مبارک!", hidePrices = true),
+        reservationGroupId = sg1001,
         id = eventId(1),
     )
 
@@ -122,12 +128,14 @@ object OrderEventSamples {
 
     val orderPaid = OrderPaid(
         order, sequence(3), at, UserId.SYSTEM, PaymentPublicId.constructFromPersisted("pay_0000000000B2"), toman(3_480_000),
-        heldForReservation = false, id = eventId(3),
+        heldForReservation = true, reservationGroupId = sg1001, id = eventId(3),
     )
 
     val orderExpired = OrderExpired(order, sequence(4), at, UserId.SYSTEM, eventId(4))
 
-    val onePerKind: List<OrderDomainEvent> = listOf(orderPlaced, orderPaymentFailed, orderPaid, orderExpired)
+    val orderReleasedFromReservation = OrderReleasedFromReservation(order, sequence(4), at, UserId.SYSTEM, eventId(5))
+
+    val onePerKind: List<OrderDomainEvent> = listOf(orderPlaced, orderPaymentFailed, orderPaid, orderExpired, orderReleasedFromReservation)
 
     /** A new address that wasn't saved, without plaque or unit; no messenger handle or note; no customer note or gift; nothing to pay. */
     val nothingOptional: List<OrderDomainEvent> = listOf(
@@ -158,7 +166,7 @@ object OrderEventSamples {
             gift = null,
             id = eventId(11),
         ),
-        OrderPaid(order, sequence(2), at, sara, paymentId = null, amount = Money.ZERO, heldForReservation = true, id = eventId(12)),
+        OrderPaid(order, sequence(2), at, sara, paymentId = null, amount = Money.ZERO, heldForReservation = false, id = eventId(12)),
         OrderPlaced(
             orderId = order,
             sequence = sequence(1),

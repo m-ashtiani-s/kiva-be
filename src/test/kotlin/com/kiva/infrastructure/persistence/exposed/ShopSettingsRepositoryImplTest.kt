@@ -37,10 +37,10 @@ class ShopSettingsRepositoryImplTest {
     }
 
     @Test
-    fun `no shipping on Friday, 15 minutes to pay, reservation off for now with 4 days, 7 days to return`() {
+    fun `no shipping on Friday, 15 minutes to pay, reservation on (since V19) with 4 days, 7 days to return`() {
         assertEquals(setOf(DayOfWeek.FRIDAY), settings.nonShippingWeekdays)
         assertEquals(15, settings.paymentPendingMinutes)
-        assertEquals(false, settings.reservationEnabled)
+        assertEquals(true, settings.reservationEnabled)
         assertEquals(4, settings.reservationHoldDays)
         assertEquals(7, settings.returnWindowDays)
     }

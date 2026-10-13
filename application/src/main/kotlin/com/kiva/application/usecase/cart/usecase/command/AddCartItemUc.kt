@@ -43,7 +43,7 @@ class AddCartItemUc(
 
         return cartCommands.run(command.caller, alsoOffersOf = listOf(variantId)) { context ->
             val before = context.cart.lineOf(variantId)?.quantity?.value ?: 0
-            cartDomainService.addItem(context.cart, variantId, quantity, context.offers, context.settings, context.now)
+            cartDomainService.addItem(context.cart, variantId, quantity, context.offers, context.settings, context.now, context.standing)
                 .mapOnSuccess { itemId ->
                     val after = context.cart.find(itemId)?.quantity?.value ?: 0
                     CartCommands.Done(affectedItemId = itemId, addedQuantity = maxOf(0, after - before))

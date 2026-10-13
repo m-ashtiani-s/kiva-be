@@ -15,6 +15,7 @@ import com.kiva.domain.aggregate.payment.model.valueobject.PaymentFailureReason
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentPublicId
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentStatus
 import com.kiva.domain.aggregate.payment.repository.PaymentIdGenerator
+import com.kiva.domain.aggregate.reservation.ReservationDomainService
 import com.kiva.domain.aggregate.settings.model.valueobject.PaymentGatewayCode
 import java.time.Instant
 
@@ -121,12 +122,22 @@ class PaymentDomainService(private val paymentIdGenerator: PaymentIdGenerator) {
      * The gateway confirmed the attempt being confirmed: it succeeds, and the order is paid with it. The gateway has the
      * money, so the attempt succeeds even when the order can't take it any more; that is a bug (the rules above keep it
      * from happening), told back as [Confirmed.OrderNotPaid] for the caller to log loudly and support to give back.
+     *
+     * [reservation] is what paying does to the customer's «رزرو ۴ روزه», decided by ReservationDomainService.onPaid with
+     * what is true now; none for an order that neither joined nor asked for one.
      */
-    fun confirmed(payment: Payment, order: Order, refId: GatewayRefId, cardMask: CardMask?, by: UserId, now: Instant): Confirmed {
+    fun confirmed(
+        payment: Payment,
+        order: Order,
+        refId: GatewayRefId,
+        cardMask: CardMask?,
+        by: UserId,
+        now: Instant,
+        reservation: ReservationDomainService.OnPaid = ReservationDomainService.OnPaid(held = false, groupId = null, started = null),
+    ): Confirmed {
         requireSameOrder(payment, order, listOf(payment))
         payment.succeed(refId, cardMask, now).orBug()
-        // Not held for «رزرو ۴ روزه» until round 2 (step 19) decides it here.
-        return when (val paid = order.markPaid(payment.publicId, payment.amount, heldForReservation = false, by, now)) {
+        return when (val paid = order.markPaid(payment.publicId, payment.amount, reservation.held, by, now, reservation.groupId)) {
             is Result.Success -> Confirmed.Paid
             is Result.Failure -> Confirmed.OrderNotPaid(paid.failure)
         }

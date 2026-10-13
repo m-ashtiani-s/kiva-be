@@ -5,6 +5,7 @@ import com.kiva.domain.aggregate.cart.CartDomainService
 import com.kiva.domain.aggregate.inventory.InventoryDomainService
 import com.kiva.domain.aggregate.order.OrderDomainService
 import com.kiva.domain.aggregate.payment.PaymentDomainService
+import com.kiva.domain.aggregate.reservation.ReservationDomainService
 import com.kiva.domain.aggregate.product.ProductDomainService
 import org.koin.dsl.module
 
@@ -24,4 +25,5 @@ val domainServiceModule = module(createdAtStart = true) {
     single { CartDomainService(cartIdGenerator = get()) }
     single { OrderDomainService(orderIdGenerator = get()) }
     single { PaymentDomainService(paymentIdGenerator = get()) }
+    single { ReservationDomainService(reservationGroupIdGenerator = get()) }
 }

@@ -4,6 +4,8 @@ import com.kiva.application.dto.CartDto
 import com.kiva.application.dto.CartIssueDto
 import com.kiva.application.dto.CartItemDto
 import com.kiva.application.dto.CartReservationDto
+import com.kiva.application.dto.ConsolidationDto
+import com.kiva.domain.aggregate.cart.model.valueobject.ReservationUnavailableReason
 import com.kiva.application.dto.RemovedItemDto
 import com.kiva.domain.aggregate.order.model.valueobject.FreeShippingProgress
 import com.kiva.domain.aggregate.order.model.valueobject.OrderTotals
@@ -24,7 +26,7 @@ import java.math.BigDecimal
 /**
  * Contract schema `Cart`, built from GetCartUc's CartDto and the command's issues.
  *
- * Not built yet, always `null`: [consolidation] (reservations, step 19) and [discount] (discount codes, step 20).
+ * Not built yet, always `null`: [discount] (discount codes, step 20).
  */
 @Serializable
 data class CartHttpResponse(
@@ -57,7 +59,7 @@ data class CartHttpResponse(
                 shippingOptions = cart.shippingOptions.map { ShippingOptionQuoteHttpResponse.from(it, cart.shippingMethod, ::nameOf) },
                 freeShipping = cart.freeShipping?.let { FreeShippingProgressHttpResponse.from(it, nameOf(it.method)) },
                 reservation = CartReservationHttpResponse.from(cart.reservation),
-                consolidation = null,
+                consolidation = cart.consolidation?.let(ReservationConsolidationHttpResponse::from),
                 discount = null,
                 issues = issues.map { CartIssueHttpResponse(it.code.name, it.itemId, CartTexts.issue(it, chosenName), it.previousValue, it.currentValue) },
                 // A guest is asked to log in with their mobile number before paying.
@@ -236,8 +238,8 @@ data class FreeShippingProgressHttpResponse(
 }
 
 /**
- * Contract schema `CartReservation`. [unavailableReason] is the code itself (the contract's enum). [timeline] stays
- * empty until reservations are switched on (step 19): its three cards need Persian dates, and nobody sees them before.
+ * Contract schema `CartReservation`. [unavailableReason] is the code itself (the contract's enum). [timeline] is the
+ * switch's three cards, with Jalali dates; empty while the shop has reservations switched off (contract).
  */
 @Serializable
 data class CartReservationHttpResponse(
@@ -255,7 +257,11 @@ data class CartReservationHttpResponse(
             enabled = reservation.enabled,
             holdDays = reservation.holdDays,
             shipAfterDate = reservation.shipAfterDate.toString(),
-            timeline = emptyList(),
+            timeline = if (reservation.unavailableReason == ReservationUnavailableReason.RESERVATION_DISABLED) {
+                emptyList()
+            } else {
+                ReservationTexts.timeline(reservation.shipAfterDate.minusDays(reservation.holdDays.toLong()), reservation.shipAfterDate, reservation.holdDays)
+            },
         )
     }
 }
@@ -264,7 +270,7 @@ data class CartReservationHttpResponse(
 @Serializable
 data class ReservationTimelineCardHttpResponse(val title: String, val text: String)
 
-/** Contract schema `ReservationConsolidation`; made from step 19. */
+/** Contract schema `ReservationConsolidation`: the order joins the customer's held reservation, shipping free. */
 @Serializable
 data class ReservationConsolidationHttpResponse(
     val reservedOrderCode: String,
@@ -273,7 +279,18 @@ data class ReservationConsolidationHttpResponse(
     val shippingWaived: Boolean,
     val shippingMethod: String,
     val message: String,
-)
+) {
+    companion object {
+        fun from(consolidation: ConsolidationDto) = ReservationConsolidationHttpResponse(
+            reservedOrderCode = consolidation.reservedOrderCode,
+            expiresAt = consolidation.expiresAt.toString(),
+            addressId = consolidation.addressId,
+            shippingWaived = true,
+            shippingMethod = consolidation.shippingMethod.name,
+            message = ReservationTexts.joins(consolidation.reservedOrderCode),
+        )
+    }
+}
 
 /** Contract schema `AppliedDiscount`; made from step 20. */
 @Serializable

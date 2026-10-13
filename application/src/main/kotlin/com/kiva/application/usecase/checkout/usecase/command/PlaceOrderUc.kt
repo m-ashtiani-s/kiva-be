@@ -11,6 +11,7 @@ import com.kiva.application.repository.OfferQmRepository
 import com.kiva.application.repository.OrderQmRepository
 import com.kiva.application.usecase.address.AddressFields
 import com.kiva.application.usecase.idempotency.IdempotencyGuard
+import com.kiva.application.usecase.reservation.Reservations
 import com.kiva.common.event.ConcurrentChangeException
 import com.kiva.common.logging.getLogger
 import com.kiva.common.railway.FailureKind
@@ -107,6 +108,7 @@ class PlaceOrderUc(
     private val paymentIdGenerator: PaymentIdGenerator,
     private val paymentGateways: PaymentGateways,
     private val smsSender: SmsSender,
+    private val reservations: Reservations,
     private val clock: Clock,
 ) : CommandUseCase<PlaceOrderUc.Cmd, PlacedOrder, PlaceOrderUc.Failure> {
 
@@ -291,6 +293,8 @@ class PlaceOrderUc(
             expectedPayable = input.expectedPayable,
             unpaidOrdersHoldingUntil = orderQmRepository.unpaidHoldingUntil(userId, now),
             settings = settings,
+            // Read, not locked: a reservation started by a payment at this very moment only means this order ships alone.
+            holdingGroup = reservations.holdingOf(userId),
         )
         val order = orderDomainService.placeOrder(placement, now).unwrapOr { return Result.failure(Failure.Refused(it)) }
 

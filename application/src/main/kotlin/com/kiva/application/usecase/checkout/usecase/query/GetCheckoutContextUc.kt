@@ -3,6 +3,7 @@ package com.kiva.application.usecase.checkout.usecase.query
 import com.kiva.application.dto.CheckoutContextDto
 import com.kiva.application.port.PaymentGateways
 import com.kiva.application.repository.OfferQmRepository
+import com.kiva.application.usecase.reservation.Reservations
 import com.kiva.application.usecase.address.addressDtosOf
 import com.kiva.application.usecase.address.addressIdOf
 import com.kiva.application.usecase.address.defaultFirst
@@ -46,6 +47,7 @@ class GetCheckoutContextUc(
     private val geoRepository: GeoRepository,
     private val userRepository: UserRepository,
     private val paymentGateways: PaymentGateways,
+    private val reservations: Reservations,
     private val clock: Clock,
 ) : QueryUseCase<GetCheckoutContextUc.Qry, CheckoutContextDto, GetCheckoutContextUc.Failure> {
 
@@ -76,9 +78,12 @@ class GetCheckoutContextUc(
             }
 
             val settings = shopSettingsRepository.get()
+            val now = clock.instant()
+            // The order joins the customer's reservation only at its address: the one selected here.
+            val standing = selected?.let { reservations.standingOf(query.userId, it.id, now) } ?: reservations.standingOf(query.userId, null, now).copy(joins = null)
             Result.success(
                 CheckoutContextDto(
-                    cart = cartDtoOf(cart, offerQmRepository.findOffers(cart.lines.map { it.variantId }), settings, clock.instant()),
+                    cart = cartDtoOf(cart, offerQmRepository.findOffers(cart.lines.map { it.variantId }), settings, now, standing),
                     addresses = geoRepository.addressDtosOf(addresses),
                     selectedAddressId = selected?.id?.value,
                     selectedMessenger = user.defaultMessenger,

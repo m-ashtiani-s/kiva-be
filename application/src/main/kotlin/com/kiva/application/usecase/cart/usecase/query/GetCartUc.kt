@@ -2,6 +2,8 @@ package com.kiva.application.usecase.cart.usecase.query
 
 import com.kiva.application.dto.CartDto
 import com.kiva.application.repository.OfferQmRepository
+import com.kiva.application.usecase.reservation.Reservations
+import com.kiva.domain.aggregate.cart.model.valueobject.CartOwner
 import com.kiva.application.usecase.cart.cartDtoOf
 import com.kiva.common.logging.getLogger
 import com.kiva.common.railway.FailureKind
@@ -25,6 +27,7 @@ class GetCartUc(
     private val cartRepository: CartRepository,
     private val offerQmRepository: OfferQmRepository,
     private val shopSettingsRepository: ShopSettingsRepository,
+    private val reservations: Reservations,
     private val clock: Clock,
 ) : QueryUseCase<GetCartUc.Qry, CartDto, GetCartUc.Failure> {
 
@@ -39,7 +42,10 @@ class GetCartUc(
             val cart = cartRepository.find(CartPublicId.constructFromPersisted(query.cartId))
                 ?: return@inTransaction Result.failure(Failure.CartNotFound)
             val offers = offerQmRepository.findOffers(cart.lines.map { it.variantId })
-            Result.success(cartDtoOf(cart, offers, shopSettingsRepository.get(), clock.instant()))
+            val now = clock.instant()
+            // A customer's order from the cart goes to their default address until checkout picks another.
+            val standing = (cart.owner as? CartOwner.User)?.let { reservations.standingOf(it.userId, addressId = null, now) } ?: Reservations.Standing.NONE
+            Result.success(cartDtoOf(cart, offers, shopSettingsRepository.get(), now, standing))
         }
     }
 

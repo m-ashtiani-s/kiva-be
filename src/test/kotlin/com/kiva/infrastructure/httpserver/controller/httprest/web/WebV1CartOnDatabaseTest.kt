@@ -31,6 +31,7 @@ import com.kiva.infrastructure.httpserver.controller.httprest.web.AuthTestStack.
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AuthTestStack.Companion.phone
 import com.kiva.infrastructure.persistence.exposed.CartRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.OfferQmRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.ReservationSwitch
 import com.kiva.infrastructure.persistence.exposed.ShopSettingsRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.StoredCatalog
 import com.kiva.infrastructure.persistence.exposed.StoredCatalog.NewColor
@@ -110,12 +111,12 @@ class WebV1CartOnDatabaseTest {
     private val domain = CartDomainService(RandomCartIds())
 
     private fun commands(repository: CartRepository = carts) =
-        CartCommands(transactions, repository, domain, offers, ShopSettingsRepositoryImpl(), clock)
+        CartCommands(transactions, repository, domain, offers, ShopSettingsRepositoryImpl(), stack.reservations, clock)
 
     private val useCases = commands().let { c ->
         CartUseCases(
             OpenCartUc(c, domain),
-            GetCartUc(transactions, carts, offers, ShopSettingsRepositoryImpl(), clock),
+            GetCartUc(transactions, carts, offers, ShopSettingsRepositoryImpl(), stack.reservations, clock),
             AddCartItemUc(c, domain),
             ChangeCartItemUc(c, domain),
             RemoveCartItemUc(c, domain),
@@ -171,6 +172,7 @@ class WebV1CartOnDatabaseTest {
     private val nazliBrown by lazy { variantOf("nazli-wallet", "brown") }
     private val mahakBlack by lazy { variantOf("mahak-shoulder-bag", "black") }
     private val shabtabBlack by lazy { variantOf("shabtab-clutch", "black") }
+    private val mahtabWhite by lazy { variantOf("mahtab-clutch", "white") }
 
     private fun HttpRequestBuilder.who(token: String?, bearer: String?) {
         token?.let { header(CART_TOKEN_HEADER, it) }
@@ -428,21 +430,63 @@ class WebV1CartOnDatabaseTest {
     }
 
     @Test
-    fun `the reservation can't be switched on while reservations are off, off is always fine`() = app {
+    fun `«رزرو ۴ روزه» switches on, with its three cards in Tehran's Jalali dates`() = app {
         val token = newGuest()
+        add(nilaOlive, token = token)
 
         val on = send("PUT", "/cart/reservation", """{"enabled":true}""", token)
+
+        assertEquals(HttpStatusCode.OK, on.status)
+        val reservation = on.json()["reservation"]!!.jsonObject
+        assertEquals(true, reservation["available"]!!.jsonPrimitive.boolean)
+        assertEquals(true, reservation["enabled"]!!.jsonPrimitive.boolean)
+        assertEquals(JsonNull, reservation["unavailableReason"])
+        assertEquals("2026-10-16", reservation.text("shipAfterDate"))
+        // Monday 2026-10-12 is ۲۰ مهر ۱۴۰۵; four days on, Friday ۲۴ مهر.
+        assertEquals(
+            listOf(
+                "امروز، ۲۰ مهر" to "پرداخت کامل و ثبت سفارش",
+                "تا جمعه ۲۴ مهر" to "هر محصول دیگه‌ای خواستی به همین سفارش اضافه کن",
+                "بعد از ۴ روز" to "همه با هم و با یک هزینه ارسال فرستاده می‌شن",
+            ),
+            reservation["timeline"]!!.jsonArray.map { it.jsonObject.text("title") to it.jsonObject.text("text") },
+        )
+        assertEquals(JsonNull, on.json()["consolidation"], "a guest holds no reservation")
+    }
+
+    @Test
+    fun `the party clutch can't be held - ITEM_NOT_RESERVABLE, and switching on is refused`() = app {
+        val token = newGuest()
+        add(mahtabWhite, token = token)
+
+        val cart = getCart(token).json()["reservation"]!!.jsonObject
+        val on = send("PUT", "/cart/reservation", """{"enabled":true}""", token)
+
+        assertEquals(false, cart["available"]!!.jsonPrimitive.boolean)
+        assertEquals("ITEM_NOT_RESERVABLE", cart.text("unavailableReason"))
         assertEquals(HttpStatusCode.UnprocessableEntity, on.status)
         assertEquals("RESERVATION_UNAVAILABLE", on.code())
-        assertEquals("RESERVATION_DISABLED", on.json()["meta"]!!.jsonObject.text("reason"))
+        assertEquals("ITEM_NOT_RESERVABLE", on.json()["meta"]!!.jsonObject.text("reason"))
+    }
 
-        val off = send("PUT", "/cart/reservation", """{"enabled":false}""", token)
-        assertEquals(HttpStatusCode.OK, off.status)
-        val reservation = off.json()["reservation"]!!.jsonObject
-        assertEquals("RESERVATION_DISABLED", reservation.text("unavailableReason"))
-        assertEquals(4, reservation["holdDays"]!!.jsonPrimitive.int)
-        assertEquals("2026-10-16", reservation.text("shipAfterDate"))
-        assertEquals(JsonArray(emptyList()), reservation["timeline"])
+    @Test
+    fun `with reservations switched off in the shop, switching on is RESERVATION_DISABLED, off is always fine, and no cards`() = app {
+        val token = newGuest()
+
+        ReservationSwitch.with(stack.db, enabled = false) {
+            val on = send("PUT", "/cart/reservation", """{"enabled":true}""", token)
+            assertEquals(HttpStatusCode.UnprocessableEntity, on.status)
+            assertEquals("RESERVATION_UNAVAILABLE", on.code())
+            assertEquals("RESERVATION_DISABLED", on.json()["meta"]!!.jsonObject.text("reason"))
+
+            val off = send("PUT", "/cart/reservation", """{"enabled":false}""", token)
+            assertEquals(HttpStatusCode.OK, off.status)
+            val reservation = off.json()["reservation"]!!.jsonObject
+            assertEquals("RESERVATION_DISABLED", reservation.text("unavailableReason"))
+            assertEquals(4, reservation["holdDays"]!!.jsonPrimitive.int)
+            assertEquals("2026-10-16", reservation.text("shipAfterDate"))
+            assertEquals(JsonArray(emptyList()), reservation["timeline"])
+        }
     }
 
     @Test

@@ -6,6 +6,7 @@ import com.kiva.domain.aggregate.order.entity.event.OrderExpired
 import com.kiva.domain.aggregate.order.entity.event.OrderPaid
 import com.kiva.domain.aggregate.order.entity.event.OrderPaymentFailed
 import com.kiva.domain.aggregate.order.entity.event.OrderPlaced
+import com.kiva.domain.aggregate.order.entity.event.OrderReleasedFromReservation
 import com.kiva.domain.aggregate.order.model.valueobject.OrderStatus
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentFailureReason
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.AddressSnapshotPayload
@@ -53,10 +54,11 @@ object OrderQmProjector {
             is OrderPlaced -> insert(event)
             is OrderPaymentFailed -> moveTo(event, OrderStatus.PAYMENT_FAILED, failureReason = event.reason)
             is OrderPaid -> {
-                moveTo(event, if (event.heldForReservation) OrderStatus.RESERVED else OrderStatus.PROCESSING, paidOn = event.occurredOn)
+                moveTo(event, if (event.heldForReservation) OrderStatus.RESERVED else OrderStatus.PROCESSING, paidOn = event.occurredOn, group = event.reservationGroupId?.value)
                 countSold(event.orderId.value)
             }
             is OrderExpired -> moveTo(event, OrderStatus.EXPIRED)
+            is OrderReleasedFromReservation -> moveTo(event, OrderStatus.PROCESSING)
         }
     }
 
@@ -74,6 +76,7 @@ object OrderQmProjector {
             it[shippingMethod] = event.shippingMethod
             it[messengerChannel] = event.messenger.channel
             it[reserveRequested] = event.reserveRequested
+            it[reservationGroupId] = event.reservationGroupId?.value
             it[lines] = event.lines.map(::OrderLinePayload)
             it[address] = AddressSnapshotPayload(event.address)
             it[messenger] = PreShipmentMessengerPayload(event.messenger)
@@ -89,7 +92,7 @@ object OrderQmProjector {
      * The order's new status, with one more timeline entry. No lock of its own is needed: two transactions changing
      * one order are already one after the other at its stream, where the second is refused.
      */
-    private fun moveTo(event: OrderDomainEvent, status: OrderStatus, failureReason: PaymentFailureReason? = null, paidOn: Instant? = null) {
+    private fun moveTo(event: OrderDomainEvent, status: OrderStatus, failureReason: PaymentFailureReason? = null, paidOn: Instant? = null, group: Long? = null) {
         val orderId = event.orderId.value
         val timeline = OrderQmTbl.select(OrderQmTbl.timeline).where { OrderQmTbl.orderId eq orderId }.singleOrNull()?.get(OrderQmTbl.timeline)
             ?: error("${event.type.value} of order $orderId, which the read model doesn't have")
@@ -98,6 +101,7 @@ object OrderQmProjector {
             it[OrderQmTbl.status] = status
             it[OrderQmTbl.timeline] = timeline + entry(status, event.occurredOn, failureReason)
             if (paidOn != null) it[OrderQmTbl.paidOn] = paidOn.utc()
+            if (group != null) it[OrderQmTbl.reservationGroupId] = group
             it[updatedOn] = event.occurredOn.utc()
         }
         check(updated == 1) { "Order $orderId: updated $updated rows of the read model instead of 1" }

@@ -25,7 +25,7 @@ class OpenCartUc(
     override suspend fun execute(command: Cmd): Result<CartChange, Nothing> {
         logger.info("OpenCartUc.execute caller=${command.caller}")
         return cartCommands.run(command.caller) { context ->
-            cartDomainService.openCart(context.cart, context.offers, context.settings, context.now)
+            cartDomainService.openCart(context.cart, context.offers, context.settings, context.now, context.standing)
             Result.success(CartCommands.Done())
         }
     }

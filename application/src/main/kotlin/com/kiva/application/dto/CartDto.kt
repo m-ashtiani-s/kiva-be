@@ -30,8 +30,18 @@ data class CartDto(
     val shippingOptions: List<ShippingQuote>,
     val freeShipping: FreeShippingProgress?,
     val reservation: CartReservationDto,
+    val consolidation: ConsolidationDto?,
     val updatedAt: Instant,
 )
+
+/**
+ * The order joins the customer's held «رزرو ۴ روزه» (the contract's ReservationConsolidation): it ships with the group,
+ * by the group's method, free. The message is the HTTP layer's.
+ *
+ * @property reservedOrderCode the order that started the reservation.
+ * @property addressId the group's address: only an order to it joins.
+ */
+data class ConsolidationDto(val reservedOrderCode: String, val expiresAt: Instant, val addressId: Long, val shippingMethod: ShippingMethodCode)
 
 /**
  * One line. [maxQuantity] is what the line may hold now next to the product's other colors; 0 when it can't be bought.

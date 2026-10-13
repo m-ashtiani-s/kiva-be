@@ -7,7 +7,8 @@ import kotlinx.serialization.Serializable
 
 /**
  * Contract schema `PaymentResult`: the result page. [failureReason] only for an attempt that didn't succeed, and
- * [nextSteps] only for one that did (empty otherwise). [order]'s `consolidatedInto` is `null` until round 2.
+ * [nextSteps] only for one that did (empty otherwise). [order]'s `consolidatedInto` names the order whose reservation it
+ * ships with, when it isn't that order itself.
  */
 @Serializable
 data class PaymentResultHttpResponse(
@@ -36,7 +37,7 @@ data class PaymentResultHttpResponse(
                 paidAt = result.paidOn?.toString(),
                 failureReason = result.failureReason?.let { PaymentTexts.failureReason(it, order.status) },
                 canRetry = result.canRetry,
-                order = PaymentResultOrderHttpResponse(order.code, order.status.name, reserved = order.status == OrderStatus.RESERVED, consolidatedInto = null),
+                order = PaymentResultOrderHttpResponse(order.code, order.status.name, reserved = order.status == OrderStatus.RESERVED, consolidatedInto = order.consolidatedInto),
                 nextSteps = if (result.outcome == PaymentOutcome.SUCCEEDED) {
                     PaymentTexts.nextSteps(order.status, OrderTexts.messengerName(order.messengerChannel), order.shippingMethodName)
                 } else {

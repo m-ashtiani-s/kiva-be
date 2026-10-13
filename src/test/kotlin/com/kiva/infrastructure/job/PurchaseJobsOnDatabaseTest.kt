@@ -149,6 +149,7 @@ class PurchaseJobsOnDatabaseTest {
             listOf(
                 "expire-unpaid-orders" to Schedule.Every(Duration.ofMinutes(1)),
                 "reconcile-payments" to Schedule.Every(Duration.ofMinutes(2)),
+                "release-reservations" to Schedule.Every(Duration.ofMinutes(1)),
                 "delete-stale-guest-carts" to Schedule.DailyAt(LocalTime.of(4, 0), ShopCalendar.ZONE),
                 "delete-old-idempotency-keys" to Schedule.Every(Duration.ofHours(1)),
             ),

@@ -54,6 +54,10 @@ import com.kiva.application.usecase.order.usecase.query.GetMyOrderUc
 import com.kiva.application.usecase.order.usecase.query.GetOrderSummaryUc
 import com.kiva.application.usecase.order.usecase.query.ListMyOrdersUc
 import com.kiva.application.usecase.payment.PaymentConfirmation
+import com.kiva.application.usecase.reservation.Reservations
+import com.kiva.application.usecase.reservation.usecase.command.ReleaseReservationGroupUc
+import com.kiva.application.usecase.reservation.usecase.query.FindDueReservationGroupsUc
+import com.kiva.application.usecase.reservation.usecase.query.GetMyReservationUc
 import com.kiva.application.usecase.payment.usecase.command.ReconcilePaymentUc
 import com.kiva.application.usecase.payment.usecase.query.FindStalePaymentsUc
 import com.kiva.application.usecase.product.usecase.command.CreateProductUc
@@ -82,11 +86,19 @@ val useCaseModule = module(createdAtStart = true) {
     // --- the use cases that take an Idempotency-Key (steps 13 and 15) ---
     single { IdempotencyGuard(store = get(), clock = get()) }
 
+    // --- «رزرو ۴ روزه»: what it means for the cart, checkout, placing and order cards ---
+    single {
+        Reservations(
+            reservationGroupRepository = get(), addressBookRepository = get(), geoRepository = get(), orderQmRepository = get(),
+            reservationDomainService = get(),
+        )
+    }
+
     // --- cart ---
     single {
         CartCommands(
             transactionManager = get(), cartRepository = get(), cartDomainService = get(), offerQmRepository = get(),
-            shopSettingsRepository = get(), clock = get(),
+            shopSettingsRepository = get(), reservations = get(), clock = get(),
         )
     }
     single { OpenCartUc(cartCommands = get(), cartDomainService = get()) }
@@ -98,14 +110,17 @@ val useCaseModule = module(createdAtStart = true) {
     single { SetCartReservationUc(cartCommands = get(), cartDomainService = get()) }
     single { MergeGuestCartUc(cartCommands = get(), cartDomainService = get()) }
     single {
-        GetCartUc(transactionManager = get(), cartRepository = get(), offerQmRepository = get(), shopSettingsRepository = get(), clock = get())
+        GetCartUc(
+            transactionManager = get(), cartRepository = get(), offerQmRepository = get(), shopSettingsRepository = get(), reservations = get(),
+            clock = get(),
+        )
     }
 
     // --- checkout ---
     single {
         GetCheckoutContextUc(
             transactionManager = get(), cartRepository = get(), offerQmRepository = get(), shopSettingsRepository = get(),
-            addressBookRepository = get(), geoRepository = get(), userRepository = get(), paymentGateways = get(), clock = get(),
+            addressBookRepository = get(), geoRepository = get(), userRepository = get(), paymentGateways = get(), reservations = get(), clock = get(),
         )
     }
     single {
@@ -114,7 +129,7 @@ val useCaseModule = module(createdAtStart = true) {
             addressBookRepository = get(), addressBookDomainService = get(), geoRepository = get(), userRepository = get(),
             orderDomainService = get(), orderRepository = get(), orderQmRepository = get(), inventoryDomainService = get(),
             inventoryRepository = get(), paymentRepository = get(), paymentIdGenerator = get(), paymentGateways = get(), smsSender = get(),
-            clock = get(),
+            reservations = get(), clock = get(),
         )
     }
     single { StartPaymentUc(transactionManager = get(), paymentRepository = get(), paymentGateways = get(), clock = get()) }
@@ -124,7 +139,8 @@ val useCaseModule = module(createdAtStart = true) {
     single {
         PaymentConfirmation(
             transactionManager = get(), paymentRepository = get(), orderRepository = get(), userRepository = get(), paymentDomainService = get(),
-            paymentGateways = get(), smsSender = get(), clock = get(),
+            reservationGroupRepository = get(), reservationDomainService = get(), shopSettingsRepository = get(), paymentGateways = get(), smsSender = get(),
+            clock = get(),
         )
     }
     single {
@@ -140,7 +156,10 @@ val useCaseModule = module(createdAtStart = true) {
         )
     }
     single {
-        GetPaymentResultUc(transactionManager = get(), paymentRepository = get(), orderQmRepository = get(), shopSettingsRepository = get(), clock = get())
+        GetPaymentResultUc(
+            transactionManager = get(), paymentRepository = get(), orderQmRepository = get(), shopSettingsRepository = get(),
+            reservationGroupRepository = get(), clock = get(),
+        )
     }
 
     // --- the scheduled jobs (roadmap section 15) ---
@@ -160,17 +179,25 @@ val useCaseModule = module(createdAtStart = true) {
     }
     single { DeleteStaleGuestCartsUc(transactionManager = get(), cartRepository = get(), clock = get()) }
     single { DeleteOldIdempotencyKeysUc(transactionManager = get(), idempotencyStore = get(), clock = get()) }
+    single { FindDueReservationGroupsUc(transactionManager = get(), reservationGroupRepository = get(), clock = get()) }
+    single {
+        ReleaseReservationGroupUc(
+            transactionManager = get(), reservationGroupRepository = get(), orderRepository = get(), orderQmRepository = get(),
+            reservationDomainService = get(), clock = get(),
+        )
+    }
+    single { GetMyReservationUc(transactionManager = get(), reservations = get(), clock = get()) }
 
     // --- orders ---
-    single { ListMyOrdersUc(transactionManager = get(), orderQmRepository = get(), shopSettingsRepository = get(), clock = get()) }
+    single { ListMyOrdersUc(transactionManager = get(), orderQmRepository = get(), shopSettingsRepository = get(), reservations = get(), clock = get()) }
     single {
         GetMyOrderUc(
             transactionManager = get(), orderQmRepository = get(), paymentRepository = get(), shopSettingsRepository = get(), colorRepository = get(),
-            clock = get(),
+            reservations = get(), clock = get(),
         )
     }
     single { ReorderUc(transactionManager = get(), orderQmRepository = get(), cartCommands = get(), cartDomainService = get()) }
-    single { GetOrderSummaryUc(transactionManager = get(), orderQmRepository = get(), shopSettingsRepository = get(), clock = get()) }
+    single { GetOrderSummaryUc(transactionManager = get(), orderQmRepository = get(), shopSettingsRepository = get(), reservations = get(), clock = get()) }
 
     // --- geo: queries ---
     single { ListProvincesUc(transactionManager = get(), geoRepository = get()) }

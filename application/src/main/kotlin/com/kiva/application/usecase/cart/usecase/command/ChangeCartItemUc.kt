@@ -46,7 +46,7 @@ class ChangeCartItemUc(
         val itemId = CartItemId.makeNew(command.itemId).getOrNull() ?: return Result.failure(Failure.Refused(Cart.Failure.CartItemNotFound))
 
         return cartCommands.run(command.caller, alsoOffersOf = listOfNotNull(variantId)) { context ->
-            cartDomainService.changeItem(context.cart, itemId, quantity, variantId, context.offers, context.settings, context.now)
+            cartDomainService.changeItem(context.cart, itemId, quantity, variantId, context.offers, context.settings, context.now, context.standing)
                 .mapOnSuccess { CartCommands.Done(affectedItemId = it) }
                 .mapOnFailure { Failure.Refused(it) }
         }

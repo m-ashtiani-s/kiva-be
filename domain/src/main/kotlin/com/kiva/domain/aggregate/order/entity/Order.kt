@@ -13,6 +13,7 @@ import com.kiva.domain.aggregate.order.entity.event.OrderExpired
 import com.kiva.domain.aggregate.order.entity.event.OrderPaid
 import com.kiva.domain.aggregate.order.entity.event.OrderPaymentFailed
 import com.kiva.domain.aggregate.order.entity.event.OrderPlaced
+import com.kiva.domain.aggregate.order.entity.event.OrderReleasedFromReservation
 import com.kiva.domain.aggregate.order.model.policy.PaymentPolicy
 import com.kiva.domain.aggregate.order.model.valueobject.AddressSnapshot
 import com.kiva.domain.aggregate.order.model.valueobject.CustomerNote
@@ -31,6 +32,7 @@ import com.kiva.domain.aggregate.payment.model.valueobject.PaymentFailureReason
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentPublicId
 import com.kiva.domain.aggregate.product.model.valueobject.MaxPerOrder
 import com.kiva.domain.aggregate.product.model.valueobject.ProductId
+import com.kiva.domain.aggregate.reservation.model.valueobject.ReservationGroupId
 import com.kiva.domain.aggregate.settings.model.valueobject.ShippingMethodCode
 import java.time.Duration
 import java.time.Instant
@@ -71,8 +73,12 @@ class Order private constructor() : EventSourceEntity<OrderDomainEvent>() {
     lateinit var totals: OrderTotals
         private set
 
-    /** «رزرو ۴ روزه» was asked for (round 2). */
+    /** «رزرو ۴ روزه» was asked for, for an order of its own (round 2). */
     var reserveRequested: Boolean = false
+        private set
+
+    /** The reservation group it ships with: one it joined when placed, or one it started or joined when paid. */
+    var reservationGroupId: ReservationGroupId? = null
         private set
     lateinit var placedOn: Instant
         private set
@@ -133,6 +139,7 @@ class Order private constructor() : EventSourceEntity<OrderDomainEvent>() {
             paymentPending: Duration,
             by: UserId,
             now: Instant,
+            reservationGroupId: ReservationGroupId? = null,
         ): Result<Order, PlaceFailure> {
             if (lines.isEmpty()) return Result.failure(PlaceFailure.NoLines)
             require(lines.map { it.lineId } == (1..lines.size).toList()) { "Order lines must be numbered 1 to n: ${lines.map { it.lineId }}" }
@@ -140,6 +147,7 @@ class Order private constructor() : EventSourceEntity<OrderDomainEvent>() {
             require(totals.linesCount == lines.size && totals.itemsCount == lines.sumOf { it.quantity.value }) { "The totals count other lines" }
             require(totals.subtotal == lines.map { it.totals.total }.sum()) { "The totals are not of these lines" }
             require(paymentPending > Duration.ZERO) { "The time to pay must be positive: $paymentPending" }
+            require(reservationGroupId == null || !reserveRequested) { "An order joining a reservation doesn't start its own" }
 
             val overLimit = productsOverLimit(lines.map { it.productId to it.quantity.value }, limits)
             if (overLimit.isNotEmpty()) return Result.failure(PlaceFailure.LimitExceeded(overLimit.toList()))
@@ -148,7 +156,7 @@ class Order private constructor() : EventSourceEntity<OrderDomainEvent>() {
             order.start { sequence ->
                 OrderPlaced(
                     id, sequence, now, by, code, userId, lines, address, messenger, shippingMethod, totals, reserveRequested,
-                    holdUntil = now.plus(paymentPending), customerNote, gift,
+                    holdUntil = now.plus(paymentPending), customerNote, gift, reservationGroupId,
                 )
             }
             return Result.success(order)
@@ -185,14 +193,34 @@ class Order private constructor() : EventSourceEntity<OrderDomainEvent>() {
      * the order hasn't expired.
      *
      * @param heldForReservation it is held with «رزرو ۴ روزه» (RESERVED) instead of being prepared now (PROCESSING);
-     *   decided by the caller with what is true now (round 2), and kept in the event as decided.
+     *   decided by the caller with what is true now (ReservationDomainService), and kept in the event as decided.
+     * @param reservationGroupId the group it is held in, or ships with; a group it joined when placed stays its own.
      */
-    fun markPaid(paymentId: PaymentPublicId, amount: Money, heldForReservation: Boolean, by: UserId, now: Instant): Result<Order, MarkPaidFailure> {
+    fun markPaid(
+        paymentId: PaymentPublicId,
+        amount: Money,
+        heldForReservation: Boolean,
+        by: UserId,
+        now: Instant,
+        reservationGroupId: ReservationGroupId? = null,
+    ): Result<Order, MarkPaidFailure> {
         if (status.isPaid) return Result.failure(MarkPaidFailure.AlreadyPaid)
         if (!isAwaitingPayment) return Result.failure(MarkPaidFailure.NotPayable(status))
         if (amount != totals.payable) return Result.failure(MarkPaidFailure.AmountMismatch(expected = totals.payable, paid = amount))
+        require(!heldForReservation || reservationGroupId != null) { "Order ${code.value} held for a reservation without its group" }
+        require(this.reservationGroupId == null || reservationGroupId == this.reservationGroupId) { "Order ${code.value} joined another group when placed" }
 
-        raiseEvent(OrderPaid(id, nextSequence(), now, by, paymentId, amount, heldForReservation))
+        raiseEvent(OrderPaid(id, nextSequence(), now, by, paymentId, amount, heldForReservation, reservationGroupId))
+        return Result.success(this)
+    }
+
+    /**
+     * Its reservation's time is over: a held order goes to be prepared, with the rest of its group. Only a RESERVED
+     * order moves; any other (let go already, or never held) changes nothing, so the job may run twice.
+     */
+    fun releaseFromReservation(by: UserId, now: Instant): Result<Order, Nothing> {
+        if (status != RESERVED) return Result.success(this)
+        raiseEvent(OrderReleasedFromReservation(id, nextSequence(), now, by))
         return Result.success(this)
     }
 
@@ -239,6 +267,7 @@ class Order private constructor() : EventSourceEntity<OrderDomainEvent>() {
                 holdUntil = event.holdUntil
                 customerNote = event.customerNote
                 gift = event.gift
+                reservationGroupId = event.reservationGroupId
                 status = PENDING_PAYMENT
             }
             is OrderPaymentFailed -> {
@@ -248,9 +277,11 @@ class Order private constructor() : EventSourceEntity<OrderDomainEvent>() {
             is OrderPaid -> {
                 paidOn = event.occurredOn
                 paidByPaymentId = event.paymentId
+                reservationGroupId = event.reservationGroupId ?: reservationGroupId
                 status = if (event.heldForReservation) RESERVED else PROCESSING
             }
             is OrderExpired -> status = EXPIRED
+            is OrderReleasedFromReservation -> status = PROCESSING
         }
     }
 

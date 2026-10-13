@@ -103,7 +103,7 @@ class WebV1CartMergeOnDatabaseTest {
     private val domain = stack.cartDomainService
 
     private fun commands(repository: CartRepository = carts) =
-        CartCommands(transactions, repository, domain, OfferQmRepositoryImpl(), ShopSettingsRepositoryImpl(), clock)
+        CartCommands(transactions, repository, domain, OfferQmRepositoryImpl(), ShopSettingsRepositoryImpl(), stack.reservations, clock)
 
     private val cartUseCases = commands().let { c ->
         CartUseCases(

@@ -4,6 +4,7 @@ import com.kiva.application.usecase.cart.usecase.query.GetCartUc
 import com.kiva.application.usecase.order.usecase.command.ReorderUc
 import com.kiva.application.usecase.order.usecase.query.GetMyOrderUc
 import com.kiva.application.usecase.order.usecase.query.ListMyOrdersUc
+import com.kiva.application.usecase.reservation.usecase.query.GetMyReservationUc
 import com.kiva.common.railway.unwrapOr
 import com.kiva.infrastructure.common.http.pageable
 import com.kiva.infrastructure.common.http.respondFailure
@@ -14,6 +15,8 @@ import com.kiva.infrastructure.httpserver.controller.httprest.model.response.Car
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.OrderDetailHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.OrderListHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.ReorderHttpResponse
+import com.kiva.infrastructure.httpserver.controller.httprest.model.response.ReservationInfoHttpResponse
+import io.ktor.http.HttpStatusCode
 import io.ktor.server.auth.authenticate
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
@@ -26,6 +29,7 @@ class MyOrderUseCases(
     val getMyOrder: GetMyOrderUc,
     val reorder: ReorderUc,
     val getCart: GetCartUc,
+    val getMyReservation: GetMyReservationUc,
 )
 
 /** The path parameter every order route names its order by. */
@@ -48,6 +52,12 @@ fun Route.webV1MyOrders(useCases: MyOrderUseCases) {
         get("/me/orders/{$ORDER_CODE}") {
             val query = GetMyOrderUc.Qry(call.accessPrincipal().userId, call.parameters[ORDER_CODE].orEmpty())
             call.respondResult(useCases.getMyOrder.execute(query)) { OrderDetailHttpResponse.from(it) }
+        }
+
+        // «رزرو ۴ روزه» while one holds; 204 when none does.
+        get("/me/reservation") {
+            val reservation = useCases.getMyReservation.execute(GetMyReservationUc.Qry(call.accessPrincipal().userId)).unwrapOr { it }
+            if (reservation == null) call.respond(HttpStatusCode.NoContent) else call.respond(ReservationInfoHttpResponse.from(reservation))
         }
 
         // The answer carries the whole cart, built as GET /cart builds it, with the issues of bringing it up to date.

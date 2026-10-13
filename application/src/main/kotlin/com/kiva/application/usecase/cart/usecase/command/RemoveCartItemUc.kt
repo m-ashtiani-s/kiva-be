@@ -34,7 +34,7 @@ class RemoveCartItemUc(
         val itemId = CartItemId.makeNew(command.itemId).getOrNull() ?: return Result.failure(Failure.Refused(Cart.Failure.CartItemNotFound))
 
         return cartCommands.run(command.caller) { context ->
-            cartDomainService.removeItem(context.cart, itemId, context.offers, context.settings, context.now)
+            cartDomainService.removeItem(context.cart, itemId, context.offers, context.settings, context.now, context.standing)
                 .mapOnSuccess { CartCommands.Done(removedLine = it) }
                 .mapOnFailure { Failure.Refused(it) }
         }

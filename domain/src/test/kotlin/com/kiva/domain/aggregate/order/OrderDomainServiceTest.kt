@@ -22,6 +22,7 @@ import com.kiva.domain.aggregate.order.model.valueobject.GiftNote
 import com.kiva.domain.aggregate.order.model.valueobject.OrderStatus.PENDING_PAYMENT
 import com.kiva.domain.aggregate.order.model.valueobject.OrderStatus.PROCESSING
 import com.kiva.domain.aggregate.order.model.valueobject.ShippingFreeReason
+import com.kiva.domain.aggregate.reservation.ReservationFixtures
 import com.kiva.domain.aggregate.settings.model.valueobject.ShippingMethodCode.COURIER
 import com.kiva.domain.aggregate.settings.model.valueobject.ShippingMethodCode.TIPAX
 import org.junit.jupiter.api.Test
@@ -134,6 +135,58 @@ class OrderDomainServiceTest {
             seen,
         )
         assertEquals(1, ids.handedOut)
+    }
+
+    @Test
+    fun `an order to the held reservation's address joins it - its method only, shipping free, its own «رزرو» ignored`() {
+        val group = ReservationFixtures.group()
+        val cheap = listOf(line(1, nilaBlack))
+        val joining = placement(lines = cheap, reserve = true, settings = PricingFixtures.shopSettings(reservationEnabled = true))
+            .copy(holdingGroup = group)
+        val inTime = now.plus(Duration.ofDays(1))
+
+        val order = service.placeOrder(joining, inTime).getOrNull()!!
+
+        assertEquals(group.id, order.reservationGroupId)
+        assertFalse(order.reserveRequested)
+        assertEquals(toman(0), order.totals.shippingCost)
+        assertEquals(ShippingFreeReason.RESERVATION_CONSOLIDATION, order.totals.shippingFreeReason)
+        assertEquals(toman(1_450_000), order.totals.payable)
+        assertEquals(PlaceOrderFailure.ShippingMethodUnavailable, service.placeOrder(joining.copy(shippingMethod = TIPAX), inTime).failureOrNull())
+        assertEquals(
+            assertIs<OrderPlaced>(order.getRecordedEvents().single()).reservationGroupId,
+            group.id,
+        )
+    }
+
+    @Test
+    fun `another address, the group's address edited, or the group's time over - no joining, shipping as usual`() {
+        val group = ReservationFixtures.group()
+        val cheap = listOf(line(1, nilaBlack))
+        val inTime = now.plus(Duration.ofDays(1))
+        val placements = listOf(
+            placement(lines = cheap).copy(holdingGroup = group, address = ReservationFixtures.address(addressId = 43)) to inTime,
+            placement(lines = cheap).copy(holdingGroup = group, address = ReservationFixtures.address(recipientName = "مریم محمدی")) to inTime,
+            placement(lines = cheap).copy(holdingGroup = group) to now.plus(Duration.ofDays(4)),
+        )
+
+        placements.forEach { (placement, at) ->
+            val order = service.placeOrder(placement, at).getOrNull()!!
+            assertEquals(null, order.reservationGroupId)
+            assertTrue(order.totals.shippingCost > toman(0))
+        }
+    }
+
+    @Test
+    fun `while a group holds, a new «رزرو» elsewhere is HAS_ACTIVE_RESERVATION - once its time is over it can be asked for`() {
+        val group = ReservationFixtures.group()
+        val elsewhere = placement(reserve = true, settings = PricingFixtures.shopSettings(reservationEnabled = true))
+            .copy(holdingGroup = group, address = ReservationFixtures.address(addressId = 43))
+
+        val refused = service.placeOrder(elsewhere, now.plus(Duration.ofDays(1))).failureOrNull()
+
+        assertEquals(PlaceOrderFailure.ReservationUnavailable(ReservationUnavailableReason.HAS_ACTIVE_RESERVATION), refused)
+        assertTrue(service.placeOrder(elsewhere, now.plus(Duration.ofDays(4))).getOrNull()!!.reserveRequested)
     }
 
     @Test

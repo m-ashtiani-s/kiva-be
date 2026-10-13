@@ -64,7 +64,7 @@ class ReorderUc(
         val change = cartCommands.run(CartCaller.Customer(command.userId), alsoOffersOf = lines.map { it.variantId }) { context ->
             // An order's line holds at most what a cart line may: it came from one.
             val asked = lines.map { it.variantId to CartQuantity.constructFromPersisted(minOf(it.quantity.value, CartQuantity.MAX)) }
-            reordered = cartDomainService.reorder(context.cart, asked, context.offers, context.settings, context.now)
+            reordered = cartDomainService.reorder(context.cart, asked, context.offers, context.settings, context.now, context.standing)
             Result.success(CartCommands.Done())
         }.unwrapOr { it }
 

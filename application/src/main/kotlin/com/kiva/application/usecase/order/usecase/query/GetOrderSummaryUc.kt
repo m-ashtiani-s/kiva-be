@@ -2,6 +2,7 @@ package com.kiva.application.usecase.order.usecase.query
 
 import com.kiva.application.dto.OrderSummaryDto
 import com.kiva.application.repository.OrderQmRepository
+import com.kiva.application.usecase.reservation.Reservations
 import com.kiva.common.logging.getLogger
 import com.kiva.common.railway.FailureKind
 import com.kiva.common.railway.Result
@@ -21,6 +22,7 @@ class GetOrderSummaryUc(
     private val transactionManager: TransactionManager,
     private val orderQmRepository: OrderQmRepository,
     private val shopSettingsRepository: ShopSettingsRepository,
+    private val reservations: Reservations,
     private val clock: Clock,
 ) : QueryUseCase<GetOrderSummaryUc.Qry, OrderSummaryDto, GetOrderSummaryUc.Failure> {
 
@@ -33,7 +35,8 @@ class GetOrderSummaryUc(
         logger.info("GetOrderSummaryUc.execute userId=${query.userId.value} orderCode=${query.orderCode.value}")
         return transactionManager.inTransaction {
             val order = orderQmRepository.findOfCustomer(query.userId, query.orderCode) ?: return@inTransaction Result.failure(Failure.OrderNotFound)
-            Result.success(OrderSummaryDto.of(order, shopSettingsRepository.get(), clock.instant()))
+            val now = clock.instant()
+            Result.success(OrderSummaryDto.of(order, shopSettingsRepository.get(), now, reservations.infosOf(listOf(order), now)[order.orderId]))
         }
     }
 
