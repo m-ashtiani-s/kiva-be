@@ -70,8 +70,31 @@ numbers, names and emails stay out of the log.
 
 To fill an empty local catalog with the prototype's 16 bags, start once with `KIVA_SEED_ENABLED=true`
 (in IntelliJ: *Run configuration → Environment variables*). The seeder goes through the use cases, like real
-data, and skips bags that are already there, so leaving it on is harmless. It is off by default and must stay
-off on a server.
+data, and skips bags that are already there, so leaving it on is harmless. It also makes the prototype's three
+discount codes (`KIVA10`, `WELCOME`, `PAEEZ15`) as rows, the way a server's codes are made by SQL until the panel
+has discount codes. It is off by default and must stay off on a server.
+
+### Buying: payments and jobs
+
+| Variable | What |
+| --- | --- |
+| `KIVA_PAYMENT_PROVIDER` | `fake` (the default, development only) or `zarinpal`. With `fake`, no money moves: the "bank" is a page on this server (`/dev/fake-gateway/…`) with «پرداخت موفق» and «انصراف», and a `WARN` on startup says so. |
+| `KIVA_ZARINPAL_MERCHANT_ID` | Required with `zarinpal`: the 36-character merchant id from the Zarinpal panel. A secret: never in git, never in a log. The app doesn't start without it, or with one that isn't a UUID. |
+| `KIVA_ZARINPAL_SANDBOX` | `true` (the default) uses Zarinpal's test host; `false` on the server, for real money. |
+| `KIVA_API_PUBLIC_URL` | This API's public address, without a `/` at the end (default `http://localhost:8080`). The gateway sends the shopper back to `{it}/api/v1/payment-callbacks/…`; on the server `https://api.kiva.ir`, whose domain must be the one registered with Zarinpal. |
+| `KIVA_PAYMENT_RESULT_URL` | The frontend's page that shows how the payment went (default `http://localhost:3100/checkout/result`); `?paymentId=…` is added. On the server `https://kiva.ir/checkout/result`. |
+| `KIVA_JOBS_ENABLED` | `true` (the default). Expiring unpaid orders (every minute), confirming payments left half-done (every 2 minutes), letting go of 4-day reservations (every minute), and cleaning up guests' carts (daily, 04:00 Tehran) and Idempotency-Keys (hourly). Keep it on, on the server too: without the jobs an unpaid order holds its stock for good. Tests turn it off and run the jobs themselves. |
+
+The shop's own rules (shipping costs, free shipping, the payment window, the gateways on offer, reservations) are in
+the database (`shopsettings_tbl`), not in the config. Locally, a shorter payment window shows an order expiring in a
+few minutes: `UPDATE shopsettings_tbl SET "paymentPendingMinutes" = 5` (5 to 60; the default is 15), and back to 15
+afterwards.
+
+A local purchase end to end: start with `KIVA_SEED_ENABLED=true`, run kiva-fe on `http://localhost:3100`, log in with
+the code from the `LogSmsSender` line, place an order, and press «پرداخت موفق» on the pretend bank's page; it sends
+the browser back through the callback to the frontend's result page. [docs/FRONTEND_PURCHASE.md](docs/FRONTEND_PURCHASE.md)
+is the whole flow for the frontend; [PURCHASE_REVIEW.md](PURCHASE_REVIEW.md) lists every risk the purchase defends
+against, with the tests that prove each defense.
 
 ## Test
 

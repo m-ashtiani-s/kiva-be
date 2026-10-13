@@ -2042,7 +2042,7 @@ Route: StartPaymentUc ← 201 با order و payment، یا 422 PAYMENT_GATEWAY_U
 
 ---
 
-### گام ۲۱: حمله‌ی آزمایشی و جمع‌بندی · M ⬜
+### گام ۲۱: حمله‌ی آزمایشی و جمع‌بندی · M ✅ (به‌جز دور با kiva-fe)
 
 **می‌سازی:**
 - `PURCHASE_REVIEW.md`: جدول بخش ۳، و جلوی هر ردیف اسم تست یا تست‌هایی که ازش محافظت می‌کنن.
@@ -2054,10 +2054,17 @@ Route: StartPaymentUc ← 201 با order و payment، یا 422 PAYMENT_GATEWAY_U
 وابسته به: گام‌های ۱ تا ۲۰
 
 **تموم شده یعنی:**
-- [ ] هر ردیف بخش ۳ حداقل یه تست داره.
-- [ ] هر خرابکاری حداقل یه تست رو قرمز می‌کنه.
-- [ ] تست اسکن لاگ سبزه.
+- [x] هر ردیف بخش ۳ حداقل یه تست داره.
+- [x] هر خرابکاری حداقل یه تست رو قرمز می‌کنه.
+- [x] تست اسکن لاگ سبزه.
 - [ ] یه دور واقعی با مرورگر و kiva-fe روی localhost:3100: مهمان دو کیف اضافه می‌کنه، وارد می‌شه (ادغام)، آدرس تازه می‌ده، با پست سفارش می‌ده، در درگاه آزمایشی پرداخت موفق ← صفحه‌ی نتیجه ← سفارش‌های من. یه بار هم انصراف ← تلاش دوباره ← موفق. یه بار هم صبر ۱۵ دقیقه‌ای (با `paymentPendingMinutes` ِ موقت ۱ دقیقه روی دیتابیس محلی) ← `EXPIRED` ← خرید دوباره.
+
+**یادداشت‌های پیاده‌سازی:**
+- `PURCHASE_REVIEW.md`: جدول بخش ۳ با اسم تست‌های هر ردیف (۲۱ از ۲۱)، نتیجه‌ی ده خرابکاری این گام و نُه خرابکاری کد تخفیف (گام ۲۰)، اسکن لاگ، و دور واقعی.
+- خرابکاری‌ها هر کدوم جدا اجرا و برگردونده شدن. ایندکس «یک پرداخت موفق» تو خود `V16` خراب شد، چون دیتابیس تست هر بار پاک و از migrationها ساخته می‌شه (حذف ایندکس روی یه کپی از دیتابیس اثری نداشت).
+- `PurchaseLogScanOnDatabaseTest`: یه خرید کامل با لاگ SQL روشن، با مقدارهای انتخاب‌شده؛ اولین اجرا سبز بود. دو نشت عمدی (شماره‌ی پیام‌رسان تو لاگ `PlaceOrderUc`، و لاگر پیش‌فرض Exposed با مقدارها) هر دو قرمزش کردن.
+- **دور واقعی بدون kiva-fe:** این محیط ریپوی kiva-fe رو نداره. پس سرور واقعی (`./gradlew run` روی یه دیتابیس محلی تازه، seed روشن، درگاه `fake`، jobها روشن) با Playwright و Chromium رد شد: مهمان دو کیف، ورود و ادغام، آدرس تازه، ثبت با پست، «پرداخت موفق» تو صفحه‌ی درگاه آزمایشی ← callback ← صفحه‌ی نتیجه ← سفارش‌های من؛ یه بار «انصراف» ← تلاش دوباره ← موفق؛ و یه بار `paymentPendingMinutes = 5` ← `EXPIRED` با job ← خرید دوباره. جزئیات تو بخش ۴ ِ `PURCHASE_REVIEW.md`. **همین دور با kiva-fe روی `localhost:3100` مونده.**
+- `docs/FRONTEND_PURCHASE.md` و README (متغیرهای پرداخت و jobها، درگاه آزمایشی، کوتاه کردن مهلت پرداخت روی دیتابیس محلی).
 
 ---
 
@@ -2164,6 +2171,7 @@ Route: StartPaymentUc ← 201 با order و payment، یا 422 PAYMENT_GATEWAY_U
 | ۲۱ مهر ۱۴۰۵ | ۱۸ | Purchase step 18 | `ZarinpalGateway` (REST v4 با `ktor-client` CIO، اتصال ۵ و کل ۱۵ ثانیه، مبلغ به ریال، `request`/`verify`/`inquiry`/`reverse`)، نگاشت کدها به `GatewayFailure` (چک‌شده با مستندات رسمی)، `CardMask.of` و `GatewayRefId.of` برای پاسخ درگاه، و `kiva.payment.provider = zarinpal` حالا واقعاً آداپتر رو می‌سازه. حالت استثنایی بخش ۱۰.۵ ساخته شد: verify ِ موفق برای سفارشی که دیگه قابل پرداخت نیست ← `reverse` بیرون تراکنش و `REFUNDED` (`Payment.refund`، `PaymentDomainService.mayReverse`/`reversed`)؛ رد ← `SUCCEEDED` و ERROR برای پشتیبانی. درگاه آزمایشی هم `reverse` و «بی‌جواب برای یه نوع تماس» گرفت. سؤال‌ها با پیشنهاد خودم: `Rejected` یعنی پیکربندی ما خرابه (‎`-9` تا ‎`-19`، ‎`-41`، ‎`-62`) و هیچ پرداختی تا درست شدنش انجام نمی‌شه، پس ERROR و هشدار؛ `Declined` یعنی پرداخت خود مشتری (‎`-51`، ‎`-54`، ‎`-55`، …)، کار عادی و INFO؛ قاطی کردنشون یعنی یا هشدار بی‌فایده برای هر انصراف، یا سکوت وقتی merchant id خرابه. timeout ِ verify ۱۵ ثانیه‌ست؛ اگه verify بعد از timeout ِ ما در زرین‌پال موفق بشه، پرداخت `VERIFYING` می‌مونه و job تطبیق دوباره verify می‌کنه و ۱۰۱ (قبلاً verify شده) رو موفقیت حساب می‌کنه، پس هیچ پولی گم نمی‌شه. **مونده:** یه دور واقعی با sandbox و kiva-fe (تماس بیرونی، کار کاربر). ۱۶ تست تازه، ۱۸۷۱ کل. کانترکت: ردیف ۳۵ |
 | ۲۱ مهر ۱۴۰۵ | ۱۹ | Purchase step 19 | `V19__reservation_groups.sql` (`reservationgroup_tbl` با شاخص یکتای «یه `HOLDING` برای هر کاربر»، `reservationgroupid_seq` از ۱۰۰۱، `orderqm_tbl.reservationGroupId`، و `reservationEnabled = TRUE`). دامنه: `ReservationGroup` (`isHolding`، `takes`، `release`)، `AddressFingerprint`، `ReservationDomainService` (`groupTaking`، `onPaid`، `release`)، `OrderPlacement.holdingGroup` و ادغام در `OrderDomainService`، `ReservationStanding` در دستورهای سبد، `OrderReleasedFromReservation`، و `reservationGroupId` در `OrderPlaced` و `OrderPaid`. کاربردی: `Reservations` (یه جا برای سبد، تسویه، ثبت و کارت سفارش)، `consolidation` در سبد و تسویه، `PaymentConfirmation` زیر قفل ۴، `GetMyReservationUc`، `FindDueReservationGroupsUc` + `ReleaseReservationGroupUc` و job ِ `release-reservations` (هر دقیقه). HTTP: `JalaliDates` و `ReservationTexts` (تایم‌لاین، پیام ادغام و شمارش معکوس)، `GET /me/reservation`، `consolidatedInto`. seeder: «کلاچ مهتاب» غیرقابل رزرو. سؤال‌ها با پیشنهاد خودم: مهلت از پرداخت (سفارش پرداخت‌نشده گروه باز نمی‌کنه)؛ «همون آدرس» = همون `addressId` و همون محتوا (fingerprint)، پس ویرایش یعنی ادغام نه. خرابکاری: حذف fingerprint ← «the group's address edited since» و `ReservationGroupTest`؛ حذف `isHolding` از `takes` ← `OrderDomainServiceTest` و `ReservationDomainServiceTest`؛ حذف قفل گروه ← «two «رزرو» orders paid at the same moment»؛ آزاد کردن پیش از موعد ← «letting go - not before its time». پیامک یادآوری ساخته نشد (اختیاری). ۳۵ تست تازه، ۱۹۰۶ کل. کانترکت: ردیف ۳۶ |
 | ۲۱ مهر ۱۴۰۵ | ۲۰ | Purchase step 20 | `V20__discount_codes.sql` (`discountcode_tbl` و `discountredemption_tbl` با `UNIQUE ("codeId", "orderId")`، و `_` در کد سبد). دامنه‌ی `discount`: `DiscountCodeText`، `DiscountCode` (`covers`)، `DiscountRedemption` (`HELD` ← `CONFIRMED`/`RELEASED`)، `DiscountPolicy` (گرد کردن با ریاضی صحیح) و `DiscountDomainService` (ترتیب بخش ۱۴، `redeem`). `OrderPricing.quote` با `CodeDiscount`، و `OrderTotals.discountCode` (رویدادهای قدیمی null). سرویس `Discounts`: بعد از هر تغییر سبد ← `DISCOUNT_REMOVED`، ثبت سفارش با قفل ردیف کد (قفل ۵) ← کد نامعتبر = `PRICE_CHANGED`، پرداخت ← `CONFIRMED`، انقضا ← `RELEASED`. `POST`/`DELETE /cart/discount-code`، `Cart.discount`، `DevDiscountCodeSeeder` (`KIVA10`، `WELCOME`، `PAEEZ15`). ادغام: کد خود کاربر می‌مونه (کانترکت). خرابکاری: بدون `FOR UPDATE` ِ کد، شمردن فقط `CONFIRMED`، بدون چک دوباره‌ی سبد، بدون `RELEASED`، بدون `CONFIRMED`، گرد کردن رو به پایین، `excludeSaleItems` نادیده، ارقام فارسی، و «خرید اول» ِ حذف‌شده: هر کدوم حداقل یه تست رو قرمز کرد. خرابکاری اول (قفل کد) هیچ تستی رو قرمز نکرد، چون دو سفارش تست یه کیف می‌خریدن و قفل موجودی جلوشون رو می‌گرفت؛ تست حالا دو کیف از دو محصول می‌خره. ۴۷ تست تازه، ۱۹۵۳ کل، سبز با `--rerun-tasks`. کانترکت: ردیف ۳۷ |
+| ۲۱ مهر ۱۴۰۵ | ۲۱ | Purchase step 21 | `PURCHASE_REVIEW.md`: هر ۲۱ ردیف بخش ۳ با تست‌هاش، ده خرابکاری این گام (مرتب‌سازی قبل از رزرو، `FOR UPDATE` ِ سبد، verify بدون چک «در انتظار پرداخت»، پیدا کردن پرداخت بدون authority، قفل idempotency، درگاه داخل تراکنش، ایندکس «یک پرداخت موفق»، چک «پرداخت در جریان» ِ job، مالکیت `GET /payments`، اعتماد به قیمت فرستاده‌شده) که هر کدوم حداقل یه تست رو قرمز کرد. `PurchaseLogScanOnDatabaseTest`: خرید کامل با لاگ SQL، بی‌نشت از اولین اجرا؛ دو نشت عمدی گرفته شد. `docs/FRONTEND_PURCHASE.md` و README. دور واقعی با Chromium روی سرور واقعی و درگاه آزمایشی (موفق، انصراف و تلاش دوباره، انقضا با job و خرید دوباره)، **بدون kiva-fe** که اینجا نیست؛ دور با kiva-fe مونده. کد اصلی عوض نشد. ۲ تست تازه، ۱۹۵۵ کل، سبز با `--rerun-tasks` |
 
 ---
 
