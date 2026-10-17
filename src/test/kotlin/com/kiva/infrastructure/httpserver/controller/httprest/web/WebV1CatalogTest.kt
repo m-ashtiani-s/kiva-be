@@ -1,5 +1,7 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
+import com.kiva.common.valueobject.SeoMeta
+import com.kiva.infrastructure.media.MediaUrls
 import com.kiva.application.dto.CategoryDto
 import com.kiva.application.dto.ColorDto
 import com.kiva.application.dto.MaterialDto
@@ -51,7 +53,7 @@ class WebV1CatalogTest {
         application {
             configureHttp()
             routing {
-                route(API_V1) { webV1Catalog(listColorsUc, listMaterialsUc, listCategoriesUc, getCategoryUc) }
+                route(API_V1) { webV1Catalog(listColorsUc, listMaterialsUc, listCategoriesUc, getCategoryUc, MediaUrls("https://api.kivashop.test/media"), "https://kivashop.test") }
             }
         }
         block()
@@ -63,7 +65,7 @@ class WebV1CatalogTest {
     private suspend fun HttpResponse.json(): JsonElement = Json.parseToJsonElement(bodyAsText())
     private fun json(text: String): JsonElement = Json.parseToJsonElement(text)
 
-    private val shoulder = CategoryDto(1, "shoulder", "کیف دوشی", null, BagType.HOBO, "lilac", 1, showInMenu = true, productCount = 0)
+    private val shoulder = CategoryDto(1, "shoulder", "کیف دوشی", null, BagType.HOBO, "lilac", null, null, 1, showInMenu = true, SeoMeta.NONE, productCount = 0)
 
     @Test
     fun `GET colors returns the palette as the contract's Color`() = withApp {
@@ -99,9 +101,15 @@ class WebV1CatalogTest {
     }
 
     @Test
-    fun `GET categories returns the contract's Category, with the icon as an object and description as null when it has none`() = withApp {
+    fun `GET categories returns the contract's Category, every field, the photo's 800 size and SEO falling back to the category`() = withApp {
         coEvery { listCategoriesUc.execute(ListCategoriesUc.Qry) } returns Result.success(
-            listOf(shoulder, shoulder.copy(id = 3, slug = "cross", name = "کراس‌بادی", description = "برای دست‌های آزاد")),
+            listOf(
+                shoulder,
+                shoulder.copy(
+                    id = 3, slug = "cross", name = "کراس‌بادی", description = "برای دست‌های آزاد", imagePath = "2036/04/med_x/w800.webp",
+                    seo = SeoMeta.constructFromPersisted("کراس | کیوا", null, true),
+                ),
+            ),
         )
 
         val response = client.get("$API_V1/categories")
@@ -109,10 +117,14 @@ class WebV1CatalogTest {
         assertEquals(HttpStatusCode.OK, response.status)
         assertEquals(
             json(
-                """[{"id":1,"slug":"shoulder","name":"کیف دوشی","description":null,"icon":{"bagType":"HOBO","colorKey":"lilac"},
-                     "productCount":0,"sortOrder":1,"showInMenu":true},
+                """[{"id":1,"slug":"shoulder","name":"کیف دوشی","description":null,"icon":{"bagType":"HOBO","colorKey":"lilac","imageUrl":null},
+                     "imageUrl":null,"productCount":0,"sortOrder":1,"showInMenu":true,
+                     "seo":{"title":"کیف دوشی | کیوا","description":null,"canonicalUrl":"https://kivashop.test/categories/shoulder","ogImageUrl":null,"noIndex":false}},
                     {"id":3,"slug":"cross","name":"کراس‌بادی","description":"برای دست‌های آزاد",
-                     "icon":{"bagType":"HOBO","colorKey":"lilac"},"productCount":0,"sortOrder":1,"showInMenu":true}]""",
+                     "icon":{"bagType":"HOBO","colorKey":"lilac","imageUrl":null},"imageUrl":"https://api.kivashop.test/media/2036/04/med_x/w800.webp",
+                     "productCount":0,"sortOrder":1,"showInMenu":true,
+                     "seo":{"title":"کراس | کیوا","description":"برای دست‌های آزاد","canonicalUrl":"https://kivashop.test/categories/cross",
+                            "ogImageUrl":"https://api.kivashop.test/media/2036/04/med_x/w800.webp","noIndex":true}}]""",
             ),
             response.json(),
         )

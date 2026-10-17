@@ -5,7 +5,9 @@ import com.kiva.domain.aggregate.color.model.valueobject.ColorName
 import com.kiva.domain.aggregate.color.model.valueobject.HexColor
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
 
 class ColorTest {
 
@@ -41,5 +43,20 @@ class ColorTest {
         assertEquals("#C8B6E2", lilac.hex.value)
         assertEquals(true, lilac.isLight)
         assertEquals(4, lilac.sortOrder)
+    }
+
+    @Test
+    fun `create keeps every value - change keeps the key and replaces the rest`() {
+        val created = Color.create(ColorKey.constructFromPersisted("mint"), ColorName.constructFromPersisted("نعنایی"), HexColor.constructFromPersisted("#A8E6CF"), true, 14)
+
+        val changed = created.change(ColorName.constructFromPersisted("سبز نعنایی"), HexColor.constructFromPersisted("#98D6BF"), false, 2)
+
+        assertEquals("mint", changed.key.value)
+        assertEquals("سبز نعنایی", changed.name.value)
+        assertEquals("#98D6BF", changed.hex.value)
+        assertEquals(false, changed.isLight)
+        assertEquals(2, changed.sortOrder)
+        assertFalse(changed.sameValuesAs(created))
+        assertTrue(created.change(created.name, created.hex, created.isLight, created.sortOrder).sameValuesAs(created))
     }
 }

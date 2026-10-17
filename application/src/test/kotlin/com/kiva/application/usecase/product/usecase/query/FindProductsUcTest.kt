@@ -1,5 +1,9 @@
 package com.kiva.application.usecase.product.usecase.query
 
+import com.kiva.application.util.UnusedMaterialRepository
+import com.kiva.application.util.UnusedColorRepository
+import com.kiva.application.util.UnusedCategoryRepository
+import com.kiva.application.util.UnusedProductQmRepository
 import com.kiva.application.repository.ProductFacetsQm
 import com.kiva.application.dto.PriceDto
 import com.kiva.application.dto.ProductCardDto
@@ -52,7 +56,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 /** The read model as far as the list needs it: hands back [cards] and remembers what it was asked. */
-private class ListReadModel(var cards: List<ProductCardQm> = emptyList()) : ProductQmRepository {
+private class ListReadModel(var cards: List<ProductCardQm> = emptyList()) : UnusedProductQmRepository() {
     var askedFilter: ProductFilter? = null
     var askedPageable: Pageable? = null
 
@@ -62,23 +66,13 @@ private class ListReadModel(var cards: List<ProductCardQm> = emptyList()) : Prod
         return Page(cards, pageable.page, pageable.size, cards.size.toLong())
     }
 
-    override fun findVariant(variantId: VariantId): VariantQm? = error("not used here")
-
     override fun findDetail(ref: ProductRef): ProductDetailQm? = error("not used here")
-
-    override fun facets(filter: ProductFilter, now: Instant): ProductFacetsQm = error("not used here")
 
     override fun findRelated(productId: ProductId, limit: Int): List<ProductCardQm>? = error("not used here")
 
-    override fun isSlugTaken(slug: Slug): Boolean = error("not used here")
-
     override fun findTakenSkus(skus: Collection<Sku>): Set<Sku> = error("not used here")
 
-    override fun countActiveByCategory(): Map<Slug, Int> = error("not used here")
-
     override fun countActiveByMaterial(): Map<Slug, Int> = error("not used here")
-
-    override fun countActiveByColor(): Map<ColorKey, Int> = error("not used here")
 
     override fun refreshSearchText(of: ProductQmRepository.NamedInSearch): Int = error("not used here")
 }
@@ -89,25 +83,22 @@ class FindProductsUcTest {
     private val transactionManager = MockTransactionManager()
     private val readModel = ListReadModel()
 
-    private val categories = object : CategoryRepository {
+    private val categories = object : UnusedCategoryRepository() {
         private val all = listOf(CategoryFactory.generate(id = 1, slug = "shoulder", name = "کیف دوشی"))
         override fun findAll(): List<Category> = all
-        override fun findBySlug(slug: Slug): Category? = error("not used here")
         override fun findById(id: CategoryId): Category? = error("not used here")
     }
-    private val colors = object : ColorRepository {
+    private val colors = object : UnusedColorRepository() {
         private val palette = listOf(
             ColorFactory.generate(key = "lilac", name = "یاسی", hex = "#C8B6E2", isLight = true, sortOrder = 4),
             ColorFactory.generate(key = "black", name = "مشکی", hex = "#2B2930", isLight = false, sortOrder = 1),
         )
         override fun findAll(): List<Color> = palette
-        override fun findByKey(key: ColorKey): Color? = error("not used here")
     }
 
-    private val materials = object : MaterialRepository {
+    private val materials = object : UnusedMaterialRepository() {
         private val all = listOf(MaterialFactory.generate(id = 11, slug = "satin", name = "ساتن"))
         override fun findAll(): List<Material> = all
-        override fun findById(id: MaterialId): Material? = error("not used here")
     }
 
     private val useCase = FindProductsUc(

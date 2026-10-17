@@ -5,8 +5,10 @@ import com.kiva.application.repository.ProductQmRepository
 import com.kiva.application.util.MockTransactionManager
 import com.kiva.application.util.factory.CategoryFactory
 import com.kiva.common.railway.Result
+import com.kiva.common.valueobject.SeoMeta
 import com.kiva.common.valueobject.Slug
 import com.kiva.domain.aggregate.category.repository.CategoryRepository
+import com.kiva.domain.aggregate.media.repository.MediaRepository
 import com.kiva.domain.aggregate.product.model.valueobject.BagType
 import io.mockk.confirmVerified
 import io.mockk.every
@@ -22,7 +24,8 @@ class GetCategoryUcTest {
     private val transactionManager = MockTransactionManager()
     private val categories = mockk<CategoryRepository>()
     private val productQm = mockk<ProductQmRepository>()
-    private val useCase = GetCategoryUc(transactionManager, categories, productQm)
+    private val media = mockk<MediaRepository>()
+    private val useCase = GetCategoryUc(transactionManager, categories, productQm, media)
 
     @Test
     fun `an existing slug returns its category, with its products in the shop`() = runTest {
@@ -33,7 +36,7 @@ class GetCategoryUcTest {
         val result = useCase.execute(GetCategoryUc.Qry("shoulder"))
 
         assertEquals(
-            Result.success(CategoryDto(1, "shoulder", "کیف دوشی", null, BagType.HOBO, "lilac", 1, showInMenu = true, productCount = 4)),
+            Result.success(CategoryDto(1, "shoulder", "کیف دوشی", null, BagType.HOBO, "lilac", null, null, 1, showInMenu = true, SeoMeta.NONE, productCount = 4)),
             result,
         )
         assertEquals(1, transactionManager.transactionsOpened)

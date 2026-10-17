@@ -85,7 +85,7 @@ class CatalogMigrationTest {
     fun `care instructions default to an empty list`() {
         val stored = transaction(db) {
             exec("""INSERT INTO material_tbl (slug, name, family) VALUES ('linen', 'کتان', 'COTTON')""")
-            val care = MaterialRepositoryImpl().findAll().single { it.slug.value == "linen" }.careInstructions
+            val care = MaterialRepositoryImpl().findAll().single { it.slug.value == "linen" }.careInstructions.items
             rollback()
             care
         }

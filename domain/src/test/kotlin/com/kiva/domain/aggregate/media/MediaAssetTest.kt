@@ -35,6 +35,15 @@ class MediaAssetTest {
     }
 
     @Test
+    fun `the size to show at a width is the largest not wider - or the smallest when all are wider`() {
+        val photo = MediaFixtures.photo(widths = listOf(160, 480, 640))
+
+        assertEquals("${photo.storageDir}/w640.webp", photo.pathFor(800))
+        assertEquals("${photo.storageDir}/w480.webp", photo.pathFor(480))
+        assertEquals("${photo.storageDir}/w160.webp", photo.pathFor(100))
+    }
+
+    @Test
     fun `sizes given in any order are kept smallest first`() {
         val dir = "2036/03/${MediaFixtures.id().value}"
         val photo = MediaAsset.upload(

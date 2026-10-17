@@ -1,5 +1,6 @@
 package com.kiva.application.usecase.inventory.usecase.command
 
+import com.kiva.application.util.UnusedProductQmRepository
 import com.kiva.application.repository.ProductFacetsQm
 import com.kiva.application.dto.InventoryAdjustmentDto
 import com.kiva.application.repository.ProductCardQm
@@ -68,28 +69,18 @@ private class InMemoryInventories : InventoryRepository {
 }
 
 /** The read model as far as stock needs it: which colors some product has. */
-private class KnownColors(vararg colors: VariantQm) : ProductQmRepository {
+private class KnownColors(vararg colors: VariantQm) : UnusedProductQmRepository() {
     private val byId = colors.associateBy { it.variantId }
 
     override fun findVariant(variantId: VariantId): VariantQm? = byId[variantId]
 
-    override fun find(filter: ProductFilter, pageable: Pageable): Page<ProductCardQm> = error("not used here")
-
     override fun findDetail(ref: ProductRef): ProductDetailQm? = error("not used here")
-
-    override fun facets(filter: ProductFilter, now: Instant): ProductFacetsQm = error("not used here")
 
     override fun findRelated(productId: ProductId, limit: Int): List<ProductCardQm>? = error("not used here")
 
-    override fun isSlugTaken(slug: Slug): Boolean = error("not used here")
-
     override fun findTakenSkus(skus: Collection<Sku>): Set<Sku> = error("not used here")
 
-    override fun countActiveByCategory(): Map<Slug, Int> = error("not used here")
-
     override fun countActiveByMaterial(): Map<Slug, Int> = error("not used here")
-
-    override fun countActiveByColor(): Map<ColorKey, Int> = error("not used here")
 
     override fun refreshSearchText(of: ProductQmRepository.NamedInSearch): Int = error("not used here")
 }

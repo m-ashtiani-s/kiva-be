@@ -8,18 +8,23 @@ import com.kiva.infrastructure.common.http.respondResult
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.CategoryHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.ColorHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.MaterialHttpResponse
+import com.kiva.infrastructure.media.MediaUrls
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 
 /**
  * Catalog reference data: colors, materials, categories (contract tag `Catalog`). Mounted under `/api/v1`.
  * The status of each failure comes from its kind (see respondResult), so there is no failure mapping here.
+ *
+ * @param mediaUrls where the category photos are served from; @param siteUrl the shop's address, for canonical links.
  */
 fun Route.webV1Catalog(
     listColorsUc: ListColorsUc,
     listMaterialsUc: ListMaterialsUc,
     listCategoriesUc: ListCategoriesUc,
     getCategoryUc: GetCategoryUc,
+    mediaUrls: MediaUrls,
+    siteUrl: String,
 ) {
     get("/colors") {
         call.respondResult(listColorsUc.execute(ListColorsUc.Qry)) { colors -> colors.map(ColorHttpResponse::from) }
@@ -30,12 +35,12 @@ fun Route.webV1Catalog(
     }
 
     get("/categories") {
-        call.respondResult(listCategoriesUc.execute(ListCategoriesUc.Qry)) { categories -> categories.map(CategoryHttpResponse::from) }
+        call.respondResult(listCategoriesUc.execute(ListCategoriesUc.Qry)) { categories -> categories.map { CategoryHttpResponse.from(it, mediaUrls, siteUrl) } }
     }
 
     get("/categories/{slug}") {
         // Always present: the route only matches when the segment is there.
         val slug = call.pathParameters["slug"].orEmpty()
-        call.respondResult(getCategoryUc.execute(GetCategoryUc.Qry(slug))) { CategoryHttpResponse.from(it) }
+        call.respondResult(getCategoryUc.execute(GetCategoryUc.Qry(slug))) { CategoryHttpResponse.from(it, mediaUrls, siteUrl) }
     }
 }

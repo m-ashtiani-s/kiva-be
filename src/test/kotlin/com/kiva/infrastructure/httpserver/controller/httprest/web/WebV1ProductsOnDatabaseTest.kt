@@ -1,5 +1,6 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
+import com.kiva.infrastructure.persistence.exposed.MediaRepositoryImpl
 import com.kiva.application.usecase.catalog.usecase.query.ListCategoriesUc
 import com.kiva.application.usecase.product.usecase.query.FindProductsUc
 import com.kiva.application.usecase.product.usecase.query.FindRelatedProductsUc
@@ -276,7 +277,7 @@ class WebV1ProductsOnDatabaseTest {
 
     @Test
     fun `the menus' productCount is the facets' count without filters`() = withApp {
-        val menu = ListCategoriesUc(ExposedTransactionManager(db), CategoryRepositoryImpl(), ProductQmRepositoryImpl())
+        val menu = ListCategoriesUc(ExposedTransactionManager(db), CategoryRepositoryImpl(), ProductQmRepositoryImpl(), MediaRepositoryImpl())
             .execute(ListCategoriesUc.Qry).getOrNull()!!
 
         assertEquals(menu.associate { it.slug to it.productCount.toLong() }, facetsOf("").counts("categories"))

@@ -1,5 +1,9 @@
 package com.kiva.application.usecase.product.usecase.command
 
+import com.kiva.application.util.UnusedMaterialRepository
+import com.kiva.application.util.UnusedColorRepository
+import com.kiva.application.util.UnusedCategoryRepository
+import com.kiva.application.util.UnusedProductQmRepository
 import com.kiva.application.repository.ProductFacetsQm
 import com.kiva.application.dto.CreatedProductDto
 import com.kiva.application.repository.ProductCardQm
@@ -84,12 +88,8 @@ private class CountingIds : ProductIdGenerator {
 }
 
 /** The read model as far as creating a product needs it: the slugs and codes already in use. */
-private class ReadModel(val takenSlugs: Set<String> = emptySet(), val takenSkus: Set<String> = emptySet()) : ProductQmRepository {
-    override fun find(filter: ProductFilter, pageable: Pageable): Page<ProductCardQm> = error("not used here")
-
+private class ReadModel(val takenSlugs: Set<String> = emptySet(), val takenSkus: Set<String> = emptySet()) : UnusedProductQmRepository() {
     override fun findDetail(ref: ProductRef): ProductDetailQm? = error("not used here")
-
-    override fun facets(filter: ProductFilter, now: Instant): ProductFacetsQm = error("not used here")
 
     override fun findRelated(productId: ProductId, limit: Int): List<ProductCardQm>? = error("not used here")
 
@@ -97,15 +97,10 @@ private class ReadModel(val takenSlugs: Set<String> = emptySet(), val takenSkus:
 
     override fun findTakenSkus(skus: Collection<Sku>): Set<Sku> = skus.filter { it.value in takenSkus }.toSet()
 
-    override fun findVariant(variantId: VariantId): VariantQm? = error("not used here")
-
     override fun countActiveByCategory(): Map<Slug, Int> = error("not used here")
-
-    override fun countActiveByMaterial(): Map<Slug, Int> = error("not used here")
 
     override fun countActiveByColor(): Map<ColorKey, Int> = error("not used here")
 
-    override fun refreshSearchText(of: ProductQmRepository.NamedInSearch): Int = error("not used here")
 }
 
 class CreateProductUcTest {
@@ -118,18 +113,18 @@ class CreateProductUcTest {
     private val ids = CountingIds()
 
     // The shoulder category, satin, and a palette of lilac, black and cream.
-    private val categories = object : CategoryRepository {
+    private val categories = object : UnusedCategoryRepository() {
         private val shoulder = CategoryFactory.generate(id = 1, slug = "shoulder")
         override fun findAll(): List<Category> = listOf(shoulder)
         override fun findBySlug(slug: Slug): Category? = shoulder.takeIf { it.slug == slug }
         override fun findById(id: CategoryId): Category? = shoulder.takeIf { it.id == id }
     }
-    private val materials = object : MaterialRepository {
+    private val materials = object : UnusedMaterialRepository() {
         private val satin = MaterialFactory.generate(id = 11, slug = "satin", name = "ساتن")
         override fun findAll(): List<Material> = listOf(satin)
         override fun findById(id: MaterialId): Material? = satin.takeIf { it.id == id }
     }
-    private val colors = object : ColorRepository {
+    private val colors = object : UnusedColorRepository() {
         private val palette = listOf("lilac", "black", "cream").map { ColorFactory.generate(key = it) }
         override fun findAll(): List<Color> = palette
         override fun findByKey(key: ColorKey): Color? = palette.firstOrNull { it.key == key }

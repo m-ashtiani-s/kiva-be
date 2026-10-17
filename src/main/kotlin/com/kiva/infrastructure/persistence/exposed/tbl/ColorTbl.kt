@@ -9,4 +9,7 @@ object ColorTbl : LongIdTable(name = "color_tbl", columnName = "pId") {
     val hex = varchar("hex", 7)
     val isLight = bool("isLight")
     val sortOrder = integer("sortOrder")
+
+    /** The unique key on [colorKey] as V1 named it (the column's case kept); the database names it when it refuses a save. */
+    const val KEY_KEY = "color_tbl_colorKey_key"
 }

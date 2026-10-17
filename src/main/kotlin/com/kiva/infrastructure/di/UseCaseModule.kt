@@ -38,6 +38,21 @@ import com.kiva.application.usecase.cart.usecase.command.RemoveCartItemUc
 import com.kiva.application.usecase.cart.usecase.command.RemoveDiscountCodeUc
 import com.kiva.application.usecase.cart.usecase.command.SetCartReservationUc
 import com.kiva.application.usecase.cart.usecase.query.GetCartUc
+import com.kiva.application.usecase.catalog.usecase.command.CreateCategoryUc
+import com.kiva.application.usecase.catalog.usecase.command.CreateColorUc
+import com.kiva.application.usecase.catalog.usecase.command.CreateMaterialUc
+import com.kiva.application.usecase.catalog.usecase.command.DeleteCategoryUc
+import com.kiva.application.usecase.catalog.usecase.command.DeleteColorUc
+import com.kiva.application.usecase.catalog.usecase.command.DeleteMaterialUc
+import com.kiva.application.usecase.catalog.usecase.command.UpdateCategoryUc
+import com.kiva.application.usecase.catalog.usecase.command.UpdateColorUc
+import com.kiva.application.usecase.catalog.usecase.command.UpdateMaterialUc
+import com.kiva.application.usecase.catalog.usecase.query.GetAdminCategoryUc
+import com.kiva.application.usecase.catalog.usecase.query.GetAdminColorUc
+import com.kiva.application.usecase.catalog.usecase.query.GetAdminMaterialUc
+import com.kiva.application.usecase.catalog.usecase.query.ListAdminCategoriesUc
+import com.kiva.application.usecase.catalog.usecase.query.ListAdminMaterialsUc
+import com.kiva.application.usecase.media.MediaAttachments
 import com.kiva.application.usecase.catalog.usecase.query.GetCategoryUc
 import com.kiva.application.usecase.catalog.usecase.query.ListCategoriesUc
 import com.kiva.application.usecase.catalog.usecase.query.ListColorsUc
@@ -80,8 +95,39 @@ val useCaseModule = module(createdAtStart = true) {
     // --- catalog: queries ---
     single { ListColorsUc(transactionManager = get(), colorRepository = get(), productQmRepository = get()) }
     single { ListMaterialsUc(transactionManager = get(), materialRepository = get(), productQmRepository = get()) }
-    single { ListCategoriesUc(transactionManager = get(), categoryRepository = get(), productQmRepository = get()) }
-    single { GetCategoryUc(transactionManager = get(), categoryRepository = get(), productQmRepository = get()) }
+    single { ListCategoriesUc(transactionManager = get(), categoryRepository = get(), productQmRepository = get(), mediaRepository = get()) }
+    single { GetCategoryUc(transactionManager = get(), categoryRepository = get(), productQmRepository = get(), mediaRepository = get()) }
+
+    // --- admin: categories, colors and materials (step 1.3) ---
+    single { MediaAttachments(mediaRepository = get()) }
+    single { ListAdminCategoriesUc(transactionManager = get(), categoryRepository = get(), productQmRepository = get(), mediaRepository = get()) }
+    single { GetAdminCategoryUc(transactionManager = get(), categoryRepository = get(), productQmRepository = get(), mediaRepository = get()) }
+    single {
+        CreateCategoryUc(
+            transactionManager = get(), categoryRepository = get(), categoryIdGenerator = get(), colorRepository = get(), mediaAttachments = get(),
+            auditTrail = get(), clock = get(),
+        )
+    }
+    single {
+        UpdateCategoryUc(
+            transactionManager = get(), categoryRepository = get(), colorRepository = get(), productQmRepository = get(), mediaAttachments = get(),
+            auditTrail = get(), clock = get(),
+        )
+    }
+    single { DeleteCategoryUc(transactionManager = get(), categoryRepository = get(), productQmRepository = get(), auditTrail = get(), clock = get()) }
+    single { GetAdminColorUc(transactionManager = get(), colorRepository = get()) }
+    single { CreateColorUc(transactionManager = get(), colorRepository = get(), auditTrail = get(), clock = get()) }
+    single { UpdateColorUc(transactionManager = get(), colorRepository = get(), productQmRepository = get(), auditTrail = get(), clock = get()) }
+    single {
+        DeleteColorUc(
+            transactionManager = get(), colorRepository = get(), categoryRepository = get(), productQmRepository = get(), auditTrail = get(), clock = get(),
+        )
+    }
+    single { ListAdminMaterialsUc(transactionManager = get(), materialRepository = get(), productQmRepository = get()) }
+    single { GetAdminMaterialUc(transactionManager = get(), materialRepository = get(), productQmRepository = get()) }
+    single { CreateMaterialUc(transactionManager = get(), materialRepository = get(), materialIdGenerator = get(), auditTrail = get(), clock = get()) }
+    single { UpdateMaterialUc(transactionManager = get(), materialRepository = get(), productQmRepository = get(), auditTrail = get(), clock = get()) }
+    single { DeleteMaterialUc(transactionManager = get(), materialRepository = get(), productQmRepository = get(), auditTrail = get(), clock = get()) }
 
     // --- address book ---
     single { ListMyAddressesUc(transactionManager = get(), addressBookRepository = get(), geoRepository = get()) }

@@ -61,6 +61,18 @@ interface ProductQmRepository {
     fun countActiveByColor(): Map<ColorKey, Int>
 
     /**
+     * How many products, whatever their status (drafts and archived ones too), are in each category, by slug: the panel's
+     * count, and what keeps a category from being removed. A category with none is missing.
+     */
+    fun countAllByCategory(): Map<Slug, Int>
+
+    /** How many products, whatever their status, are made of each material, by slug. A material with none is missing. */
+    fun countAllByMaterial(): Map<Slug, Int>
+
+    /** How many products, whatever their status, have [key] among their colors, active or not. */
+    fun countAllWithColor(key: ColorKey): Int
+
+    /**
      * Writes the search text again for every product, whatever its status, that shows this category, material or
      * color, so a search for its new name finds them. The use case that renames one calls it in the same transaction,
      * after the rename. It goes through the projectors' own code, so the rules of the search text stay in one place.

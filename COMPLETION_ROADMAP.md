@@ -764,7 +764,7 @@ Route: 201 با MediaAsset
 | ۱.۰ | کانترکت 1.8.0 و آماده‌سازی | M | ✅ |
 | ۱.۱ | لاگ تغییرات | M | ✅ |
 | ۱.۲ | آپلود مدیا | L | ✅ |
-| ۱.۳ | دسته، رنگ و متریال | M | ⬜ |
+| ۱.۳ | دسته، رنگ و متریال | M | ✅ |
 | ۱.۴ | read model ِ پنل و دو Query ِ محصول | M | ⬜ |
 | ۱.۵ | ساخت و ویرایش محصول، `If-Match` | L | ⬜ |
 | ۱.۶ | وضعیت، آرشیو و انتشار زمان‌بندی‌شده | M | ⬜ |
@@ -1262,7 +1262,7 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 
 ---
 
-#### گام ۱.۳: دسته، رنگ و متریال · M ⬜
+#### گام ۱.۳: دسته، رنگ و متریال · M ✅
 
 **می‌سازی:** `V23__catalog_admin.sql`؛ متدهای `create`/`change` و VOهای تازه‌ی ۶.۳؛ نوشتن در سه Repository و `UniqueTakenException`؛ شمارش «در استفاده» در `ProductQmRepository` (`countAllByCategory`، `countAllByMaterial`، `countAllByColor`، به‌علاوه‌ی `countCategoriesWithIcon(colorKey)` در `CategoryRepository`)؛ ۱۱ UseCase ِ جدول ۶.۵؛ `webV1AdminCatalog.kt`؛ `imageUrl` و `seo` در پاسخ دسته (پنل و فروشگاه).
 
@@ -1273,16 +1273,27 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 - چرا `refreshSearchText` در همون تراکنش؟ وگرنه بین commit ِ اسم تازه و به‌روزرسانی جستجو، محصول با اسم تازه پیدا نمی‌شه، و اگه دومی شکست بخوره هیچ‌وقت پیدا نمی‌شه.
 
 **تموم شده یعنی:**
-- [ ] ساخت دسته با همه‌ی فیلدها ← `201`؛ بدون `iconBagType` ← ۴۰۰؛ `iconColorKey` ِ ناموجود ← `400 COLOR_NOT_FOUND`؛ slug ِ تکراری ← `409 DUPLICATE_SLUG`؛ دو ساخت همزمان با یه slug، ۱۰ بار ← یکی ۲۰۱ و یکی ۴۰۹، هیچ‌وقت ۵۰۰.
-- [ ] تغییر اسم دسته ← جستجوی `/products?q=<اسم تازه>` محصولاتش رو پیدا می‌کنه، اسم قدیمی نه.
-- [ ] تغییر slug ِ دسته ← `/products?category=<slug تازه>` کار می‌کنه.
-- [ ] حذف دسته‌ای که فقط یه محصول **آرشیو** داره ← `409 IN_USE` با `productCount = 1`؛ دسته‌ی خالی ← `204` و لاگ `CATEGORY_DELETED`.
-- [ ] رنگ: کلید تکراری ← `409 DUPLICATE_CODE`؛ `PUT` با کلید دیگه ← `400 COLOR_KEY_IMMUTABLE`؛ حذف رنگی که فقط روی یه ورینت **غیرفعال** هست ← `409 IN_USE` (`productCount = 1`)؛ حذف رنگ آیکن یه دسته ← `409 IN_USE` (`categoryCount = 1`).
-- [ ] متریال: `family` ِ غلط ← `400 MATERIAL_FAMILY_INVALID`؛ ۱۱ دستور نگه‌داری ← ۴۰۰؛ تغییر اسم ← جستجو.
-- [ ] `GET /admin/categories` و `/admin/materials`: `productCount` پیش‌نویس و آرشیو رو هم می‌شمره؛ `GET /categories` و `/materials` همون «فقط منتشرشده».
-- [ ] هر نوشتن یه ردیف لاگ با `changes` ِ درست؛ `PUT` ِ بی‌تغییر هیچی.
-- [ ] `OPERATOR` ← 403.
-- [ ] خرابکاری: حذف `refreshSearchText` از `UpdateCategoryUc` ← تست جستجو قرمز.
+- [x] ساخت دسته با همه‌ی فیلدها ← `201`؛ بدون `iconBagType` ← ۴۰۰؛ `iconColorKey` ِ ناموجود ← `400 COLOR_NOT_FOUND`؛ slug ِ تکراری ← `409 DUPLICATE_SLUG`؛ دو ساخت همزمان با یه slug، ۱۰ بار ← یکی ۲۰۱ و یکی ۴۰۹، هیچ‌وقت ۵۰۰.
+- [x] تغییر اسم دسته ← جستجوی `/products?q=<اسم تازه>` محصولاتش رو پیدا می‌کنه، اسم قدیمی نه.
+- [x] تغییر slug ِ دسته ← `/products?category=<slug تازه>` کار می‌کنه.
+- [x] حذف دسته‌ای که فقط یه محصول **آرشیو** داره ← `409 IN_USE` با `productCount = 1`؛ دسته‌ی خالی ← `204` و لاگ `CATEGORY_DELETED`.
+- [x] رنگ: کلید تکراری ← `409 DUPLICATE_CODE`؛ `PUT` با کلید دیگه ← `400 COLOR_KEY_IMMUTABLE`؛ حذف رنگی که فقط روی یه ورینت **غیرفعال** هست ← `409 IN_USE` (`productCount = 1`)؛ حذف رنگ آیکن یه دسته ← `409 IN_USE` (`categoryCount = 1`).
+- [x] متریال: `family` ِ غلط ← `400 MATERIAL_FAMILY_INVALID`؛ ۱۱ دستور نگه‌داری ← ۴۰۰؛ تغییر اسم ← جستجو.
+- [x] `GET /admin/categories` و `/admin/materials`: `productCount` پیش‌نویس و آرشیو رو هم می‌شمره؛ `GET /categories` و `/materials` همون «فقط منتشرشده».
+- [x] هر نوشتن یه ردیف لاگ با `changes` ِ درست؛ `PUT` ِ بی‌تغییر هیچی.
+- [x] `OPERATOR` ← 403.
+- [x] خرابکاری: حذف `refreshSearchText` از `UpdateCategoryUc` ← تست جستجو قرمز.
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- سئو یه VO ِ مشترک داره: `SeoMeta` در `common` (`title` ≤ ۷۰، `description` ≤ ۱۷۰، `noIndex`؛ خالی = null)، به‌جای `CategorySeo` و `ProductSeo` ِ جدا. محصول (۱.۵)، صفحه و بلاگ هم همین رو می‌گیرن.
+- دسته و متریال شناسه‌شون رو قبل از insert از sequence ِ identity ِ جدول می‌گیرن (`CategoryIdGenerator`، `MaterialIdGenerator`، مثل `user_tbl`)، تا `create` ِ Aggregate شناسه داشته باشه.
+- `UniqueTakenException` و `StillReferencedException` در `common.repository` ان. FK ِ read model (دیوار دوم «در استفاده») ← همون `409 IN_USE`، با `productCount` حداقل ۱ (بعد از خطای دیتابیس تراکنش دیگه کوئری نمی‌گیره).
+- قانون‌های وصل شدن مدیا (۵.۲) یه سرویس مشترکه: `MediaAttachments` (`check` همه‌ی فیلدها با هم، `attach`). عکس ۸۰۰ ِ دسته = بزرگ‌ترین نسخه‌ای که از ۸۰۰ پهن‌تر نیست (`MediaAsset.pathFor`).
+- بدنه‌ی پاسخ نوشتن‌ها با سه Query ِ کوچیک خونده می‌شه: `GetAdminCategoryUc`، `GetAdminMaterialUc`، `GetAdminColorUc` (رنگ بدون `productCount`، چون کانترکت فقط در `/colors` می‌فرستدش).
+- ردیف لاگ ِ `*_CREATED` و `*_DELETED` بدون `changes`ـه؛ `*_UPDATED` فیلدهای عوض‌شده. توضیح متریال `longText` (فقط «عوض شد»).
+- پاسخ فروشگاه هم کامل شد: `Category.imageUrl`، `icon.imageUrl` (همیشه null) و `seo` (برگشت به اسم و توضیح دسته، `canonicalUrl` = `{siteUrl}/categories/{slug}`).
+- fakeهای تست application یه پایه‌ی مشترک دارن (`UnusedRepositories.kt`) تا متد تازه‌ی پورت فقط یه فایل رو عوض کنه.
+- خرابکاری: حذف `refreshSearchText` از `UpdateCategoryUc` ← `renaming a category puts its new name in its products' search text - the old name finds nothing` قرمز شد.
 
 ---
 
@@ -5880,3 +5891,4 @@ kiva {
 | ۲۶ مهر ۱۴۰۵ | ۱.۰ | Phase 1 step 1.0 | کانترکت 1.8.0 با هر ۱۸ ردیف ِ ۶.۸ و ردیف تازه‌ی ۱۹ (`ProductSpecsInput`). سه `FailureKind` ِ تازه، `EventSourceEntity.version`، متن همه‌ی کدهای تازه، تست چهارم `RouteGuardsTest` و `PanelTestStack`. کار روی برنچ `claude/sweet-lamport-v3gy0d` (برنچ تعیین‌شده‌ی این جلسه) به‌جای `panel-catalog` |
 | ۲۵ مهر ۱۴۰۵ | ۱.۱ | Phase 1 step 1.1 | `V21`، پورت `AuditTrail` با `AuditDiff`، `GET /admin/audit-log` با `AuditTexts`، job ِ `delete-old-audit-entries` در `PanelJobs`، و لاگ تغییر نقش‌ها. خرابکاری: trigger بدون شرط ۹۰ روز ← `a row of 89 days is never removed` قرمز |
 | ۲۵ مهر ۱۴۰۵ | ۱.۲ | Phase 1 step 1.2 | `V22`، aggregate ِ `media` (انتقال `MediaType`)، `MediaLimitsPolicy`، پورت‌های `MediaProcessor` و `MediaStorage`، `VipsFfmpegMediaProcessor`، `DiskMediaStorage`، `Blurhash`، `POST /admin/media` با خوندن جریانی و سقف حجم، `staticFiles` ِ توسعه، و job ِ `delete-unattached-media`. تست‌های ابزار واقعی اینجا skip (ابزار نصب نیست) |
+| ۲۵ مهر ۱۴۰۵ | ۱.۳ | Phase 1 step 1.3 | `V23`، `create`/`change` ِ دسته، رنگ و متریال با VOهای تازه (`CategoryDescription`، `MaterialNote`، `CareInstructions`، `SeoMeta` ِ مشترک)، ۱۱ UseCase ِ پنل و سه Query ِ بدنه، `MediaAttachments`، `webV1AdminCatalog.kt`، عکس و سئوی دسته در فروشگاه. خرابکاری: بدون `refreshSearchText` ← تست جستجوی اسم تازه قرمز |

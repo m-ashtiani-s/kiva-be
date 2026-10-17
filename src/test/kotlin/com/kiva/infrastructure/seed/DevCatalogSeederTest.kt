@@ -1,5 +1,6 @@
 package com.kiva.infrastructure.seed
 
+import com.kiva.infrastructure.persistence.exposed.MediaRepositoryImpl
 import com.kiva.application.usecase.catalog.usecase.query.ListCategoriesUc
 import com.kiva.domain.aggregate.product.model.valueobject.ProductStatus
 import com.kiva.infrastructure.TestDatabase
@@ -119,7 +120,7 @@ class DevCatalogSeederTest {
     fun `every category gets its two bags, so the menus count real products now`() = runTest {
         seeder.seed()
 
-        val categories = ListCategoriesUc(ExposedTransactionManager(db), CategoryRepositoryImpl(), ProductQmRepositoryImpl())
+        val categories = ListCategoriesUc(ExposedTransactionManager(db), CategoryRepositoryImpl(), ProductQmRepositoryImpl(), MediaRepositoryImpl())
             .execute(ListCategoriesUc.Qry).getOrNull()!!
 
         assertEquals(List(8) { 2 }, categories.map { it.productCount })

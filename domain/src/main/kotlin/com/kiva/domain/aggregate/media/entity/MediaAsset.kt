@@ -61,6 +61,12 @@ class MediaAsset private constructor(
     /** Its smallest stored size: a photo's thumbnail, a video's smaller cover. */
     val thumbnailPath: String get() = variants.first().path
 
+    /**
+     * The stored size to show at [width] pixels: the largest one not wider than it (`w800` for 800), or the smallest
+     * when every size is wider. For a video, one of its covers.
+     */
+    fun pathFor(width: Int): String = (variants.lastOrNull { it.width <= width } ?: variants.first()).path
+
     /** Whether something uses it; an attached file is never removed. */
     val isAttached: Boolean get() = attachedOn != null
 

@@ -54,6 +54,6 @@ class MaterialRepositoryImplTest {
         assertEquals(4L, matte.id.value)
         assertEquals("چرم مصنوعی مات درجه یک", matte.name.value)
         assertNull(matte.description)
-        assertEquals(emptyList(), matte.careInstructions)
+        assertEquals(emptyList(), matte.careInstructions.items)
     }
 }

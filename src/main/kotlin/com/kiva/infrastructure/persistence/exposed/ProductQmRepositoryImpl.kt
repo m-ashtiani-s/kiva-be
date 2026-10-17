@@ -296,6 +296,22 @@ class ProductQmRepositoryImpl : ProductQmRepository {
 
     override fun countActiveByColor(): Map<ColorKey, Int> = colorCounts(ProductFilter())
 
+    override fun countAllByCategory(): Map<Slug, Int> =
+        countAllBy(ProductQmTbl.categorySlug).mapKeys { Slug.constructFromPersisted(it.key) }
+
+    override fun countAllByMaterial(): Map<Slug, Int> =
+        countAllBy(ProductQmTbl.materialSlug).mapKeys { Slug.constructFromPersisted(it.key) }
+
+    // A product has each color once (productvariantqm_tbl_product_color_key), so its colors count its products.
+    override fun countAllWithColor(key: ColorKey): Int =
+        ProductVariantQmTbl.selectAll().where { ProductVariantQmTbl.colorKey eq key.value }.count().toInt()
+
+    /** How many products of any status have each value of [column]. */
+    private fun <T> countAllBy(column: Column<T>): Map<T, Int> {
+        val products = ProductQmTbl.id.count()
+        return ProductQmTbl.select(column, products).groupBy(column).associate { it[column] to it[products].toInt() }
+    }
+
     /** How many products pass [filter], for each value of [column] they have. */
     private fun <T> countBy(column: Column<T>, filter: ProductFilter): Map<T, Int> {
         val products = ProductQmTbl.id.count()

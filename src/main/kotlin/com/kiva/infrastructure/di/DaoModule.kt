@@ -12,12 +12,14 @@ import com.kiva.domain.aggregate.address.repository.AddressBookRepository
 import com.kiva.domain.aggregate.address.repository.AddressIdGenerator
 import com.kiva.domain.aggregate.cart.repository.CartIdGenerator
 import com.kiva.domain.aggregate.cart.repository.CartRepository
+import com.kiva.domain.aggregate.category.repository.CategoryIdGenerator
 import com.kiva.domain.aggregate.category.repository.CategoryRepository
 import com.kiva.domain.aggregate.color.repository.ColorRepository
 import com.kiva.domain.aggregate.discount.repository.DiscountCodeRepository
 import com.kiva.domain.aggregate.discount.repository.DiscountRedemptionRepository
 import com.kiva.domain.aggregate.geo.repository.GeoRepository
 import com.kiva.domain.aggregate.inventory.repository.InventoryRepository
+import com.kiva.domain.aggregate.material.repository.MaterialIdGenerator
 import com.kiva.domain.aggregate.material.repository.MaterialRepository
 import com.kiva.domain.aggregate.media.repository.MediaIdGenerator
 import com.kiva.domain.aggregate.media.repository.MediaRepository
@@ -43,6 +45,7 @@ import com.kiva.infrastructure.persistence.exposed.AuditLogQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.AuditTrailImpl
 import com.kiva.infrastructure.persistence.exposed.AuthSessionRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.CartRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.CategoryIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.CategoryRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ColorRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.DiscountCodeRepositoryImpl
@@ -50,6 +53,7 @@ import com.kiva.infrastructure.persistence.exposed.DiscountRedemptionRepositoryI
 import com.kiva.infrastructure.persistence.exposed.GeoRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.IdempotencyStoreImpl
 import com.kiva.infrastructure.persistence.exposed.InventoryRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.MaterialIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.MaterialRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.MediaRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.OfferQmRepositoryImpl
@@ -75,7 +79,9 @@ import org.koin.dsl.module
 val daoModule = module(createdAtStart = true) {
     single<ColorRepository> { ColorRepositoryImpl() }
     single<CategoryRepository> { CategoryRepositoryImpl() }
+    single<CategoryIdGenerator> { CategoryIdGeneratorImpl() }
     single<MaterialRepository> { MaterialRepositoryImpl() }
+    single<MaterialIdGenerator> { MaterialIdGeneratorImpl() }
     single<ProductRepository> { ProductRepositoryImpl() }
     single<ProductIdGenerator> { ProductIdGeneratorImpl() }
     single<InventoryRepository> { InventoryRepositoryImpl() }

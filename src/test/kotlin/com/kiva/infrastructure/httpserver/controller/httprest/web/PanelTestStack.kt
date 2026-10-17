@@ -1,6 +1,27 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
 import com.kiva.application.usecase.admin.usecase.command.CheckPanelAccessUc
+import com.kiva.application.usecase.catalog.usecase.command.CreateCategoryUc
+import com.kiva.application.usecase.catalog.usecase.command.CreateColorUc
+import com.kiva.application.usecase.catalog.usecase.command.CreateMaterialUc
+import com.kiva.application.usecase.catalog.usecase.command.DeleteCategoryUc
+import com.kiva.application.usecase.catalog.usecase.command.DeleteColorUc
+import com.kiva.application.usecase.catalog.usecase.command.DeleteMaterialUc
+import com.kiva.application.usecase.catalog.usecase.command.UpdateCategoryUc
+import com.kiva.application.usecase.catalog.usecase.command.UpdateColorUc
+import com.kiva.application.usecase.catalog.usecase.command.UpdateMaterialUc
+import com.kiva.application.usecase.catalog.usecase.query.GetAdminCategoryUc
+import com.kiva.application.usecase.catalog.usecase.query.GetAdminColorUc
+import com.kiva.application.usecase.catalog.usecase.query.GetAdminMaterialUc
+import com.kiva.application.usecase.catalog.usecase.query.ListAdminCategoriesUc
+import com.kiva.application.usecase.catalog.usecase.query.ListAdminMaterialsUc
+import com.kiva.application.usecase.media.MediaAttachments
+import com.kiva.infrastructure.persistence.exposed.CategoryIdGeneratorImpl
+import com.kiva.infrastructure.persistence.exposed.CategoryRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.ColorRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.MaterialIdGeneratorImpl
+import com.kiva.infrastructure.persistence.exposed.MaterialRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.ProductQmRepositoryImpl
 import com.kiva.application.usecase.admin.usecase.command.SetUserRolesUc
 import com.kiva.application.usecase.admin.usecase.query.FindCustomersUc
 import com.kiva.application.usecase.admin.usecase.query.GetCustomerUc
@@ -93,6 +114,30 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
     val mediaUrls = MediaUrls(MEDIA_BASE_URL)
     val uploadMedia = UploadMediaUc(transactions, mediaProcessor, mediaStorage, mediaRepository, RandomMediaIds(), clock)
 
+    // --- categories, colors and materials (step 1.3) ---
+    val categories = CategoryRepositoryImpl()
+    val colors = ColorRepositoryImpl()
+    val materials = MaterialRepositoryImpl()
+    val productQm = ProductQmRepositoryImpl()
+    val mediaAttachments = MediaAttachments(mediaRepository)
+    val adminCatalog = AdminCatalogUseCases(
+        checkPanelAccess = checkPanelAccess,
+        listCategories = ListAdminCategoriesUc(transactions, categories, productQm, mediaRepository),
+        getCategory = GetAdminCategoryUc(transactions, categories, productQm, mediaRepository),
+        createCategory = CreateCategoryUc(transactions, categories, CategoryIdGeneratorImpl(), colors, mediaAttachments, auditTrail, clock),
+        updateCategory = UpdateCategoryUc(transactions, categories, colors, productQm, mediaAttachments, auditTrail, clock),
+        deleteCategory = DeleteCategoryUc(transactions, categories, productQm, auditTrail, clock),
+        getColor = GetAdminColorUc(transactions, colors),
+        createColor = CreateColorUc(transactions, colors, auditTrail, clock),
+        updateColor = UpdateColorUc(transactions, colors, productQm, auditTrail, clock),
+        deleteColor = DeleteColorUc(transactions, colors, categories, productQm, auditTrail, clock),
+        listMaterials = ListAdminMaterialsUc(transactions, materials, productQm),
+        getMaterial = GetAdminMaterialUc(transactions, materials, productQm),
+        createMaterial = CreateMaterialUc(transactions, materials, MaterialIdGeneratorImpl(), auditTrail, clock),
+        updateMaterial = UpdateMaterialUc(transactions, materials, productQm, auditTrail, clock),
+        deleteMaterial = DeleteMaterialUc(transactions, materials, productQm, auditTrail, clock),
+    )
+
     /** A logged-in user of the panel: who they are and the access token of their session. */
     class Caller(val user: User, val token: String) {
         val userId: Long get() = user.id.value
@@ -136,6 +181,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
                     webV1AdminCustomers(AdminCustomerUseCases(checkPanelAccess, findCustomers, getCustomer, setUserRoles))
                     webV1AdminAudit(AdminAuditUseCases(checkPanelAccess, listAuditLog))
                     webV1AdminMedia(AdminMediaUseCases(checkPanelAccess, uploadMedia), mediaStorage::newUploadFile, mediaUrls)
+                    webV1AdminCatalog(adminCatalog, mediaUrls, SITE_URL)
                 }
             }
         }
@@ -160,6 +206,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
     companion object {
         private const val TEST_PHONES = "09900%"
         const val MEDIA_BASE_URL = "https://api.kivashop.test/media"
+        const val SITE_URL = "https://kivashop.test"
 
         /** `0990000000n`: the panel's test phones. */
         fun phone(n: Int) = "09900" + n.toString().padStart(6, '0')

@@ -1,5 +1,6 @@
 package com.kiva.infrastructure.seed
 
+import com.kiva.infrastructure.persistence.exposed.MediaRepositoryImpl
 import com.kiva.application.usecase.catalog.usecase.query.ListCategoriesUc
 import com.kiva.application.usecase.catalog.usecase.query.ListMaterialsUc
 import com.kiva.application.usecase.inventory.usecase.command.AdjustInventoryUc
@@ -46,7 +47,7 @@ class SeededCatalog(clock: Clock) {
         DevCatalogSeeder(
             CreateProductUc(transactions, productDomainService, products, readModel, JsoupHtmlSanitizer, clock),
             AdjustInventoryUc(transactions, InventoryDomainService(inventories), inventories, readModel, clock),
-            ListCategoriesUc(transactions, CategoryRepositoryImpl(), readModel),
+            ListCategoriesUc(transactions, CategoryRepositoryImpl(), readModel, MediaRepositoryImpl()),
             ListMaterialsUc(transactions, MaterialRepositoryImpl(), readModel),
             clock,
         )
