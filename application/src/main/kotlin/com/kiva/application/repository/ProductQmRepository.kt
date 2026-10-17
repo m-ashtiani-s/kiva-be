@@ -14,7 +14,8 @@ import java.time.Instant
  * write it, in the same transaction as the events, so inside a use case's transaction it shows every saved change.
  *
  * A port of the application layer, not of the domain: the read model serves queries and the use cases' checks; the
- * domain never reads it. Products in the shop are the ACTIVE ones; drafts and archived products are never counted.
+ * domain never reads it. Products in the shop are the ACTIVE ones; drafts and archived products are never counted,
+ * except by the panel's own reads (findForAdmin, findAdminDetail, countAll*).
  *
  * The one write a use case may ask for is [refreshSearchText]: categories, materials and colors are not event-sourced,
  * so no event tells the projectors that one of their names changed.
@@ -41,6 +42,16 @@ interface ProductQmRepository {
      * selling, those that can be bought before those that can't. Null when [productId] itself is not in the shop.
      */
     fun findRelated(productId: ProductId, limit: Int): List<ProductCardQm>?
+
+    /**
+     * One page of the panel's product list: products of every status that pass [filter], in the order of [pageable]'s
+     * sort (one of AdminProductSorts, ties broken by the larger id first). Rows, their count and the first media of
+     * each one's default color: a fixed number of queries, never one per product.
+     */
+    fun findForAdmin(filter: AdminProductFilter, pageable: Pageable): Page<AdminProductQm>
+
+    /** One product for the panel's page, whatever its status, or null when nobody has it. */
+    fun findAdminDetail(productId: ProductId): AdminProductDetailQm?
 
     /** One color of any product, whatever its status, or null when no product has it. */
     fun findVariant(variantId: VariantId): VariantQm?

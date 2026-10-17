@@ -59,10 +59,11 @@ class StoredCatalog {
         details: ProductDetails = ProductEventSamples.fullDetails,
         slug: String? = null,
         at: Instant = now,
+        by: UserId = staff,
     ): Product = transaction(db) {
         val id = ids.nextProductId()
         productIds += id.value
-        val product = Product.create(id, Slug.constructFromPersisted(slug ?: "bag-${id.value}"), null, details, priceTag, staff, at)
+        val product = Product.create(id, Slug.constructFromPersisted(slug ?: "bag-${id.value}"), null, details, priceTag, by, at)
             .orFail()
         colors.forEachIndexed { index, color ->
             val variantId = ids.nextVariantId().also { variantIds += it.value }

@@ -23,8 +23,8 @@ data class ProductDetailHttpResponse(
     val price: PriceInfoHttpResponse,
     val colors: List<ProductColorOptionHttpResponse>,
     val colorsCount: Int,
-    val defaultColorKey: String,
-    val displayColorKey: String,
+    val defaultColorKey: String?,
+    val displayColorKey: String?,
     val image: MediaAssetHttpResponse?,
     val badges: List<ProductBadgeHttpResponse>,
     val stock: StockInfoHttpResponse,
@@ -32,7 +32,7 @@ data class ProductDetailHttpResponse(
     val hasVideo: Boolean,
     val soldCount: Int,
     val freeShippingEligible: Boolean,
-    val selectedColorKey: String,
+    val selectedColorKey: String?,
     val shortDescription: String? = null,
     val description: String? = null,
     val highlights: List<String>,
@@ -53,7 +53,7 @@ data class ProductDetailHttpResponse(
         /** @param siteUrl the shop's address (`https://kiva.ir`): the page's address is always its slug's. */
         fun from(detail: ProductDetailDto, siteUrl: String): ProductDetailHttpResponse {
             // The card exactly as in the list, its picture in the selected color.
-            val card = ProductSummaryHttpResponse.from(detail.card, filterColors = listOf(detail.selectedColorKey))
+            val card = ProductSummaryHttpResponse.from(detail.card, filterColors = listOfNotNull(detail.selectedColorKey))
             // Asked for by number or code, the canonical address is still the slug's.
             val pageUrl = siteUrl.trimEnd('/') + card.url
 

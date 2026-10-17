@@ -1,5 +1,8 @@
 package com.kiva.application.util
 
+import com.kiva.application.repository.AdminProductDetailQm
+import com.kiva.application.repository.AdminProductFilter
+import com.kiva.application.repository.AdminProductQm
 import com.kiva.application.repository.ProductCardQm
 import com.kiva.application.repository.ProductDetailQm
 import com.kiva.application.repository.ProductFacetsQm
@@ -35,6 +38,8 @@ abstract class UnusedProductQmRepository : ProductQmRepository {
     override fun findDetail(ref: ProductRef): ProductDetailQm? = unused()
     override fun facets(filter: ProductFilter, now: Instant): ProductFacetsQm = unused()
     override fun findRelated(productId: ProductId, limit: Int): List<ProductCardQm>? = unused()
+    override fun findForAdmin(filter: AdminProductFilter, pageable: Pageable): Page<AdminProductQm> = unused()
+    override fun findAdminDetail(productId: ProductId): AdminProductDetailQm? = unused()
     override fun findVariant(variantId: VariantId): VariantQm? = unused()
     override fun isSlugTaken(slug: Slug): Boolean = unused()
     override fun findTakenSkus(skus: Collection<Sku>): Set<Sku> = unused()

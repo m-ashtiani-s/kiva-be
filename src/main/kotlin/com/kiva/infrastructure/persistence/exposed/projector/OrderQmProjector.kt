@@ -17,6 +17,7 @@ import com.kiva.infrastructure.persistence.event.serializer.payload.order.PreShi
 import com.kiva.infrastructure.persistence.exposed.tbl.OrderQmTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.OrderTimelineEntry
 import com.kiva.infrastructure.persistence.exposed.tbl.ProductQmTbl
+import com.kiva.infrastructure.persistence.exposed.tbl.ProductVariantQmTbl
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.plus
 import org.jetbrains.exposed.v1.jdbc.insert
@@ -31,9 +32,10 @@ import java.time.ZoneOffset
  * so `OrderDetail.timeline` comes from the events without anyone reading the event store.
  *
  * A payment also counts the bags as sold: `soldCount` of each product of the order goes up by its quantity, so «پرفروش‌ترین»
- * is real. That changes product rows, which other writers lock too (the stock's projector, a product's own); so the
- * repository takes those locks with [lockFor] before it stores anything, in the order every writer uses (roadmap
- * section 11: the products' rows, ascending, before the order's stream).
+ * is real, and so does each color's (the panel's AdminVariant.soldCount). That changes product rows, which other
+ * writers lock too (the stock's projector, a product's own); so the repository takes those locks with [lockFor]
+ * before it stores anything, in the order every writer uses (roadmap section 11: the products' rows, ascending, before
+ * the order's stream).
  *
  * Runs inside the caller's transaction; it never opens one itself.
  */
@@ -107,15 +109,24 @@ object OrderQmProjector {
         check(updated == 1) { "Order $orderId: updated $updated rows of the read model instead of 1" }
     }
 
-    /** Each product of the paid order sold its quantity, all its colors together; ascending productId, as locked. */
+    /**
+     * Each product of the paid order sold its quantity, all its colors together, and each color its own; ascending
+     * productId, as locked, each product's row before its colors' rows (ProductQmSummary's lock order).
+     */
     private fun countSold(orderId: Long) {
         val lines = OrderQmTbl.select(OrderQmTbl.lines).where { OrderQmTbl.orderId eq orderId }.single()[OrderQmTbl.lines]
-        lines.groupBy({ it.productId }, { it.quantity }).toSortedMap().forEach { (productId, quantities) ->
+        lines.groupBy { it.productId }.toSortedMap().forEach { (productId, ofProduct) ->
             ProductQmSummary.lock(productId)
             val updated = ProductQmTbl.update({ ProductQmTbl.productId eq productId }) {
-                it[soldCount] = soldCount + quantities.sum()
+                it[soldCount] = soldCount + ofProduct.sumOf { line -> line.quantity }
             }
             check(updated == 1) { "Product $productId: updated $updated rows of the read model instead of 1" }
+            ofProduct.groupBy({ it.variantId }, { it.quantity }).toSortedMap().forEach { (variantId, quantities) ->
+                val colorUpdated = ProductVariantQmTbl.update({ ProductVariantQmTbl.variantId eq variantId }) {
+                    it[soldCount] = soldCount + quantities.sum()
+                }
+                check(colorUpdated == 1) { "Variant $variantId: updated $colorUpdated rows of the read model instead of 1" }
+            }
         }
     }
 

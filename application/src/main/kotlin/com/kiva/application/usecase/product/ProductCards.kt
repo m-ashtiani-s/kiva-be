@@ -2,14 +2,21 @@ package com.kiva.application.usecase.product
 
 import com.kiva.application.dto.PriceDto
 import com.kiva.application.dto.ProductCardDto
+import com.kiva.application.dto.ProductDetailDto
 import com.kiva.application.repository.ProductCardQm
 import com.kiva.common.valueobject.Money
 import com.kiva.domain.aggregate.category.entity.Category
 import com.kiva.domain.aggregate.color.entity.Color
 import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
+import com.kiva.domain.aggregate.media.model.valueobject.MediaType
 import com.kiva.domain.aggregate.product.model.policy.BadgePolicy
 import com.kiva.domain.aggregate.product.model.policy.PricePolicy
 import com.kiva.domain.aggregate.product.model.policy.StockPolicy
+import com.kiva.domain.aggregate.product.model.valueobject.MaxPerOrder
+import com.kiva.domain.aggregate.product.model.valueobject.PriceTag
+import com.kiva.domain.aggregate.product.model.valueobject.ProductMedia
+import com.kiva.domain.aggregate.product.model.valueobject.Sku
+import com.kiva.domain.aggregate.product.model.valueobject.VariantId
 import java.time.Instant
 
 /**
@@ -46,14 +53,43 @@ object ProductCards {
                     stockStatus = StockPolicy.stockOf(color.available, qm.maxPerOrder).status,
                 )
             },
-            // A product in the shop always has an active default color: Product keeps that.
-            defaultColorKey = qm.colors.first { it.isDefault }.colorKey.value,
+            // A product in the shop always has an active default color (Product keeps that); only a draft the panel
+            // reads may have none.
+            defaultColorKey = qm.colors.firstOrNull { it.isDefault }?.colorKey?.value,
             stock = stock,
             badges = BadgePolicy.badgesOf(isNew, qm.priceTag, qm.hasVideo, stock.status, freeShippingThreshold),
             isNew = isNew,
             hasVideo = qm.hasVideo,
             soldCount = qm.soldCount,
             freeShippingEligible = PricePolicy.qualifiesForFreeShipping(qm.priceTag, freeShippingThreshold),
+        )
+    }
+
+    /**
+     * One color of a product's page: its price tag, and its stock through StockPolicy, so only a few left shows a
+     * number. The shop's page and the panel's (for every color, active or not) make it the same way.
+     */
+    fun variantOf(
+        variantId: VariantId,
+        sku: Sku,
+        colorKey: ColorKey,
+        priceTag: PriceTag,
+        isDefault: Boolean,
+        available: Int,
+        media: List<ProductMedia>,
+        palette: Map<ColorKey, Color>,
+        maxPerOrder: MaxPerOrder,
+    ): ProductDetailDto.Variant {
+        val swatch = palette.getValue(colorKey)
+        return ProductDetailDto.Variant(
+            id = variantId.value,
+            sku = sku.value,
+            color = ProductDetailDto.Swatch(swatch.key.value, swatch.name.value, swatch.hex.value, swatch.isLight, swatch.sortOrder),
+            isDefault = isDefault,
+            price = PriceDto.from(priceTag),
+            stock = StockPolicy.stockOf(available, maxPerOrder),
+            media = media,
+            hasVideo = media.any { it.type == MediaType.VIDEO },
         )
     }
 }

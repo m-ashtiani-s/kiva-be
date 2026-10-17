@@ -1,8 +1,6 @@
 package com.kiva.application.usecase.product.usecase.query
 
-import com.kiva.application.dto.PriceDto
 import com.kiva.application.dto.ProductDetailDto
-import com.kiva.application.repository.ProductDetailQm
 import com.kiva.application.repository.ProductQmRepository
 import com.kiva.application.repository.ProductRef
 import com.kiva.application.usecase.product.ProductCards
@@ -15,13 +13,9 @@ import com.kiva.common.railway.unwrapOr
 import com.kiva.common.transaction.TransactionManager
 import com.kiva.common.usecase.QueryUseCase
 import com.kiva.domain.aggregate.category.repository.CategoryRepository
-import com.kiva.domain.aggregate.color.entity.Color
 import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
 import com.kiva.domain.aggregate.color.repository.ColorRepository
 import com.kiva.domain.aggregate.material.repository.MaterialRepository
-import com.kiva.domain.aggregate.product.model.policy.StockPolicy
-import com.kiva.domain.aggregate.product.model.valueobject.MaxPerOrder
-import com.kiva.domain.aggregate.media.model.valueobject.MediaType
 import com.kiva.domain.aggregate.settings.repository.ShopSettingsRepository
 import java.time.Clock
 
@@ -81,7 +75,9 @@ class GetProductUc(
                     material = ProductDetailDto.MaterialRef(material.id.value, material.slug.value, material.name.value, material.family),
                     materialDescription = product.materialDescription?.value,
                     specs = product.specs,
-                    variants = product.variants.map { variantOf(it, palette, product.card.maxPerOrder) },
+                    variants = product.variants.map {
+                        ProductCards.variantOf(it.variantId, it.sku, it.colorKey, it.priceTag, it.isDefault, it.available, it.media, palette, product.card.maxPerOrder)
+                    },
                     returnable = product.returnable,
                     reservable = product.reservable,
                     maxPerOrder = product.card.maxPerOrder.value,
@@ -90,21 +86,6 @@ class GetProductUc(
                 ),
             )
         }
-    }
-
-    /** One color: its price tag, and its stock through StockPolicy, so only a few left shows a number. */
-    private fun variantOf(variant: ProductDetailQm.Variant, palette: Map<ColorKey, Color>, maxPerOrder: MaxPerOrder): ProductDetailDto.Variant {
-        val swatch = palette.getValue(variant.colorKey)
-        return ProductDetailDto.Variant(
-            id = variant.variantId.value,
-            sku = variant.sku.value,
-            color = ProductDetailDto.Swatch(swatch.key.value, swatch.name.value, swatch.hex.value, swatch.isLight, swatch.sortOrder),
-            isDefault = variant.isDefault,
-            price = PriceDto.from(variant.priceTag),
-            stock = StockPolicy.stockOf(variant.available, maxPerOrder),
-            media = variant.media,
-            hasVideo = variant.media.any { it.type == MediaType.VIDEO },
-        )
     }
 
     sealed class Failure(

@@ -22,8 +22,8 @@ import java.time.Instant
 import java.time.ZoneOffset
 
 /**
- * The columns of productqm_tbl worked out from several rows: the card's price tag, the active colors, video, stock and
- * searchText. Both projectors change the rows these come from, then call [refresh], so the rules live in one place.
+ * The columns of productqm_tbl worked out from several rows: the card's price tag, the active colors, video, stock
+ * (inStock and availableTotal) and searchText. Both projectors change the rows these come from, then call [refresh], so the rules live in one place.
  *
  * Lock order, for every writer of the read model: [lock] the product's row first, then change its colors' rows, then
  * [refresh]. Two transactions on one product then take their locks in the same order, so they wait for each other
@@ -77,6 +77,7 @@ internal object ProductQmSummary {
             it[inStock] = activeColors.any { color ->
                 color[ProductVariantQmTbl.onHand] - color[ProductVariantQmTbl.reserved] > 0
             }
+            it[availableTotal] = activeColors.sumOf { color -> color[ProductVariantQmTbl.onHand] - color[ProductVariantQmTbl.reserved] }
             it[hasVideo] = activeColors.any { color ->
                 color[ProductVariantQmTbl.media].any { media -> media.toDomain().type == MediaType.VIDEO }
             }
@@ -87,8 +88,9 @@ internal object ProductQmSummary {
     }
 
     /**
-     * Name, category, active colors and material, in Persian as the shopper types them, through normalizePersian.
-     * The search term goes through the same function, so «كيف» from an Arabic keyboard finds «کیف».
+     * Name, category, active colors and material, in Persian as the shopper types them, then the product's code (the
+     * panel searches by it), all through normalizePersian. The search term goes through the same function, so «كيف» from
+     * an Arabic keyboard finds «کیف». V24 appended the code to the rows written before it the same way.
      */
     private fun searchTextOf(product: ResultRow, colorKeys: List<String>): String {
         val category = CategoryTbl.select(CategoryTbl.name)
@@ -101,7 +103,7 @@ internal object ProductQmSummary {
             .where { ColorTbl.colorKey inList colorKeys }
             .associate { it[ColorTbl.colorKey] to it[ColorTbl.name] }
 
-        val parts = listOf(product[ProductQmTbl.name], category) + colorKeys.map { colorNames.getValue(it) } + material
+        val parts = listOf(product[ProductQmTbl.name], category) + colorKeys.map { colorNames.getValue(it) } + material + product[ProductQmTbl.sku]
         return parts.joinToString(" ").normalizePersian()
     }
 

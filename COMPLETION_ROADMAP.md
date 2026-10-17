@@ -765,7 +765,7 @@ Route: 201 با MediaAsset
 | ۱.۱ | لاگ تغییرات | M | ✅ |
 | ۱.۲ | آپلود مدیا | L | ✅ |
 | ۱.۳ | دسته، رنگ و متریال | M | ✅ |
-| ۱.۴ | read model ِ پنل و دو Query ِ محصول | M | ⬜ |
+| ۱.۴ | read model ِ پنل و دو Query ِ محصول | M | ✅ |
 | ۱.۵ | ساخت و ویرایش محصول، `If-Match` | L | ⬜ |
 | ۱.۶ | وضعیت، آرشیو و انتشار زمان‌بندی‌شده | M | ⬜ |
 | ۱.۷ | رنگ‌ها (ورینت‌ها) | M | ⬜ |
@@ -1150,6 +1150,7 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 | 17 | `ErrorCode` | `DUPLICATE_CODE` (تازه؛ متن: «این کد قبلاً استفاده شده») | ردیف ۱۵ |
 | 18 | مثال‌های SKU | `KV-1001-LIL` ← `KV-1001-LILAC` | قانون واقعی `Sku.forVariant` |
 | 19 | `ProductUpsertRequest.specs` | شِمای تازه‌ی `ProductSpecsInput`: همون `ProductSpecs` با سقف هر فیلد (ردیف `ProductSpecs` ِ ۶.۳)، و `seo` ِ ورودی محصول و دسته فقط با `title`، `description`، `noIndex` | `ProductSpecs` ِ پاسخ هیچ سقفی نداشت و `label`ها رو سرور می‌سازه (گام ۱.۰) |
+| 20 | پارامتر `SearchQuery` | «جستجو روی نام، دسته، رنگ‌های فعال، متریال و کد محصول (SKU)» | تصمیم ۱۷: کد محصول در متن جستجو (گام ۱.۴) |
 
 **کدهای فیلدی تازه** (در enum ِ کانترکت نیستن، ولی متن فارسی تو `ErrorMessages.kt` می‌گیرن؛ گام ۱.۰ این‌ها رو هم اضافه کرد: `FIELD_REQUIRED` برای فیلد اجباری ِ نیومده، `STOCK_QUANTITY_INVALID`، `DATE_INVALID`، `AUDIT_ENTITY_TYPE_INVALID`، `ENTITY_ID_TOO_LONG`، و کدهای `specs`: `STRAPS_TOO_MANY`، `STRAP_TYPE_INVALID`، `STRAP_LENGTH_INVALID`، `STRAP_LENGTH_RANGE_INVALID`، `STRAP_MATERIAL_TOO_LONG`، `POCKET_COUNT_INVALID`، `LAPTOP_MAX_INCH_INVALID`، `CAPACITY_LITERS_INVALID`، `FIT_ITEM_INVALID`، `LINING_MATERIAL_TOO_LONG`، `LINING_COLOR_TOO_LONG`، `HARDWARE_MATERIAL_TOO_LONG`، `HARDWARE_FINISH_TOO_LONG`، `STITCHING_TOO_LONG`، `MADE_IN_TOO_LONG`، `WARRANTY_MONTHS_INVALID`، `WARRANTY_DESCRIPTION_TOO_LONG`): `SLUG_IMMUTABLE`، `SKU_IMMUTABLE`، `COLOR_KEY_IMMUTABLE`، `IF_MATCH_INVALID`، `PUBLISH_AT_NOT_ALLOWED`، `PUBLISH_AT_TOO_FAR`، `MEDIA_ID_INVALID`، `MEDIA_NOT_FOUND`، `MEDIA_PURPOSE_MISMATCH`، `MEDIA_TYPE_NOT_ALLOWED`، `MEDIA_VIEW_INVALID`، `MEDIA_PRIMARY_DUPLICATE`، `MEDIA_DUPLICATE`، `MEDIA_TOO_MANY`، `MEDIA_ALT_TOO_LONG` (هست)، `IMAGE_TOO_SMALL`، `IMAGE_TOO_LARGE`، `VIDEO_TOO_LONG`، `FILE_COUNT_INVALID`، `MEDIA_PURPOSE_INVALID`، `BARCODE_INVALID`، `TAG_INVALID`، `TAGS_TOO_MANY`، `SEO_TITLE_TOO_LONG`، `SEO_DESCRIPTION_TOO_LONG`، `MATERIAL_FAMILY_INVALID`، `CATEGORY_DESCRIPTION_TOO_LONG`، `MATERIAL_NOTE_TOO_LONG`، `CARE_INSTRUCTIONS_INVALID`، `DATE_RANGE_INVALID`، و کدهای هر فیلد تازه‌ی `specs`. `MEDIA_INVALID` و `SPECS_INVALID` هم که الان متن ندارن، متن می‌گیرن.
 
@@ -1297,7 +1298,7 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 
 ---
 
-#### گام ۱.۴: read model ِ پنل و دو Query ِ محصول · M ⬜
+#### گام ۱.۴: read model ِ پنل و دو Query ِ محصول · M ✅
 
 **می‌سازی:** `V24__product_admin_read_model.sql` (با backfillها)؛ Projector: `version` = `sequence` ِ هر رویداد محصول، `createdByUserId` از `ProductCreated`، `publishAt`، `tags`، `seo`، `barcode`؛ `ProductQmSummary.refresh` ← `availableTotal`؛ `OrderQmProjector` با `OrderPaid` ← `soldCount` ِ هر رنگ هم (مثل محصول، زیر همون قفل ۷)؛ پورت‌های تازه‌ی `ProductQmRepository` (`findForAdmin(filter, pageable)`، `findAdminDetail(productId)`)؛ `AdminProductSorts`؛ `FindAdminProductsUc`، `GetAdminProductUc`، DTOها؛ `webV1AdminProducts.kt` (دو GET)؛ `AdminProductHttpResponse`، `AdminVariantHttpResponse`، `AdminProductListItemHttpResponse`.
 
@@ -1308,13 +1309,23 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 - چرا `AdminProduct` از همون سازنده‌ی پاسخ فروشگاه استفاده می‌کنه؟ تا پنل دقیقاً همون چیزی رو ببینه که مشتری می‌بینه («پیش‌نمایش»)، و دو کد برای یه شِما نباشه.
 
 **تموم شده یعنی:**
-- [ ] backfillها روی دیتابیس با داده‌ی seed: `version` ِ هر محصول = تعداد رویدادهاش، `createdByUserId = 0`، `availableTotal` = جمع موجودی رنگ‌های فعال، `soldCount` ِ رنگ‌ها از سفارش‌های پرداخت‌شده.
-- [ ] لیست همه‌ی وضعیت‌ها رو داره؛ هر فیلتر و هر sort ِ جدول با یه تست؛ `q = KV-1001` محصول و `q = KV-1001-LILAC` همون محصول رو پیدا می‌کنه.
-- [ ] `stockStatus = LOW_STOCK` محصولی رو می‌ده که یه رنگش ۳ تا و بقیه ۱۲ تا دارن.
-- [ ] جزئیات محصول پیش‌نویس بدون رنگ ← `200` با `defaultColorKey = null` و `adminVariants = []`؛ محصول آرشیو هم `200`؛ ناموجود و `abc` ← `404 PRODUCT_NOT_FOUND`.
-- [ ] `adminVariants` رنگ غیرفعال رو داره با `isActive = false`؛ `variants` نه.
-- [ ] هدر `ETag` = فیلد `etag` = `W/"{تعداد رویدادها}"`.
-- [ ] صفحه‌ی ۲۰ تایی دقیقاً دو کوئری می‌زنه (با شمارنده‌ی کوئری در تست).
+- [x] backfillها روی دیتابیس با داده‌ی seed: `version` ِ هر محصول = تعداد رویدادهاش، `createdByUserId = 0`، `availableTotal` = جمع موجودی رنگ‌های فعال، `soldCount` ِ رنگ‌ها از سفارش‌های پرداخت‌شده.
+- [x] لیست همه‌ی وضعیت‌ها رو داره؛ هر فیلتر و هر sort ِ جدول با یه تست؛ `q = KV-1001` محصول و `q = KV-1001-LILAC` همون محصول رو پیدا می‌کنه.
+- [x] `stockStatus = LOW_STOCK` محصولی رو می‌ده که یه رنگش ۳ تا و بقیه ۱۲ تا دارن.
+- [x] جزئیات محصول پیش‌نویس بدون رنگ ← `200` با `defaultColorKey = null` و `adminVariants = []`؛ محصول آرشیو هم `200`؛ ناموجود و `abc` ← `404 PRODUCT_NOT_FOUND`.
+- [x] `adminVariants` رنگ غیرفعال رو داره با `isActive = false`؛ `variants` نه.
+- [x] هدر `ETag` = فیلد `etag` = `W/"{تعداد رویدادها}"`.
+- [x] صفحه‌ی ۲۰ تایی دقیقاً دو کوئری می‌زنه (با شمارنده‌ی کوئری در تست).
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- backfillها با یه تست اثبات می‌شن که SQL ِ خود `V24` روی ردیف‌هایی که به حالت قبل از V24 برگردونده شدن همون عددهای Projector رو می‌ده (`V24's backfills give exactly what the projectors wrote`). دیتابیس تست محصول seed نداره، پس محصول‌ها با Repository ِ واقعی ساخته می‌شن.
+- صفحه‌ی لیست سه statement می‌زنه، مستقل از اندازه‌ی صفحه: ردیف‌ها (با `variantsCount` و `lowStockVariants` در خود SQL، با subquery)، شمارش کل (`paginate`) و مدیای اول رنگ‌های پیش‌فرض. تست با `statementCount` ِ تراکنش برای صفحه‌ی ۱ و ۲۰ تایی ۳ می‌بینه. اسم دسته‌ها یه کوئری جدا در UseCase ـه (همه‌ی دسته‌ها، نه یکی برای هر محصول).
+- متن جستجو حالا با کد محصول تموم می‌شه (تصمیم ۱۷)؛ `V24` کد رو به ردیف‌های قبلی هم اضافه کرد و توضیح `SearchQuery` ِ کانترکت عوض شد (ردیف ۲۰ ِ ۶.۸).
+- `tags`، `seo`، `barcode` و `publishAt` ستون‌هاشون الان ساخته شدن ولی تا رویدادهاشون (۱.۵ و ۱.۶) مقدار پیش‌فرض دارن.
+- `createdBy` یه `ActorNameDto` ـه (سیستم، شخص با اسم یا موبایل ماسک‌شده، یا حسابی که دیگه نیست ← «حساب حذف‌شده») و متنش در `PanelTexts` ِ لایه‌ی HTTP؛ همین برای `createdBy` ِ تاریخچه‌ی موجودی (۱.۸) هم استفاده می‌شه.
+- `defaultColorKey`، `displayColorKey` و `selectedColorKey` در DTO و پاسخ `String?` شدن (فروشگاه هیچ‌وقت null نمی‌ده). سازنده‌ی رنگ صفحه‌ی محصول (`ProductCards.variantOf`) بین فروشگاه و پنل مشترکه.
+- `AdminProductHttpResponse` از خروجی خود `ProductDetailHttpResponse.from` ساخته می‌شه و فیلدهای پنل بهش اضافه می‌شن؛ `respondResultWithETag` هدر `ETag` رو با `VersionETag.of(version)` می‌ذاره.
+- کد فیلدی تازه: `STOCK_STATUS_INVALID` (پارامتر `stockStatus`) با متن فارسی.
 
 ---
 
@@ -5892,3 +5903,4 @@ kiva {
 | ۲۵ مهر ۱۴۰۵ | ۱.۱ | Phase 1 step 1.1 | `V21`، پورت `AuditTrail` با `AuditDiff`، `GET /admin/audit-log` با `AuditTexts`، job ِ `delete-old-audit-entries` در `PanelJobs`، و لاگ تغییر نقش‌ها. خرابکاری: trigger بدون شرط ۹۰ روز ← `a row of 89 days is never removed` قرمز |
 | ۲۵ مهر ۱۴۰۵ | ۱.۲ | Phase 1 step 1.2 | `V22`، aggregate ِ `media` (انتقال `MediaType`)، `MediaLimitsPolicy`، پورت‌های `MediaProcessor` و `MediaStorage`، `VipsFfmpegMediaProcessor`، `DiskMediaStorage`، `Blurhash`، `POST /admin/media` با خوندن جریانی و سقف حجم، `staticFiles` ِ توسعه، و job ِ `delete-unattached-media`. تست‌های ابزار واقعی اینجا skip (ابزار نصب نیست) |
 | ۲۵ مهر ۱۴۰۵ | ۱.۳ | Phase 1 step 1.3 | `V23`، `create`/`change` ِ دسته، رنگ و متریال با VOهای تازه (`CategoryDescription`، `MaterialNote`، `CareInstructions`، `SeoMeta` ِ مشترک)، ۱۱ UseCase ِ پنل و سه Query ِ بدنه، `MediaAttachments`، `webV1AdminCatalog.kt`، عکس و سئوی دسته در فروشگاه. خرابکاری: بدون `refreshSearchText` ← تست جستجوی اسم تازه قرمز |
+| ۲۵ مهر ۱۴۰۵ | ۱.۴ | Phase 1 step 1.4 | `V24` با backfillها (`version`، `createdByUserId`، `availableTotal`، `soldCount` ِ رنگ‌ها، کد محصول در متن جستجو)، Projectorها، `findForAdmin` و `findAdminDetail`، `AdminProductSorts`، `FindAdminProductsUc` و `GetAdminProductUc`، `webV1AdminProducts.kt` (دو GET با `ETag`) |

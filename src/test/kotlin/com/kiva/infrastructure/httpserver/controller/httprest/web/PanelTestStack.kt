@@ -16,6 +16,9 @@ import com.kiva.application.usecase.catalog.usecase.query.GetAdminMaterialUc
 import com.kiva.application.usecase.catalog.usecase.query.ListAdminCategoriesUc
 import com.kiva.application.usecase.catalog.usecase.query.ListAdminMaterialsUc
 import com.kiva.application.usecase.media.MediaAttachments
+import com.kiva.application.usecase.product.usecase.query.FindAdminProductsUc
+import com.kiva.application.usecase.product.usecase.query.GetAdminProductUc
+import com.kiva.infrastructure.persistence.exposed.ShopSettingsRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.CategoryIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.CategoryRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ColorRepositoryImpl
@@ -138,6 +141,13 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         deleteMaterial = DeleteMaterialUc(transactions, materials, productQm, auditTrail, clock),
     )
 
+    // --- products (step 1.4 on) ---
+    val adminProducts = AdminProductUseCases(
+        checkPanelAccess = checkPanelAccess,
+        findProducts = FindAdminProductsUc(transactions, productQm, categories),
+        getProduct = GetAdminProductUc(transactions, productQm, categories, materials, colors, users, ShopSettingsRepositoryImpl(), clock),
+    )
+
     /** A logged-in user of the panel: who they are and the access token of their session. */
     class Caller(val user: User, val token: String) {
         val userId: Long get() = user.id.value
@@ -182,6 +192,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
                     webV1AdminAudit(AdminAuditUseCases(checkPanelAccess, listAuditLog))
                     webV1AdminMedia(AdminMediaUseCases(checkPanelAccess, uploadMedia), mediaStorage::newUploadFile, mediaUrls)
                     webV1AdminCatalog(adminCatalog, mediaUrls, SITE_URL)
+                    webV1AdminProducts(adminProducts, SITE_URL)
                 }
             }
         }

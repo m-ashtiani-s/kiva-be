@@ -13,6 +13,8 @@ import com.kiva.domain.aggregate.product.model.valueobject.StockStatus
  * @property stock the whole product's: sold out only when none of its colors can be bought, a number only when few
  *   are left in all.
  * @property colors the active colors in display order, each with its own stock status.
+ * @property defaultColorKey never null in the shop; null only for a product without an active color, which only the
+ *   panel reads.
  */
 data class ProductCardDto(
     val id: Long,
@@ -23,7 +25,7 @@ data class ProductCardDto(
     val bagType: BagType,
     val price: PriceDto,
     val colors: List<ColorOption>,
-    val defaultColorKey: String,
+    val defaultColorKey: String?,
     val stock: StockInfo,
     val badges: List<BadgeCode>,
     val isNew: Boolean,

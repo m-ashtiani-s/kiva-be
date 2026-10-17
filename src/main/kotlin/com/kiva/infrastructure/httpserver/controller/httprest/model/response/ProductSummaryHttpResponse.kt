@@ -9,6 +9,7 @@ import kotlinx.serialization.Serializable
  * Contract schema `ProductSummary`: a product card.
  *
  * [image] is always there and `null` until photos are uploaded (the client then draws the bag's illustration).
+ * [defaultColorKey] and [displayColorKey] are never null in the shop: only a panel draft without an active color has none.
  * Not sent yet: `hoverImage` (no uploads yet), `rating` (no reviews yet) and `isWishlisted` (no accounts yet); none
  * of them is required by the contract.
  */
@@ -24,8 +25,8 @@ data class ProductSummaryHttpResponse(
     val price: PriceInfoHttpResponse,
     val colors: List<ProductColorOptionHttpResponse>,
     val colorsCount: Int,
-    val defaultColorKey: String,
-    val displayColorKey: String,
+    val defaultColorKey: String?,
+    val displayColorKey: String?,
     val image: MediaAssetHttpResponse?,
     val badges: List<ProductBadgeHttpResponse>,
     val stock: StockInfoHttpResponse,

@@ -189,16 +189,16 @@ class ProductQmProjectorTest {
     }
 
     @Test
-    fun `the search text holds name, category, active colors and material, written the Persian way`() {
+    fun `the search text holds name, category, active colors, material and the product's code, written the Persian way`() {
         // Typed on an Arabic keyboard: ي and ك instead of ی and ک.
         val arabicName = ProductEventSamples.fullDetails.copy(name = ProductName.constructFromPersisted("كيف دوشي ماهك"))
         val product = catalog.newProduct(listOf(NewColor("lilac"), NewColor("black")), details = arabicName)
 
-        assertEquals("کیف دوشی ماهک کیف دوشی یاسی مشکی چرم مصنوعی مات درجه یک", productRow(product.id)[ProductQmTbl.searchText])
+        assertEquals("کیف دوشی ماهک کیف دوشی یاسی مشکی چرم مصنوعی مات درجه یک ${product.sku.value}", productRow(product.id)[ProductQmTbl.searchText])
 
         catalog.change(product.id) { it.deactivateVariant(product.color("black"), staff, now) }
 
-        assertEquals("کیف دوشی ماهک کیف دوشی یاسی چرم مصنوعی مات درجه یک", productRow(product.id)[ProductQmTbl.searchText])
+        assertEquals("کیف دوشی ماهک کیف دوشی یاسی چرم مصنوعی مات درجه یک ${product.sku.value}", productRow(product.id)[ProductQmTbl.searchText])
     }
 
     @Test
@@ -210,7 +210,7 @@ class ProductQmProjectorTest {
 
         val row = productRow(product.id)
         assertEquals(listOf("wallet", "genuine-cow-leather", BagType.WALLET), listOf(row[ProductQmTbl.categorySlug], row[ProductQmTbl.materialSlug], row[ProductQmTbl.bagType]))
-        assertEquals("کیف پول ساده کیف پول مشکی چرم طبیعی گاوی", row[ProductQmTbl.searchText])
+        assertEquals("کیف پول ساده کیف پول مشکی چرم طبیعی گاوی ${changed.sku.value}", row[ProductQmTbl.searchText])
         assertEquals(
             listOf(null, null, emptyList<String>(), null, ProductSpecsPayload(ProductEventSamples.bareDetails.specs), emptyList<String>(), null, true, true, 5),
             listOf(

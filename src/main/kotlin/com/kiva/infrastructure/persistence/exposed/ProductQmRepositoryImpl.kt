@@ -1,5 +1,8 @@
 package com.kiva.infrastructure.persistence.exposed
 
+import com.kiva.application.repository.AdminProductDetailQm
+import com.kiva.application.repository.AdminProductFilter
+import com.kiva.application.repository.AdminProductQm
 import com.kiva.application.repository.ProductCardQm
 import com.kiva.application.repository.PriceRange
 import com.kiva.application.repository.ProductDetailQm
@@ -9,11 +12,13 @@ import com.kiva.application.repository.ProductQmRepository
 import com.kiva.application.repository.ProductQmRepository.NamedInSearch
 import com.kiva.application.repository.ProductRef
 import com.kiva.application.repository.VariantQm
+import com.kiva.application.usecase.product.usecase.query.AdminProductSorts
 import com.kiva.application.usecase.product.usecase.query.ProductSorts
 import com.kiva.common.pagination.Page
 import com.kiva.common.pagination.Pageable
 import com.kiva.common.valueobject.Money
 import com.kiva.common.valueobject.Slug
+import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
 import com.kiva.domain.aggregate.product.model.valueobject.Highlights
 import com.kiva.domain.aggregate.product.model.valueobject.MaterialDescription
@@ -21,10 +26,12 @@ import com.kiva.domain.aggregate.product.model.valueobject.MaxPerOrder
 import com.kiva.domain.aggregate.product.model.valueobject.PriceTag
 import com.kiva.domain.aggregate.product.model.valueobject.ProductDescription
 import com.kiva.domain.aggregate.product.model.valueobject.ProductId
+import com.kiva.domain.aggregate.product.model.valueobject.ProductMedia
 import com.kiva.domain.aggregate.product.model.valueobject.ProductName
 import com.kiva.domain.aggregate.product.model.valueobject.ProductStatus
 import com.kiva.domain.aggregate.product.model.valueobject.ShortDescription
 import com.kiva.domain.aggregate.product.model.valueobject.Sku
+import com.kiva.domain.aggregate.product.model.valueobject.StockStatus
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
 import com.kiva.infrastructure.common.persistence.SortOrders
 import com.kiva.infrastructure.persistence.exposed.projector.ProductQmSummary
@@ -40,6 +47,14 @@ import org.jetbrains.exposed.v1.core.QueryParameter
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.minus
+import org.jetbrains.exposed.v1.core.wrapAsExpression
+import org.jetbrains.exposed.v1.core.upperCase
+import org.jetbrains.exposed.v1.core.or
+import org.jetbrains.exposed.v1.core.less
+import org.jetbrains.exposed.v1.core.intLiteral
+import org.jetbrains.exposed.v1.core.notExists
+import org.jetbrains.exposed.v1.core.exists
 import org.jetbrains.exposed.v1.core.count
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greater
@@ -154,21 +169,26 @@ class ProductQmRepositoryImpl : ProductQmRepository {
             .where { (ProductQmTbl.status eq ProductStatus.ACTIVE) and matching(ref) }
             .singleOrNull()
             ?: return null
-
-        val variants = ProductVariantQmTbl.selectAll()
+        val activeColors = ProductVariantQmTbl.selectAll()
             .where { (ProductVariantQmTbl.productId eq row[ProductQmTbl.productId]) and (ProductVariantQmTbl.isActive eq true) }
             .orderBy(ProductVariantQmTbl.sortOrder to SortOrder.ASC, ProductVariantQmTbl.variantId to SortOrder.ASC)
-            .map {
-                ProductDetailQm.Variant(
-                    variantId = VariantId.constructFromPersisted(it[ProductVariantQmTbl.variantId]),
-                    colorKey = ColorKey.constructFromPersisted(it[ProductVariantQmTbl.colorKey]),
-                    sku = Sku.constructFromPersisted(it[ProductVariantQmTbl.sku]),
-                    priceTag = priceTagOf(it[ProductVariantQmTbl.price], it[ProductVariantQmTbl.compareAtPrice]),
-                    isDefault = it[ProductVariantQmTbl.isDefault],
-                    available = it[ProductVariantQmTbl.onHand] - it[ProductVariantQmTbl.reserved],
-                    media = it[ProductVariantQmTbl.media].map { media -> media.toDomain() },
-                )
-            }
+            .toList()
+        return detailOf(row, activeColors)
+    }
+
+    /** One product's page from its row and its active colors' rows (in display order). */
+    private fun detailOf(row: ResultRow, activeColors: List<ResultRow>): ProductDetailQm {
+        val variants = activeColors.map {
+            ProductDetailQm.Variant(
+                variantId = VariantId.constructFromPersisted(it[ProductVariantQmTbl.variantId]),
+                colorKey = ColorKey.constructFromPersisted(it[ProductVariantQmTbl.colorKey]),
+                sku = Sku.constructFromPersisted(it[ProductVariantQmTbl.sku]),
+                priceTag = priceTagOf(it[ProductVariantQmTbl.price], it[ProductVariantQmTbl.compareAtPrice]),
+                isDefault = it[ProductVariantQmTbl.isDefault],
+                available = it[ProductVariantQmTbl.onHand] - it[ProductVariantQmTbl.reserved],
+                media = it[ProductVariantQmTbl.media].map { media -> media.toDomain() },
+            )
+        }
 
         return ProductDetailQm(
             card = cardOf(row, variants.map { ProductCardQm.Color(it.variantId, it.colorKey, it.isDefault, it.available) }),
@@ -190,6 +210,123 @@ class ProductQmRepositoryImpl : ProductQmRepository {
         is ProductRef.ById -> ProductQmTbl.productId eq ref.id.value
         is ProductRef.BySku -> ProductQmTbl.sku eq ref.sku.value
         is ProductRef.BySlug -> ProductQmTbl.slug eq ref.slug.value
+    }
+
+    // ============ the panel ============
+
+    /**
+     * One query for the page's rows, each with its colors counted in SQL (all of them, and the active ones low on
+     * stock), one for the total, and one for the first media of the page's default colors.
+     */
+    override fun findForAdmin(filter: AdminProductFilter, pageable: Pageable): Page<AdminProductQm> {
+        val variantsCount = wrapAsExpression<Long>(
+            ProductVariantQmTbl.select(ProductVariantQmTbl.id.count()).where { ProductVariantQmTbl.productId eq ProductQmTbl.productId },
+        )
+        val lowStockVariants = wrapAsExpression<Long>(
+            ProductVariantQmTbl.select(ProductVariantQmTbl.id.count()).where { lowOnStock(filter.lowStockThreshold) },
+        )
+        val page = ProductQmTbl.select(ProductQmTbl.columns + variantsCount + lowStockVariants)
+            .where { adminConditionsOf(filter) }
+            .paginate(pageable, adminSortOrders, tiebreaker = ProductQmTbl.productId, tiebreakerOrder = SortOrder.DESC) { it }
+
+        val media = defaultMediaOf(page.items.map { it[ProductQmTbl.productId] })
+        return page.map { row ->
+            AdminProductQm(
+                productId = ProductId.constructFromPersisted(row[ProductQmTbl.productId]),
+                sku = Sku.constructFromPersisted(row[ProductQmTbl.sku]),
+                name = ProductName.constructFromPersisted(row[ProductQmTbl.name]),
+                categorySlug = Slug.constructFromPersisted(row[ProductQmTbl.categorySlug]),
+                status = row[ProductQmTbl.status],
+                priceTag = priceTagOf(row[ProductQmTbl.price], row[ProductQmTbl.compareAtPrice]),
+                availableTotal = row[ProductQmTbl.availableTotal],
+                variantsCount = (row[variantsCount] ?: 0L).toInt(),
+                lowStockVariants = (row[lowStockVariants] ?: 0L).toInt(),
+                soldCount = row[ProductQmTbl.soldCount],
+                updatedOn = row[ProductQmTbl.updatedOn].toInstant(),
+                defaultMedia = media[row[ProductQmTbl.productId]],
+            )
+        }
+    }
+
+    /** Every status unless one is asked for; each filter given narrows further. */
+    private fun adminConditionsOf(filter: AdminProductFilter): Op<Boolean> {
+        val lowColor = ProductVariantQmTbl.select(ProductVariantQmTbl.id).where { lowOnStock(filter.lowStockThreshold) }
+        val conditions = buildList<Op<Boolean>> {
+            filter.q?.let { add(matchesAdminSearch(it)) }
+            filter.status?.let { add(ProductQmTbl.status eq it) }
+            if (filter.categories.isNotEmpty()) add(ProductQmTbl.categorySlug inList filter.categories.map { it.value })
+            when (filter.stockStatus) {
+                StockStatus.OUT_OF_STOCK -> add(ProductQmTbl.availableTotal eq 0)
+                StockStatus.LOW_STOCK -> add((ProductQmTbl.availableTotal greater 0) and exists(lowColor))
+                StockStatus.IN_STOCK -> add((ProductQmTbl.availableTotal greater 0) and notExists(lowColor))
+                null -> Unit
+            }
+        }
+        return conditions.reduceOrNull { all, next -> all and next } ?: Op.TRUE
+    }
+
+    /** An active color of the outer query's product with something left, but fewer than [threshold]. */
+    private fun lowOnStock(threshold: Int): Op<Boolean> {
+        val available = ProductVariantQmTbl.onHand - ProductVariantQmTbl.reserved
+        return (ProductVariantQmTbl.productId eq ProductQmTbl.productId) and (ProductVariantQmTbl.isActive eq true) and
+            (available greater intLiteral(0)) and (available less intLiteral(threshold))
+    }
+
+    /** The text in the search text, a code (the product's or a color's) that starts with it, or a color's exact barcode. */
+    private fun matchesAdminSearch(q: String): Op<Boolean> {
+        val code = q.uppercase()
+        val colorMatches = ProductVariantQmTbl.select(ProductVariantQmTbl.id).where {
+            (ProductVariantQmTbl.productId eq ProductQmTbl.productId) and
+                ((ProductVariantQmTbl.sku.upperCase() like startingWith(code)) or (ProductVariantQmTbl.barcode eq q))
+        }
+        return (ProductQmTbl.searchText.lowerCase() like containing(q.lowercase())) or
+            (ProductQmTbl.sku.upperCase() like startingWith(code)) or exists(colorMatches)
+    }
+
+    /** `word%`, with any `%` or `_` typed taken as themselves. */
+    private fun startingWith(word: String): LikePattern = LikePattern.ofLiteral(word, ESCAPE) + "%"
+
+    /** The first media of each product's default color, for those of [productIds] that have one. */
+    private fun defaultMediaOf(productIds: List<Long>): Map<Long, ProductMedia> {
+        if (productIds.isEmpty()) return emptyMap()
+        return ProductVariantQmTbl.select(ProductVariantQmTbl.productId, ProductVariantQmTbl.media)
+            .where { (ProductVariantQmTbl.productId inList productIds) and (ProductVariantQmTbl.isDefault eq true) }
+            .mapNotNull { row -> row[ProductVariantQmTbl.media].firstOrNull()?.let { row[ProductVariantQmTbl.productId] to it.toDomain() } }
+            .toMap()
+    }
+
+    override fun findAdminDetail(productId: ProductId): AdminProductDetailQm? {
+        val row = ProductQmTbl.selectAll().where { ProductQmTbl.productId eq productId.value }.singleOrNull() ?: return null
+        val colors = ProductVariantQmTbl.selectAll()
+            .where { ProductVariantQmTbl.productId eq productId.value }
+            .orderBy(ProductVariantQmTbl.sortOrder to SortOrder.ASC, ProductVariantQmTbl.variantId to SortOrder.ASC)
+            .toList()
+
+        return AdminProductDetailQm(
+            detail = detailOf(row, colors.filter { it[ProductVariantQmTbl.isActive] }),
+            status = row[ProductQmTbl.status],
+            version = row[ProductQmTbl.version],
+            createdOn = row[ProductQmTbl.createdOn].toInstant(),
+            createdBy = UserId.constructFromPersisted(row[ProductQmTbl.createdByUserId]),
+            publishAt = row[ProductQmTbl.publishAt]?.toInstant(),
+            sortPriority = row[ProductQmTbl.sortPriority],
+            tags = row[ProductQmTbl.tags],
+            variants = colors.map {
+                AdminProductDetailQm.Variant(
+                    variantId = VariantId.constructFromPersisted(it[ProductVariantQmTbl.variantId]),
+                    colorKey = ColorKey.constructFromPersisted(it[ProductVariantQmTbl.colorKey]),
+                    sku = Sku.constructFromPersisted(it[ProductVariantQmTbl.sku]),
+                    barcode = it[ProductVariantQmTbl.barcode],
+                    priceTag = priceTagOf(it[ProductVariantQmTbl.price], it[ProductVariantQmTbl.compareAtPrice]),
+                    isDefault = it[ProductVariantQmTbl.isDefault],
+                    isActive = it[ProductVariantQmTbl.isActive],
+                    onHand = it[ProductVariantQmTbl.onHand],
+                    reserved = it[ProductVariantQmTbl.reserved],
+                    soldCount = it[ProductVariantQmTbl.soldCount],
+                    media = it[ProductVariantQmTbl.media].map { media -> media.toDomain() },
+                )
+            },
+        )
     }
 
     // ============ one color, slugs and codes in use ============
@@ -351,6 +488,21 @@ class ProductQmRepositoryImpl : ProductQmRepository {
                 else -> error("No database order for sort '$sort'")
             }
             if (ProductSorts.putsSoldOutLast(sort)) listOf(ProductQmTbl.inStock to SortOrder.DESC, own) else listOf(own)
+        }
+
+        /** What each of AdminProductSorts means here; the largest productId breaks ties. Nothing puts sold-out last. */
+        val adminSortOrders: SortOrders = AdminProductSorts.names.associateWith { sort ->
+            val own: Pair<Expression<*>, SortOrder> = when (sort) {
+                AdminProductSorts.UPDATED -> ProductQmTbl.updatedOn to SortOrder.DESC
+                AdminProductSorts.NEWEST -> ProductQmTbl.createdOn to SortOrder.DESC
+                AdminProductSorts.NAME -> ProductQmTbl.name to SortOrder.ASC
+                AdminProductSorts.PRICE_ASC -> ProductQmTbl.price to SortOrder.ASC
+                AdminProductSorts.PRICE_DESC -> ProductQmTbl.price to SortOrder.DESC
+                AdminProductSorts.BESTSELLING -> ProductQmTbl.soldCount to SortOrder.DESC
+                AdminProductSorts.STOCK_ASC -> ProductQmTbl.availableTotal to SortOrder.ASC
+                else -> error("No database order for sort '$sort'")
+            }
+            listOf(own)
         }
     }
 }

@@ -60,6 +60,7 @@ import com.kiva.infrastructure.config.AppConfig
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AddressUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminAuditUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminCatalogUseCases
+import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminProductUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminMediaUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminCustomerUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AuthUseCases
@@ -73,6 +74,7 @@ import com.kiva.infrastructure.httpserver.controller.httprest.web.devFakeGateway
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Addresses
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminAudit
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminCatalog
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminProducts
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminMedia
 import com.kiva.infrastructure.media.DiskMediaStorage
 import com.kiva.infrastructure.media.MediaUrls
@@ -244,6 +246,7 @@ fun Application.configureRouting() {
         getColor = get(), createColor = get(), updateColor = get(), deleteColor = get(),
         listMaterials = get(), getMaterial = get(), createMaterial = get(), updateMaterial = get(), deleteMaterial = get(),
     )
+    val adminProductUseCases = AdminProductUseCases(checkPanelAccess = checkPanelAccessUc, findProducts = get(), getProduct = get())
     val config by inject<AppConfig>()
 
     routing {
@@ -262,6 +265,7 @@ fun Application.configureRouting() {
             webV1AdminAudit(AdminAuditUseCases(checkPanelAccessUc, listAuditLogUc))
             webV1AdminMedia(AdminMediaUseCases(checkPanelAccessUc, uploadMediaUc), mediaStorage::newUploadFile, mediaUrls)
             webV1AdminCatalog(adminCatalogUseCases, mediaUrls, config.shop.siteUrl)
+            webV1AdminProducts(adminProductUseCases, config.shop.siteUrl)
             webV1Catalog(listColorsUc, listMaterialsUc, listCategoriesUc, getCategoryUc, mediaUrls, config.shop.siteUrl)
             webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, config.shop.siteUrl)
             webV1Geo(listProvincesUc, listCitiesOfProvinceUc)

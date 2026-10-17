@@ -10,12 +10,13 @@ import java.time.Instant
  * A product's page (the contract's ProductDetail, without its Persian texts, which are the HTTP layer's job): its card,
  * the color shown first, and what only the page shows. As on the card, no exact stock: only what a shopper may see.
  *
- * @property selectedColorKey the color asked for (`?color=`) when the product comes in it, otherwise the default.
+ * @property selectedColorKey the color asked for (`?color=`) when the product comes in it, otherwise the default (null
+ *   only for a product without an active color, which only the panel reads).
  * @property variants the colors in the shop, in display order, each with its own price tag, stock and gallery.
  */
 data class ProductDetailDto(
     val card: ProductCardDto,
-    val selectedColorKey: String,
+    val selectedColorKey: String?,
     val shortDescription: String?,
     val description: String?,
     val highlights: List<String>,

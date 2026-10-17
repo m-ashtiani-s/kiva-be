@@ -4898,7 +4898,7 @@ components:
     SearchQuery:
       name: q
       in: query
-      description: جستجو روی نام، دسته، رنگ و متریال (با نرمال‌سازی ی/ک)
+      description: جستجو روی نام، دسته، رنگ‌های فعال، متریال و کد محصول (SKU)، با نرمال‌سازی ی/ک
       schema: { type: string, maxLength: 100, example: کراس‌بادی }
     CategoryFilter:
       name: category

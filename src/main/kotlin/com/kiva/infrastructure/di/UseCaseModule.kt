@@ -80,7 +80,9 @@ import com.kiva.application.usecase.payment.PaymentConfirmation
 import com.kiva.application.usecase.payment.usecase.command.ReconcilePaymentUc
 import com.kiva.application.usecase.payment.usecase.query.FindStalePaymentsUc
 import com.kiva.application.usecase.product.usecase.command.CreateProductUc
+import com.kiva.application.usecase.product.usecase.query.FindAdminProductsUc
 import com.kiva.application.usecase.product.usecase.query.FindProductsUc
+import com.kiva.application.usecase.product.usecase.query.GetAdminProductUc
 import com.kiva.application.usecase.product.usecase.query.FindRelatedProductsUc
 import com.kiva.application.usecase.product.usecase.query.GetProductFacetsUc
 import com.kiva.application.usecase.product.usecase.query.GetProductUc
@@ -305,6 +307,15 @@ val useCaseModule = module(createdAtStart = true) {
             colorRepository = get(),
             clock = get(),
             shopSettingsRepository = get(),
+        )
+    }
+
+    // --- admin: products (step 1.4) ---
+    single { FindAdminProductsUc(transactionManager = get(), productQmRepository = get(), categoryRepository = get()) }
+    single {
+        GetAdminProductUc(
+            transactionManager = get(), productQmRepository = get(), categoryRepository = get(), materialRepository = get(), colorRepository = get(),
+            userRepository = get(), shopSettingsRepository = get(), clock = get(),
         )
     }
 

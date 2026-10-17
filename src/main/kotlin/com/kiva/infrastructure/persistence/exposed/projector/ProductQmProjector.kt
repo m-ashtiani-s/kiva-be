@@ -24,6 +24,7 @@ import com.kiva.infrastructure.persistence.exposed.tbl.CategoryTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.MaterialTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.ProductQmTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.ProductVariantQmTbl
+import kotlinx.serialization.json.JsonObject
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.isNull
@@ -98,6 +99,8 @@ object ProductQmProjector {
             }
         }
 
+        // The product's version is its last event's sequence (the panel's ETag); stock changes are other streams.
+        if (event !is ProductCreated) updateProduct(productId) { it[version] = event.sequence.value }
         ProductQmSummary.refresh(productId, updatedOn = event.occurredOn)
     }
 
@@ -121,6 +124,12 @@ object ProductQmProjector {
             it[updatedOn] = event.occurredOn.utc()
             it[publishedOn] = null
             it[firstPublishedOn] = null
+            it[version] = event.sequence.value
+            it[createdByUserId] = event.occurredByUserId.value
+            it[publishAt] = null
+            it[tags] = emptyList()
+            it[seo] = JsonObject(emptyMap())
+            it[availableTotal] = 0
         }
     }
 
