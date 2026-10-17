@@ -40,6 +40,7 @@ import com.kiva.infrastructure.httpserver.auth.configureAuthentication
 import com.kiva.infrastructure.httpserver.configureHttp
 import com.kiva.infrastructure.persistence.exposed.AddressBookRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.AdminCustomerRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.AuditTrailImpl
 import com.kiva.infrastructure.persistence.exposed.AuthSessionRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.CartRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.DiscountCodeRepositoryImpl
@@ -98,7 +99,7 @@ class AuthTestStack(val clock: MutableClock, maxSmsPerHour: Int = 300, val otpCo
     val checkPanelAccess = CheckPanelAccessUc(transactions, sessions, users, events, clock)
     val findCustomers = FindCustomersUc(transactions, AdminCustomerRepositoryImpl(), OrderQmRepositoryImpl())
     val getCustomer = GetCustomerUc(transactions, AdminCustomerRepositoryImpl(), OrderQmRepositoryImpl())
-    val setUserRoles = SetUserRolesUc(transactions, users, sessions, events, clock)
+    val setUserRoles = SetUserRolesUc(transactions, users, sessions, events, AuditTrailImpl(), clock)
     val bootstrapAdmin = BootstrapAdminUc(transactions, users, sessions, events, clock)
     val requestPhoneChange = RequestPhoneChangeUc(transactions, users, sessions, otpIssuer, sms, clock)
     val confirmPhoneChange = ConfirmPhoneChangeUc(transactions, codes, users, sessions, otpCodes, sessionTokens, accessTokens, sms, events, clock)

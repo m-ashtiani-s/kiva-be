@@ -14,6 +14,8 @@ import com.kiva.application.usecase.admin.usecase.command.CheckPanelAccessUc
 import com.kiva.application.usecase.admin.usecase.command.SetUserRolesUc
 import com.kiva.application.usecase.admin.usecase.query.FindCustomersUc
 import com.kiva.application.usecase.admin.usecase.query.GetCustomerUc
+import com.kiva.application.usecase.audit.usecase.command.DeleteOldAuditEntriesUc
+import com.kiva.application.usecase.audit.usecase.query.ListAuditLogUc
 import com.kiva.application.usecase.auth.OtpIssuer
 import com.kiva.application.usecase.auth.usecase.command.BootstrapAdminUc
 import com.kiva.application.usecase.auth.usecase.command.LogoutUc
@@ -349,11 +351,22 @@ val useCaseModule = module(createdAtStart = true) {
     single { FindCustomersUc(transactionManager = get(), adminCustomerRepository = get(), orderQmRepository = get()) }
     single { GetCustomerUc(transactionManager = get(), adminCustomerRepository = get(), orderQmRepository = get()) }
     single {
-        SetUserRolesUc(transactionManager = get(), userRepository = get(), authSessionRepository = get(), securityEventLog = get(), clock = get())
+        SetUserRolesUc(
+            transactionManager = get(),
+            userRepository = get(),
+            authSessionRepository = get(),
+            securityEventLog = get(),
+            auditTrail = get(),
+            clock = get(),
+        )
     }
     single {
         BootstrapAdminUc(transactionManager = get(), userRepository = get(), authSessionRepository = get(), securityEventLog = get(), clock = get())
     }
+
+    // --- admin: the change log ---
+    single { ListAuditLogUc(transactionManager = get(), auditLogQmRepository = get()) }
+    single { DeleteOldAuditEntriesUc(transactionManager = get(), auditTrail = get(), clock = get()) }
 
     // --- inventory: commands ---
     single {

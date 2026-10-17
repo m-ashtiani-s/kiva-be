@@ -22,6 +22,7 @@ import org.jetbrains.exposed.v1.jdbc.Database
 import com.kiva.infrastructure.job.JobScheduler
 import com.kiva.infrastructure.payment.ZarinpalGateway
 import io.ktor.client.engine.cio.CIO
+import com.kiva.infrastructure.job.PanelJobs
 import com.kiva.infrastructure.job.PurchaseJobs
 import org.koin.dsl.module
 import java.time.Clock
@@ -52,7 +53,8 @@ fun infrastructureModule(config: AppConfig, database: Database) = module {
             deleteStaleGuestCarts = get(), deleteOldIdempotencyKeys = get(), findDueReservationGroups = get(), releaseReservationGroup = get(),
         )
     }
-    single { JobScheduler(get<PurchaseJobs>().all(), clock = get()) }
+    single { PanelJobs(deleteOldAuditEntries = get()) }
+    single { JobScheduler(get<PurchaseJobs>().all() + get<PanelJobs>().all(), clock = get()) }
     // The adapters behind the gateways. A gateway without one here is never available, whatever the settings say.
     when (config.payment.provider) {
         PaymentProvider.FAKE -> {

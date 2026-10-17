@@ -1,8 +1,10 @@
 package com.kiva.infrastructure.di
 
+import com.kiva.application.port.AuditTrail
 import com.kiva.application.port.IdempotencyStore
 import com.kiva.application.port.SecurityEventLog
 import com.kiva.application.repository.AdminCustomerRepository
+import com.kiva.application.repository.AuditLogQmRepository
 import com.kiva.application.repository.OfferQmRepository
 import com.kiva.application.repository.OrderQmRepository
 import com.kiva.application.repository.ProductQmRepository
@@ -34,6 +36,8 @@ import com.kiva.infrastructure.payment.RandomPaymentIds
 import com.kiva.infrastructure.persistence.exposed.AddressBookRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.AddressIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.AdminCustomerRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.AuditLogQmRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.AuditTrailImpl
 import com.kiva.infrastructure.persistence.exposed.AuthSessionRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.CartRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.CategoryRepositoryImpl
@@ -94,4 +98,6 @@ val daoModule = module(createdAtStart = true) {
     single<IdempotencyStore> { IdempotencyStoreImpl() }
     single<DiscountCodeRepository> { DiscountCodeRepositoryImpl() }
     single<DiscountRedemptionRepository> { DiscountRedemptionRepositoryImpl() }
+    single<AuditTrail> { AuditTrailImpl() }
+    single<AuditLogQmRepository> { AuditLogQmRepositoryImpl() }
 }

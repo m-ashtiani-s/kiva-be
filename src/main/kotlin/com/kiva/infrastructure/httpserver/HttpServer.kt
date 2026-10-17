@@ -14,6 +14,7 @@ import com.kiva.application.usecase.admin.usecase.command.CheckPanelAccessUc
 import com.kiva.application.usecase.admin.usecase.command.SetUserRolesUc
 import com.kiva.application.usecase.admin.usecase.query.FindCustomersUc
 import com.kiva.application.usecase.admin.usecase.query.GetCustomerUc
+import com.kiva.application.usecase.audit.usecase.query.ListAuditLogUc
 import com.kiva.application.usecase.auth.usecase.command.LogoutUc
 import com.kiva.application.usecase.auth.usecase.command.RefreshSessionUc
 import com.kiva.application.usecase.auth.usecase.command.SendLoginCodeUc
@@ -56,6 +57,7 @@ import com.kiva.infrastructure.common.http.KivaJson
 import com.kiva.infrastructure.common.http.configureStatusPages
 import com.kiva.infrastructure.config.AppConfig
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AddressUseCases
+import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminAuditUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminCustomerUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AuthUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.CartUseCases
@@ -66,6 +68,7 @@ import com.kiva.infrastructure.httpserver.controller.httprest.web.OTP_SEND_RATE_
 import com.kiva.infrastructure.httpserver.controller.httprest.web.PaymentUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.devFakeGateway
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Addresses
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminAudit
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminCustomers
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Auth
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Cart
@@ -223,6 +226,7 @@ fun Application.configureRouting() {
     val findCustomersUc by inject<FindCustomersUc>()
     val getCustomerUc by inject<GetCustomerUc>()
     val setUserRolesUc by inject<SetUserRolesUc>()
+    val listAuditLogUc by inject<ListAuditLogUc>()
     val config by inject<AppConfig>()
 
     routing {
@@ -236,6 +240,7 @@ fun Application.configureRouting() {
             )
             webV1Me(MeUseCases(getMeUc, updateMyProfileUc, requestPhoneChangeUc, confirmPhoneChangeUc))
             webV1AdminCustomers(AdminCustomerUseCases(checkPanelAccessUc, findCustomersUc, getCustomerUc, setUserRolesUc))
+            webV1AdminAudit(AdminAuditUseCases(checkPanelAccessUc, listAuditLogUc))
             webV1Catalog(listColorsUc, listMaterialsUc, listCategoriesUc, getCategoryUc)
             webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, config.shop.siteUrl)
             webV1Geo(listProvincesUc, listCitiesOfProvinceUc)

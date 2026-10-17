@@ -762,7 +762,7 @@ Route: 201 با MediaAsset
 | گام | عنوان | اندازه | وضعیت |
 |---|---|---|---|
 | ۱.۰ | کانترکت 1.8.0 و آماده‌سازی | M | ✅ |
-| ۱.۱ | لاگ تغییرات | M | ⬜ |
+| ۱.۱ | لاگ تغییرات | M | ✅ |
 | ۱.۲ | آپلود مدیا | L | ⬜ |
 | ۱.۳ | دسته، رنگ و متریال | M | ⬜ |
 | ۱.۴ | read model ِ پنل و دو Query ِ محصول | M | ⬜ |
@@ -1196,7 +1196,7 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 
 ---
 
-#### گام ۱.۱: لاگ تغییرات · M ⬜
+#### گام ۱.۱: لاگ تغییرات · M ✅
 
 **می‌سازی:** `V21__audit_log.sql`؛ `AuditTrail`، `AuditEntry`، `AuditChange`، `PanelActor` (application)؛ `AuditAction` و `AuditEntityType` (enum، با ردیف‌های فاز ۱ ِ جدول ۵.۱)؛ `AuditDiff`؛ `AuditTrailImpl`؛ `AuditLogQmRepository` و پیاده‌سازیش (با join ِ `user_tbl`)؛ `ListAuditLogUc`؛ `AuditTexts` (جمله‌ی هر `AuditAction`)؛ `webV1AdminAudit.kt`؛ `ApplicationCall.panelActor()`؛ `DeleteOldAuditEntriesUc` و `PanelJobs` با job ِ `delete-old-audit-entries`؛ و **لاگ تغییرات برای endpoint ِ موجود `PUT /admin/customers/{customerId}/roles`** (`SetUserRolesUc.Cmd` یه `actor: PanelActor` می‌گیره).
 
@@ -1208,14 +1208,21 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 - چرا موبایل کاربر تو ردیف نیست؟ داده‌ی شخصی کمتر، و حذف حساب (فاز ۱۴) لازم نیست لاگ رو دست بزنه.
 
 **تموم شده یعنی:**
-- [ ] `AuditDiff` فقط فیلدهای عوض‌شده رو می‌ده؛ متن بلند `from = to = null`؛ پول بدون جداکننده؛ لیست JSON ِ مرتب.
-- [ ] تغییر نقش یه ردیف `USER_ROLES_CHANGED` با `roles` ِ قبل و بعد، `ip` و `traceId` می‌ذاره؛ تغییر نقش ِ ردشده (`ROLE_CHANGE_NOT_ALLOWED`) هیچ ردیفی نمی‌ذاره.
-- [ ] `GET /admin/audit-log`: تازه‌ترین اول؛ فیلتر `entityType` + `entityId`، `actorId`، و `from`/`to` به وقت تهران (ردیف ساعت ۲۱:۰۰ ِ UTC ِ پنجشنبه تو روز جمعه ـه)؛ `from > to` ← ۴۰۰؛ `summary` فارسی و `actor` با اسم و موبایل.
-- [ ] `SUPPORT` ← 403؛ بدون توکن ← 401.
-- [ ] دیتابیس رد می‌کنه: `UPDATE` ِ هر ردیف؛ `DELETE` ِ ردیف ۸۹ روزه. `DELETE` ِ ردیف ۹۱ روزه مجازه.
-- [ ] `DeleteOldAuditEntriesUc` با `MutableClock`: ردیف‌های ۹۱ روزه می‌رن، ۸۹ روزه می‌مونن؛ ۱۲٬۰۰۰ ردیف در سه دسته؛ اجرای دوباره بی‌اثر.
-- [ ] `AuditTextsTest`: هر مقدار `AuditAction` یه جمله داره.
-- [ ] خرابکاری: trigger بدون شرط ۹۰ روز ← تست «ردیف ۸۹ روزه پاک نمی‌شه» قرمز.
+- [x] `AuditDiff` فقط فیلدهای عوض‌شده رو می‌ده؛ متن بلند `from = to = null`؛ پول بدون جداکننده؛ لیست JSON ِ مرتب.
+- [x] تغییر نقش یه ردیف `USER_ROLES_CHANGED` با `roles` ِ قبل و بعد، `ip` و `traceId` می‌ذاره؛ تغییر نقش ِ ردشده (`ROLE_CHANGE_NOT_ALLOWED`) هیچ ردیفی نمی‌ذاره.
+- [x] `GET /admin/audit-log`: تازه‌ترین اول؛ فیلتر `entityType` + `entityId`، `actorId`، و `from`/`to` به وقت تهران (ردیف ساعت ۲۱:۰۰ ِ UTC ِ پنجشنبه تو روز جمعه ـه)؛ `from > to` ← ۴۰۰؛ `summary` فارسی و `actor` با اسم و موبایل.
+- [x] `SUPPORT` ← 403؛ بدون توکن ← 401.
+- [x] دیتابیس رد می‌کنه: `UPDATE` ِ هر ردیف؛ `DELETE` ِ ردیف ۸۹ روزه. `DELETE` ِ ردیف ۹۱ روزه مجازه.
+- [x] `DeleteOldAuditEntriesUc` با `MutableClock`: ردیف‌های ۹۱ روزه می‌رن، ۸۹ روزه می‌مونن؛ ۱۲٬۰۰۰ ردیف در سه دسته؛ اجرای دوباره بی‌اثر.
+- [x] `AuditTextsTest`: هر مقدار `AuditAction` یه جمله داره.
+- [x] خرابکاری: trigger بدون شرط ۹۰ روز ← تست «ردیف ۸۹ روزه پاک نمی‌شه» قرمز.
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- `AuditTrailImpl` و `AuditLogQmRepositoryImpl` کنار بقیه در `persistence/exposed/` ان (نه `infrastructure/audit/` ِ بخش ۲۲)، مثل `SecurityEventLogImpl`. `AuditDiff` در application ـه چون UseCaseها می‌سازنش.
+- پاک کردن قدیمی‌ها متد خود پورت `AuditTrail` ـه (`deleteRecordedBefore(before, limit)`)، مثل `IdempotencyStore`. هر دسته‌ی ۵۰۰۰تایی تراکنش خودش رو داره.
+- مرز پاک کردن یه ساعت زودتر از ۹۰ روزه (`SAFETY_MARGIN`): trigger با ساعت دیتابیس چک می‌کنه، و چند ثانیه اختلاف دو ساعت نباید یه دسته رو بشکنه.
+- `actor.phone` فقط وقتی `null` می‌شه که حساب دیگه نباشه (left join)، که تو فروشگاه پیش نمیاد (حساب بی‌نام می‌شه، پاک نه).
+- `entityLabel` ِ تغییر نقش اسم کاربره، یا `null`؛ `roles` به ترتیب الفبا تا یه مجموعه همیشه یه متن باشه.
 
 ---
 
@@ -5861,3 +5868,4 @@ kiva {
 |---|---|---|---|
 | ۲۵ مهر ۱۴۰۵ | — | — | سند نوشته شد. تصمیم‌های بخش ۱ (ردیف‌های ۱ تا ۱۰) پذیرفته شدن؛ بقیه پیشنهاد این سنده و با هر گام ۰ در کانترکت نوشته می‌شه |
 | ۲۶ مهر ۱۴۰۵ | ۱.۰ | Phase 1 step 1.0 | کانترکت 1.8.0 با هر ۱۸ ردیف ِ ۶.۸ و ردیف تازه‌ی ۱۹ (`ProductSpecsInput`). سه `FailureKind` ِ تازه، `EventSourceEntity.version`، متن همه‌ی کدهای تازه، تست چهارم `RouteGuardsTest` و `PanelTestStack`. کار روی برنچ `claude/sweet-lamport-v3gy0d` (برنچ تعیین‌شده‌ی این جلسه) به‌جای `panel-catalog` |
+| ۲۵ مهر ۱۴۰۵ | ۱.۱ | Phase 1 step 1.1 | `V21`، پورت `AuditTrail` با `AuditDiff`، `GET /admin/audit-log` با `AuditTexts`، job ِ `delete-old-audit-entries` در `PanelJobs`، و لاگ تغییر نقش‌ها. خرابکاری: trigger بدون شرط ۹۰ روز ← `a row of 89 days is never removed` قرمز |

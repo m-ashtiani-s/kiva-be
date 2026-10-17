@@ -4,6 +4,7 @@ import com.kiva.application.usecase.admin.usecase.command.CheckPanelAccessUc
 import com.kiva.application.usecase.admin.usecase.command.SetUserRolesUc
 import com.kiva.application.usecase.admin.usecase.query.FindCustomersUc
 import com.kiva.application.usecase.admin.usecase.query.GetCustomerUc
+import com.kiva.application.usecase.audit.usecase.query.ListAuditLogUc
 import com.kiva.common.patch.Patch
 import com.kiva.common.valueobject.IranianMobileNumber
 import com.kiva.common.valueobject.UserId
@@ -22,6 +23,8 @@ import com.kiva.infrastructure.httpserver.API_V1
 import com.kiva.infrastructure.httpserver.auth.configureAuthentication
 import com.kiva.infrastructure.httpserver.configureHttp
 import com.kiva.infrastructure.persistence.exposed.AdminCustomerRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.AuditLogQmRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.AuditTrailImpl
 import com.kiva.infrastructure.persistence.exposed.AuthSessionRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.OrderQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.SecurityEventLogImpl
@@ -60,13 +63,17 @@ class PanelTestStack(val clock: MutableClock) {
     val users = UserRepositoryImpl()
     val sessions = AuthSessionRepositoryImpl()
     private val events = SecurityEventLogImpl()
+    val auditTrail = AuditTrailImpl()
 
     val checkPanelAccess = CheckPanelAccessUc(transactions, sessions, users, events, clock)
 
     // --- the customers page (login phase), the first panel routes ---
     val findCustomers = FindCustomersUc(transactions, AdminCustomerRepositoryImpl(), OrderQmRepositoryImpl())
     val getCustomer = GetCustomerUc(transactions, AdminCustomerRepositoryImpl(), OrderQmRepositoryImpl())
-    val setUserRoles = SetUserRolesUc(transactions, users, sessions, events, clock)
+    val setUserRoles = SetUserRolesUc(transactions, users, sessions, events, auditTrail, clock)
+
+    // --- the change log (step 1.1) ---
+    val listAuditLog = ListAuditLogUc(transactions, AuditLogQmRepositoryImpl())
 
     /** A logged-in user of the panel: who they are and the access token of their session. */
     class Caller(val user: User, val token: String) {
@@ -109,6 +116,7 @@ class PanelTestStack(val clock: MutableClock) {
             routing {
                 route(API_V1) {
                     webV1AdminCustomers(AdminCustomerUseCases(checkPanelAccess, findCustomers, getCustomer, setUserRoles))
+                    webV1AdminAudit(AdminAuditUseCases(checkPanelAccess, listAuditLog))
                 }
             }
         }

@@ -11,7 +11,7 @@ import com.kiva.infrastructure.common.http.pageable
 import com.kiva.infrastructure.common.http.respondFailure
 import com.kiva.infrastructure.common.http.respondResult
 import com.kiva.infrastructure.common.http.toHttpResponse
-import com.kiva.infrastructure.httpserver.auth.accessPrincipal
+import com.kiva.infrastructure.httpserver.auth.panelActor
 import com.kiva.infrastructure.httpserver.auth.requireRoles
 import com.kiva.infrastructure.httpserver.controller.httprest.model.request.SetRolesHttpRequest
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.AdminCustomerHttpResponse
@@ -46,7 +46,7 @@ fun Route.webV1AdminCustomers(useCases: AdminCustomerUseCases) {
             val command = SetUserRolesUc.Cmd(
                 customerId = call.pathParameters["customerId"].orEmpty(),
                 roles = request.roles,
-                by = call.accessPrincipal().userId,
+                actor = call.panelActor(),
             )
             val customerId = useCases.setUserRoles.execute(command).unwrapOr { return@put call.respondFailure(it) }
             call.respondResult(useCases.getCustomer.execute(GetCustomerUc.Qry(customerId))) { AdminCustomerHttpResponse.from(it) }
