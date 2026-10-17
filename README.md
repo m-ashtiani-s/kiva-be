@@ -123,6 +123,19 @@ that need the real tools (`VipsFfmpegMediaProcessorTest`) skip themselves with a
 An upload nothing uses (a color, a category, …) within 48 hours is removed with its files every night at 04:30 Tehran;
 one in use never is.
 
+### The panel's catalog
+
+Categories, colors, materials, products, their colors and stock are written through `/admin/*` (ADMIN and
+CATALOG_MANAGER; uploads also OPERATOR and CONTENT_EDITOR). Every write is one row of the change log
+(`GET /admin/audit-log`, kept 90 days). A product's page carries its version in `ETag`; a `PUT` with that `If-Match`
+is refused with 412 if someone saved in between. With `KIVA_JOBS_ENABLED` on, drafts scheduled for publication are
+published every minute. [docs/FRONTEND_PANEL_CATALOG.md](docs/FRONTEND_PANEL_CATALOG.md) is the whole behaviour for the
+panel; [PANEL_CATALOG_REVIEW.md](PANEL_CATALOG_REVIEW.md) the risks and the tests that guard them.
+
+A local round with the panel: run kiva-backoffice-fe on `http://localhost:3200` (an origin allowed by default) with
+`NEXT_PUBLIC_API_URL` pointing here, and log in with a phone that has CATALOG_MANAGER or ADMIN (the first ADMIN through
+`KIVA_BOOTSTRAP_ADMIN_PHONE`, the others with `PUT /admin/customers/{id}/roles`).
+
 The shop's own rules (shipping costs, free shipping, the payment window, the gateways on offer, reservations) are in
 the database (`shopsettings_tbl`), not in the config. Locally, a shorter payment window shows an order expiring in a
 few minutes: `UPDATE shopsettings_tbl SET "paymentPendingMinutes" = 5` (5 to 60; the default is 15), and back to 15

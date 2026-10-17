@@ -230,10 +230,11 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         Caller(stored, accessTokens.issue(stored, session, clock.now).value)
     }
 
-    fun app(block: suspend ApplicationTestBuilder.() -> Unit) = testApplication {
+    /** @param trustedProxyHops 1 to read the caller's address from X-Forwarded-For, as behind our nginx. */
+    fun app(trustedProxyHops: Int = 0, block: suspend ApplicationTestBuilder.() -> Unit) = testApplication {
         environment { config = MapApplicationConfig() }
         application {
-            configureHttp()
+            configureHttp(trustedProxyHops = trustedProxyHops)
             configureAuthentication(accessTokens)
             routing {
                 route(API_V1) {

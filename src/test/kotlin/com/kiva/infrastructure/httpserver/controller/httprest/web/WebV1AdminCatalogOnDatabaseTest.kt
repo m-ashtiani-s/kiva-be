@@ -316,6 +316,20 @@ class WebV1AdminCatalogOnDatabaseTest {
     }
 
     @Test
+    fun `a category with a draft and an archived product is 409 IN_USE with productCount 2 - counted before the delete is tried`() = stack.app {
+        val id = newCategory("tst-busy-two")
+        product(id, status = "DRAFT")
+        product(id, status = "ARCHIVED")
+
+        val response = send("DELETE", "/admin/categories/$id")
+
+        assertEquals(HttpStatusCode.Conflict, response.status)
+        // The foreign key alone would also refuse, but can only say "at least 1": the count comes from the check before it.
+        assertEquals(2, response.json().getValue("meta").jsonObject.getValue("productCount").jsonPrimitive.int)
+        assertEquals(1L, transaction(db) { CategoryTbl.selectAll().where { CategoryTbl.slug eq "tst-busy-two" }.count() })
+    }
+
+    @Test
     fun `an empty category is removed - 204 and one CATEGORY_DELETED row - and again it is 404`() = stack.app {
         val id = newCategory("tst-empty", "خالی")
 

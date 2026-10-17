@@ -1502,11 +1502,17 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 وابسته به: ۱.۰ تا ۱.۹
 
 **تموم شده یعنی:**
-- [ ] هر ردیف بخش ۳ ِ این فاز حداقل یه تست داره و هر خرابکاری حداقل یه تست رو قرمز می‌کنه.
-- [ ] اسکن لاگ سبز، با تست همراهِ نشت عمدی.
+- [x] هر ردیف بخش ۳ ِ این فاز حداقل یه تست داره و هر خرابکاری حداقل یه تست رو قرمز می‌کنه.
+- [x] اسکن لاگ سبز، با تست همراهِ نشت عمدی.
 - [ ] دور با پنل انجام شده، یا اگه این محیط پنل رو نداره، با Chromium و اسکریپت، و دور با پنل برای تو مونده (مثل گام ۲۱ ِ خرید).
 - [ ] merge به `main`.
 
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- `PANEL_CATALOG_REVIEW.md`، `PanelCatalogLogScanOnDatabaseTest` (با IP ِ واقعی از `X-Forwarded-For` که به لاگ تغییرات رسیده و به لاگ برنامه نه؛ `PanelTestStack.app(trustedProxyHops)`)، `docs/FRONTEND_PANEL_CATALOG.md` و بخش «The panel's catalog» ِ README. پیکربندی مدیا و نصب `vips`/`ffmpeg` از گام ۱.۲ تو README بود.
+- دو خرابکاری اول سبز موندن و تستشون اضافه شد: حذف چک «در استفاده» ِ دسته (FK دیوار دوم فقط «حداقل ۱» می‌گه) ← `a category with a draft and an archived product is 409 IN_USE with productCount 2 …`؛ حذف قفل ۷ برای `VariantChanged` (بن‌بست به زمان‌بندی بستگی داره) ← `ProductLockOrderOnDatabaseTest` با `FOR UPDATE NOWAIT` روی ردیف رنگ وقتی ردیف محصول دست کس دیگه‌ست.
+- خرابکاری‌های تازه: چک نقش در `webV1AdminProducts` ← `RouteGuardsTest` قرمز؛ `MediaProbe.Unsupported` به‌عنوان عکس ← `MediaLimitsPolicyTest` و تست ۴۱۵ ِ HTTP قرمز؛ سقف حجم عکس ← تست‌های ۴۱۳ قرمز. جدول کامل در `PANEL_CATALOG_REVIEW.md`.
+- **دور با پنل انجام نشد:** این ماشین نه kiva-backoffice-fe رو داره نه `vips`/`ffmpeg` (پس آپلود واقعی ۵۰۰ می‌شه). همه‌ی جریان‌های دور با HTTP ِ واقعی و `FakeMediaProcessor` تست شدن؛ دور واقعی و تست‌های ابزار واقعی برای تو مونده (بخش آخر سند ریویو).
+- **merge به `main`** منتظر تأیید توئه.
 ---
 
 <a id="p2"></a>
@@ -5963,3 +5969,4 @@ kiva {
 | ۲۶ مهر ۱۴۰۵ | ۱.۷ | Phase 1 step 1.7 | `AddVariantUc` (با موجودی اولیه و گالری)، `UpdateVariantUc` (ترتیب فعال‌سازی، تغییر، گالری، غیرفعال‌سازی)، `DeactivateVariantUc`، سه route با پاسخ `AdminVariant` و `ETag` ِ محصول، لاگ `VARIANT_*`، تست بن‌بست با خرید. خرابکاری: جابه‌جایی ترتیب فعال‌سازی و پیش‌فرض ← تست قرمز |
 | ۲۶ مهر ۱۴۰۵ | ۱.۸ | Phase 1 step 1.8 | `V25` با backfill، ردیف تاریخچه در `InventoryQmProjector`، `InventoryAdjustmentQmRepository`، `AdjustInventoryUc` با `actor`، لاگ و `id` از read model، `holdForChange` برای صف کشیدن تغییرهای همزمان، `ListInventoryAdjustmentsUc`، `webV1AdminInventory.kt`. خرابکاری: بدون `holdForChange` ← تست ۲۰ تغییر همزمان قرمز |
 | ۲۶ مهر ۱۴۰۵ | ۱.۹ | Phase 1 step 1.9 | عکس و hover ِ کارت از رنگ نمایش، `imageUrl`/`thumbnailUrl` ِ سواچ‌ها، عکس صفحه‌ی محصول، `CartItem.image`، `OrderItemSnapshot.imageUrl` (مسیر ۴۸۰، سفارش‌های قبلی null)، کانترکت `OrderItem.image` رشته (ردیف ۲۱). بدون کوئری اضافه. خرابکاری: `imageUrl = null` در ثبت سفارش ← تست قرمز |
+| ۲۶ مهر ۱۴۰۵ | ۱.۱۰ | Phase 1 step 1.10 | `PANEL_CATALOG_REVIEW.md` (ردیف‌های ۱، ۳، ۴، ۵، ۱۵، ۱۶، ۱۸، ۲۰ با تست‌هاشون و ۱۳ خرابکاری)، `PanelCatalogLogScanOnDatabaseTest`، `ProductLockOrderOnDatabaseTest`، تست «در استفاده» با `productCount 2`، `docs/FRONTEND_PANEL_CATALOG.md`، README. ۲۲۶۳ تست سبز. مونده: دور با پنل و تست‌های `vips` (ابزار و پنل اینجا نیست) و merge به `main` |
