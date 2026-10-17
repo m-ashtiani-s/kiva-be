@@ -35,6 +35,11 @@ class InventoryRepositoryImpl : InventoryRepository {
      * The product's row in the read model is locked first, before the stream (InventoryQmProjector.lockFor): whoever
      * waits on a color's stream then always waits at its product's row first, in the one order every writer takes.
      */
+    // The lock every stock writer takes before storing (lock 7, the product's row), only taken before the read.
+    override fun holdForChange(variantId: VariantId) {
+        InventoryQmProjector.lockFor(variantId)
+    }
+
     override fun save(inventory: Inventory) {
         val events = inventory.getRecordedEvents()
         if (events.isEmpty()) return

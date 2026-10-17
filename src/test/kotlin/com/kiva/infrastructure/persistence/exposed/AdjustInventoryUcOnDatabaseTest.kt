@@ -1,5 +1,6 @@
 package com.kiva.infrastructure.persistence.exposed
 
+import com.kiva.application.port.PanelActor
 import com.kiva.application.usecase.inventory.usecase.command.AdjustInventoryUc
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.inventory.InventoryDomainService
@@ -70,13 +71,14 @@ class AdjustInventoryUcOnDatabaseTest {
 
         val repository = AnotherRequestSavesFirst { delivery(color, 2) }
         val useCase = AdjustInventoryUc(
-            ExposedTransactionManager(db), InventoryDomainService(repository), repository, ProductQmRepositoryImpl(), Clock.systemUTC(),
+            ExposedTransactionManager(db), InventoryDomainService(repository), repository, ProductQmRepositoryImpl(), InventoryAdjustmentQmRepositoryImpl(),
+            UserRepositoryImpl(), AuditTrailImpl(), Clock.systemUTC(),
         )
 
-        val result = useCase.execute(AdjustInventoryUc.Cmd(color.value, -1, "DAMAGED", null, staff))
+        val result = useCase.execute(AdjustInventoryUc.Cmd(color.value, -1, "DAMAGED", null, PanelActor(staff, null)))
 
         // 5 delivered, 2 more by the other request, 1 damaged by this one: nothing lost, nothing counted twice.
-        assertEquals(6, result.getOrNull()?.onHandAfter)
+        assertEquals(6, result.getOrNull()?.stockAfter)
         assertEquals(lilac.sku.value, result.getOrNull()?.sku)
         assertEquals(6, transaction(db) { inventories.get(color)?.onHand })
         val stockEvents = transaction(db) {

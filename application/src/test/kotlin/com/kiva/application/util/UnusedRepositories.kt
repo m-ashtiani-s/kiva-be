@@ -12,7 +12,9 @@ import com.kiva.application.repository.ProductRef
 import com.kiva.application.repository.VariantQm
 import com.kiva.common.pagination.Page
 import com.kiva.common.pagination.Pageable
+import com.kiva.common.valueobject.IranianMobileNumber
 import com.kiva.common.valueobject.Slug
+import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.category.entity.Category
 import com.kiva.domain.aggregate.category.model.valueobject.CategoryId
 import com.kiva.domain.aggregate.category.repository.CategoryRepository
@@ -25,6 +27,9 @@ import com.kiva.domain.aggregate.material.repository.MaterialRepository
 import com.kiva.domain.aggregate.product.model.valueobject.ProductId
 import com.kiva.domain.aggregate.product.model.valueobject.Sku
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
+import com.kiva.domain.aggregate.user.entity.User
+import com.kiva.domain.aggregate.user.repository.UserRepository
+import com.kiva.domain.aggregate.user.repository.UserRepository.FoundOrRegistered
 import java.time.Instant
 
 // Fakes of the read model and the catalog repositories: a test overrides only what its use case calls, and anything
@@ -82,4 +87,13 @@ abstract class UnusedMaterialRepository : MaterialRepository {
     override fun insert(material: Material): Unit = unused()
     override fun update(material: Material): Unit = unused()
     override fun delete(id: MaterialId): Unit = unused()
+}
+
+/** [UserRepository] where every call fails until a test overrides it. */
+abstract class UnusedUserRepository : UserRepository {
+    override fun findById(id: UserId): User? = unused()
+    override fun findByPhone(phone: IranianMobileNumber): User? = unused()
+    override fun findOrRegister(phone: IranianMobileNumber, now: Instant): FoundOrRegistered = unused()
+    override fun save(user: User): Unit = unused()
+    override fun hasAnyAdmin(): Boolean = unused()
 }

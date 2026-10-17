@@ -5,6 +5,7 @@ import com.kiva.application.port.IdempotencyStore
 import com.kiva.application.port.SecurityEventLog
 import com.kiva.application.repository.AdminCustomerRepository
 import com.kiva.application.repository.AuditLogQmRepository
+import com.kiva.application.repository.InventoryAdjustmentQmRepository
 import com.kiva.application.repository.OfferQmRepository
 import com.kiva.application.repository.OrderQmRepository
 import com.kiva.application.repository.ProductQmRepository
@@ -52,6 +53,7 @@ import com.kiva.infrastructure.persistence.exposed.DiscountCodeRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.DiscountRedemptionRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.GeoRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.IdempotencyStoreImpl
+import com.kiva.infrastructure.persistence.exposed.InventoryAdjustmentQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.InventoryRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.MaterialIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.MaterialRepositoryImpl
@@ -86,6 +88,7 @@ val daoModule = module(createdAtStart = true) {
     single<ProductIdGenerator> { ProductIdGeneratorImpl() }
     single<InventoryRepository> { InventoryRepositoryImpl() }
     single<ProductQmRepository> { ProductQmRepositoryImpl() }
+    single<InventoryAdjustmentQmRepository> { InventoryAdjustmentQmRepositoryImpl() }
     single<UserRepository> { UserRepositoryImpl() }
     single<OtpChallengeRepository> { OtpChallengeRepositoryImpl() }
     single<AuthSessionRepository> { AuthSessionRepositoryImpl() }

@@ -1,13 +1,14 @@
 package com.kiva.infrastructure.seed
 
-import com.kiva.infrastructure.persistence.exposed.MediaRepositoryImpl
 import com.kiva.application.usecase.catalog.usecase.query.ListCategoriesUc
 import com.kiva.domain.aggregate.product.model.valueobject.ProductStatus
 import com.kiva.infrastructure.TestDatabase
 import com.kiva.infrastructure.common.persistence.ExposedTransactionManager
 import com.kiva.infrastructure.persistence.exposed.CategoryRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.MediaRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ProductQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.tbl.EventStoreTbl
+import com.kiva.infrastructure.persistence.exposed.tbl.InventoryAdjustmentQmTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.ProductQmTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.ProductVariantQmTbl
 import kotlinx.coroutines.test.runTest
@@ -16,6 +17,7 @@ import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.junit.jupiter.api.AfterEach
@@ -25,6 +27,7 @@ import java.time.Instant
 import java.time.ZoneOffset
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /**
  * The seeder on kiva_test with everything real: use cases, domain, event store and read model. Whatever it made is
@@ -140,5 +143,27 @@ class DevCatalogSeederTest {
 
         assertEquals(List(4) { listOf("StockAdjusted", 0L) }, stockEvents)
         assertNull(productRow("aseman-tote-bag").let { row -> row[ProductQmTbl.newUntil] })
+    }
+
+    @Test
+    fun `each color's starting stock is one RESTOCK row of the stock's history, its stock after the starting stock`() = runTest {
+        seeder.seed()
+
+        val rows = transaction(db) {
+            val colors = ProductVariantQmTbl.selectAll()
+                .where { ProductVariantQmTbl.productId inList ProductQmTbl.select(ProductQmTbl.productId).where { ProductQmTbl.slug inList seededSlugs }.map { it[ProductQmTbl.productId] } }
+                .associate { it[ProductVariantQmTbl.variantId] to it[ProductVariantQmTbl.onHand] }
+            val history = InventoryAdjustmentQmTbl.selectAll().where { InventoryAdjustmentQmTbl.variantId inList colors.keys }
+                .groupBy { it[InventoryAdjustmentQmTbl.variantId] }
+            colors.filterValues { it > 0 }.map { (variantId, onHand) ->
+                Triple(onHand, history.getValue(variantId).map { it[InventoryAdjustmentQmTbl.reason] }, history.getValue(variantId).single()[InventoryAdjustmentQmTbl.stockAfter])
+            }
+        }
+
+        assertTrue(rows.isNotEmpty())
+        rows.forEach { (onHand, reasons, stockAfter) ->
+            assertEquals(listOf("RESTOCK"), reasons)
+            assertEquals(onHand, stockAfter)
+        }
     }
 }

@@ -66,6 +66,7 @@ import com.kiva.application.usecase.geo.usecase.query.ListProvincesUc
 import com.kiva.application.usecase.idempotency.IdempotencyGuard
 import com.kiva.application.usecase.idempotency.usecase.command.DeleteOldIdempotencyKeysUc
 import com.kiva.application.usecase.inventory.usecase.command.AdjustInventoryUc
+import com.kiva.application.usecase.inventory.usecase.query.ListInventoryAdjustmentsUc
 import com.kiva.application.usecase.media.MediaAttachments
 import com.kiva.application.usecase.media.usecase.command.DeleteUnattachedMediaUc
 import com.kiva.application.usecase.media.usecase.command.UploadMediaUc
@@ -484,7 +485,11 @@ val useCaseModule = module(createdAtStart = true) {
             inventoryDomainService = get(),
             inventoryRepository = get(),
             productQmRepository = get(),
+            inventoryAdjustmentQmRepository = get(),
+            userRepository = get(),
+            auditTrail = get(),
             clock = get(),
         )
     }
+    single { ListInventoryAdjustmentsUc(transactionManager = get(), inventoryAdjustmentQmRepository = get(), userRepository = get()) }
 }

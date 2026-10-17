@@ -20,6 +20,8 @@ import com.kiva.application.usecase.catalog.usecase.query.GetAdminColorUc
 import com.kiva.application.usecase.catalog.usecase.query.GetAdminMaterialUc
 import com.kiva.application.usecase.catalog.usecase.query.ListAdminCategoriesUc
 import com.kiva.application.usecase.catalog.usecase.query.ListAdminMaterialsUc
+import com.kiva.application.usecase.inventory.usecase.command.AdjustInventoryUc
+import com.kiva.application.usecase.inventory.usecase.query.ListInventoryAdjustmentsUc
 import com.kiva.application.usecase.media.MediaAttachments
 import com.kiva.application.usecase.media.usecase.command.UploadMediaUc
 import com.kiva.application.usecase.product.ProductInput
@@ -65,6 +67,7 @@ import com.kiva.infrastructure.persistence.exposed.AuthSessionRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.CategoryIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.CategoryRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ColorRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.InventoryAdjustmentQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.InventoryRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.MaterialIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.MaterialRepositoryImpl
@@ -181,6 +184,15 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         deactivateVariant = DeactivateVariantUc(transactions, products, auditTrail, clock),
     )
 
+    // --- stock (step 1.8 on) ---
+    val adminInventory = AdminInventoryUseCases(
+        checkPanelAccess = checkPanelAccess,
+        adjustInventory = AdjustInventoryUc(
+            transactions, InventoryDomainService(inventories), inventories, productQm, InventoryAdjustmentQmRepositoryImpl(), users, auditTrail, clock,
+        ),
+        listAdjustments = ListInventoryAdjustmentsUc(transactions, InventoryAdjustmentQmRepositoryImpl(), users),
+    )
+
     // The publish job's two use cases, run by the tests the way PanelJobs runs them.
     val findDueScheduled = FindDueScheduledProductsUc(transactions, productQm, clock)
     val publishScheduled = PublishScheduledProductUc(transactions, products, clock)
@@ -230,6 +242,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
                     webV1AdminMedia(AdminMediaUseCases(checkPanelAccess, uploadMedia), mediaStorage::newUploadFile, mediaUrls)
                     webV1AdminCatalog(adminCatalog, mediaUrls, SITE_URL)
                     webV1AdminProducts(adminProducts, SITE_URL, mediaUrls)
+                    webV1AdminInventory(adminInventory)
                 }
             }
         }

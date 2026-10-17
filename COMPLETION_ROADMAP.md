@@ -769,7 +769,7 @@ Route: 201 با MediaAsset
 | ۱.۵ | ساخت و ویرایش محصول، `If-Match` | L | ✅ |
 | ۱.۶ | وضعیت، آرشیو و انتشار زمان‌بندی‌شده | M | ✅ |
 | ۱.۷ | رنگ‌ها (ورینت‌ها) | M | ✅ |
-| ۱.۸ | تغییر موجودی و تاریخچه‌اش | M | ⬜ |
+| ۱.۸ | تغییر موجودی و تاریخچه‌اش | M | ✅ |
 | ۱.۹ | عکس‌ها در فروشگاه، سبد و سفارش | M | ⬜ |
 | ۱.۱۰ | ریویو، حمله‌ی آزمایشی و دور با پنل | M | ⬜ |
 
@@ -1433,7 +1433,7 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 
 ---
 
-#### گام ۱.۸: تغییر موجودی و تاریخچه‌اش · M ⬜
+#### گام ۱.۸: تغییر موجودی و تاریخچه‌اش · M ✅
 
 **می‌سازی:** `V25__inventory_adjustments.sql` (با backfill)؛ `InventoryQmProjector` با `StockAdjusted` یه ردیف `inventoryadjustmentqm_tbl` می‌نویسه؛ `InventoryAdjustmentQmRepository`؛ گسترش `AdjustInventoryUc` (`actor`، لاگ تغییرات، `id` از read model)؛ `ListInventoryAdjustmentsUc`؛ `webV1AdminInventory.kt`؛ `InventoryAdjustmentHttpResponse`.
 
@@ -1444,12 +1444,21 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 - چرا رزرو و ارسال تو تاریخچه نیستن؟ اونا تغییر دستی نیستن و هر سفارش ده‌ها ردیف می‌ساخت؛ تاریخچه‌ی رزرو مال سفارشه.
 
 **تموم شده یعنی:**
-- [ ] backfill روی داده‌ی seed: هر رنگ یه ردیف `RESTOCK` با `stockAfter` = موجودی اولیه.
-- [ ] `RESTOCK` با ۵ ← `201` با `id`، `stockAfter`، `createdBy` = اسم کاربر؛ تو لیست اول.
-- [ ] `DAMAGED` با +۲ ← `400 ADJUSTMENT_DIRECTION_INVALID`؛ ۰ ← `400 STOCK_DELTA_INVALID`؛ کم کردن بیشتر از آزاد (۳ تا رزرو شده) ← `422 QUANTITY_EXCEEDS_STOCK` با `availableQuantity`.
-- [ ] لیست با `variantId` فقط همون رنگ؛ تازه‌ترین اول؛ رزرو یه سفارش تو لیست نیست.
-- [ ] ۲۰ تغییر همزمان روی یه رنگ ← موجودی نهایی = جمعشون، ۲۰ ردیف تاریخچه با `stockAfter` ِ پشت‌سرهم.
-- [ ] لاگ تغییرات `INVENTORY_ADJUSTED` با `stockOnHand` ِ قبل و بعد.
+- [x] backfill روی داده‌ی seed: هر رنگ یه ردیف `RESTOCK` با `stockAfter` = موجودی اولیه.
+- [x] `RESTOCK` با ۵ ← `201` با `id`، `stockAfter`، `createdBy` = اسم کاربر؛ تو لیست اول.
+- [x] `DAMAGED` با +۲ ← `400 ADJUSTMENT_DIRECTION_INVALID`؛ ۰ ← `400 STOCK_DELTA_INVALID`؛ کم کردن بیشتر از آزاد (۳ تا رزرو شده) ← `422 QUANTITY_EXCEEDS_STOCK` با `availableQuantity`.
+- [x] لیست با `variantId` فقط همون رنگ؛ تازه‌ترین اول؛ رزرو یه سفارش تو لیست نیست.
+- [x] ۲۰ تغییر همزمان روی یه رنگ ← موجودی نهایی = جمعشون، ۲۰ ردیف تاریخچه با `stockAfter` ِ پشت‌سرهم.
+- [x] لاگ تغییرات `INVENTORY_ADJUSTED` با `stockOnHand` ِ قبل و بعد.
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- `V25` همون شِمای ۶.۵؛ backfill جمع غلتان `onHand` (`StockAdjusted` ‏`+delta`، `StockShipped` ‏`−quantity`) و ترتیب ردیف‌ها «زمان، رنگ، sequence». تست با SQL ِ خود فایل (`ON CONFLICT ("eventId") DO NOTHING` برای ردیف‌های بقیه‌ی تست‌ها) همون ردیف‌های Projector رو می‌ده؛ کامنت‌های SQL `;` ندارن تا تست بتونه فایل رو به دستورها بشکنه.
+- Projector ردیف تاریخچه رو در همون تراکنش رویداد، بعد از به‌روز کردن `onHand` ِ رنگ می‌نویسه و `stockAfter` رو از همون ردیف می‌خونه.
+- `AdjustInventoryUc` حالا `actor: PanelActor` می‌گیره (seeder دیگه صداش نمی‌زنه، از ۱.۵)، فیلدهای Cmd nullable با `FIELD_REQUIRED`، پاسخ = ردیف read model ِ همین رویداد (با `eventId`) و `createdBy` به اسم. لاگ `INVENTORY_ADJUSTED` با `stockOnHand` ِ قبل و بعد و `reason`.
+- ۲۰ تغییر همزمان با ۳ بار تلاش ِ قبلی ۴۰۹ می‌گرفتن. پورت `InventoryRepository` یه `holdForChange(variantId)` گرفت (پیش‌فرض بی‌اثر برای حافظه‌ای‌ها؛ در Exposed همون قفل ۷ ِ ردیف محصول، این بار **قبل** از خوندن) و `AdjustInventoryUc` قبل از خوندن موجودی صداش می‌زنه؛ تغییرهای همزمان صف می‌کشن. تلاش دوباره برای سفارش‌ها (که قبلش قفل نمی‌گیرن) سر جاشه.
+- `InventoryAdjustmentDto` شکل کانترکت رو گرفت (`id`، `stockAfter`، `createdBy`)؛ `onHandAfter`/`availableAfter` رفتن.
+- `ListInventoryAdjustmentsUc` همیشه تازه‌ترین اول (`occurredOn`، بعد `pId`)؛ کانترکت `sort` نداره. اسم‌ها برای هر شخص یه بار.
+- خرابکاری: حذف `holdForChange` از `AdjustInventoryUc` ← `20 changes at once on one color …` قرمز.
 
 ---
 
@@ -5940,3 +5949,4 @@ kiva {
 | ۲۶ مهر ۱۴۰۵ | ۱.۵ | Phase 1 step 1.5 | شکل کامل محصول در دامنه (`ProductSpecs` ِ کامل با `StrapInfo`/`PocketInfo`/…، `ProductTags`، `SeoMeta`، `Barcode`، `ProductMedia` با `mediaId`، `ProductGalleryPolicy`، `MaxPerOrder` تا ۲۰) با payloadهای سازگار با رویدادهای قبلی، `GalleryItemPayload` در read model، `ProductInput`، گسترش `CreateProductUc` (گالری، موجودی اولیه، لاگ)، `UpdateProductUc` با `If-Match`، `POST`/`PUT /admin/products`. دیتابیس توسعه: ۰ از ۶۵ فیلد `media` غیرخالی. خرابکاری: بدون چک `If-Match` و بدون sanitize ← تست‌هاشون قرمز |
 | ۲۶ مهر ۱۴۰۵ | ۱.۶ | Phase 1 step 1.6 | `schedulePublish`/`unschedulePublish` با دو رویداد و payloadشون، Projector ِ `publishAt`، `ChangeProductStatusUc` (همه‌ی ردیف‌های ۶.۶)، `ArchiveProductUc`، job ِ `publish-scheduled-products` (`FindDueScheduledProductsUc` + `PublishScheduledProductUc`)، `PATCH …/status` و `DELETE`، `MomentField` (`DATE_TIME_INVALID`). خرابکاری: بدون catch ِ همزمانی در job ← تست «یه انتشار» قرمز |
 | ۲۶ مهر ۱۴۰۵ | ۱.۷ | Phase 1 step 1.7 | `AddVariantUc` (با موجودی اولیه و گالری)، `UpdateVariantUc` (ترتیب فعال‌سازی، تغییر، گالری، غیرفعال‌سازی)، `DeactivateVariantUc`، سه route با پاسخ `AdminVariant` و `ETag` ِ محصول، لاگ `VARIANT_*`، تست بن‌بست با خرید. خرابکاری: جابه‌جایی ترتیب فعال‌سازی و پیش‌فرض ← تست قرمز |
+| ۲۶ مهر ۱۴۰۵ | ۱.۸ | Phase 1 step 1.8 | `V25` با backfill، ردیف تاریخچه در `InventoryQmProjector`، `InventoryAdjustmentQmRepository`، `AdjustInventoryUc` با `actor`، لاگ و `id` از read model، `holdForChange` برای صف کشیدن تغییرهای همزمان، `ListInventoryAdjustmentsUc`، `webV1AdminInventory.kt`. خرابکاری: بدون `holdForChange` ← تست ۲۰ تغییر همزمان قرمز |

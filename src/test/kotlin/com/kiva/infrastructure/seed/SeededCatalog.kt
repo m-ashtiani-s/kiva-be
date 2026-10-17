@@ -20,6 +20,7 @@ import com.kiva.infrastructure.persistence.exposed.ProductIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.ProductQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ProductRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.tbl.EventStoreTbl
+import com.kiva.infrastructure.persistence.exposed.tbl.InventoryAdjustmentQmTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.ProductQmTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.ProductVariantQmTbl
 import org.jetbrains.exposed.v1.core.and
@@ -67,6 +68,7 @@ class SeededCatalog(clock: Clock) {
                 .map { it[ProductVariantQmTbl.variantId] }
             EventStoreTbl.deleteWhere { (aggregateName eq "PRODUCT") and (aggregateId inList productIds.map { it.toString() }) }
             EventStoreTbl.deleteWhere { (aggregateName eq "INVENTORY") and (aggregateId inList variantIds.map { it.toString() }) }
+            InventoryAdjustmentQmTbl.deleteWhere { InventoryAdjustmentQmTbl.variantId inList variantIds }
             ProductVariantQmTbl.deleteWhere { productId inList productIds }
             ProductQmTbl.deleteWhere { productId inList productIds }
         }

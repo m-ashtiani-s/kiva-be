@@ -15,6 +15,7 @@ import com.kiva.domain.aggregate.product.model.valueobject.VariantId
 import com.kiva.infrastructure.TestDatabase
 import com.kiva.infrastructure.persistence.event.ProductEventSamples
 import com.kiva.infrastructure.persistence.exposed.tbl.EventStoreTbl
+import com.kiva.infrastructure.persistence.exposed.tbl.InventoryAdjustmentQmTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.ProductQmTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.ProductVariantQmTbl
 import org.jetbrains.exposed.v1.core.inList
@@ -103,6 +104,7 @@ class StoredCatalog {
         transaction(db) {
             // By id alone, so a stream a test wrote by hand with one of these numbers goes too.
             EventStoreTbl.deleteWhere { aggregateId inList (productIds + variantIds).map { it.toString() } }
+            InventoryAdjustmentQmTbl.deleteWhere { variantId inList variantIds }
             ProductVariantQmTbl.deleteWhere { productId inList productIds }
             ProductQmTbl.deleteWhere { productId inList productIds }
         }
