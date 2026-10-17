@@ -4,6 +4,7 @@ import com.kiva.application.dto.AdminProductDto
 import com.kiva.application.dto.AdminProductListItemDto
 import com.kiva.application.dto.AdminVariantDto
 import com.kiva.infrastructure.common.http.VersionETag
+import com.kiva.infrastructure.media.MediaUrls
 import kotlinx.serialization.Serializable
 
 /** Contract schema `RatingBrief`. Reviews come in phase 8; until then every product has none. */
@@ -35,11 +36,11 @@ data class AdminProductListItemHttpResponse(
     val updatedAt: String,
 ) {
     companion object {
-        fun from(item: AdminProductListItemDto) = AdminProductListItemHttpResponse(
+        fun from(item: AdminProductListItemDto, urls: MediaUrls) = AdminProductListItemHttpResponse(
             id = item.id,
             sku = item.sku,
             name = item.name,
-            imageUrl = item.image?.url,
+            imageUrl = item.image?.let { urls.of(it.media.thumbnailPath) },
             category = CategoryRefHttpResponse(item.category.id, item.category.slug, item.category.name),
             status = item.status.name,
             price = PriceInfoHttpResponse.from(item.price),
@@ -117,8 +118,8 @@ data class AdminProductHttpResponse(
 ) {
     companion object {
         /** @param siteUrl the shop's address, for the page's canonical address (as the shop's page builds it). */
-        fun from(product: AdminProductDto, siteUrl: String): AdminProductHttpResponse {
-            val shop = ProductDetailHttpResponse.from(product.detail, siteUrl)
+        fun from(product: AdminProductDto, siteUrl: String, urls: MediaUrls): AdminProductHttpResponse {
+            val shop = ProductDetailHttpResponse.from(product.detail, siteUrl, urls)
             return AdminProductHttpResponse(
                 id = shop.id,
                 slug = shop.slug,
@@ -163,7 +164,7 @@ data class AdminProductHttpResponse(
                 publishedAt = shop.publishedAt,
                 updatedAt = shop.updatedAt,
                 status = product.status.name,
-                adminVariants = product.variants.map(AdminVariantHttpResponse::from),
+                adminVariants = product.variants.map { AdminVariantHttpResponse.from(it, urls) },
                 newUntil = product.newUntil?.toString(),
                 sortPriority = product.sortPriority,
                 publishAt = product.publishAt?.toString(),
@@ -210,8 +211,8 @@ data class AdminVariantHttpResponse(
     val stockAlertSubscribers: Int,
 ) {
     companion object {
-        fun from(variant: AdminVariantDto): AdminVariantHttpResponse {
-            val shop = ProductVariantHttpResponse.from(variant.shop)
+        fun from(variant: AdminVariantDto, urls: MediaUrls): AdminVariantHttpResponse {
+            val shop = ProductVariantHttpResponse.from(variant.shop, urls)
             return AdminVariantHttpResponse(
                 id = shop.id,
                 sku = shop.sku,

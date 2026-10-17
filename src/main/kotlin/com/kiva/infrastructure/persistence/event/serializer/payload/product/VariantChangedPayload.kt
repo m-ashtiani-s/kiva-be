@@ -4,6 +4,7 @@ import com.kiva.common.event.valueobject.EventId
 import com.kiva.common.event.valueobject.EventSequence
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.product.entity.event.VariantChanged
+import com.kiva.domain.aggregate.product.model.valueobject.Barcode
 import com.kiva.domain.aggregate.product.model.valueobject.ProductId
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
 import com.kiva.infrastructure.persistence.event.serializer.payload.EventPayload
@@ -21,6 +22,7 @@ data class VariantChangedPayload(
     val ownPriceTag: PriceTagPayload?,
     val sortOrder: Int,
     val isDefault: Boolean,
+    val barcode: String? = null,
 ) : EventPayload<VariantChanged> {
 
     constructor(event: VariantChanged) : this(
@@ -33,6 +35,7 @@ data class VariantChangedPayload(
         ownPriceTag = event.ownPriceTag?.let { PriceTagPayload(it) },
         sortOrder = event.sortOrder,
         isDefault = event.isDefault,
+        barcode = event.barcode?.value,
     )
 
     override fun toDomainEvent(): VariantChanged = VariantChanged(
@@ -44,6 +47,7 @@ data class VariantChangedPayload(
         ownPriceTag = ownPriceTag?.toDomain(),
         sortOrder = sortOrder,
         isDefault = isDefault,
+        barcode = barcode?.let(Barcode::constructFromPersisted),
         id = EventId.constructFromPersisted(id),
     )
 }

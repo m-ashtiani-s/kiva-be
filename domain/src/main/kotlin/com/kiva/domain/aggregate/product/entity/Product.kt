@@ -19,6 +19,7 @@ import com.kiva.domain.aggregate.product.entity.event.VariantChanged
 import com.kiva.domain.aggregate.product.entity.event.VariantDeactivated
 import com.kiva.domain.aggregate.product.entity.event.VariantMediaReplaced
 import com.kiva.domain.aggregate.product.entity.event.VariantReactivated
+import com.kiva.domain.aggregate.product.model.valueobject.Barcode
 import com.kiva.domain.aggregate.product.model.valueobject.PriceTag
 import com.kiva.domain.aggregate.product.model.valueobject.ProductDetails
 import com.kiva.domain.aggregate.product.model.valueobject.ProductId
@@ -158,6 +159,7 @@ class Product private constructor() : EventSourceEntity<ProductDomainEvent>() {
         media: List<ProductMedia>,
         by: UserId,
         now: Instant,
+        barcode: Barcode? = null,
     ): Result<Product, AddVariantFailure> {
         if (!canBeEdited()) return Result.failure(AddVariantFailure.ProductIsArchived)
         require(variantList.none { it.id == variantId }) { "Variant ${variantId.value} is already on product ${id.value}" }
@@ -167,13 +169,13 @@ class Product private constructor() : EventSourceEntity<ProductDomainEvent>() {
         if (variantSku == this.sku || variantList.any { it.sku == variantSku }) return Result.failure(AddVariantFailure.SkuAlreadyUsed)
 
         val isDefault = makeDefault || defaultVariant() == null
-        raiseEvent(VariantAdded(id, nextSequence(), now, by, variantId, colorKey, variantSku, ownPriceTag, isDefault, sortOrder, media.toList()))
+        raiseEvent(VariantAdded(id, nextSequence(), now, by, variantId, colorKey, variantSku, ownPriceTag, isDefault, sortOrder, media.toList(), barcode))
         return Result.success(this)
     }
 
     /**
-     * Changes a color's own price tag (null = follow the product's) and its position, and can make it the default.
-     * [makeDefault] false leaves the default where it is: to move it, make another color the default.
+     * Changes a color's own price tag (null = follow the product's), its position and its barcode, and can make it the
+     * default. [makeDefault] false leaves the default where it is: to move it, make another color the default.
      * The same values again record nothing.
      */
     fun changeVariant(
@@ -183,17 +185,18 @@ class Product private constructor() : EventSourceEntity<ProductDomainEvent>() {
         makeDefault: Boolean,
         by: UserId,
         now: Instant,
+        barcode: Barcode? = findVariant(variantId)?.barcode,
     ): Result<Product, ChangeVariantFailure> {
         if (!canBeEdited()) return Result.failure(ChangeVariantFailure.ProductIsArchived)
         val variant = findVariant(variantId) ?: return Result.failure(ChangeVariantFailure.VariantNotFound(variantId))
         if (makeDefault && !variant.isActive) return Result.failure(ChangeVariantFailure.InactiveVariantCannotBeDefault)
 
         val isDefault = makeDefault || variant.isDefault
-        if (variant.ownPriceTag == ownPriceTag && variant.sortOrder == sortOrder && variant.isDefault == isDefault) {
+        if (variant.ownPriceTag == ownPriceTag && variant.sortOrder == sortOrder && variant.isDefault == isDefault && variant.barcode == barcode) {
             return Result.success(this)
         }
 
-        raiseEvent(VariantChanged(id, nextSequence(), now, by, variantId, ownPriceTag, sortOrder, isDefault))
+        raiseEvent(VariantChanged(id, nextSequence(), now, by, variantId, ownPriceTag, sortOrder, isDefault, barcode))
         return Result.success(this)
     }
 
@@ -301,12 +304,13 @@ class Product private constructor() : EventSourceEntity<ProductDomainEvent>() {
                     isActive = true,
                     sortOrder = event.sortOrder,
                     media = event.media.toList(),
+                    barcode = event.barcode,
                 )
             }
             is VariantChanged -> {
                 if (event.isDefault) variantList.replaceAll { it.copy(isDefault = false) }
                 updateVariant(event.variantId) {
-                    it.copy(ownPriceTag = event.ownPriceTag, sortOrder = event.sortOrder, isDefault = event.isDefault)
+                    it.copy(ownPriceTag = event.ownPriceTag, sortOrder = event.sortOrder, isDefault = event.isDefault, barcode = event.barcode)
                 }
             }
             is VariantDeactivated -> {

@@ -1,10 +1,12 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
+import com.kiva.application.dto.GalleryItemDto
 import com.kiva.application.dto.PriceDto
 import com.kiva.application.dto.ProductCardDto
 import com.kiva.application.dto.ProductDetailDto
 import com.kiva.application.dto.ProductFacetsDto
 import com.kiva.application.dto.ProductListDto
+import com.kiva.application.dto.UploadedMediaDto
 import com.kiva.application.repository.PriceRange
 import com.kiva.application.usecase.product.ProductFilterQuery
 import com.kiva.application.usecase.product.usecase.query.FindProductsUc
@@ -17,19 +19,20 @@ import com.kiva.common.pagination.Pageable
 import com.kiva.common.railway.FieldFailure
 import com.kiva.common.railway.Result
 import com.kiva.domain.aggregate.material.model.valueobject.MaterialFamily
+import com.kiva.domain.aggregate.media.model.valueobject.MediaType
 import com.kiva.domain.aggregate.product.model.valueobject.BadgeCode
 import com.kiva.domain.aggregate.product.model.valueobject.BagType
 import com.kiva.domain.aggregate.product.model.valueobject.ClosureType
 import com.kiva.domain.aggregate.product.model.valueobject.Dimensions
-import com.kiva.domain.aggregate.media.model.valueobject.MediaType
 import com.kiva.domain.aggregate.product.model.valueobject.MediaView
 import com.kiva.domain.aggregate.product.model.valueobject.Occasion
-import com.kiva.domain.aggregate.product.model.valueobject.ProductMedia
 import com.kiva.domain.aggregate.product.model.valueobject.ProductSpecs
 import com.kiva.domain.aggregate.product.model.valueobject.StockInfo
 import com.kiva.domain.aggregate.product.model.valueobject.StockStatus
+import com.kiva.domain.aggregate.product.model.valueobject.StrapInfo
 import com.kiva.infrastructure.httpserver.API_V1
 import com.kiva.infrastructure.httpserver.configureHttp
+import com.kiva.infrastructure.media.MediaUrls
 import io.ktor.client.request.get
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
@@ -69,7 +72,7 @@ class WebV1ProductsTest {
         environment { config = MapApplicationConfig() }
         application {
             configureHttp()
-            routing { route(API_V1) { webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, siteUrl = "https://kiva.ir") } }
+            routing { route(API_V1) { webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, siteUrl = "https://kiva.ir", mediaUrls = MediaUrls("https://media.kiva.test")) } }
         }
         block()
     }
@@ -259,7 +262,14 @@ class WebV1ProductsTest {
 
     // ============ one product's page ============
 
-    private val photo = ProductMedia.constructFromPersisted(MediaType.IMAGE, "https://cdn.kiva.ir/p/2/black/front.webp", MediaView.FRONT, "نمای جلو")
+    private val photo = GalleryItemDto(
+        UploadedMediaDto(
+            "med_0000000000000000000201", MediaType.IMAGE, "image/webp", "p/2/black/1600.webp", "p/2/black/320.webp",
+            listOf(UploadedMediaDto.Variant(320, "p/2/black/320.webp"), UploadedMediaDto.Variant(1600, "p/2/black/1600.webp")), null, 1600, 1200, null,
+            "نمای جلو", null,
+        ),
+        MediaView.FRONT,
+    )
 
     private fun page() = ProductDetailDto(
         card = card(StockInfo(StockStatus.LOW_STOCK, shownQuantity = 3, maxOrderQuantity = 3), badges = listOf(BadgeCode.SALE, BadgeCode.LOW_STOCK)),
@@ -270,8 +280,11 @@ class WebV1ProductsTest {
         material = ProductDetailDto.MaterialRef(5, "faux-leather-soft", "چرم مصنوعی سافت", MaterialFamily.FAUX_LEATHER),
         materialDescription = null,
         specs = ProductSpecs.constructFromPersisted(
-            Dimensions.constructFromPersisted(22.0, 16.0, 8.5), 420, ClosureType.MAGNETIC_FLAP, "بند بلند قابل تنظیم", null,
-            setOf(Occasion.TRAVEL, Occasion.DAILY),
+            dimensions = Dimensions.constructFromPersisted(22.0, 16.0, 8.5),
+            weightGrams = 420,
+            closure = ClosureType.MAGNETIC_FLAP,
+            straps = listOf(StrapInfo.legacy("بند بلند قابل تنظیم")),
+            occasions = setOf(Occasion.TRAVEL, Occasion.DAILY),
         ),
         variants = listOf(
             ProductDetailDto.Variant(
@@ -340,8 +353,11 @@ class WebV1ProductsTest {
                 {"id":201,"sku":"KV-1002-BLACK","color":{"key":"black","name":"مشکی","hex":"#2B2930","isLight":false,"sortOrder":1,"productCount":null},
                  "isDefault":true,"price":{"price":1450000,"compareAtPrice":1750000,"discountPercent":17,"discountAmount":300000,"currency":"IRT"},
                  "stock":{"status":"IN_STOCK","availableQuantity":null,"maxOrderQuantity":5,"label":"موجود در انبار"},
-                 "media":[{"type":"IMAGE","url":"https://cdn.kiva.ir/p/2/black/front.webp","alt":"نمای جلو","view":"FRONT","viewLabel":"نمای جلو",
-                           "sortOrder":0,"isPrimary":true}],
+                 "media":[{"id":"med_0000000000000000000201","type":"IMAGE","url":"https://media.kiva.test/p/2/black/1600.webp",
+                           "thumbnailUrl":"https://media.kiva.test/p/2/black/320.webp",
+                           "srcSet":[{"width":320,"url":"https://media.kiva.test/p/2/black/320.webp"},{"width":1600,"url":"https://media.kiva.test/p/2/black/1600.webp"}],
+                           "posterUrl":null,"width":1600,"height":1200,"durationSec":null,"mimeType":"image/webp","alt":"نمای جلو","blurhash":null,
+                           "view":"FRONT","viewLabel":"نمای جلو","sortOrder":0,"isPrimary":true,"isUnedited":true}],
                  "hasVideo":false}
                 """,
             ),
@@ -351,8 +367,11 @@ class WebV1ProductsTest {
             json(
                 """
                 {"dimensions":{"lengthCm":22.0,"heightCm":16.0,"widthCm":8.5},"weightGrams":420,
-                 "closure":{"type":"MAGNETIC_FLAP","label":"درب مگنتی"},"straps":[{"label":"بند بلند قابل تنظیم"}],"pockets":null,
-                 "occasions":[{"code":"DAILY","label":"روزمره"},{"code":"TRAVEL","label":"سفر"}]}
+                 "closure":{"type":"MAGNETIC_FLAP","label":"درب مگنتی"},
+                 "straps":[{"type":null,"label":"بند بلند قابل تنظیم","lengthCm":null,"minLengthCm":null,"maxLengthCm":null,"adjustable":false,"detachable":false,"material":null}],
+                 "pockets":null,"laptopMaxInch":null,"capacityLiters":null,"waterproof":false,
+                 "occasions":[{"code":"DAILY","label":"روزمره"},{"code":"TRAVEL","label":"سفر"}],
+                 "fits":[],"lining":null,"hardware":null,"stitching":null,"handmade":false,"madeIn":null,"careInstructions":[],"warranty":null}
                 """,
             ),
             body["specs"],

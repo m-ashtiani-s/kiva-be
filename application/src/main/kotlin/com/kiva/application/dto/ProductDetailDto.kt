@@ -1,7 +1,6 @@
 package com.kiva.application.dto
 
 import com.kiva.domain.aggregate.material.model.valueobject.MaterialFamily
-import com.kiva.domain.aggregate.product.model.valueobject.ProductMedia
 import com.kiva.domain.aggregate.product.model.valueobject.ProductSpecs
 import com.kiva.domain.aggregate.product.model.valueobject.StockInfo
 import java.time.Instant
@@ -42,7 +41,7 @@ data class ProductDetailDto(
         val isDefault: Boolean,
         val price: PriceDto,
         val stock: StockInfo,
-        val media: List<ProductMedia>,
+        val media: List<GalleryItemDto>,
         val hasVideo: Boolean,
     )
 }

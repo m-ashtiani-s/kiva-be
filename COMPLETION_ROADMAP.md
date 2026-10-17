@@ -766,7 +766,7 @@ Route: 201 با MediaAsset
 | ۱.۲ | آپلود مدیا | L | ✅ |
 | ۱.۳ | دسته، رنگ و متریال | M | ✅ |
 | ۱.۴ | read model ِ پنل و دو Query ِ محصول | M | ✅ |
-| ۱.۵ | ساخت و ویرایش محصول، `If-Match` | L | ⬜ |
+| ۱.۵ | ساخت و ویرایش محصول، `If-Match` | L | ✅ |
 | ۱.۶ | وضعیت، آرشیو و انتشار زمان‌بندی‌شده | M | ⬜ |
 | ۱.۷ | رنگ‌ها (ورینت‌ها) | M | ⬜ |
 | ۱.۸ | تغییر موجودی و تاریخچه‌اش | M | ⬜ |
@@ -1329,7 +1329,7 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 
 ---
 
-#### گام ۱.۵: ساخت و ویرایش محصول، `If-Match` · L ⬜
+#### گام ۱.۵: ساخت و ویرایش محصول، `If-Match` · L ✅
 
 **می‌سازی:** تغییرات دامنه‌ی ۶.۳ برای محصول (`ProductMedia` ِ تازه، `ProductTags`، `ProductSeo`، `ProductSpecs` ِ کامل، `Barcode`، `MaxPerOrder` ِ سقف‌دار) با payloadها و JSON ِ طلایی؛ Projector: مدیای رنگ‌ها به شکل کامل از `media_tbl`؛ یه سرویس مشترک `ProductInput` (application، Rule 15) که شکل ورودی محصول رو برای ساخت و ویرایش یه جا می‌خونه؛ گسترش `CreateProductUc.Cmd` (tags، seo، barcode و media و isActive و stockQuantity ِ هر رنگ، `actor`)؛ `UpdateProductUc`؛ خوندن `If-Match` در route؛ به‌روزرسانی `DevCatalogSeeder` و سه تستی که `CreateProductUc` رو می‌سازن.
 
@@ -1341,18 +1341,32 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 - چرا موجودی اولیه در همون تراکنش؟ تا محصول بدون موجودی ِ نصفه‌کاره نمونه (مشکل فعلی seeder).
 
 **تموم شده یعنی:**
-- [ ] قبل از هر چیز، یه کوئری روی `eventstore_tbl` ثابت می‌کنه هیچ رویداد ذخیره‌شده‌ای مدیا نداره (و نتیجه‌ش تو یادداشت گام میاد).
-- [ ] ساخت کامل با سه رنگ، مدیا، موجودی اولیه و `status = ACTIVE` ← `201`، محصول تو فروشگاه با عکس، `availableTotal` درست، یه ردیف لاگ `PRODUCT_CREATED`، و هر سه رنگ با `StockAdjusted` ِ `RESTOCK` تو تاریخچه‌ی موجودی.
-- [ ] ۱۰ خطای شکل با هم ← یه ۴۰۰ با ۱۰ ردیف `errors[]` و مسیرهای درست (`variants.1.media.0.mediaId`، `specs.straps.0.lengthCm`).
-- [ ] مدیای `PRE_SHIPMENT` در گالری محصول ← `400 MEDIA_PURPOSE_MISMATCH`؛ دو `isPrimary` ← `400 MEDIA_PRIMARY_DUPLICATE`؛ ۲۱ مدیا ← `400 MEDIA_TOO_MANY`.
-- [ ] `description` با `<script>` و `onerror` ذخیره می‌شه بدون اون‌ها؛ لینک `javascript:` حذف می‌شه.
-- [ ] `PUT` با `If-Match` ِ درست ← `200` و `ETag` یه پله بالاتر؛ با `If-Match` ِ کهنه ← `412` و هیچ رویدادی؛ بدون `If-Match` ← `200`.
-- [ ] دو `PUT` همزمان با یه `If-Match`، ۱۰ بار ← یکی `200` و یکی `409 CHANGED_BY_SOMEONE_ELSE`، و فقط تغییر برنده ذخیره شده.
-- [ ] `PUT` با `slug` ِ دیگه ← `400 SLUG_IMMUTABLE`؛ با `status = ARCHIVED` ← محصول آرشیو **نمی‌شه**.
-- [ ] تغییر فقط قیمت ← لاگ `PRODUCT_PRICE_CHANGED` با `price` ِ قبل و بعد؛ قیمت و اسم ← `PRODUCT_UPDATED` با هر دو.
-- [ ] `PUT` روی محصول آرشیو ← `422 PRODUCT_ARCHIVED`.
-- [ ] رویدادهای ذخیره‌شده‌ی قبلی (`ProductDetailsChanged` بدون `tags`/`seo`، `VariantAdded` بدون `barcode`) هنوز خونده می‌شن (تست با JSON ِ قدیمی).
-- [ ] خرابکاری: حذف چک `If-Match` ← تست ۴۱۲ قرمز؛ حذف sanitize ← تست `<script>` قرمز.
+- [x] قبل از هر چیز، یه کوئری روی `eventstore_tbl` ثابت می‌کنه هیچ رویداد ذخیره‌شده‌ای مدیا نداره (و نتیجه‌ش تو یادداشت گام میاد).
+- [x] ساخت کامل با سه رنگ، مدیا، موجودی اولیه و `status = ACTIVE` ← `201`، محصول تو فروشگاه با عکس، `availableTotal` درست، یه ردیف لاگ `PRODUCT_CREATED`، و هر سه رنگ با `StockAdjusted` ِ `RESTOCK` تو تاریخچه‌ی موجودی.
+- [x] ۱۰ خطای شکل با هم ← یه ۴۰۰ با ۱۰ ردیف `errors[]` و مسیرهای درست (`variants.1.media.0.mediaId`، `specs.straps.0.lengthCm`).
+- [x] مدیای `PRE_SHIPMENT` در گالری محصول ← `400 MEDIA_PURPOSE_MISMATCH`؛ دو `isPrimary` ← `400 MEDIA_PRIMARY_DUPLICATE`؛ ۲۱ مدیا ← `400 MEDIA_TOO_MANY`.
+- [x] `description` با `<script>` و `onerror` ذخیره می‌شه بدون اون‌ها؛ لینک `javascript:` حذف می‌شه.
+- [x] `PUT` با `If-Match` ِ درست ← `200` و `ETag` یه پله بالاتر؛ با `If-Match` ِ کهنه ← `412` و هیچ رویدادی؛ بدون `If-Match` ← `200`.
+- [x] دو `PUT` همزمان با یه `If-Match`، ۱۰ بار ← یکی `200` و یکی `409 CHANGED_BY_SOMEONE_ELSE`، و فقط تغییر برنده ذخیره شده.
+- [x] `PUT` با `slug` ِ دیگه ← `400 SLUG_IMMUTABLE`؛ با `status = ARCHIVED` ← محصول آرشیو **نمی‌شه**.
+- [x] تغییر فقط قیمت ← لاگ `PRODUCT_PRICE_CHANGED` با `price` ِ قبل و بعد؛ قیمت و اسم ← `PRODUCT_UPDATED` با هر دو.
+- [x] `PUT` روی محصول آرشیو ← `422 PRODUCT_ARCHIVED`.
+- [x] رویدادهای ذخیره‌شده‌ی قبلی (`ProductDetailsChanged` بدون `tags`/`seo`، `VariantAdded` بدون `barcode`) هنوز خونده می‌شن (تست با JSON ِ قدیمی).
+- [x] خرابکاری: حذف چک `If-Match` ← تست ۴۱۲ قرمز؛ حذف sanitize ← تست `<script>` قرمز.
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- کوئری روی دیتابیس توسعه، قبل از هر چیز: ۹۷ رویداد محصول، ۶۵ تاشون فیلد `media` دارن و **هیچ‌کدوم** خالی نیست جز `[]` (۰ از ۶۵). پس رویداد ذخیره‌شده‌ای با `url` نیست و `ProductMediaPayload` ِ بدون `mediaId` با `error(...)` می‌ایسته (تست با JSON).
+- سئوی محصول همون `SeoMeta` ِ مشترک ۱.۳ ـه (نه `ProductSeo`). در payload `seo` با پیش‌فرض `null` و `tags` با پیش‌فرض `[]`؛ `barcode` ِ `VariantAdded`/`VariantChanged` با پیش‌فرض `null`. نسخه‌ی payload همون ۱ موند.
+- `strap` و `pockets` ِ متنی ِ قبلی در `ProductSpecsPayload` موندن (فیلد حذف نمی‌شه) و از این به بعد `null` نوشته می‌شن؛ شکل تازه `straps` و `pocketInfo` ـه. payload ِ قدیمی یه بند با همون `label` (`StrapInfo.legacy`) و جیب‌هایی با همون `summary` (`PocketInfo.legacy`) خونده می‌شه، و دوباره نوشتنش شکل تازه رو می‌ده. `ProductSpecs` حالا `warranty` هم داره (کانترکت داشت).
+- read model ِ مدیا: `GalleryItemPayload` در `productvariantqm_tbl.media` (شناسه، نوع، `view`، `alt`، اندازه‌ها، `blurhash`، همه‌ی مسیرهای نسبی). Projector موقع `VariantAdded`/`VariantMediaReplaced` ردیف‌های `media_tbl` رو می‌خونه؛ فایلِ نبود = باگ (`error`). لایه‌ی application `GalleryItemDto` (`UploadedMediaDto` + `view`) می‌بینه و پاسخ `ProductMedia` ِ کانترکت همه‌ی فیلدهای `MediaAsset` رو با `MediaUrls` می‌سازه (`webV1Products` و `webV1AdminProducts` حالا `mediaUrls` می‌گیرن). `alt` ِ آیتم گالری، یا اگه پنل نداد `alt` ِ خود فایل.
+- `ProductInput` فرم رو با یه جمع‌کننده‌ی ساده (`Problems`) به‌جای zipهای تودرتو می‌خونه؛ مسیرها کامل‌ان (`specs.closure.type`، `specs.straps.0.lengthCm`، `variants.1.media.0.mediaId`). سقف‌های کل specs (وزن، تعداد بند، …) با `ProductSpecs.problemsOfWhole` همراه خطاهای اجزا میان. ترتیب نهایی گالری مال `ProductGalleryPolicy` ِ دامنه‌ست و جای هر فایل در فرم (`mediaPlaces`) نگه داشته می‌شه تا `MEDIA_NOT_FOUND` روی همون اندیس بیاد.
+- ترتیب `CreateProductUc` در تراکنش: slug ← فایل‌ها (`PRODUCT`، عکس یا ویدیو) ← دامنه ← کدها ← رنگ‌های `isActive: false` غیرفعال ← `status` ← ذخیره ← موجودی اولیه (یه `RESTOCK` برای هر رنگ با موجودی، به ترتیب id ِ رنگ) ← `markAttached` ← لاگ. `actor` ِ null یعنی seeder: با `UserId.SYSTEM` و بدون لاگ. seeder حالا موجودی رو در همون درخواست می‌ده و `AdjustInventoryUc` رو صدا نمی‌زنه (محصول نصفه‌کاره نمی‌مونه).
+- `UpdateProductUc`: شکل `If-Match` قبل از هر چیز؛ فرم قبل از تراکنش، ولی **اگه فرم غلط بود و `If-Match` اومده بود**، اول یه خوندن کوتاه نسخه رو چک می‌کنه تا فرم کهنه ۴۱۲ بگیره نه خطاهای فرم (قانون «`If-Match` قبل از همه»). ذخیره‌ی همزمان: `ConcurrentChangeException` تا `StatusPages` بالا می‌ره ← `409 CHANGED_BY_SOMEONE_ELSE`. لاگ: فقط قیمت ← `PRODUCT_PRICE_CHANGED`، بقیه ← `PRODUCT_UPDATED` با همه‌ی فیلدها؛ `description` و `specs` فقط «عوض شد».
+- تست همزمانی در سطح UseCase روی دیتابیس با یه `CyclicBarrier` بعد از خوندن (`UpdateProductUcOnDatabaseTest`)، تا هر ۱۰ دور واقعاً هر دو یه نسخه رو ببینن و جواب همیشه «یکی ذخیره، یکی ۴۰۹» باشه، نه گاهی ۴۱۲.
+- `MaxPerOrder` حالا ۱ تا ۲۰ ـه؛ سقف ۲۰ ِ ردیف سبد با همین یکی شد (دو تست سبد که `maxPerOrder = 30` داشتن، ۲۰ شدن). متن `MAX_PER_ORDER_INVALID` با `{max}`.
+- لینک نسبی (`/faq#reserve`) هنوز `href` ِ خودش رو از دست می‌ده: این تصمیم ۶ ِ گام ۵.۱ ـه. تست sanitize ِ این گام `<script>`، `onclick` و `javascript:` رو چک می‌کنه و لینک `https` ِ کامل باید بمونه.
+- تست‌های دیتابیس که رویداد با گالری می‌سازن، فایل‌های نمونه رو یه بار در `media_tbl` می‌ذارن (`SampleMedia`) چون Projector اندازه‌ها رو از اونجا می‌خونه.
+- خرابکاری: حذف چک `If-Match` در تراکنش ← `a stale version is 412 …` (application) و `PUT with the current If-Match is 200 … a stale one is 412 …` (HTTP) قرمز؛ `HtmlSanitizer { it }` به‌جای sanitizer در `ProductInput` ← `the description is kept as the sanitizer made it …` و `a description is kept without script …` قرمز.
 
 ---
 
@@ -5904,3 +5918,4 @@ kiva {
 | ۲۵ مهر ۱۴۰۵ | ۱.۲ | Phase 1 step 1.2 | `V22`، aggregate ِ `media` (انتقال `MediaType`)، `MediaLimitsPolicy`، پورت‌های `MediaProcessor` و `MediaStorage`، `VipsFfmpegMediaProcessor`، `DiskMediaStorage`، `Blurhash`، `POST /admin/media` با خوندن جریانی و سقف حجم، `staticFiles` ِ توسعه، و job ِ `delete-unattached-media`. تست‌های ابزار واقعی اینجا skip (ابزار نصب نیست) |
 | ۲۵ مهر ۱۴۰۵ | ۱.۳ | Phase 1 step 1.3 | `V23`، `create`/`change` ِ دسته، رنگ و متریال با VOهای تازه (`CategoryDescription`، `MaterialNote`، `CareInstructions`، `SeoMeta` ِ مشترک)، ۱۱ UseCase ِ پنل و سه Query ِ بدنه، `MediaAttachments`، `webV1AdminCatalog.kt`، عکس و سئوی دسته در فروشگاه. خرابکاری: بدون `refreshSearchText` ← تست جستجوی اسم تازه قرمز |
 | ۲۵ مهر ۱۴۰۵ | ۱.۴ | Phase 1 step 1.4 | `V24` با backfillها (`version`، `createdByUserId`، `availableTotal`، `soldCount` ِ رنگ‌ها، کد محصول در متن جستجو)، Projectorها، `findForAdmin` و `findAdminDetail`، `AdminProductSorts`، `FindAdminProductsUc` و `GetAdminProductUc`، `webV1AdminProducts.kt` (دو GET با `ETag`) |
+| ۲۶ مهر ۱۴۰۵ | ۱.۵ | Phase 1 step 1.5 | شکل کامل محصول در دامنه (`ProductSpecs` ِ کامل با `StrapInfo`/`PocketInfo`/…، `ProductTags`، `SeoMeta`، `Barcode`، `ProductMedia` با `mediaId`، `ProductGalleryPolicy`، `MaxPerOrder` تا ۲۰) با payloadهای سازگار با رویدادهای قبلی، `GalleryItemPayload` در read model، `ProductInput`، گسترش `CreateProductUc` (گالری، موجودی اولیه، لاگ)، `UpdateProductUc` با `If-Match`، `POST`/`PUT /admin/products`. دیتابیس توسعه: ۰ از ۶۵ فیلد `media` غیرخالی. خرابکاری: بدون چک `If-Match` و بدون sanitize ← تست‌هاشون قرمز |

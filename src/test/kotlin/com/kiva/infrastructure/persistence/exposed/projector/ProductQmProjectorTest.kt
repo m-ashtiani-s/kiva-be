@@ -15,6 +15,7 @@ import com.kiva.infrastructure.TestDatabase
 import com.kiva.infrastructure.persistence.event.ProductEventSamples
 import com.kiva.infrastructure.persistence.event.serializer.payload.product.ProductSpecsPayload
 import com.kiva.infrastructure.persistence.exposed.ProductRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.SampleMedia
 import com.kiva.infrastructure.persistence.exposed.StoredCatalog
 import com.kiva.infrastructure.persistence.exposed.StoredCatalog.Companion.orFail
 import com.kiva.infrastructure.persistence.exposed.StoredCatalog.Companion.priceTag
@@ -94,7 +95,7 @@ class ProductQmProjectorTest {
                 val priceTag = PricePolicy.priceTagOf(product, it)
                 listOf(
                     it.id.value, it.colorKey.value, it.sku.value, priceTag.price.toman, priceTag.compareAtPrice?.toman,
-                    it.ownPriceTag != null, it.isDefault, it.isActive, it.sortOrder, it.media,
+                    it.ownPriceTag != null, it.isDefault, it.isActive, it.sortOrder, it.media.map(SampleMedia::dtoOf),
                 )
             },
             colorRows(product.id).map {
@@ -102,7 +103,7 @@ class ProductQmProjectorTest {
                     it[ProductVariantQmTbl.variantId], it[ProductVariantQmTbl.colorKey], it[ProductVariantQmTbl.sku],
                     it[ProductVariantQmTbl.price], it[ProductVariantQmTbl.compareAtPrice], it[ProductVariantQmTbl.hasOwnPrice],
                     it[ProductVariantQmTbl.isDefault], it[ProductVariantQmTbl.isActive], it[ProductVariantQmTbl.sortOrder],
-                    it[ProductVariantQmTbl.media].map { media -> media.toDomain() },
+                    it[ProductVariantQmTbl.media].map { media -> media.toDto() },
                 )
             },
         )

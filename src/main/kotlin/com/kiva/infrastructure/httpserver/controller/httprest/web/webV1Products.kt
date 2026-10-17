@@ -14,6 +14,7 @@ import com.kiva.infrastructure.httpserver.controller.httprest.model.response.Pro
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.ProductFacetsHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.ProductListHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.ProductSummaryHttpResponse
+import com.kiva.infrastructure.media.MediaUrls
 import io.ktor.http.Parameters
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
@@ -32,6 +33,7 @@ fun Route.webV1Products(
     getProductUc: GetProductUc,
     findRelatedProductsUc: FindRelatedProductsUc,
     siteUrl: String,
+    mediaUrls: MediaUrls,
 ) {
     get("/products") {
         // The contract's product grid: 24 a page, at most 60.
@@ -58,7 +60,7 @@ fun Route.webV1Products(
     get("/products/{idOrSlug}") {
         // Always present: the route only matches when the segment is there.
         val query = GetProductUc.Qry(idOrSlug = call.pathParameters["idOrSlug"].orEmpty(), color = call.request.queryParameters["color"])
-        call.respondResult(getProductUc.execute(query)) { ProductDetailHttpResponse.from(it, siteUrl) }
+        call.respondResult(getProductUc.execute(query)) { ProductDetailHttpResponse.from(it, siteUrl, mediaUrls) }
     }
 
     get("/products/{productId}/related") {

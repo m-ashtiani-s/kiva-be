@@ -2,6 +2,8 @@ package com.kiva.domain.aggregate.product.entity
 
 import com.kiva.common.railway.FailureKind
 import com.kiva.common.railway.Result
+import com.kiva.domain.aggregate.media.model.valueobject.MediaType
+import com.kiva.domain.aggregate.product.ProductTestData
 import com.kiva.domain.aggregate.product.ProductTestData.admin
 import com.kiva.domain.aggregate.product.ProductTestData.color
 import com.kiva.domain.aggregate.product.ProductTestData.later
@@ -13,7 +15,6 @@ import com.kiva.domain.aggregate.product.ProductTestData.snapshot
 import com.kiva.domain.aggregate.product.ProductTestData.variantId
 import com.kiva.domain.aggregate.product.ProductTestData.withColor
 import com.kiva.domain.aggregate.product.entity.event.VariantDeactivated
-import com.kiva.domain.aggregate.media.model.valueobject.MediaType
 import com.kiva.domain.aggregate.product.model.valueobject.PriceTag
 import com.kiva.domain.aggregate.product.model.valueobject.ProductMedia
 import org.junit.jupiter.api.Nested
@@ -259,7 +260,7 @@ class ProductVariantTest {
 
         @Test
         fun `a color with a video has one, and so does the product while that color is in the shop`() {
-            val video = ProductMedia.constructFromPersisted(MediaType.VIDEO, "https://cdn.kiva.ir/p/1/lilac/intro.mp4", null, null)
+            val video = ProductTestData.media("intro", MediaType.VIDEO)
             val product = threeColors()
             product.replaceVariantMedia(variantId(102), listOf(photo("front"), video), admin, now)
 

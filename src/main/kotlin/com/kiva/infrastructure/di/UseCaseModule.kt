@@ -16,9 +16,6 @@ import com.kiva.application.usecase.admin.usecase.query.FindCustomersUc
 import com.kiva.application.usecase.admin.usecase.query.GetCustomerUc
 import com.kiva.application.usecase.audit.usecase.command.DeleteOldAuditEntriesUc
 import com.kiva.application.usecase.audit.usecase.query.ListAuditLogUc
-import com.kiva.application.usecase.media.usecase.command.DeleteUnattachedMediaUc
-import com.kiva.application.usecase.media.usecase.command.UploadMediaUc
-import com.kiva.application.usecase.media.usecase.query.FindUnattachedMediaUc
 import com.kiva.application.usecase.auth.OtpIssuer
 import com.kiva.application.usecase.auth.usecase.command.BootstrapAdminUc
 import com.kiva.application.usecase.auth.usecase.command.LogoutUc
@@ -50,10 +47,9 @@ import com.kiva.application.usecase.catalog.usecase.command.UpdateMaterialUc
 import com.kiva.application.usecase.catalog.usecase.query.GetAdminCategoryUc
 import com.kiva.application.usecase.catalog.usecase.query.GetAdminColorUc
 import com.kiva.application.usecase.catalog.usecase.query.GetAdminMaterialUc
+import com.kiva.application.usecase.catalog.usecase.query.GetCategoryUc
 import com.kiva.application.usecase.catalog.usecase.query.ListAdminCategoriesUc
 import com.kiva.application.usecase.catalog.usecase.query.ListAdminMaterialsUc
-import com.kiva.application.usecase.media.MediaAttachments
-import com.kiva.application.usecase.catalog.usecase.query.GetCategoryUc
 import com.kiva.application.usecase.catalog.usecase.query.ListCategoriesUc
 import com.kiva.application.usecase.catalog.usecase.query.ListColorsUc
 import com.kiva.application.usecase.catalog.usecase.query.ListMaterialsUc
@@ -70,6 +66,10 @@ import com.kiva.application.usecase.geo.usecase.query.ListProvincesUc
 import com.kiva.application.usecase.idempotency.IdempotencyGuard
 import com.kiva.application.usecase.idempotency.usecase.command.DeleteOldIdempotencyKeysUc
 import com.kiva.application.usecase.inventory.usecase.command.AdjustInventoryUc
+import com.kiva.application.usecase.media.MediaAttachments
+import com.kiva.application.usecase.media.usecase.command.DeleteUnattachedMediaUc
+import com.kiva.application.usecase.media.usecase.command.UploadMediaUc
+import com.kiva.application.usecase.media.usecase.query.FindUnattachedMediaUc
 import com.kiva.application.usecase.order.usecase.command.ExpireUnpaidOrderUc
 import com.kiva.application.usecase.order.usecase.command.ReorderUc
 import com.kiva.application.usecase.order.usecase.query.FindExpirableOrdersUc
@@ -79,11 +79,13 @@ import com.kiva.application.usecase.order.usecase.query.ListMyOrdersUc
 import com.kiva.application.usecase.payment.PaymentConfirmation
 import com.kiva.application.usecase.payment.usecase.command.ReconcilePaymentUc
 import com.kiva.application.usecase.payment.usecase.query.FindStalePaymentsUc
+import com.kiva.application.usecase.product.ProductInput
 import com.kiva.application.usecase.product.usecase.command.CreateProductUc
+import com.kiva.application.usecase.product.usecase.command.UpdateProductUc
 import com.kiva.application.usecase.product.usecase.query.FindAdminProductsUc
 import com.kiva.application.usecase.product.usecase.query.FindProductsUc
-import com.kiva.application.usecase.product.usecase.query.GetAdminProductUc
 import com.kiva.application.usecase.product.usecase.query.FindRelatedProductsUc
+import com.kiva.application.usecase.product.usecase.query.GetAdminProductUc
 import com.kiva.application.usecase.product.usecase.query.GetProductFacetsUc
 import com.kiva.application.usecase.product.usecase.query.GetProductUc
 import com.kiva.application.usecase.reservation.Reservations
@@ -326,8 +328,18 @@ val useCaseModule = module(createdAtStart = true) {
             productDomainService = get(),
             productRepository = get(),
             productQmRepository = get(),
-            htmlSanitizer = get(),
+            productInput = get(),
+            mediaAttachments = get(),
+            inventoryDomainService = get(),
+            inventoryRepository = get(),
+            auditTrail = get(),
             clock = get(),
+        )
+    }
+    single { ProductInput(htmlSanitizer = get()) }
+    single {
+        UpdateProductUc(
+            transactionManager = get(), productDomainService = get(), productRepository = get(), productInput = get(), auditTrail = get(), clock = get(),
         )
     }
 

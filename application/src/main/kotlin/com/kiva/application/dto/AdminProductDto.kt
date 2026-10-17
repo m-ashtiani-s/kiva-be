@@ -1,6 +1,5 @@
 package com.kiva.application.dto
 
-import com.kiva.domain.aggregate.product.model.valueobject.ProductMedia
 import com.kiva.domain.aggregate.product.model.valueobject.ProductStatus
 import java.time.Instant
 
@@ -26,7 +25,7 @@ data class AdminProductListItemDto(
     val lowStockVariants: Int,
     val soldCount: Int,
     val updatedAt: Instant,
-    val image: ProductMedia?,
+    val image: GalleryItemDto?,
 )
 
 /**

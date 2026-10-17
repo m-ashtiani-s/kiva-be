@@ -34,15 +34,20 @@ class ProductSpecsTest {
     // The spec of the prototype's hobo bags (kiva.js SPEC.hobo).
     private fun hobo(
         weightGrams: Int? = 650,
-        strap: String? = "بند دوشی ثابت ۵۵ سانتی‌متر",
-        pockets: String? = "۱ جیب زیپ‌دار داخلی، ۲ جیب موبایل",
+        straps: List<StrapInfo> = listOf(StrapInfo.legacy("بند دوشی ثابت ۵۵ سانتی‌متر")),
+        stitching: String? = "دوخت دولایه",
+        madeIn: String? = "ایران",
+        laptopMaxInch: Double? = null,
     ) = ProductSpecs.makeNew(
         dimensions = Dimensions.makeNew(34.0, 26.0, 12.0).getOrNull(),
         weightGrams = weightGrams,
         closure = ClosureType.ZIPPER,
-        strap = strap,
-        pockets = pockets,
+        straps = straps,
+        pockets = PocketInfo.legacy("۱ جیب زیپ‌دار داخلی، ۲ جیب موبایل"),
+        laptopMaxInch = laptopMaxInch,
         occasions = setOf(Occasion.DAILY, Occasion.UNIVERSITY, Occasion.WORK),
+        stitching = stitching,
+        madeIn = madeIn,
     )
 
     @Test
@@ -51,28 +56,48 @@ class ProductSpecsTest {
 
         assertEquals(650, specs.weightGrams)
         assertEquals(ClosureType.ZIPPER, specs.closure)
-        assertEquals("بند دوشی ثابت ۵۵ سانتی‌متر", specs.strap)
+        assertEquals("بند دوشی ثابت ۵۵ سانتی‌متر", specs.straps.single().label)
+        assertEquals("ایران", specs.madeIn)
         assertEquals(setOf(Occasion.DAILY, Occasion.UNIVERSITY, Occasion.WORK), specs.occasions)
     }
 
     @Test
     fun `everything is optional, and blank texts mean not given`() {
-        val specs = hobo(weightGrams = null, strap = "  ", pockets = null).getOrNull()!!
+        val specs = hobo(weightGrams = null, stitching = "  ", madeIn = "").getOrNull()!!
 
         assertNull(specs.weightGrams)
-        assertNull(specs.strap)
-        assertEquals(ProductSpecs.NONE, ProductSpecs.makeNew(null, null, null, null, null, emptySet()).getOrNull())
+        assertNull(specs.stitching)
+        assertNull(specs.madeIn)
+        assertEquals(ProductSpecs.NONE, ProductSpecs.makeNew().getOrNull())
     }
 
     @Test
-    fun `every problem is reported at once, each under its own field`() {
-        val failure = hobo(weightGrams = 0, strap = "ب".repeat(201), pockets = "ج".repeat(201)).failureOrNull()!!
+    fun `every limit on the whole is reported at once, each under its own field`() {
+        val failure = hobo(
+            weightGrams = 0,
+            straps = List(5) { StrapInfo.legacy("بند") },
+            stitching = "د".repeat(101),
+            madeIn = "ا".repeat(41),
+            laptopMaxInch = 21.0,
+        ).failureOrNull()!!
 
-        assertEquals("SPECS_INVALID", failure.code)
-        assertEquals("specs", failure.field)
         assertEquals(
-            listOf("WEIGHT_INVALID" to "weightGrams", "STRAP_TOO_LONG" to "strap", "POCKETS_TOO_LONG" to "pockets"),
+            listOf(
+                "WEIGHT_INVALID" to "weightGrams",
+                "STRAPS_TOO_MANY" to "straps",
+                "LAPTOP_MAX_INCH_INVALID" to "laptopMaxInch",
+                "STITCHING_TOO_LONG" to "stitching",
+                "MADE_IN_TOO_LONG" to "madeIn",
+            ),
             failure.causes.map { it.code to it.field },
+        )
+    }
+
+    @Test
+    fun `problemsOfWhole gives the same limits without the parts`() {
+        assertEquals(
+            listOf("WEIGHT_INVALID", "CAPACITY_LITERS_INVALID"),
+            ProductSpecs.problemsOfWhole(20_001, 4, 14.0, 0.0, null, null).map { it.code },
         )
     }
 
@@ -84,7 +109,8 @@ class ProductSpecsTest {
 
     @Test
     fun `a broken stored value is a bug, so constructFromPersisted throws`() {
-        assertFailsWith<IllegalArgumentException> { ProductSpecs.constructFromPersisted(null, -5, null, null, null, emptySet()) }
-        assertFailsWith<IllegalArgumentException> { ProductSpecs.constructFromPersisted(null, null, null, " ", null, emptySet()) }
+        assertFailsWith<IllegalArgumentException> { ProductSpecs.constructFromPersisted(weightGrams = -5) }
+        assertFailsWith<IllegalArgumentException> { ProductSpecs.constructFromPersisted(stitching = " ") }
+        assertFailsWith<IllegalArgumentException> { ProductSpecs.constructFromPersisted(straps = List(5) { StrapInfo.legacy("بند") }) }
     }
 }

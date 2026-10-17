@@ -1,8 +1,11 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.model.response
 
+import com.kiva.application.dto.GalleryItemDto
 import com.kiva.application.dto.ProductDetailDto
-import com.kiva.domain.aggregate.product.model.valueobject.ProductMedia
+import com.kiva.domain.aggregate.product.model.valueobject.PocketInfo
 import com.kiva.domain.aggregate.product.model.valueobject.ProductSpecs
+import com.kiva.domain.aggregate.product.model.valueobject.StrapInfo
+import com.kiva.infrastructure.media.MediaUrls
 import kotlinx.serialization.Serializable
 
 /**
@@ -51,7 +54,7 @@ data class ProductDetailHttpResponse(
 ) {
     companion object {
         /** @param siteUrl the shop's address (`https://kiva.ir`): the page's address is always its slug's. */
-        fun from(detail: ProductDetailDto, siteUrl: String): ProductDetailHttpResponse {
+        fun from(detail: ProductDetailDto, siteUrl: String, urls: MediaUrls): ProductDetailHttpResponse {
             // The card exactly as in the list, its picture in the selected color.
             val card = ProductSummaryHttpResponse.from(detail.card, filterColors = listOfNotNull(detail.selectedColorKey))
             // Asked for by number or code, the canonical address is still the slug's.
@@ -85,7 +88,7 @@ data class ProductDetailHttpResponse(
                 materialDescription = detail.materialDescription,
                 specs = ProductSpecsHttpResponse.from(detail.specs),
                 specTable = ProductTexts.specTable(detail),
-                variants = detail.variants.map(ProductVariantHttpResponse::from),
+                variants = detail.variants.map { ProductVariantHttpResponse.from(it, urls) },
                 breadcrumbs = listOf(
                     BreadcrumbHttpResponse("خانه", "/"),
                     BreadcrumbHttpResponse("فروشگاه", "/products"),
@@ -107,10 +110,7 @@ data class ProductDetailHttpResponse(
 @Serializable
 data class MaterialRefHttpResponse(val id: Long, val slug: String, val name: String, val family: String)
 
-/**
- * Contract schema `ProductSpecs`, as far as the domain keeps specs today: the strap and the pockets are one text each,
- * so they go out as one strap's label and the pockets' summary.
- */
+/** Contract schema `ProductSpecs`, every part of it. Labels (closure, occasions, straps, pockets) are the server's own Persian. */
 @Serializable
 data class ProductSpecsHttpResponse(
     val dimensions: DimensionsHttpResponse? = null,
@@ -118,16 +118,38 @@ data class ProductSpecsHttpResponse(
     val closure: ClosureHttpResponse? = null,
     val straps: List<StrapHttpResponse>? = null,
     val pockets: PocketsHttpResponse? = null,
+    val laptopMaxInch: Double? = null,
+    val capacityLiters: Double? = null,
+    val waterproof: Boolean = false,
     val occasions: List<OccasionHttpResponse>,
+    val fits: List<String> = emptyList(),
+    val lining: LiningHttpResponse? = null,
+    val hardware: HardwareHttpResponse? = null,
+    val stitching: String? = null,
+    val handmade: Boolean = false,
+    val madeIn: String? = null,
+    val careInstructions: List<String> = emptyList(),
+    val warranty: WarrantyHttpResponse? = null,
 ) {
     companion object {
         fun from(specs: ProductSpecs) = ProductSpecsHttpResponse(
             dimensions = specs.dimensions?.let { DimensionsHttpResponse(it.lengthCm, it.heightCm, it.widthCm) },
             weightGrams = specs.weightGrams,
             closure = specs.closure?.let { ClosureHttpResponse(it.name, ProductTexts.closure(it)) },
-            straps = specs.strap?.let { listOf(StrapHttpResponse(it)) },
-            pockets = specs.pockets?.let { PocketsHttpResponse(it) },
+            straps = specs.straps.takeIf { it.isNotEmpty() }?.map(StrapHttpResponse::from),
+            pockets = specs.pockets?.let(PocketsHttpResponse::from),
+            laptopMaxInch = specs.laptopMaxInch,
+            capacityLiters = specs.capacityLiters,
+            waterproof = specs.waterproof,
             occasions = specs.occasions.sorted().map { OccasionHttpResponse(it.name, ProductTexts.occasion(it)) },
+            fits = specs.fits.sorted().map { it.name },
+            lining = specs.lining?.let { LiningHttpResponse(it.material, it.color) },
+            hardware = specs.hardware?.let { HardwareHttpResponse(it.material, it.finish) },
+            stitching = specs.stitching,
+            handmade = specs.handmade,
+            madeIn = specs.madeIn,
+            careInstructions = specs.careInstructions.items,
+            warranty = specs.warranty?.let { WarrantyHttpResponse(it.months, it.description) },
         )
     }
 }
@@ -138,11 +160,70 @@ data class DimensionsHttpResponse(val lengthCm: Double, val heightCm: Double, va
 @Serializable
 data class ClosureHttpResponse(val type: String, val label: String)
 
+/** Contract schema `StrapInfo`. [label] is the panel's, or one made from the kind and the length. */
 @Serializable
-data class StrapHttpResponse(val label: String)
+data class StrapHttpResponse(
+    val type: String? = null,
+    val label: String,
+    val lengthCm: Double? = null,
+    val minLengthCm: Double? = null,
+    val maxLengthCm: Double? = null,
+    val adjustable: Boolean = false,
+    val detachable: Boolean = false,
+    val material: String? = null,
+) {
+    companion object {
+        fun from(strap: StrapInfo) = StrapHttpResponse(
+            type = strap.type?.name,
+            label = ProductTexts.strap(strap),
+            lengthCm = strap.lengthCm,
+            minLengthCm = strap.minLengthCm,
+            maxLengthCm = strap.maxLengthCm,
+            adjustable = strap.adjustable,
+            detachable = strap.detachable,
+            material = strap.material,
+        )
+    }
+}
+
+/** Contract schema `PocketInfo`. [summary] is the panel's, or one made from the counts. */
+@Serializable
+data class PocketsHttpResponse(
+    val internal: Int = 0,
+    val internalZip: Int = 0,
+    val external: Int = 0,
+    val phone: Int = 0,
+    val cardSlots: Int = 0,
+    val billSlots: Int = 0,
+    val coinPocket: Boolean = false,
+    val detachablePouch: Boolean = false,
+    val laptopSleeve: Boolean = false,
+    val summary: String,
+) {
+    companion object {
+        fun from(pockets: PocketInfo) = PocketsHttpResponse(
+            internal = pockets.internal,
+            internalZip = pockets.internalZip,
+            external = pockets.external,
+            phone = pockets.phone,
+            cardSlots = pockets.cardSlots,
+            billSlots = pockets.billSlots,
+            coinPocket = pockets.coinPocket,
+            detachablePouch = pockets.detachablePouch,
+            laptopSleeve = pockets.laptopSleeve,
+            summary = ProductTexts.pockets(pockets),
+        )
+    }
+}
 
 @Serializable
-data class PocketsHttpResponse(val summary: String)
+data class LiningHttpResponse(val material: String? = null, val color: String? = null)
+
+@Serializable
+data class HardwareHttpResponse(val material: String? = null, val finish: String? = null)
+
+@Serializable
+data class WarrantyHttpResponse(val months: Int, val description: String? = null)
 
 @Serializable
 data class OccasionHttpResponse(val code: String, val label: String)
@@ -170,40 +251,65 @@ data class ProductVariantHttpResponse(
     val hasVideo: Boolean,
 ) {
     companion object {
-        fun from(variant: ProductDetailDto.Variant) = ProductVariantHttpResponse(
+        fun from(variant: ProductDetailDto.Variant, urls: MediaUrls) = ProductVariantHttpResponse(
             id = variant.id,
             sku = variant.sku,
             color = variant.color.let { ColorHttpResponse(it.key, it.name, it.hex, it.isLight, it.sortOrder) },
             isDefault = variant.isDefault,
             price = PriceInfoHttpResponse.from(variant.price),
             stock = StockInfoHttpResponse.from(variant.stock),
-            media = variant.media.mapIndexed(ProductMediaHttpResponse::from),
+            media = variant.media.mapIndexed { index, item -> ProductMediaHttpResponse.from(index, item, urls) },
             hasVideo = variant.hasVideo,
         )
     }
 }
 
-/** Contract schema `ProductMedia`, without its `id` until uploads exist. The first of a gallery is the main photo. */
+/**
+ * Contract schema `ProductMedia`: the file (MediaAsset, every address full) and its place in the color's gallery. The
+ * first of a gallery is the main photo. Every photo is a real one, so `isUnedited` is always true.
+ */
 @Serializable
 data class ProductMediaHttpResponse(
+    val id: String,
     val type: String,
     val url: String,
-    val alt: String? = null,
-    val view: String? = null,
-    val viewLabel: String? = null,
+    val thumbnailUrl: String?,
+    val srcSet: List<MediaAssetHttpResponse.SrcSetItem>,
+    val posterUrl: String?,
+    val width: Int,
+    val height: Int,
+    val durationSec: Int?,
+    val mimeType: String,
+    val alt: String?,
+    val blurhash: String?,
+    val view: String?,
+    val viewLabel: String?,
     val sortOrder: Int,
     val isPrimary: Boolean,
+    val isUnedited: Boolean = true,
 ) {
     companion object {
-        fun from(index: Int, media: ProductMedia) = ProductMediaHttpResponse(
-            type = media.type.name,
-            url = media.url,
-            alt = media.alt,
-            view = media.view?.name,
-            viewLabel = media.view?.let { ProductTexts.mediaView(it) },
-            sortOrder = index,
-            isPrimary = index == 0,
-        )
+        fun from(index: Int, item: GalleryItemDto, urls: MediaUrls): ProductMediaHttpResponse {
+            val asset = MediaAssetHttpResponse.from(item.media, urls)
+            return ProductMediaHttpResponse(
+                id = asset.id,
+                type = asset.type,
+                url = asset.url,
+                thumbnailUrl = asset.thumbnailUrl,
+                srcSet = asset.srcSet,
+                posterUrl = asset.posterUrl,
+                width = asset.width,
+                height = asset.height,
+                durationSec = asset.durationSec,
+                mimeType = asset.mimeType,
+                alt = asset.alt,
+                blurhash = asset.blurhash,
+                view = item.view.name,
+                viewLabel = ProductTexts.mediaView(item.view),
+                sortOrder = index,
+                isPrimary = index == 0,
+            )
+        }
     }
 }
 

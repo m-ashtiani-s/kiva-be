@@ -246,7 +246,7 @@ fun Application.configureRouting() {
         getColor = get(), createColor = get(), updateColor = get(), deleteColor = get(),
         listMaterials = get(), getMaterial = get(), createMaterial = get(), updateMaterial = get(), deleteMaterial = get(),
     )
-    val adminProductUseCases = AdminProductUseCases(checkPanelAccess = checkPanelAccessUc, findProducts = get(), getProduct = get())
+    val adminProductUseCases = AdminProductUseCases(checkPanelAccess = checkPanelAccessUc, findProducts = get(), getProduct = get(), createProduct = get(), updateProduct = get())
     val config by inject<AppConfig>()
 
     routing {
@@ -265,9 +265,9 @@ fun Application.configureRouting() {
             webV1AdminAudit(AdminAuditUseCases(checkPanelAccessUc, listAuditLogUc))
             webV1AdminMedia(AdminMediaUseCases(checkPanelAccessUc, uploadMediaUc), mediaStorage::newUploadFile, mediaUrls)
             webV1AdminCatalog(adminCatalogUseCases, mediaUrls, config.shop.siteUrl)
-            webV1AdminProducts(adminProductUseCases, config.shop.siteUrl)
+            webV1AdminProducts(adminProductUseCases, config.shop.siteUrl, mediaUrls)
             webV1Catalog(listColorsUc, listMaterialsUc, listCategoriesUc, getCategoryUc, mediaUrls, config.shop.siteUrl)
-            webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, config.shop.siteUrl)
+            webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, config.shop.siteUrl, mediaUrls)
             webV1Geo(listProvincesUc, listCitiesOfProvinceUc)
             webV1Addresses(AddressUseCases(listMyAddressesUc, getMyAddressUc, addAddressUc, updateAddressUc, deleteAddressUc, setDefaultAddressUc))
             webV1Cart(

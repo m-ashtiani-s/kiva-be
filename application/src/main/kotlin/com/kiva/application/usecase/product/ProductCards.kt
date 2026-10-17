@@ -1,5 +1,6 @@
 package com.kiva.application.usecase.product
 
+import com.kiva.application.dto.GalleryItemDto
 import com.kiva.application.dto.PriceDto
 import com.kiva.application.dto.ProductCardDto
 import com.kiva.application.dto.ProductDetailDto
@@ -14,7 +15,6 @@ import com.kiva.domain.aggregate.product.model.policy.PricePolicy
 import com.kiva.domain.aggregate.product.model.policy.StockPolicy
 import com.kiva.domain.aggregate.product.model.valueobject.MaxPerOrder
 import com.kiva.domain.aggregate.product.model.valueobject.PriceTag
-import com.kiva.domain.aggregate.product.model.valueobject.ProductMedia
 import com.kiva.domain.aggregate.product.model.valueobject.Sku
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
 import java.time.Instant
@@ -76,7 +76,7 @@ object ProductCards {
         priceTag: PriceTag,
         isDefault: Boolean,
         available: Int,
-        media: List<ProductMedia>,
+        media: List<GalleryItemDto>,
         palette: Map<ColorKey, Color>,
         maxPerOrder: MaxPerOrder,
     ): ProductDetailDto.Variant {

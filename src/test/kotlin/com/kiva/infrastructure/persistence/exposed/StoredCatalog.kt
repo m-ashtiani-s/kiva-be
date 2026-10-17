@@ -35,6 +35,10 @@ class StoredCatalog {
     private val inventories = InventoryRepositoryImpl()
     private val ids = ProductIdGeneratorImpl()
 
+    init {
+        SampleMedia.ensureStored()
+    }
+
     private val productIds = mutableListOf<Long>()
     private val variantIds = mutableListOf<Long>()
 

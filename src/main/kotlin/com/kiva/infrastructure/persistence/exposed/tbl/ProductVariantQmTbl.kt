@@ -1,6 +1,5 @@
 package com.kiva.infrastructure.persistence.exposed.tbl
 
-import com.kiva.infrastructure.persistence.event.serializer.payload.product.ProductMediaPayload
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.v1.core.dao.id.LongIdTable
 import org.jetbrains.exposed.v1.json.jsonb
@@ -23,7 +22,8 @@ object ProductVariantQmTbl : LongIdTable(name = "productvariantqm_tbl", columnNa
     val isDefault = bool("isDefault")
     val isActive = bool("isActive")
     val sortOrder = integer("sortOrder")
-    val media = jsonb<List<ProductMediaPayload>>("media", Json)
+    /** The gallery in order, each item with its file's sizes (GalleryItemPayload). */
+    val media = jsonb<List<GalleryItemPayload>>("media", Json)
     val onHand = integer("onHand").default(0)
     val reserved = integer("reserved").default(0)
     // V24 (step 1.4)

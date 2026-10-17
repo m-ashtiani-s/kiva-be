@@ -2,6 +2,8 @@ package com.kiva.domain.aggregate.product.entity
 
 import com.kiva.common.railway.FailureKind
 import com.kiva.common.railway.Result
+import com.kiva.domain.aggregate.media.model.valueobject.MediaType
+import com.kiva.domain.aggregate.product.ProductTestData
 import com.kiva.domain.aggregate.product.ProductTestData.admin
 import com.kiva.domain.aggregate.product.ProductTestData.color
 import com.kiva.domain.aggregate.product.ProductTestData.details
@@ -14,7 +16,6 @@ import com.kiva.domain.aggregate.product.ProductTestData.variantId
 import com.kiva.domain.aggregate.product.ProductTestData.withColor
 import com.kiva.domain.aggregate.product.entity.event.ProductCreated
 import com.kiva.domain.aggregate.product.entity.event.ProductDetailsChanged
-import com.kiva.domain.aggregate.media.model.valueobject.MediaType
 import com.kiva.domain.aggregate.product.model.valueobject.ProductMedia
 import com.kiva.domain.aggregate.product.model.valueobject.ProductStatus.ACTIVE
 import com.kiva.domain.aggregate.product.model.valueobject.ProductStatus.ARCHIVED
@@ -200,7 +201,7 @@ class ProductTest {
 
         @Test
         fun `a color keeps its gallery as it was given, even if the caller's list changes later`() {
-            val front = ProductMedia.constructFromPersisted(MediaType.IMAGE, "https://cdn.kiva.ir/p/1/lilac/front.webp", null, null)
+            val front = ProductTestData.photo("lilacfront")
             val gallery = mutableListOf(front)
             val product = newProduct().withColor(101, "lilac", media = gallery)
 

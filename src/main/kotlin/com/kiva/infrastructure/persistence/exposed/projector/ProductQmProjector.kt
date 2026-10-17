@@ -1,5 +1,6 @@
 package com.kiva.infrastructure.persistence.exposed.projector
 
+import com.kiva.common.valueobject.SeoMeta
 import com.kiva.domain.aggregate.category.model.valueobject.CategoryId
 import com.kiva.domain.aggregate.material.model.valueobject.MaterialId
 import com.kiva.domain.aggregate.product.entity.event.ProductArchived
@@ -16,22 +17,29 @@ import com.kiva.domain.aggregate.product.entity.event.VariantMediaReplaced
 import com.kiva.domain.aggregate.product.entity.event.VariantReactivated
 import com.kiva.domain.aggregate.product.model.valueobject.PriceTag
 import com.kiva.domain.aggregate.product.model.valueobject.ProductDetails
+import com.kiva.domain.aggregate.product.model.valueobject.ProductMedia
 import com.kiva.domain.aggregate.product.model.valueobject.ProductStatus
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
-import com.kiva.infrastructure.persistence.event.serializer.payload.product.ProductMediaPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.product.ProductSpecsPayload
 import com.kiva.infrastructure.persistence.exposed.tbl.CategoryTbl
+import com.kiva.infrastructure.persistence.exposed.tbl.GalleryItemPayload
 import com.kiva.infrastructure.persistence.exposed.tbl.MaterialTbl
+import com.kiva.infrastructure.persistence.exposed.tbl.MediaTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.ProductQmTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.ProductVariantQmTbl
+import com.kiva.infrastructure.persistence.exposed.toMediaAsset
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.statements.UpdateBuilder
 import org.jetbrains.exposed.v1.core.statements.UpdateStatement
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.select
+import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 import java.time.Instant
 import java.time.ZoneOffset
@@ -78,6 +86,7 @@ object ProductQmProjector {
                     it.writeColorPrice(event.ownPriceTag, ProductQmSummary.basePriceTag(productId))
                     it[sortOrder] = event.sortOrder
                     it[isDefault] = event.isDefault
+                    it[barcode] = event.barcode?.value
                 }
             }
             is VariantDeactivated -> {
@@ -94,8 +103,9 @@ object ProductQmProjector {
                     it[isDefault] = event.isDefault
                 }
             }
-            is VariantMediaReplaced -> updateColor(productId, event.variantId) {
-                it[media] = event.media.map(::ProductMediaPayload)
+            is VariantMediaReplaced -> {
+                val gallery = galleryOf(event.media)
+                updateColor(productId, event.variantId) { it[media] = gallery }
             }
         }
 
@@ -127,8 +137,6 @@ object ProductQmProjector {
             it[version] = event.sequence.value
             it[createdByUserId] = event.occurredByUserId.value
             it[publishAt] = null
-            it[tags] = emptyList()
-            it[seo] = JsonObject(emptyMap())
             it[availableTotal] = 0
         }
     }
@@ -156,10 +164,25 @@ object ProductQmProjector {
             it[isDefault] = event.isDefault
             it[isActive] = true
             it[sortOrder] = event.sortOrder
-            it[media] = event.media.map(::ProductMediaPayload)
+            it[media] = galleryOf(event.media)
+            it[barcode] = event.barcode?.value
             // Stock comes from its own events (InventoryQmProjector); a new color has none yet.
             it[onHand] = 0
             it[reserved] = 0
+        }
+    }
+
+    /**
+     * The gallery with each file's sizes copied from its media row. The use case checked every file exists before the
+     * event was raised (MediaAttachments), and a used file is never removed, so a missing one is a bug.
+     */
+    private fun galleryOf(media: List<ProductMedia>): List<GalleryItemPayload> {
+        if (media.isEmpty()) return emptyList()
+        val assets = MediaTbl.selectAll().where { MediaTbl.mediaId inList media.map { it.mediaId.value } }
+            .map { it.toMediaAsset() }
+            .associateBy { it.id }
+        return media.map { item ->
+            GalleryItemPayload(item, assets[item.mediaId] ?: error("Media ${item.mediaId.value} of a product event is not in media_tbl"))
         }
     }
 
@@ -200,6 +223,15 @@ object ProductQmProjector {
         this[ProductQmTbl.highlights] = details.highlights.items
         this[ProductQmTbl.materialDescription] = details.materialDescription?.value
         this[ProductQmTbl.specs] = ProductSpecsPayload(details.specs)
+        this[ProductQmTbl.tags] = details.tags.items
+        this[ProductQmTbl.seo] = seoOf(details.seo)
+    }
+
+    /** The page's own SEO fields, as V24's `seo` JSONB keeps them: only those set (none is `{}`). */
+    private fun seoOf(seo: SeoMeta): JsonObject = buildJsonObject {
+        seo.title?.let { put("title", it) }
+        seo.description?.let { put("description", it) }
+        if (seo.noIndex) put("noIndex", true)
     }
 
     private fun UpdateBuilder<*>.writeBasePrice(priceTag: PriceTag) {

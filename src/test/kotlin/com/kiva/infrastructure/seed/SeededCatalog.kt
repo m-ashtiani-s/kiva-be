@@ -1,19 +1,21 @@
 package com.kiva.infrastructure.seed
 
-import com.kiva.infrastructure.persistence.exposed.MediaRepositoryImpl
 import com.kiva.application.usecase.catalog.usecase.query.ListCategoriesUc
 import com.kiva.application.usecase.catalog.usecase.query.ListMaterialsUc
-import com.kiva.application.usecase.inventory.usecase.command.AdjustInventoryUc
+import com.kiva.application.usecase.media.MediaAttachments
+import com.kiva.application.usecase.product.ProductInput
 import com.kiva.application.usecase.product.usecase.command.CreateProductUc
 import com.kiva.domain.aggregate.inventory.InventoryDomainService
 import com.kiva.domain.aggregate.product.ProductDomainService
 import com.kiva.infrastructure.TestDatabase
 import com.kiva.infrastructure.common.html.JsoupHtmlSanitizer
 import com.kiva.infrastructure.common.persistence.ExposedTransactionManager
+import com.kiva.infrastructure.persistence.exposed.AuditTrailImpl
 import com.kiva.infrastructure.persistence.exposed.CategoryRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ColorRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.InventoryRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.MaterialRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.MediaRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ProductIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.ProductQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ProductRepositoryImpl
@@ -45,8 +47,10 @@ class SeededCatalog(clock: Clock) {
             products, ProductIdGeneratorImpl(), CategoryRepositoryImpl(), MaterialRepositoryImpl(), ColorRepositoryImpl(),
         )
         DevCatalogSeeder(
-            CreateProductUc(transactions, productDomainService, products, readModel, JsoupHtmlSanitizer, clock),
-            AdjustInventoryUc(transactions, InventoryDomainService(inventories), inventories, readModel, clock),
+            CreateProductUc(
+                transactions, productDomainService, products, readModel, ProductInput(JsoupHtmlSanitizer), MediaAttachments(MediaRepositoryImpl()),
+                InventoryDomainService(inventories), inventories, AuditTrailImpl(), clock,
+            ),
             ListCategoriesUc(transactions, CategoryRepositoryImpl(), readModel, MediaRepositoryImpl()),
             ListMaterialsUc(transactions, MaterialRepositoryImpl(), readModel),
             clock,

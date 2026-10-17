@@ -1,11 +1,11 @@
 package com.kiva.application.repository
 
+import com.kiva.application.dto.GalleryItemDto
 import com.kiva.common.valueobject.Slug
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
 import com.kiva.domain.aggregate.product.model.valueobject.PriceTag
 import com.kiva.domain.aggregate.product.model.valueobject.ProductId
-import com.kiva.domain.aggregate.product.model.valueobject.ProductMedia
 import com.kiva.domain.aggregate.product.model.valueobject.ProductName
 import com.kiva.domain.aggregate.product.model.valueobject.ProductStatus
 import com.kiva.domain.aggregate.product.model.valueobject.Sku
@@ -52,7 +52,7 @@ data class AdminProductQm(
     val lowStockVariants: Int,
     val soldCount: Int,
     val updatedOn: Instant,
-    val defaultMedia: ProductMedia?,
+    val defaultMedia: GalleryItemDto?,
 )
 
 /**
@@ -84,7 +84,7 @@ data class AdminProductDetailQm(
         val onHand: Int,
         val reserved: Int,
         val soldCount: Int,
-        val media: List<ProductMedia>,
+        val media: List<GalleryItemDto>,
     ) {
         /** What can still be sold: on hand minus reserved. */
         val available: Int get() = onHand - reserved

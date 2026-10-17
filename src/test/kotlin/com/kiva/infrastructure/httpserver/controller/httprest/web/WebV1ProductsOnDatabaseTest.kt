@@ -1,6 +1,5 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
-import com.kiva.infrastructure.persistence.exposed.MediaRepositoryImpl
 import com.kiva.application.usecase.catalog.usecase.query.ListCategoriesUc
 import com.kiva.application.usecase.product.usecase.query.FindProductsUc
 import com.kiva.application.usecase.product.usecase.query.FindRelatedProductsUc
@@ -10,9 +9,11 @@ import com.kiva.infrastructure.TestDatabase
 import com.kiva.infrastructure.common.persistence.ExposedTransactionManager
 import com.kiva.infrastructure.httpserver.API_V1
 import com.kiva.infrastructure.httpserver.configureHttp
+import com.kiva.infrastructure.media.MediaUrls
 import com.kiva.infrastructure.persistence.exposed.CategoryRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ColorRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.MaterialRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.MediaRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ProductQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ShopSettingsRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.StoredCatalog
@@ -91,7 +92,7 @@ class WebV1ProductsOnDatabaseTest {
         environment { config = MapApplicationConfig() }
         application {
             configureHttp()
-            routing { route(API_V1) { webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, siteUrl = "https://kiva.ir") } }
+            routing { route(API_V1) { webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, siteUrl = "https://kiva.ir", mediaUrls = MediaUrls("https://media.kiva.test")) } }
         }
         block()
     }

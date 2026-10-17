@@ -126,7 +126,7 @@ object ErrorMessages {
         "DESCRIPTION_TOO_LONG" to "توضیحات حداکثر {maxLength} حرفه",
         "HIGHLIGHTS_TOO_MANY" to "حداکثر {maxItems} ویژگی می‌شه نوشت",
         "HIGHLIGHT_TOO_LONG" to "هر ویژگی حداکثر {maxLength} حرفه",
-        "MAX_PER_ORDER_INVALID" to "سقف تعداد در هر سفارش باید حداقل ۱ باشه",
+        "MAX_PER_ORDER_INVALID" to "سقف تعداد در هر سفارش باید بین ۱ و {max} باشه",
         "DIMENSIONS_INVALID" to "ابعاد باید عدد مثبت و حداکثر {maxCm} سانتی‌متر باشه",
         "WEIGHT_INVALID" to "وزن باید عدد مثبت و حداکثر {maxGrams} گرم باشه",
         "STRAP_TOO_LONG" to "توضیح بند حداکثر {maxLength} حرفه",

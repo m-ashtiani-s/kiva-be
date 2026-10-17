@@ -1,5 +1,6 @@
 package com.kiva.infrastructure.persistence.exposed
 
+import com.kiva.application.dto.GalleryItemDto
 import com.kiva.application.repository.AdminProductDetailQm
 import com.kiva.application.repository.AdminProductFilter
 import com.kiva.application.repository.AdminProductQm
@@ -26,7 +27,6 @@ import com.kiva.domain.aggregate.product.model.valueobject.MaxPerOrder
 import com.kiva.domain.aggregate.product.model.valueobject.PriceTag
 import com.kiva.domain.aggregate.product.model.valueobject.ProductDescription
 import com.kiva.domain.aggregate.product.model.valueobject.ProductId
-import com.kiva.domain.aggregate.product.model.valueobject.ProductMedia
 import com.kiva.domain.aggregate.product.model.valueobject.ProductName
 import com.kiva.domain.aggregate.product.model.valueobject.ProductStatus
 import com.kiva.domain.aggregate.product.model.valueobject.ShortDescription
@@ -186,7 +186,7 @@ class ProductQmRepositoryImpl : ProductQmRepository {
                 priceTag = priceTagOf(it[ProductVariantQmTbl.price], it[ProductVariantQmTbl.compareAtPrice]),
                 isDefault = it[ProductVariantQmTbl.isDefault],
                 available = it[ProductVariantQmTbl.onHand] - it[ProductVariantQmTbl.reserved],
-                media = it[ProductVariantQmTbl.media].map { media -> media.toDomain() },
+                media = it[ProductVariantQmTbl.media].map { media -> media.toDto() },
             )
         }
 
@@ -287,11 +287,11 @@ class ProductQmRepositoryImpl : ProductQmRepository {
     private fun startingWith(word: String): LikePattern = LikePattern.ofLiteral(word, ESCAPE) + "%"
 
     /** The first media of each product's default color, for those of [productIds] that have one. */
-    private fun defaultMediaOf(productIds: List<Long>): Map<Long, ProductMedia> {
+    private fun defaultMediaOf(productIds: List<Long>): Map<Long, GalleryItemDto> {
         if (productIds.isEmpty()) return emptyMap()
         return ProductVariantQmTbl.select(ProductVariantQmTbl.productId, ProductVariantQmTbl.media)
             .where { (ProductVariantQmTbl.productId inList productIds) and (ProductVariantQmTbl.isDefault eq true) }
-            .mapNotNull { row -> row[ProductVariantQmTbl.media].firstOrNull()?.let { row[ProductVariantQmTbl.productId] to it.toDomain() } }
+            .mapNotNull { row -> row[ProductVariantQmTbl.media].firstOrNull()?.let { row[ProductVariantQmTbl.productId] to it.toDto() } }
             .toMap()
     }
 
@@ -323,7 +323,7 @@ class ProductQmRepositoryImpl : ProductQmRepository {
                     onHand = it[ProductVariantQmTbl.onHand],
                     reserved = it[ProductVariantQmTbl.reserved],
                     soldCount = it[ProductVariantQmTbl.soldCount],
-                    media = it[ProductVariantQmTbl.media].map { media -> media.toDomain() },
+                    media = it[ProductVariantQmTbl.media].map { media -> media.toDto() },
                 )
             },
         )

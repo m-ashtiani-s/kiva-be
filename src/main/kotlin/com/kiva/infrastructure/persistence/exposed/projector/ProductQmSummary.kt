@@ -3,7 +3,6 @@ package com.kiva.infrastructure.persistence.exposed.projector
 import com.kiva.common.text.normalizePersian
 import com.kiva.common.valueobject.Money
 import com.kiva.domain.aggregate.product.model.policy.PricePolicy
-import com.kiva.domain.aggregate.media.model.valueobject.MediaType
 import com.kiva.domain.aggregate.product.model.valueobject.PriceTag
 import com.kiva.infrastructure.persistence.exposed.tbl.CategoryTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.ColorTbl
@@ -79,7 +78,7 @@ internal object ProductQmSummary {
             }
             it[availableTotal] = activeColors.sumOf { color -> color[ProductVariantQmTbl.onHand] - color[ProductVariantQmTbl.reserved] }
             it[hasVideo] = activeColors.any { color ->
-                color[ProductVariantQmTbl.media].any { media -> media.toDomain().type == MediaType.VIDEO }
+                color[ProductVariantQmTbl.media].any { media -> media.isVideo }
             }
             it[searchText] = searchTextOf(product, colorKeys)
             if (updatedOn != null) it[ProductQmTbl.updatedOn] = updatedOn.atOffset(ZoneOffset.UTC)

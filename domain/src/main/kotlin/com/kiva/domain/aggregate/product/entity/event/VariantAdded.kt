@@ -5,6 +5,7 @@ import com.kiva.common.event.valueobject.EventSequence
 import com.kiva.common.event.valueobject.EventType
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
+import com.kiva.domain.aggregate.product.model.valueobject.Barcode
 import com.kiva.domain.aggregate.product.model.valueobject.PriceTag
 import com.kiva.domain.aggregate.product.model.valueobject.ProductId
 import com.kiva.domain.aggregate.product.model.valueobject.ProductMedia
@@ -16,6 +17,7 @@ import java.time.Instant
  * A color was added to the product. A new color is always active.
  *
  * @property isDefault this color became the default one; the color that was the default until now is not any more.
+ * @property barcode the color's barcode after this event, or null (events stored before barcodes existed have none).
  * @property ownPriceTag null when the color simply follows the product's price.
  */
 data class VariantAdded(
@@ -30,6 +32,7 @@ data class VariantAdded(
     val isDefault: Boolean,
     val sortOrder: Int,
     val media: List<ProductMedia>,
+    val barcode: Barcode? = null,
     override val id: EventId = EventId.generate(),
 ) : ProductDomainEvent() {
     override val type: EventType get() = TYPE

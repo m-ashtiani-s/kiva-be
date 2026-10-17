@@ -1,5 +1,6 @@
 package com.kiva.domain.aggregate.product.model.valueobject
 
+import com.kiva.common.valueobject.SeoMeta
 import com.kiva.domain.aggregate.category.model.valueobject.CategoryId
 import com.kiva.domain.aggregate.material.model.valueobject.MaterialId
 import java.time.Instant
@@ -15,6 +16,7 @@ import java.time.Instant
  * @property reservable it may go in an order held for the 4-day reservation; one item that isn't makes the whole cart
  *   unreservable (contract: `ITEM_NOT_RESERVABLE`).
  * @property sortPriority higher comes first where staff pin products in the list.
+ * @property seo the page's own SEO title and description, and noIndex (the rest of SeoMeta is the server's).
  */
 data class ProductDetails(
     val name: ProductName,
@@ -31,4 +33,6 @@ data class ProductDetails(
     val returnable: Boolean,
     val reservable: Boolean,
     val sortPriority: Int,
+    val tags: ProductTags = ProductTags.NONE,
+    val seo: SeoMeta = SeoMeta.NONE,
 )

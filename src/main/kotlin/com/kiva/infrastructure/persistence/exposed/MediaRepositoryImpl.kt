@@ -81,25 +81,28 @@ class MediaRepositoryImpl : MediaRepository {
             (MediaTbl.mediaId eq id.value) and MediaTbl.attachedOn.isNull() and (MediaTbl.uploadedOn less before.atOffset(ZoneOffset.UTC))
         } == 1
 
-    private fun ResultRow.toAsset() = MediaAsset.constructFromPersisted(
-        id = MediaId.constructFromPersisted(this[MediaTbl.mediaId]),
-        purpose = MediaPurpose.valueOf(this[MediaTbl.purpose]),
-        type = MediaType.valueOf(this[MediaTbl.type]),
-        mimeType = this[MediaTbl.mimeType],
-        width = this[MediaTbl.width],
-        height = this[MediaTbl.height],
-        durationSec = this[MediaTbl.durationSec],
-        bytes = this[MediaTbl.bytes],
-        blurhash = this[MediaTbl.blurhash],
-        variants = this[MediaTbl.variants].map { item ->
-            val variant = item.jsonObject
-            MediaVariant.of(variant.getValue("width").jsonPrimitive.int, variant.getValue("path").jsonPrimitive.content)
-        },
-        posterPath = this[MediaTbl.posterPath],
-        alt = this[MediaTbl.alt]?.let(MediaAlt::constructFromPersisted),
-        storageDir = this[MediaTbl.storageDir],
-        uploadedBy = UserId.constructFromPersisted(this[MediaTbl.uploadedBy]),
-        uploadedOn = this[MediaTbl.uploadedOn].toInstant(),
-        attachedOn = this[MediaTbl.attachedOn]?.toInstant(),
-    )
+    private fun ResultRow.toAsset() = toMediaAsset()
 }
+
+/** One media_tbl row as the domain's MediaAsset; also for the product projector, which copies a file's sizes into the read model. */
+internal fun ResultRow.toMediaAsset() = MediaAsset.constructFromPersisted(
+    id = MediaId.constructFromPersisted(this[MediaTbl.mediaId]),
+    purpose = MediaPurpose.valueOf(this[MediaTbl.purpose]),
+    type = MediaType.valueOf(this[MediaTbl.type]),
+    mimeType = this[MediaTbl.mimeType],
+    width = this[MediaTbl.width],
+    height = this[MediaTbl.height],
+    durationSec = this[MediaTbl.durationSec],
+    bytes = this[MediaTbl.bytes],
+    blurhash = this[MediaTbl.blurhash],
+    variants = this[MediaTbl.variants].map { item ->
+        val variant = item.jsonObject
+        MediaVariant.of(variant.getValue("width").jsonPrimitive.int, variant.getValue("path").jsonPrimitive.content)
+    },
+    posterPath = this[MediaTbl.posterPath],
+    alt = this[MediaTbl.alt]?.let(MediaAlt::constructFromPersisted),
+    storageDir = this[MediaTbl.storageDir],
+    uploadedBy = UserId.constructFromPersisted(this[MediaTbl.uploadedBy]),
+    uploadedOn = this[MediaTbl.uploadedOn].toInstant(),
+    attachedOn = this[MediaTbl.attachedOn]?.toInstant(),
+)

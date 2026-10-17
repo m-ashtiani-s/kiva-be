@@ -1,6 +1,11 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
+import com.kiva.application.port.MediaProcessor
 import com.kiva.application.usecase.admin.usecase.command.CheckPanelAccessUc
+import com.kiva.application.usecase.admin.usecase.command.SetUserRolesUc
+import com.kiva.application.usecase.admin.usecase.query.FindCustomersUc
+import com.kiva.application.usecase.admin.usecase.query.GetCustomerUc
+import com.kiva.application.usecase.audit.usecase.query.ListAuditLogUc
 import com.kiva.application.usecase.catalog.usecase.command.CreateCategoryUc
 import com.kiva.application.usecase.catalog.usecase.command.CreateColorUc
 import com.kiva.application.usecase.catalog.usecase.command.CreateMaterialUc
@@ -16,24 +21,17 @@ import com.kiva.application.usecase.catalog.usecase.query.GetAdminMaterialUc
 import com.kiva.application.usecase.catalog.usecase.query.ListAdminCategoriesUc
 import com.kiva.application.usecase.catalog.usecase.query.ListAdminMaterialsUc
 import com.kiva.application.usecase.media.MediaAttachments
+import com.kiva.application.usecase.media.usecase.command.UploadMediaUc
+import com.kiva.application.usecase.product.ProductInput
+import com.kiva.application.usecase.product.usecase.command.CreateProductUc
+import com.kiva.application.usecase.product.usecase.command.UpdateProductUc
 import com.kiva.application.usecase.product.usecase.query.FindAdminProductsUc
 import com.kiva.application.usecase.product.usecase.query.GetAdminProductUc
-import com.kiva.infrastructure.persistence.exposed.ShopSettingsRepositoryImpl
-import com.kiva.infrastructure.persistence.exposed.CategoryIdGeneratorImpl
-import com.kiva.infrastructure.persistence.exposed.CategoryRepositoryImpl
-import com.kiva.infrastructure.persistence.exposed.ColorRepositoryImpl
-import com.kiva.infrastructure.persistence.exposed.MaterialIdGeneratorImpl
-import com.kiva.infrastructure.persistence.exposed.MaterialRepositoryImpl
-import com.kiva.infrastructure.persistence.exposed.ProductQmRepositoryImpl
-import com.kiva.application.usecase.admin.usecase.command.SetUserRolesUc
-import com.kiva.application.usecase.admin.usecase.query.FindCustomersUc
-import com.kiva.application.usecase.admin.usecase.query.GetCustomerUc
-import com.kiva.application.port.MediaProcessor
-import com.kiva.application.usecase.audit.usecase.query.ListAuditLogUc
-import com.kiva.application.usecase.media.usecase.command.UploadMediaUc
 import com.kiva.common.patch.Patch
 import com.kiva.common.valueobject.IranianMobileNumber
 import com.kiva.common.valueobject.UserId
+import com.kiva.domain.aggregate.inventory.InventoryDomainService
+import com.kiva.domain.aggregate.product.ProductDomainService
 import com.kiva.domain.aggregate.session.entity.AuthSession
 import com.kiva.domain.aggregate.session.model.valueobject.SessionDevice
 import com.kiva.domain.aggregate.user.entity.User
@@ -44,26 +42,35 @@ import com.kiva.infrastructure.MutableClock
 import com.kiva.infrastructure.TestDatabase
 import com.kiva.infrastructure.auth.JwtAccessTokens
 import com.kiva.infrastructure.auth.RandomSessionTokens
+import com.kiva.infrastructure.common.html.JsoupHtmlSanitizer
 import com.kiva.infrastructure.common.persistence.ExposedTransactionManager
 import com.kiva.infrastructure.httpserver.API_V1
 import com.kiva.infrastructure.httpserver.auth.configureAuthentication
 import com.kiva.infrastructure.httpserver.configureHttp
-import com.kiva.infrastructure.persistence.exposed.AdminCustomerRepositoryImpl
-import com.kiva.infrastructure.persistence.exposed.AuditLogQmRepositoryImpl
-import com.kiva.infrastructure.persistence.exposed.AuditTrailImpl
-import com.kiva.infrastructure.persistence.exposed.MediaRepositoryImpl
-import com.kiva.infrastructure.persistence.exposed.tbl.MediaTbl
 import com.kiva.infrastructure.media.DiskMediaStorage
 import com.kiva.infrastructure.media.FakeMediaProcessor
 import com.kiva.infrastructure.media.MediaUrls
 import com.kiva.infrastructure.media.RandomMediaIds
-import java.nio.file.Files
-import java.nio.file.Path
+import com.kiva.infrastructure.persistence.exposed.AdminCustomerRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.AuditLogQmRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.AuditTrailImpl
 import com.kiva.infrastructure.persistence.exposed.AuthSessionRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.CategoryIdGeneratorImpl
+import com.kiva.infrastructure.persistence.exposed.CategoryRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.ColorRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.InventoryRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.MaterialIdGeneratorImpl
+import com.kiva.infrastructure.persistence.exposed.MaterialRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.MediaRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.OrderQmRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.ProductIdGeneratorImpl
+import com.kiva.infrastructure.persistence.exposed.ProductQmRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.ProductRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.SecurityEventLogImpl
+import com.kiva.infrastructure.persistence.exposed.ShopSettingsRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.UserRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.tbl.AuthSessionTbl
+import com.kiva.infrastructure.persistence.exposed.tbl.MediaTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.OtpChallengeTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.RefreshTokenTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.UserTbl
@@ -77,6 +84,8 @@ import org.jetbrains.exposed.v1.core.like
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import java.nio.file.Files
+import java.nio.file.Path
 import java.time.ZoneOffset
 import java.util.concurrent.ConcurrentHashMap
 
@@ -142,10 +151,19 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
     )
 
     // --- products (step 1.4 on) ---
+    val products = ProductRepositoryImpl()
+    val inventories = InventoryRepositoryImpl()
+    val productDomainService = ProductDomainService(products, ProductIdGeneratorImpl(), categories, materials, colors)
+    val productInput = ProductInput(JsoupHtmlSanitizer)
     val adminProducts = AdminProductUseCases(
         checkPanelAccess = checkPanelAccess,
         findProducts = FindAdminProductsUc(transactions, productQm, categories),
         getProduct = GetAdminProductUc(transactions, productQm, categories, materials, colors, users, ShopSettingsRepositoryImpl(), clock),
+        createProduct = CreateProductUc(
+            transactions, productDomainService, products, productQm, productInput, mediaAttachments, InventoryDomainService(inventories), inventories,
+            auditTrail, clock,
+        ),
+        updateProduct = UpdateProductUc(transactions, productDomainService, products, productInput, auditTrail, clock),
     )
 
     /** A logged-in user of the panel: who they are and the access token of their session. */
@@ -192,7 +210,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
                     webV1AdminAudit(AdminAuditUseCases(checkPanelAccess, listAuditLog))
                     webV1AdminMedia(AdminMediaUseCases(checkPanelAccess, uploadMedia), mediaStorage::newUploadFile, mediaUrls)
                     webV1AdminCatalog(adminCatalog, mediaUrls, SITE_URL)
-                    webV1AdminProducts(adminProducts, SITE_URL)
+                    webV1AdminProducts(adminProducts, SITE_URL, mediaUrls)
                 }
             }
         }

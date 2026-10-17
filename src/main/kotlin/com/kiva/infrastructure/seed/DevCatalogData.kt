@@ -1,6 +1,6 @@
 package com.kiva.infrastructure.seed
 
-import com.kiva.application.usecase.product.usecase.command.CreateProductUc.Cmd
+import com.kiva.application.usecase.product.ProductInput
 
 /**
  * The frontend prototype's catalog (its assets/kiva.js): 16 bags, kept as the prototype has them, so a development
@@ -108,40 +108,51 @@ internal object DevCatalogData {
     )
 
     /** The prototype's spec table, one per bag type: every bag of a type shares it. */
-    val specsByBagType: Map<String, Cmd.Specs> = mapOf(
-        "HOBO" to Cmd.Specs(
-            Cmd.Dimensions(34.0, 26.0, 12.0), 650, "ZIPPER",
+    val specsByBagType: Map<String, ProductInput.Specs> = mapOf(
+        "HOBO" to specs(
+            ProductInput.Size(34.0, 26.0, 12.0), 650, "ZIPPER",
             "بند دوشی ثابت ۵۵ سانتی‌متر", "۱ جیب زیپ‌دار داخلی، ۲ جیب موبایل", listOf("DAILY", "UNIVERSITY", "WORK"),
         ),
-        "CROSSBODY" to Cmd.Specs(
-            Cmd.Dimensions(22.0, 16.0, 8.0), 420, "MAGNETIC_FLAP",
+        "CROSSBODY" to specs(
+            ProductInput.Size(22.0, 16.0, 8.0), 420, "MAGNETIC_FLAP",
             "بند بلند قابل تنظیم تا ۱۲۰ سانتی‌متر", "۱ جیب داخلی، ۱ جیب پشت", listOf("DAILY", "TRAVEL", "GATHERING"),
         ),
-        "BACKPACK" to Cmd.Specs(
-            Cmd.Dimensions(38.0, 28.0, 14.0), 800, "DOUBLE_ZIPPER",
+        "BACKPACK" to specs(
+            ProductInput.Size(38.0, 28.0, 14.0), 800, "DOUBLE_ZIPPER",
             "دو بند دوشی قابل تنظیم + دسته", "جای لپ‌تاپ تا ۱۴ اینچ، جیب جلو", listOf("UNIVERSITY", "TRAVEL"),
         ),
-        "SATCHEL" to Cmd.Specs(
-            Cmd.Dimensions(30.0, 22.0, 12.0), 750, "ZIPPER_WITH_DECORATIVE_LOCK",
+        "SATCHEL" to specs(
+            ProductInput.Size(30.0, 22.0, 12.0), 750, "ZIPPER_WITH_DECORATIVE_LOCK",
             "دسته کوتاه + بند بلند جداشونده", "۲ جیب داخلی، ۱ جیب زیپ‌دار", listOf("WORK", "FORMAL"),
         ),
-        "CLUTCH" to Cmd.Specs(
-            Cmd.Dimensions(24.0, 14.0, 5.0), 300, "MAGNETIC_FLAP",
+        "CLUTCH" to specs(
+            ProductInput.Size(24.0, 14.0, 5.0), 300, "MAGNETIC_FLAP",
             "زنجیر جداشونده ۱۰۰ سانتی‌متر", "۱ جیب کارت داخلی", listOf("PARTY"),
         ),
-        "TOTE" to Cmd.Specs(
-            Cmd.Dimensions(40.0, 32.0, 14.0), 550, "MAGNETIC_SNAP",
+        "TOTE" to specs(
+            ProductInput.Size(40.0, 32.0, 14.0), 550, "MAGNETIC_SNAP",
             "دو دسته بلند", "کیف کوچک داخلی جداشونده", listOf("SHOPPING", "DAILY", "TRAVEL"),
         ),
-        "BUCKET" to Cmd.Specs(
-            Cmd.Dimensions(26.0, 24.0, 18.0), 500, "DRAWSTRING",
+        "BUCKET" to specs(
+            ProductInput.Size(26.0, 24.0, 18.0), 500, "DRAWSTRING",
             "بند دوشی قابل تنظیم", "۱ جیب داخلی", listOf("DAILY", "GATHERING"),
         ),
-        "WALLET" to Cmd.Specs(
-            Cmd.Dimensions(19.0, 10.0, 2.0), 180, "METAL_BUTTON",
+        "WALLET" to specs(
+            ProductInput.Size(19.0, 10.0, 2.0), 180, "METAL_BUTTON",
             "بدون بند", "۱۲ جای کارت، ۲ جای اسکناس، جیب سکه", listOf("DAILY"),
         ),
     )
+
+    /** The prototype's strap and pockets are one line of text each: a strap with that label, pockets with that summary. */
+    private fun specs(size: ProductInput.Size, weightGrams: Int, closure: String, strap: String, pockets: String, occasions: List<String>) =
+        ProductInput.Specs(
+            dimensions = size,
+            weightGrams = weightGrams,
+            closure = closure,
+            straps = listOf(ProductInput.Strap(label = strap)),
+            pockets = ProductInput.Pockets(summary = pockets),
+            occasions = occasions,
+        )
 
     /** The prototype's description text, the same for every bag but its name and material. */
     fun description(bag: Bag): String =
