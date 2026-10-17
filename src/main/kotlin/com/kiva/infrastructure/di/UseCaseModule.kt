@@ -16,6 +16,9 @@ import com.kiva.application.usecase.admin.usecase.query.FindCustomersUc
 import com.kiva.application.usecase.admin.usecase.query.GetCustomerUc
 import com.kiva.application.usecase.audit.usecase.command.DeleteOldAuditEntriesUc
 import com.kiva.application.usecase.audit.usecase.query.ListAuditLogUc
+import com.kiva.application.usecase.media.usecase.command.DeleteUnattachedMediaUc
+import com.kiva.application.usecase.media.usecase.command.UploadMediaUc
+import com.kiva.application.usecase.media.usecase.query.FindUnattachedMediaUc
 import com.kiva.application.usecase.auth.OtpIssuer
 import com.kiva.application.usecase.auth.usecase.command.BootstrapAdminUc
 import com.kiva.application.usecase.auth.usecase.command.LogoutUc
@@ -367,6 +370,20 @@ val useCaseModule = module(createdAtStart = true) {
     // --- admin: the change log ---
     single { ListAuditLogUc(transactionManager = get(), auditLogQmRepository = get()) }
     single { DeleteOldAuditEntriesUc(transactionManager = get(), auditTrail = get(), clock = get()) }
+
+    // --- admin: uploads ---
+    single {
+        UploadMediaUc(
+            transactionManager = get(),
+            mediaProcessor = get(),
+            mediaStorage = get(),
+            mediaRepository = get(),
+            mediaIdGenerator = get(),
+            clock = get(),
+        )
+    }
+    single { FindUnattachedMediaUc(transactionManager = get(), mediaRepository = get(), clock = get()) }
+    single { DeleteUnattachedMediaUc(transactionManager = get(), mediaRepository = get(), mediaStorage = get(), clock = get()) }
 
     // --- inventory: commands ---
     single {

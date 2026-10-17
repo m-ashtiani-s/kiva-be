@@ -14,7 +14,7 @@ import com.kiva.domain.aggregate.product.ProductTestData.variantId
 import com.kiva.domain.aggregate.product.ProductTestData.withColor
 import com.kiva.domain.aggregate.product.entity.event.ProductCreated
 import com.kiva.domain.aggregate.product.entity.event.ProductDetailsChanged
-import com.kiva.domain.aggregate.product.model.valueobject.MediaType
+import com.kiva.domain.aggregate.media.model.valueobject.MediaType
 import com.kiva.domain.aggregate.product.model.valueobject.ProductMedia
 import com.kiva.domain.aggregate.product.model.valueobject.ProductStatus.ACTIVE
 import com.kiva.domain.aggregate.product.model.valueobject.ProductStatus.ARCHIVED

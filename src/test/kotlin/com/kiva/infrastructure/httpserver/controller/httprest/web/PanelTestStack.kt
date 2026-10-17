@@ -4,7 +4,9 @@ import com.kiva.application.usecase.admin.usecase.command.CheckPanelAccessUc
 import com.kiva.application.usecase.admin.usecase.command.SetUserRolesUc
 import com.kiva.application.usecase.admin.usecase.query.FindCustomersUc
 import com.kiva.application.usecase.admin.usecase.query.GetCustomerUc
+import com.kiva.application.port.MediaProcessor
 import com.kiva.application.usecase.audit.usecase.query.ListAuditLogUc
+import com.kiva.application.usecase.media.usecase.command.UploadMediaUc
 import com.kiva.common.patch.Patch
 import com.kiva.common.valueobject.IranianMobileNumber
 import com.kiva.common.valueobject.UserId
@@ -25,6 +27,14 @@ import com.kiva.infrastructure.httpserver.configureHttp
 import com.kiva.infrastructure.persistence.exposed.AdminCustomerRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.AuditLogQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.AuditTrailImpl
+import com.kiva.infrastructure.persistence.exposed.MediaRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.tbl.MediaTbl
+import com.kiva.infrastructure.media.DiskMediaStorage
+import com.kiva.infrastructure.media.FakeMediaProcessor
+import com.kiva.infrastructure.media.MediaUrls
+import com.kiva.infrastructure.media.RandomMediaIds
+import java.nio.file.Files
+import java.nio.file.Path
 import com.kiva.infrastructure.persistence.exposed.AuthSessionRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.OrderQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.SecurityEventLogImpl
@@ -50,10 +60,11 @@ import java.util.concurrent.ConcurrentHashMap
  * The panel's routes over kiva_test, wired by hand as the app wires them (with a test clock and fixed secrets), and a
  * staff member for every role whose session is ready, as a login would leave it: [callerWith] gives the token.
  *
- * Every test user's phone starts with 09900; [deleteWhatWasStored] removes them with their sessions.
+ * Every test user's phone starts with 09900; [deleteWhatWasStored] removes them with their sessions and uploads, and
+ * removes the media root ([mediaRoot], a temporary folder of each stack).
  * A route of a later step is added to [app] (and its use cases built here) the day it exists.
  */
-class PanelTestStack(val clock: MutableClock) {
+class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor = FakeMediaProcessor()) {
 
     val db = TestDatabase.database
     val sms = RecordingSmsSender()
@@ -74,6 +85,13 @@ class PanelTestStack(val clock: MutableClock) {
 
     // --- the change log (step 1.1) ---
     val listAuditLog = ListAuditLogUc(transactions, AuditLogQmRepositoryImpl())
+
+    // --- uploads (step 1.2): a media root of its own, removed by deleteWhatWasStored ---
+    val mediaRoot: Path = Files.createTempDirectory("kiva-media-")
+    val mediaStorage = DiskMediaStorage(mediaRoot)
+    val mediaRepository = MediaRepositoryImpl()
+    val mediaUrls = MediaUrls(MEDIA_BASE_URL)
+    val uploadMedia = UploadMediaUc(transactions, mediaProcessor, mediaStorage, mediaRepository, RandomMediaIds(), clock)
 
     /** A logged-in user of the panel: who they are and the access token of their session. */
     class Caller(val user: User, val token: String) {
@@ -117,6 +135,7 @@ class PanelTestStack(val clock: MutableClock) {
                 route(API_V1) {
                     webV1AdminCustomers(AdminCustomerUseCases(checkPanelAccess, findCustomers, getCustomer, setUserRoles))
                     webV1AdminAudit(AdminAuditUseCases(checkPanelAccess, listAuditLog))
+                    webV1AdminMedia(AdminMediaUseCases(checkPanelAccess, uploadMedia), mediaStorage::newUploadFile, mediaUrls)
                 }
             }
         }
@@ -132,12 +151,15 @@ class PanelTestStack(val clock: MutableClock) {
             RefreshTokenTbl.deleteWhere { RefreshTokenTbl.sessionId inList sessionIds }
             AuthSessionTbl.deleteWhere { AuthSessionTbl.userId inList userIds }
             OtpChallengeTbl.deleteWhere { OtpChallengeTbl.phone like TEST_PHONES }
+            MediaTbl.deleteWhere { MediaTbl.uploadedBy inList userIds }
             UserTbl.deleteWhere { UserTbl.phone like TEST_PHONES }
         }
+        if (Files.exists(mediaRoot)) Files.walk(mediaRoot).use { paths -> paths.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists) }
     }
 
     companion object {
         private const val TEST_PHONES = "09900%"
+        const val MEDIA_BASE_URL = "https://api.kivashop.test/media"
 
         /** `0990000000n`: the panel's test phones. */
         fun phone(n: Int) = "09900" + n.toString().padStart(6, '0')

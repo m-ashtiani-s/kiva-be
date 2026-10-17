@@ -15,6 +15,7 @@ import com.kiva.application.usecase.admin.usecase.command.SetUserRolesUc
 import com.kiva.application.usecase.admin.usecase.query.FindCustomersUc
 import com.kiva.application.usecase.admin.usecase.query.GetCustomerUc
 import com.kiva.application.usecase.audit.usecase.query.ListAuditLogUc
+import com.kiva.application.usecase.media.usecase.command.UploadMediaUc
 import com.kiva.application.usecase.auth.usecase.command.LogoutUc
 import com.kiva.application.usecase.auth.usecase.command.RefreshSessionUc
 import com.kiva.application.usecase.auth.usecase.command.SendLoginCodeUc
@@ -58,6 +59,7 @@ import com.kiva.infrastructure.common.http.configureStatusPages
 import com.kiva.infrastructure.config.AppConfig
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AddressUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminAuditUseCases
+import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminMediaUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminCustomerUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AuthUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.CartUseCases
@@ -69,6 +71,10 @@ import com.kiva.infrastructure.httpserver.controller.httprest.web.PaymentUseCase
 import com.kiva.infrastructure.httpserver.controller.httprest.web.devFakeGateway
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Addresses
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminAudit
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminMedia
+import com.kiva.infrastructure.media.DiskMediaStorage
+import com.kiva.infrastructure.media.MediaUrls
+import io.ktor.server.http.content.staticFiles
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminCustomers
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Auth
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Cart
@@ -227,12 +233,17 @@ fun Application.configureRouting() {
     val getCustomerUc by inject<GetCustomerUc>()
     val setUserRolesUc by inject<SetUserRolesUc>()
     val listAuditLogUc by inject<ListAuditLogUc>()
+    val uploadMediaUc by inject<UploadMediaUc>()
+    val mediaStorage by inject<DiskMediaStorage>()
+    val mediaUrls by inject<MediaUrls>()
     val config by inject<AppConfig>()
 
     routing {
         healthRoutes()
         // Outside /api/v1: the pretend bank's page is not the shop's, and exists only with the fake gateway.
         if (config.payment.provider == PaymentProvider.FAKE) devFakeGateway(get<FakePaymentGateway>())
+        // Development only: the app serves the uploads itself. On the server nginx serves {root} as /media.
+        if (config.media.serveLocally) staticFiles("/media", config.media.root.toFile())
         route(API_V1) {
             webV1Auth(
                 AuthUseCases(sendLoginCodeUc, verifyLoginCodeUc, getMeUc, refreshSessionUc, logoutUc, mergeGuestCartUc, getCartUc),
@@ -241,6 +252,7 @@ fun Application.configureRouting() {
             webV1Me(MeUseCases(getMeUc, updateMyProfileUc, requestPhoneChangeUc, confirmPhoneChangeUc))
             webV1AdminCustomers(AdminCustomerUseCases(checkPanelAccessUc, findCustomersUc, getCustomerUc, setUserRolesUc))
             webV1AdminAudit(AdminAuditUseCases(checkPanelAccessUc, listAuditLogUc))
+            webV1AdminMedia(AdminMediaUseCases(checkPanelAccessUc, uploadMediaUc), mediaStorage::newUploadFile, mediaUrls)
             webV1Catalog(listColorsUc, listMaterialsUc, listCategoriesUc, getCategoryUc)
             webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, config.shop.siteUrl)
             webV1Geo(listProvincesUc, listCitiesOfProvinceUc)

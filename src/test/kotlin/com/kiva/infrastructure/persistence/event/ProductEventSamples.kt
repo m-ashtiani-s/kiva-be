@@ -26,7 +26,7 @@ import com.kiva.domain.aggregate.product.model.valueobject.Dimensions
 import com.kiva.domain.aggregate.product.model.valueobject.Highlights
 import com.kiva.domain.aggregate.product.model.valueobject.MaterialDescription
 import com.kiva.domain.aggregate.product.model.valueobject.MaxPerOrder
-import com.kiva.domain.aggregate.product.model.valueobject.MediaType
+import com.kiva.domain.aggregate.media.model.valueobject.MediaType
 import com.kiva.domain.aggregate.product.model.valueobject.MediaView
 import com.kiva.domain.aggregate.product.model.valueobject.Occasion
 import com.kiva.domain.aggregate.product.model.valueobject.PriceTag

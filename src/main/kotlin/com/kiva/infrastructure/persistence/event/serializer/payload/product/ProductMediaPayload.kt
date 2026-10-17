@@ -1,6 +1,6 @@
 package com.kiva.infrastructure.persistence.event.serializer.payload.product
 
-import com.kiva.domain.aggregate.product.model.valueobject.MediaType
+import com.kiva.domain.aggregate.media.model.valueobject.MediaType
 import com.kiva.domain.aggregate.product.model.valueobject.MediaView
 import com.kiva.domain.aggregate.product.model.valueobject.ProductMedia
 import kotlinx.serialization.Serializable

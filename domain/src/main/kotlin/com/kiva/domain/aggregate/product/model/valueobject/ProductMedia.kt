@@ -1,5 +1,6 @@
 package com.kiva.domain.aggregate.product.model.valueobject
 
+import com.kiva.domain.aggregate.media.model.valueobject.MediaType
 import com.kiva.common.railway.FailureKind
 import com.kiva.common.railway.Result
 import com.kiva.common.railway.ResultFailure

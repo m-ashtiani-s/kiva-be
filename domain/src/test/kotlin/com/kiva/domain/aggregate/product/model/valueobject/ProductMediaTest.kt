@@ -1,5 +1,6 @@
 package com.kiva.domain.aggregate.product.model.valueobject
 
+import com.kiva.domain.aggregate.media.model.valueobject.MediaType
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource

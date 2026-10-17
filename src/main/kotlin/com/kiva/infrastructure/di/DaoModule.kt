@@ -19,6 +19,8 @@ import com.kiva.domain.aggregate.discount.repository.DiscountRedemptionRepositor
 import com.kiva.domain.aggregate.geo.repository.GeoRepository
 import com.kiva.domain.aggregate.inventory.repository.InventoryRepository
 import com.kiva.domain.aggregate.material.repository.MaterialRepository
+import com.kiva.domain.aggregate.media.repository.MediaIdGenerator
+import com.kiva.domain.aggregate.media.repository.MediaRepository
 import com.kiva.domain.aggregate.order.repository.OrderIdGenerator
 import com.kiva.domain.aggregate.order.repository.OrderRepository
 import com.kiva.domain.aggregate.otp.repository.OtpChallengeRepository
@@ -32,6 +34,7 @@ import com.kiva.domain.aggregate.session.repository.AuthSessionRepository
 import com.kiva.domain.aggregate.settings.repository.ShopSettingsRepository
 import com.kiva.domain.aggregate.user.repository.UserRepository
 import com.kiva.infrastructure.cart.RandomCartIds
+import com.kiva.infrastructure.media.RandomMediaIds
 import com.kiva.infrastructure.payment.RandomPaymentIds
 import com.kiva.infrastructure.persistence.exposed.AddressBookRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.AddressIdGeneratorImpl
@@ -48,6 +51,7 @@ import com.kiva.infrastructure.persistence.exposed.GeoRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.IdempotencyStoreImpl
 import com.kiva.infrastructure.persistence.exposed.InventoryRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.MaterialRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.MediaRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.OfferQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.OrderIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.OrderQmRepositoryImpl
@@ -100,4 +104,6 @@ val daoModule = module(createdAtStart = true) {
     single<DiscountRedemptionRepository> { DiscountRedemptionRepositoryImpl() }
     single<AuditTrail> { AuditTrailImpl() }
     single<AuditLogQmRepository> { AuditLogQmRepositoryImpl() }
+    single<MediaRepository> { MediaRepositoryImpl() }
+    single<MediaIdGenerator> { RandomMediaIds() }
 }

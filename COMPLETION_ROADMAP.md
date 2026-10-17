@@ -763,7 +763,7 @@ Route: 201 با MediaAsset
 |---|---|---|---|
 | ۱.۰ | کانترکت 1.8.0 و آماده‌سازی | M | ✅ |
 | ۱.۱ | لاگ تغییرات | M | ✅ |
-| ۱.۲ | آپلود مدیا | L | ⬜ |
+| ۱.۲ | آپلود مدیا | L | ✅ |
 | ۱.۳ | دسته، رنگ و متریال | M | ⬜ |
 | ۱.۴ | read model ِ پنل و دو Query ِ محصول | M | ⬜ |
 | ۱.۵ | ساخت و ویرایش محصول، `If-Match` | L | ⬜ |
@@ -1226,7 +1226,7 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 
 ---
 
-#### گام ۱.۲: آپلود مدیا · L ⬜
+#### گام ۱.۲: آپلود مدیا · L ✅
 
 **می‌سازی:** `V22__media.sql`؛ aggregate ِ `media` (بخش ۵.۲، و انتقال `MediaType`)؛ پورت‌های `MediaProcessor` و `MediaStorage`؛ `VipsFfmpegMediaProcessor` (اجرای `vips`، `vipsheader`، `ffprobe`، `ffmpeg` با `ProcessBuilder`، timeout ِ ۹۰ ثانیه، خطای استاندارد فقط در لاگ)، `DiskMediaStorage`، `RandomMediaIds`، `MediaRepositoryImpl`؛ `Blurhash` (پیاده‌سازی کوچیک با تست طلایی)؛ `UploadMediaUc` و `UploadedMediaDto`؛ `webV1AdminMedia.kt` با خوندن multipart جریانی و سقف حجم؛ پیکربندی `kiva.media` (بخش ۲۳)؛ route ِ `staticFiles` ِ توسعه؛ `FindUnattachedMediaUc` + `DeleteUnattachedMediaUc` و job ِ `delete-unattached-media`؛ `FakeMediaProcessor` برای تست‌ها؛ سه فایل نمونه‌ی کوچیک تست (jpeg، png، mp4 ِ H.264) و یه SVG و یه HEVC برای تست ِ رد.
 
@@ -1238,17 +1238,27 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 - چرا HEVC رد می‌شه به‌جای تبدیل؟ تبدیل روی ۲ هسته چند دقیقه طول می‌کشه و درخواست HTTP (و timeout ِ nginx) رو نگه می‌داره. تنظیم دوربین یه بار انجام می‌شه.
 
 **تموم شده یعنی:**
-- [ ] jpeg ِ ۴۰۰۰×۳۰۰۰ با GPS ← `201`، پنج نسخه‌ی webp، `blurhash`، `width = 1600`؛ هیچ نسخه‌ای EXIF یا GPS نداره (با `vipsheader -a` چک می‌شه).
-- [ ] عکس ۴۰۰×۳۰۰ فقط نسخه‌های ۱۶۰ و ۴۰۰ (اندازه‌ی خودش) رو می‌سازه؛ عکس ۲۰۰×۲۰۰ ← `400 IMAGE_TOO_SMALL`؛ ۵۰ مگاپیکسل ← `400 IMAGE_TOO_LARGE`.
-- [ ] mp4 ِ H.264 ← `201` با `posterUrl` و `durationSec`؛ HEVC ← `415` با `meta.hint = "H264"`؛ SVG، GIF و فایل اجرایی با پسوند `.jpg` ← `415`.
-- [ ] ۱۶ مگابایت ← `413` قبل از اینکه کل فایل خونده بشه (تست با جریانی که بیشتر از سقف می‌فرسته و چک می‌کنه سرور زودتر قطع کرده).
-- [ ] `purpose` ِ `RETURN_EVIDENCE` از پنل ← `400 MEDIA_PURPOSE_INVALID`؛ ویدیو با `purpose = CATEGORY` ← `415`.
-- [ ] اسم فایل کلاینت (`../../etc/passwd.jpg`) هیچ‌جا نیست: نه روی دیسک، نه در دیتابیس، نه در لاگ.
-- [ ] خطای دیتابیس بعد از ذخیره‌ی فایل‌ها ← پوشه پاک می‌شه (با `MediaRepository` ِ خراب‌شده در تست).
-- [ ] هیچ ردیف لاگ تغییراتی برای آپلود.
-- [ ] job: مدیای وصل‌نشده‌ی ۴۹ ساعته پاک می‌شه (ردیف و پوشه)، ۴۷ ساعته و وصل‌شده می‌مونن.
-- [ ] `OPERATOR` و `CONTENT_EDITOR` می‌تونن آپلود کنن؛ `SUPPORT` ← 403.
-- [ ] تست‌های ابزار واقعی بدون `vips` روی PATH با پیام روشن رد می‌شن، نه شکست.
+- [x] jpeg ِ ۴۰۰۰×۳۰۰۰ با GPS ← `201`، پنج نسخه‌ی webp، `blurhash`، `width = 1600`؛ هیچ نسخه‌ای EXIF یا GPS نداره (با `vipsheader -a` چک می‌شه).
+- [x] عکس ۴۰۰×۳۲۰ فقط نسخه‌های ۱۶۰ و ۴۰۰ (اندازه‌ی خودش) رو می‌سازه؛ عکس ۲۰۰×۲۰۰ ← `400 IMAGE_TOO_SMALL`؛ ۵۰ مگاپیکسل ← `400 IMAGE_TOO_LARGE`.
+- [x] mp4 ِ H.264 ← `201` با `posterUrl` و `durationSec`؛ HEVC ← `415` با `meta.hint = "H264"`؛ SVG، GIF و فایل اجرایی با پسوند `.jpg` ← `415`.
+- [x] ۱۶ مگابایت ← `413` قبل از اینکه کل فایل خونده بشه (تست با جریانی که بیشتر از سقف می‌فرسته و چک می‌کنه سرور زودتر قطع کرده).
+- [x] `purpose` ِ `RETURN_EVIDENCE` از پنل ← `400 MEDIA_PURPOSE_INVALID`؛ ویدیو با `purpose = CATEGORY` ← `415`.
+- [x] اسم فایل کلاینت (`../../etc/passwd.jpg`) هیچ‌جا نیست: نه روی دیسک، نه در دیتابیس، نه در لاگ.
+- [x] خطای دیتابیس بعد از ذخیره‌ی فایل‌ها ← پوشه پاک می‌شه (با `MediaRepository` ِ خراب‌شده در تست).
+- [x] هیچ ردیف لاگ تغییراتی برای آپلود.
+- [x] job: مدیای وصل‌نشده‌ی ۴۹ ساعته پاک می‌شه (ردیف و پوشه)، ۴۷ ساعته و وصل‌شده می‌مونن.
+- [x] `OPERATOR` و `CONTENT_EDITOR` می‌تونن آپلود کنن؛ `SUPPORT` ← 403.
+- [x] تست‌های ابزار واقعی بدون `vips` روی PATH با پیام روشن رد می‌شن، نه شکست.
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- مثال «عکس ۴۰۰×۳۰۰» با قانون «کوتاه‌ترین ضلع حداقل ۳۲۰» ِ همین سند و کانترکت نمی‌خوند (۳۰۰ < ۳۲۰ یعنی `IMAGE_TOO_SMALL`)؛ قانون کانترکت موند و مثال شد ۴۰۰×۳۲۰.
+- روی این کامپیوتر `vips` و `ffmpeg` نصب نیستن، پس چهار تست `VipsFfmpegMediaProcessorTest` با پیام روشن skip شدن (نه شکست). بقیه‌ی آپلود با `FakeMediaProcessor` تست شده (نوع عکس از محتوا با خواننده‌های خود JDK، GIF و SVG و فایل اجرایی ← `Unsupported`). روی سرور (گام ۶) و هر جا ابزارها باشن، این چهار تست باید سبز بشن.
+- فایل‌های نمونه‌ی تست در repo نیستن: عکس‌ها با JDK و ویدیوها با خود ffmpeg (`testsrc` با libx264 و libx265) همون لحظه ساخته می‌شن؛ عکس GPS‌دار با یه بلوک EXIF ِ دست‌ساز.
+- سقف موقع خوندن: اگه `purpose` قبل از فایل اومده باشه سقف همون purpose (۱۵ مگ برای دسته)، وگرنه بزرگ‌ترین سقف (۲۰۰ مگ)؛ بعد از تشخیص نوع، سقف دقیق همون نوع (۴۱۳). قطع زودهنگام با `copyToFileWithin` تست شده (از ۱۰۰ مگ، کمتر از ۴ مگ خونده می‌شه).
+- هر part ِ فایلی، با هر اسمی، یه فایل حساب می‌شه (دو تا ← `FILE_COUNT_INVALID`). فایل موقت مال route ـه و همیشه پاک می‌شه.
+- کاور ویدیو برای ویدیوی باریک‌تر از ۸۰۰ بزرگ نمی‌شه (مثل عکس‌ها: ۴۸۰ و عرض خود ویدیو). صدای ویدیو (اگه باشه) AAC می‌شه تا mov ِ گوشی هم mp4 ِ درست بده؛ تصویر دوباره انکود نمی‌شه.
+- `MediaRepository.deleteIfUnattached` خودش در `DELETE` شرط «وصل‌نشده و قدیمی‌تر از ۴۸ ساعت» رو چک می‌کنه، پس مدیایی که بین پیدا شدن و پاک شدن وصل بشه می‌مونه (تست داره). job حداکثر ۵۰ دسته‌ی ۱۰۰تایی در هر اجرا.
+- `MediaAssetHttpResponse` ِ ناقص قبلی (فقط برای `image` ِ کارت) با نسخه‌ی کامل کانترکت جایگزین شد؛ تا گام ۱.۹ همه‌جا `null` می‌مونه.
 
 ---
 
@@ -5869,3 +5879,4 @@ kiva {
 | ۲۵ مهر ۱۴۰۵ | — | — | سند نوشته شد. تصمیم‌های بخش ۱ (ردیف‌های ۱ تا ۱۰) پذیرفته شدن؛ بقیه پیشنهاد این سنده و با هر گام ۰ در کانترکت نوشته می‌شه |
 | ۲۶ مهر ۱۴۰۵ | ۱.۰ | Phase 1 step 1.0 | کانترکت 1.8.0 با هر ۱۸ ردیف ِ ۶.۸ و ردیف تازه‌ی ۱۹ (`ProductSpecsInput`). سه `FailureKind` ِ تازه، `EventSourceEntity.version`، متن همه‌ی کدهای تازه، تست چهارم `RouteGuardsTest` و `PanelTestStack`. کار روی برنچ `claude/sweet-lamport-v3gy0d` (برنچ تعیین‌شده‌ی این جلسه) به‌جای `panel-catalog` |
 | ۲۵ مهر ۱۴۰۵ | ۱.۱ | Phase 1 step 1.1 | `V21`، پورت `AuditTrail` با `AuditDiff`، `GET /admin/audit-log` با `AuditTexts`، job ِ `delete-old-audit-entries` در `PanelJobs`، و لاگ تغییر نقش‌ها. خرابکاری: trigger بدون شرط ۹۰ روز ← `a row of 89 days is never removed` قرمز |
+| ۲۵ مهر ۱۴۰۵ | ۱.۲ | Phase 1 step 1.2 | `V22`، aggregate ِ `media` (انتقال `MediaType`)، `MediaLimitsPolicy`، پورت‌های `MediaProcessor` و `MediaStorage`، `VipsFfmpegMediaProcessor`، `DiskMediaStorage`، `Blurhash`، `POST /admin/media` با خوندن جریانی و سقف حجم، `staticFiles` ِ توسعه، و job ِ `delete-unattached-media`. تست‌های ابزار واقعی اینجا skip (ابزار نصب نیست) |

@@ -39,6 +39,11 @@ class AppConfigTest {
         "kiva.payment.resultUrl" to "http://localhost:3100/checkout/result",
         "kiva.payment.zarinpal.sandbox" to "true",
         "kiva.jobs.enabled" to "true",
+        "kiva.media.root" to "build/media",
+        "kiva.media.publicBaseUrl" to "http://localhost:8080/media",
+        "kiva.media.serveLocally" to "true",
+        "kiva.media.vipsBin" to "vips",
+        "kiva.media.ffmpegBin" to "ffmpeg",
     )
 
     private fun read(vararg changes: Pair<String, String?>): AppConfig {
@@ -257,5 +262,43 @@ class AppConfigTest {
 
         assertFalse(merchantId in printed)
         assertTrue("merchantId=<hidden>" in printed)
+    }
+
+    // ============ media ============
+
+    @Test
+    fun `media is read with its root, public address and tools - served by the app only in development`() {
+        val media = read().media
+
+        assertEquals(java.nio.file.Paths.get("build/media"), media.root)
+        assertEquals("http://localhost:8080/media", media.publicBaseUrl)
+        assertTrue(media.serveLocally)
+        assertEquals(listOf("vips", "vipsheader", "ffmpeg", "ffprobe"), listOf(media.vipsBin, media.vipsHeaderBin, media.ffmpegBin, media.ffprobeBin))
+        assertEquals(false, read("kiva.media.serveLocally" to "false").media.serveLocally)
+    }
+
+    @Test
+    fun `a tool given by its full path has its sibling next to it`() {
+        val media = read("kiva.media.vipsBin" to "C:/tools/vips/bin/vips.exe", "kiva.media.ffmpegBin" to "/opt/ffmpeg/ffmpeg").media
+
+        assertEquals(java.nio.file.Paths.get("C:/tools/vips/bin/vipsheader.exe").toString(), media.vipsHeaderBin)
+        assertEquals(java.nio.file.Paths.get("/opt/ffmpeg/ffprobe").toString(), media.ffprobeBin)
+    }
+
+    @Test
+    fun `a public address with a slash at the end or without a scheme, or a serveLocally typo, stops the boot`() {
+        assertTrue("KIVA_MEDIA_PUBLIC_URL" in refusal("kiva.media.publicBaseUrl" to "https://api.kivashop.ir/media/"))
+        assertTrue("KIVA_MEDIA_PUBLIC_URL" in refusal("kiva.media.publicBaseUrl" to "api.kivashop.ir/media"))
+        assertTrue("yes" in refusal("kiva.media.serveLocally" to "yes"))
+    }
+
+    @Test
+    fun `application conf serves media from build in development`() {
+        val file = ConfigFactory.parseResources("application.conf")
+        val secrets = mapOf("kiva.auth.otpPepper" to valid.getValue("kiva.auth.otpPepper"), "kiva.auth.jwtSecret" to valid.getValue("kiva.auth.jwtSecret"))
+        val media = AppConfig.from(HoconApplicationConfig(ConfigFactory.parseMap(secrets).withFallback(file).resolve(ConfigResolveOptions.noSystem()))).media
+
+        assertEquals("http://localhost:8080/media", media.publicBaseUrl)
+        assertTrue(media.serveLocally)
     }
 }

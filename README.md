@@ -103,6 +103,26 @@ has discount codes. It is off by default and must stay off on a server.
 | `KIVA_PAYMENT_RESULT_URL` | The frontend's page that shows how the payment went (default `http://localhost:3100/checkout/result`); `?paymentId=…` is added. On the server `https://kiva.ir/checkout/result`. |
 | `KIVA_JOBS_ENABLED` | `true` (the default). Expiring unpaid orders (every minute), confirming payments left half-done (every 2 minutes), letting go of 4-day reservations (every minute), and cleaning up guests' carts (daily, 04:00 Tehran) and Idempotency-Keys (hourly). Keep it on, on the server too: without the jobs an unpaid order holds its stock for good. Tests turn it off and run the jobs themselves. |
 
+### Uploads (the panel's photos and videos)
+
+`POST /admin/media` processes every file on the spot with two outside tools: **libvips** for photos (webp in five
+widths, EXIF rotation, every metadata removed, a blurhash) and **ffmpeg** for videos (the same H.264, clean mp4, a cover
+frame). On the server: `sudo apt install libvips-tools ffmpeg`. On a Windows machine: the official zips of
+[libvips](https://github.com/libvips/build-win64-mxe/releases) (`vips-dev-w64-web-…zip`) and
+[ffmpeg](https://www.gyan.dev/ffmpeg/builds/) (a "release essentials" build), unpacked anywhere, and their full paths
+below. Without them an upload is a 500 with `media processing failed` in the log; everything else works, and the tests
+that need the real tools (`VipsFfmpegMediaProcessorTest`) skip themselves with a message saying so.
+
+| Variable | Meaning |
+|---|---|
+| `KIVA_MEDIA_ROOT` | Where processed files live (default `build/media`). On the server `/var/lib/kiva/media`, owned by the app's user. |
+| `KIVA_MEDIA_PUBLIC_URL` | The public address of that folder, without a `/` at the end (default `http://localhost:8080/media`). Only relative paths are stored, so it can change later. On the server `https://api.kivashop.ir/media`. |
+| `KIVA_MEDIA_SERVE_LOCALLY` | `true` (the default) makes the app serve `/media` itself: development only. `false` on the server, where nginx serves the folder (`Cache-Control: public, max-age=31536000, immutable`: a stored file never changes). |
+| `KIVA_VIPS_BIN`, `KIVA_FFMPEG_BIN` | The tools, by name on the `PATH` (`vips`, `ffmpeg`, the defaults) or by full path (`C:\tools\vips\bin\vips.exe`). `vipsheader` and `ffprobe` are looked for next to them. |
+
+An upload nothing uses (a color, a category, …) within 48 hours is removed with its files every night at 04:30 Tehran;
+one in use never is.
+
 The shop's own rules (shipping costs, free shipping, the payment window, the gateways on offer, reservations) are in
 the database (`shopsettings_tbl`), not in the config. Locally, a shorter payment window shows an order expiring in a
 few minutes: `UPDATE shopsettings_tbl SET "paymentPendingMinutes" = 5` (5 to 60; the default is 15), and back to 15

@@ -1,7 +1,7 @@
 package com.kiva.domain.aggregate.product.entity
 
 import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
-import com.kiva.domain.aggregate.product.model.valueobject.MediaType
+import com.kiva.domain.aggregate.media.model.valueobject.MediaType
 import com.kiva.domain.aggregate.product.model.valueobject.PriceTag
 import com.kiva.domain.aggregate.product.model.valueobject.ProductMedia
 import com.kiva.domain.aggregate.product.model.valueobject.Sku

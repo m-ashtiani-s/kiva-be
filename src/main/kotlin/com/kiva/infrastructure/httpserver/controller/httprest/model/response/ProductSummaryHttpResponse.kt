@@ -70,19 +70,6 @@ data class ProductSummaryHttpResponse(
     }
 }
 
-/**
- * Contract schema `MediaAsset`, as far as the card's photo needs it. Never made yet: it comes with uploads, which give
- * each photo its id. Declared now so [ProductSummaryHttpResponse.image] already has its real type.
- */
-@Serializable
-data class MediaAssetHttpResponse(
-    val id: String,
-    val type: String,
-    val url: String,
-    val thumbnailUrl: String?,
-    val alt: String?,
-)
-
 /** Contract schema `CategoryRef`. */
 @Serializable
 data class CategoryRefHttpResponse(val id: Long, val slug: String, val name: String)

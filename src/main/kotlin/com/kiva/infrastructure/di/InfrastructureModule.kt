@@ -1,6 +1,8 @@
 package com.kiva.infrastructure.di
 
 import com.kiva.application.port.AccessTokens
+import com.kiva.application.port.MediaProcessor
+import com.kiva.application.port.MediaStorage
 import com.kiva.application.port.OtpCodes
 import com.kiva.application.port.PaymentGateways
 import com.kiva.application.port.SessionTokens
@@ -23,6 +25,9 @@ import com.kiva.infrastructure.job.JobScheduler
 import com.kiva.infrastructure.payment.ZarinpalGateway
 import io.ktor.client.engine.cio.CIO
 import com.kiva.infrastructure.job.PanelJobs
+import com.kiva.infrastructure.media.DiskMediaStorage
+import com.kiva.infrastructure.media.MediaUrls
+import com.kiva.infrastructure.media.VipsFfmpegMediaProcessor
 import com.kiva.infrastructure.job.PurchaseJobs
 import org.koin.dsl.module
 import java.time.Clock
@@ -53,7 +58,12 @@ fun infrastructureModule(config: AppConfig, database: Database) = module {
             deleteStaleGuestCarts = get(), deleteOldIdempotencyKeys = get(), findDueReservationGroups = get(), releaseReservationGroup = get(),
         )
     }
-    single { PanelJobs(deleteOldAuditEntries = get()) }
+    // Uploads: processed by libvips and ffmpeg, kept on this server's disk, served from kiva.media.publicBaseUrl.
+    single { DiskMediaStorage(config.media.root) }
+    single<MediaStorage> { get<DiskMediaStorage>() }
+    single<MediaProcessor> { VipsFfmpegMediaProcessor(config.media) }
+    single { MediaUrls(config.media.publicBaseUrl) }
+    single { PanelJobs(deleteOldAuditEntries = get(), findUnattachedMedia = get(), deleteUnattachedMedia = get()) }
     single { JobScheduler(get<PurchaseJobs>().all() + get<PanelJobs>().all(), clock = get()) }
     // The adapters behind the gateways. A gateway without one here is never available, whatever the settings say.
     when (config.payment.provider) {

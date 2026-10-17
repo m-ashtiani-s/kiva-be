@@ -2,10 +2,12 @@ package com.kiva.infrastructure.config
 
 import com.kiva.common.valueobject.IranianMobileNumber
 import com.kiva.infrastructure.auth.sms.FarazSmsConfig
+import com.kiva.infrastructure.media.MediaConfig
 import com.kiva.infrastructure.payment.PaymentConfig
 import com.kiva.infrastructure.payment.PaymentProvider
 import com.kiva.infrastructure.payment.ZarinpalConfig
 import io.ktor.server.config.ApplicationConfig
+import java.nio.file.Paths
 import java.util.Base64
 
 /** @property auth no default: the app must not start without its secrets. */
@@ -18,6 +20,7 @@ data class AppConfig(
     val sms: SmsConfig = SmsConfig(SmsProvider.LOG),
     val payment: PaymentConfig = PaymentConfig.DEFAULT,
     val jobs: JobsConfig = JobsConfig(enabled = false),
+    val media: MediaConfig = MediaConfig.DEFAULT,
 ) {
     companion object {
         fun from(config: ApplicationConfig): AppConfig {
@@ -55,6 +58,14 @@ data class AppConfig(
                 ),
                 // Strict too: a typo must not quietly stop expiring orders.
                 jobs = JobsConfig(enabled = config.property("kiva.jobs.enabled").getString().toBooleanStrict()),
+                media = MediaConfig(
+                    root = Paths.get(config.property("kiva.media.root").getString().trim()),
+                    publicBaseUrl = config.property("kiva.media.publicBaseUrl").getString().trim(),
+                    // Strict: on the server a typo must not quietly make the app serve files nginx should.
+                    serveLocally = config.property("kiva.media.serveLocally").getString().toBooleanStrict(),
+                    vipsBin = config.property("kiva.media.vipsBin").getString().trim(),
+                    ffmpegBin = config.property("kiva.media.ffmpegBin").getString().trim(),
+                ),
             )
         }
     }
