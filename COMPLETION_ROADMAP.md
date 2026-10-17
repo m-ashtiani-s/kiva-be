@@ -768,7 +768,7 @@ Route: 201 با MediaAsset
 | ۱.۴ | read model ِ پنل و دو Query ِ محصول | M | ✅ |
 | ۱.۵ | ساخت و ویرایش محصول، `If-Match` | L | ✅ |
 | ۱.۶ | وضعیت، آرشیو و انتشار زمان‌بندی‌شده | M | ✅ |
-| ۱.۷ | رنگ‌ها (ورینت‌ها) | M | ⬜ |
+| ۱.۷ | رنگ‌ها (ورینت‌ها) | M | ✅ |
 | ۱.۸ | تغییر موجودی و تاریخچه‌اش | M | ⬜ |
 | ۱.۹ | عکس‌ها در فروشگاه، سبد و سفارش | M | ⬜ |
 | ۱.۱۰ | ریویو، حمله‌ی آزمایشی و دور با پنل | M | ⬜ |
@@ -1401,7 +1401,7 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 
 ---
 
-#### گام ۱.۷: رنگ‌ها (ورینت‌ها) · M ⬜
+#### گام ۱.۷: رنگ‌ها (ورینت‌ها) · M ✅
 
 **می‌سازی:** `AddVariantUc`، `UpdateVariantUc`، `DeactivateVariantUc`؛ `changeVariant` با `barcode`؛ سه route؛ `AdminVariantHttpResponse` از `GetAdminProductUc`.
 
@@ -1412,15 +1412,24 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 - چرا `isDefault: false` پیش‌فرض بودن رو برنمی‌داره؟ همیشه باید دقیقاً یه رنگ پیش‌فرض باشه؛ «برداشتن» بدون «گذاشتن» این قانون رو می‌شکنه.
 
 **تموم شده یعنی:**
-- [ ] افزودن رنگ با موجودی ۸ و دو مدیا ← `201`، تو فروشگاه با عکس و موجودی ۸.
-- [ ] رنگ تکراری (حتی غیرفعال) ← `409 COLOR_ALREADY_ON_PRODUCT`؛ SKU ِ رنگ محصول دیگه ← `409 DUPLICATE_SKU`.
-- [ ] رنگ با `isActive: false` ← اضافه و غیرفعال؛ تو فروشگاه نیست.
-- [ ] `PUT` رنگ غیرفعال با `isActive: true` و `isDefault: true` ← فعال و پیش‌فرض، رنگ قبلی پیش‌فرض نیست.
-- [ ] `PUT` با `colorKey` ِ دیگه ← `400 COLOR_KEY_IMMUTABLE`؛ با `stockQuantity: 99` ← موجودی عوض نمی‌شه.
-- [ ] غیرفعال کردن آخرین رنگ محصول منتشرشده ← `422 LAST_ACTIVE_VARIANT`؛ محصول پیش‌نویس ← مجاز.
-- [ ] رنگ محصول دیگه در مسیر ← `404 VARIANT_NOT_FOUND`.
-- [ ] تغییر قیمت رنگ همزمان با خرید همون رنگ، ۲۰ بار ← هیچ بن‌بستی (قفل ۷: ردیف محصول، بعد رنگ).
-- [ ] هر نوشتن لاگ `VARIANT_*` با `changes`؛ `DELETE` ِ رنگِ از قبل غیرفعال هیچی.
+- [x] افزودن رنگ با موجودی ۸ و دو مدیا ← `201`، تو فروشگاه با عکس و موجودی ۸.
+- [x] رنگ تکراری (حتی غیرفعال) ← `409 COLOR_ALREADY_ON_PRODUCT`؛ SKU ِ رنگ محصول دیگه ← `409 DUPLICATE_SKU`.
+- [x] رنگ با `isActive: false` ← اضافه و غیرفعال؛ تو فروشگاه نیست.
+- [x] `PUT` رنگ غیرفعال با `isActive: true` و `isDefault: true` ← فعال و پیش‌فرض، رنگ قبلی پیش‌فرض نیست.
+- [x] `PUT` با `colorKey` ِ دیگه ← `400 COLOR_KEY_IMMUTABLE`؛ با `stockQuantity: 99` ← موجودی عوض نمی‌شه.
+- [x] غیرفعال کردن آخرین رنگ محصول منتشرشده ← `422 LAST_ACTIVE_VARIANT`؛ محصول پیش‌نویس ← مجاز.
+- [x] رنگ محصول دیگه در مسیر ← `404 VARIANT_NOT_FOUND`.
+- [x] تغییر قیمت رنگ همزمان با خرید همون رنگ، ۲۰ بار ← هیچ بن‌بستی (قفل ۷: ردیف محصول، بعد رنگ).
+- [x] هر نوشتن لاگ `VARIANT_*` با `changes`؛ `DELETE` ِ رنگِ از قبل غیرفعال هیچی.
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- `changeVariant` ِ `barcode` از ۱.۵ ساخته شده بود؛ اینجا فقط به کار رفت. شکل فرم رنگ همون `ProductInput.checkVariant` ِ ۱.۵ ـه (مسیرها بدون `variants.i`: `colorKey`، `media.0.mediaId`).
+- `AddVariantUc` ترتیب کانترکت رو خودش چک می‌کنه (پالت ← رنگ روی محصول ← کد ← مدیا) و بعد `ProductDomainService.addVariant` رو صدا می‌زنه، چون نوع هر مدیا (عکس یا ویدیو) باید قبل از ساختن `ProductMedia` از ردیف فایل خونده بشه. کد ِ گرفته‌شده بین چک و ذخیره (`ProductCodeTakenException`) همون `409 DUPLICATE_SKU` ـه.
+- `PUT` ِ رنگ فرم کامله: `isActive` ِ نیومده یعنی `true` (پیش‌فرض کانترکت)، `barcode` ِ نیومده یعنی بدون بارکد. `stockQuantity` قبل از چک فرم دور ریخته می‌شه (نادیده، نه خطا).
+- برچسب ردیف لاگ ِ رنگ: «اسم محصول · کلید رنگ»؛ `VARIANT_UPDATED` با فیلدهای عوض‌شده (`priceOverride`، `compareAtPriceOverride`، `sortOrder`، `isDefault`، `isActive`، `barcode`، `media` به شکل لیست شناسه‌ها).
+- پاسخ هر سه نوشتن رنگ (به‌جز `DELETE`) `AdminVariant` ِ همون رنگه که از `GetAdminProductUc` برداشته می‌شه، با `ETag` ِ نسخه‌ی محصول.
+- تست «تغییر قیمت رنگ همزمان با خرید همون رنگ، ۲۰ بار» در `WebV1OrdersOnDatabaseTest` (با کاتالوگ seed و `PlaceOrderUc` ِ واقعی): هیچ بن‌بستی؛ سفارش یا ثبت می‌شه یا با یه قانون بیزنس رد می‌شه. خرابکاری ِ «حذف قفل ردیف محصول برای `VariantChanged` در Projector» در ۲۰ دور بن‌بست نساخت (زمان‌بندیه)؛ پس این تست نگهبانه، نه اثبات ِ اون یه خط.
+- خرابکاری: جابه‌جایی ترتیب «فعال کردن» و «پیش‌فرض کردن» در `UpdateVariantUc` ← `PUT an inactive color with isActive and isDefault …` قرمز.
 
 ---
 
@@ -5930,3 +5939,4 @@ kiva {
 | ۲۵ مهر ۱۴۰۵ | ۱.۴ | Phase 1 step 1.4 | `V24` با backfillها (`version`، `createdByUserId`، `availableTotal`، `soldCount` ِ رنگ‌ها، کد محصول در متن جستجو)، Projectorها، `findForAdmin` و `findAdminDetail`، `AdminProductSorts`، `FindAdminProductsUc` و `GetAdminProductUc`، `webV1AdminProducts.kt` (دو GET با `ETag`) |
 | ۲۶ مهر ۱۴۰۵ | ۱.۵ | Phase 1 step 1.5 | شکل کامل محصول در دامنه (`ProductSpecs` ِ کامل با `StrapInfo`/`PocketInfo`/…، `ProductTags`، `SeoMeta`، `Barcode`، `ProductMedia` با `mediaId`، `ProductGalleryPolicy`، `MaxPerOrder` تا ۲۰) با payloadهای سازگار با رویدادهای قبلی، `GalleryItemPayload` در read model، `ProductInput`، گسترش `CreateProductUc` (گالری، موجودی اولیه، لاگ)، `UpdateProductUc` با `If-Match`، `POST`/`PUT /admin/products`. دیتابیس توسعه: ۰ از ۶۵ فیلد `media` غیرخالی. خرابکاری: بدون چک `If-Match` و بدون sanitize ← تست‌هاشون قرمز |
 | ۲۶ مهر ۱۴۰۵ | ۱.۶ | Phase 1 step 1.6 | `schedulePublish`/`unschedulePublish` با دو رویداد و payloadشون، Projector ِ `publishAt`، `ChangeProductStatusUc` (همه‌ی ردیف‌های ۶.۶)، `ArchiveProductUc`، job ِ `publish-scheduled-products` (`FindDueScheduledProductsUc` + `PublishScheduledProductUc`)، `PATCH …/status` و `DELETE`، `MomentField` (`DATE_TIME_INVALID`). خرابکاری: بدون catch ِ همزمانی در job ← تست «یه انتشار» قرمز |
+| ۲۶ مهر ۱۴۰۵ | ۱.۷ | Phase 1 step 1.7 | `AddVariantUc` (با موجودی اولیه و گالری)، `UpdateVariantUc` (ترتیب فعال‌سازی، تغییر، گالری، غیرفعال‌سازی)، `DeactivateVariantUc`، سه route با پاسخ `AdminVariant` و `ETag` ِ محصول، لاگ `VARIANT_*`، تست بن‌بست با خرید. خرابکاری: جابه‌جایی ترتیب فعال‌سازی و پیش‌فرض ← تست قرمز |

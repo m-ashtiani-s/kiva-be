@@ -1,10 +1,13 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
 import com.kiva.application.usecase.admin.usecase.command.CheckPanelAccessUc
+import com.kiva.application.usecase.product.usecase.command.AddVariantUc
 import com.kiva.application.usecase.product.usecase.command.ArchiveProductUc
 import com.kiva.application.usecase.product.usecase.command.ChangeProductStatusUc
 import com.kiva.application.usecase.product.usecase.command.CreateProductUc
+import com.kiva.application.usecase.product.usecase.command.DeactivateVariantUc
 import com.kiva.application.usecase.product.usecase.command.UpdateProductUc
+import com.kiva.application.usecase.product.usecase.command.UpdateVariantUc
 import com.kiva.application.usecase.product.usecase.query.AdminProductSorts
 import com.kiva.application.usecase.product.usecase.query.FindAdminProductsUc
 import com.kiva.application.usecase.product.usecase.query.GetAdminProductUc
@@ -20,8 +23,10 @@ import com.kiva.infrastructure.httpserver.auth.panelActor
 import com.kiva.infrastructure.httpserver.auth.requireRoles
 import com.kiva.infrastructure.httpserver.controller.httprest.model.request.ProductStatusHttpRequest
 import com.kiva.infrastructure.httpserver.controller.httprest.model.request.ProductUpsertHttpRequest
+import com.kiva.infrastructure.httpserver.controller.httprest.model.request.VariantUpsertHttpRequest
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.AdminProductHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.AdminProductListItemHttpResponse
+import com.kiva.infrastructure.httpserver.controller.httprest.model.response.AdminVariantHttpResponse
 import com.kiva.infrastructure.media.MediaUrls
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
@@ -43,9 +48,13 @@ class AdminProductUseCases(
     val updateProduct: UpdateProductUc,
     val changeStatus: ChangeProductStatusUc,
     val archiveProduct: ArchiveProductUc,
+    val addVariant: AddVariantUc,
+    val updateVariant: UpdateVariantUc,
+    val deactivateVariant: DeactivateVariantUc,
 )
 
 private const val PRODUCT_ID = "productId"
+private const val VARIANT_ID = "variantId"
 
 /**
  * The panel's products (contract tag `Admin · Catalog`, `[ADMIN, CATALOG_MANAGER]`). Mounted under `/api/v1`. Every
@@ -105,6 +114,27 @@ fun Route.webV1AdminProducts(useCases: AdminProductUseCases, siteUrl: String, me
         delete("/admin/products/{$PRODUCT_ID}") {
             call.respondResult(useCases.archiveProduct.execute(ArchiveProductUc.Cmd(call.pathParameters[PRODUCT_ID].orEmpty(), call.panelActor())))
         }
+
+        // A color's answers are that color as the panel's page shows it, with the product's version in the ETag.
+        post("/admin/products/{$PRODUCT_ID}/variants") {
+            val request = call.receive<VariantUpsertHttpRequest>()
+            val command = AddVariantUc.Cmd(call.pathParameters[PRODUCT_ID].orEmpty(), request.toVariant(), call.panelActor())
+            val added = useCases.addVariant.execute(command).unwrapOr { return@post call.respondFailure(it) }
+            call.respondVariant(useCases, added.productId.value.toString(), added.variantId.value, HttpStatusCode.Created, mediaUrls)
+        }
+
+        put("/admin/products/{$PRODUCT_ID}/variants/{$VARIANT_ID}") {
+            val request = call.receive<VariantUpsertHttpRequest>()
+            val productId = call.pathParameters[PRODUCT_ID].orEmpty()
+            val command = UpdateVariantUc.Cmd(productId, call.pathParameters[VARIANT_ID].orEmpty(), request.toVariant(), call.panelActor())
+            val variantId = useCases.updateVariant.execute(command).unwrapOr { return@put call.respondFailure(it) }
+            call.respondVariant(useCases, productId, variantId.value, HttpStatusCode.OK, mediaUrls)
+        }
+
+        delete("/admin/products/{$PRODUCT_ID}/variants/{$VARIANT_ID}") {
+            val command = DeactivateVariantUc.Cmd(call.pathParameters[PRODUCT_ID].orEmpty(), call.pathParameters[VARIANT_ID].orEmpty(), call.panelActor())
+            call.respondResult(useCases.deactivateVariant.execute(command))
+        }
     }
 }
 
@@ -112,5 +142,12 @@ fun Route.webV1AdminProducts(useCases: AdminProductUseCases, siteUrl: String, me
 private suspend fun ApplicationCall.respondProduct(useCases: AdminProductUseCases, productId: String, status: HttpStatusCode, siteUrl: String, mediaUrls: MediaUrls) {
     respondResultWithETag(useCases.getProduct.execute(GetAdminProductUc.Qry(productId)), status, etagOf = { VersionETag.of(it.version) }) {
         AdminProductHttpResponse.from(it, siteUrl, mediaUrls)
+    }
+}
+
+/** One color of the product as the panel's page shows it (AdminVariant), with the product's version in the `ETag` header. */
+private suspend fun ApplicationCall.respondVariant(useCases: AdminProductUseCases, productId: String, variantId: Long, status: HttpStatusCode, mediaUrls: MediaUrls) {
+    respondResultWithETag(useCases.getProduct.execute(GetAdminProductUc.Qry(productId)), status, etagOf = { VersionETag.of(it.version) }) { product ->
+        AdminVariantHttpResponse.from(product.variants.single { it.shop.id == variantId }, mediaUrls)
     }
 }

@@ -247,6 +247,7 @@ fun Application.configureRouting() {
         listMaterials = get(), getMaterial = get(), createMaterial = get(), updateMaterial = get(), deleteMaterial = get(),
     )
     val adminProductUseCases = AdminProductUseCases(checkPanelAccess = checkPanelAccessUc, findProducts = get(), getProduct = get(), createProduct = get(), updateProduct = get(), changeStatus = get(), archiveProduct = get(),
+        addVariant = get(), updateVariant = get(), deactivateVariant = get(),
     )
     val config by inject<AppConfig>()
 

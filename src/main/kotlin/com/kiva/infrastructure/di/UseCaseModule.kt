@@ -80,11 +80,14 @@ import com.kiva.application.usecase.payment.PaymentConfirmation
 import com.kiva.application.usecase.payment.usecase.command.ReconcilePaymentUc
 import com.kiva.application.usecase.payment.usecase.query.FindStalePaymentsUc
 import com.kiva.application.usecase.product.ProductInput
+import com.kiva.application.usecase.product.usecase.command.AddVariantUc
 import com.kiva.application.usecase.product.usecase.command.ArchiveProductUc
 import com.kiva.application.usecase.product.usecase.command.ChangeProductStatusUc
 import com.kiva.application.usecase.product.usecase.command.CreateProductUc
+import com.kiva.application.usecase.product.usecase.command.DeactivateVariantUc
 import com.kiva.application.usecase.product.usecase.command.PublishScheduledProductUc
 import com.kiva.application.usecase.product.usecase.command.UpdateProductUc
+import com.kiva.application.usecase.product.usecase.command.UpdateVariantUc
 import com.kiva.application.usecase.product.usecase.query.FindAdminProductsUc
 import com.kiva.application.usecase.product.usecase.query.FindDueScheduledProductsUc
 import com.kiva.application.usecase.product.usecase.query.FindProductsUc
@@ -343,6 +346,18 @@ val useCaseModule = module(createdAtStart = true) {
     single { ProductInput(htmlSanitizer = get()) }
     single { ChangeProductStatusUc(transactionManager = get(), productRepository = get(), auditTrail = get(), clock = get()) }
     single { ArchiveProductUc(transactionManager = get(), productRepository = get(), auditTrail = get(), clock = get()) }
+    single {
+        AddVariantUc(
+            transactionManager = get(), productDomainService = get(), productRepository = get(), productQmRepository = get(), colorRepository = get(),
+            productInput = get(), mediaAttachments = get(), inventoryDomainService = get(), inventoryRepository = get(), auditTrail = get(), clock = get(),
+        )
+    }
+    single {
+        UpdateVariantUc(
+            transactionManager = get(), productRepository = get(), productInput = get(), mediaAttachments = get(), auditTrail = get(), clock = get(),
+        )
+    }
+    single { DeactivateVariantUc(transactionManager = get(), productRepository = get(), auditTrail = get(), clock = get()) }
     single { FindDueScheduledProductsUc(transactionManager = get(), productQmRepository = get(), clock = get()) }
     single { PublishScheduledProductUc(transactionManager = get(), productRepository = get(), clock = get()) }
     single {

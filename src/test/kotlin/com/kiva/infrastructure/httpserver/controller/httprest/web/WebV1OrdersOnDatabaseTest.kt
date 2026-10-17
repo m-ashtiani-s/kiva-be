@@ -1,6 +1,7 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
 import com.kiva.application.dto.PlacedOrder
+import com.kiva.application.port.PanelActor
 import com.kiva.application.port.RequestHash
 import com.kiva.application.usecase.address.AddressFields
 import com.kiva.application.usecase.address.usecase.command.AddAddressUc
@@ -8,6 +9,10 @@ import com.kiva.application.usecase.cart.CartCaller
 import com.kiva.application.usecase.cart.usecase.command.AddCartItemUc
 import com.kiva.application.usecase.checkout.usecase.command.PlaceOrderUc
 import com.kiva.application.usecase.checkout.usecase.command.StartPaymentUc
+import com.kiva.application.usecase.media.MediaAttachments
+import com.kiva.application.usecase.product.ProductInput
+import com.kiva.application.usecase.product.usecase.command.UpdateVariantUc
+import com.kiva.common.railway.FailureKind
 import com.kiva.common.railway.Result
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.cart.entity.Cart
@@ -21,10 +26,15 @@ import com.kiva.domain.aggregate.payment.model.valueobject.PaymentStatus
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
 import com.kiva.domain.aggregate.user.model.valueobject.MessengerChannel
 import com.kiva.infrastructure.MutableClock
+import com.kiva.infrastructure.common.html.JsoupHtmlSanitizer
 import com.kiva.infrastructure.httpserver.API_V1
 import com.kiva.infrastructure.httpserver.IDEMPOTENCY_KEY_HEADER
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AuthTestStack.Companion.phone
 import com.kiva.infrastructure.payment.FakePaymentGateway
+import com.kiva.infrastructure.persistence.exposed.AuditTrailImpl
+import com.kiva.infrastructure.persistence.exposed.MediaRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.ProductQmRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.ProductRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.StoredCatalog
 import com.kiva.infrastructure.persistence.exposed.tbl.AddressTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.OrderQmTbl
@@ -430,6 +440,36 @@ class WebV1OrdersOnDatabaseTest {
             val results = atOnce(2) { purchase.placeOrder.execute(command(listOf(a, b)[it])) }
 
             assertEquals(listOf(true, true), results.map { it is Result.Success }, "round $round: $results")
+        }
+    }
+
+    @Test
+    fun `no deadlock - a color's price changed in the panel while it is being bought, at once, 20 times`() {
+        restock(nilaOlive, 100)
+        val nila = transaction(purchase.db) { ProductQmRepositoryImpl().findVariant(VariantId.constructFromPersisted(nilaOlive))!!.productId }
+        // The panel's color form, built as the app builds it; the change log row goes to a staff id of its own.
+        val updateVariant = UpdateVariantUc(
+            purchase.transactions, ProductRepositoryImpl(), ProductInput(JsoupHtmlSanitizer), MediaAttachments(MediaRepositoryImpl()), AuditTrailImpl(), clock,
+        )
+        val staff = PanelActor(UserId.constructFromPersisted(7), null)
+
+        repeat(20) { round ->
+            val buyer = purchase.customer(phone(1200 + round))
+            putInCart(buyer, nilaOlive)
+            val price = if (round % 2 == 0) 1_450_000L else 1_390_000L
+            val form = ProductInput.Variant(colorKey = "olive", priceOverride = price)
+
+            val results = atOnce(2) {
+                if (it == 0) {
+                    purchase.placeOrder.execute(command(buyer))
+                } else {
+                    updateVariant.execute(UpdateVariantUc.Cmd(nila.value.toString(), nilaOlive.toString(), form, staff))
+                }
+            }
+
+            assertTrue(results[1] is Result.Success, "round $round: ${results[1]}")
+            // The order goes through, or (bought at the old price while the new one landed) is refused as a business rule.
+            assertTrue(results[0] is Result.Success || results[0].failureOrNull()?.kind == FailureKind.BUSINESS_RULE, "round $round: ${results[0]}")
         }
     }
 
