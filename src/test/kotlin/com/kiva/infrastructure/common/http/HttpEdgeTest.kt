@@ -159,14 +159,17 @@ class HttpEdgeTest {
                 mapOf(
                     FailureKind.INVALID to 400, FailureKind.UNAUTHORIZED to 401, FailureKind.FORBIDDEN to 403,
                     FailureKind.NOT_FOUND to 404, FailureKind.CONFLICT to 409, FailureKind.BUSINESS_RULE to 422,
-                    FailureKind.RATE_LIMITED to 429,
+                    FailureKind.RATE_LIMITED to 429, FailureKind.PRECONDITION_FAILED to 412, FailureKind.PAYLOAD_TOO_LARGE to 413,
+                    FailureKind.UNSUPPORTED_MEDIA_TYPE to 415,
                 ),
                 FailureKind.entries.associateWith { it.toHttpStatus().value },
             )
         }
 
         @ParameterizedTest
-        @ValueSource(strings = ["NOT_FOUND", "CONFLICT", "BUSINESS_RULE", "RATE_LIMITED", "UNAUTHORIZED", "FORBIDDEN"])
+        @ValueSource(
+            strings = ["NOT_FOUND", "CONFLICT", "BUSINESS_RULE", "RATE_LIMITED", "UNAUTHORIZED", "FORBIDDEN", "PRECONDITION_FAILED", "PAYLOAD_TOO_LARGE", "UNSUPPORTED_MEDIA_TYPE"],
+        )
         fun `a failure is a problem with its kind's status and code`(kind: String) = withApp {
             val response = client.get("/fail/$kind")
             val status = FailureKind.valueOf(kind).toHttpStatus()

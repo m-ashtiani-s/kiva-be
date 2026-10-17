@@ -311,6 +311,35 @@ class ProductTest {
         }
 
         @Test
+        fun `a new product created with two colors is version 3, one event each`() {
+            val product = newProduct().withColor(101, "black").withColor(102, "lilac")
+
+            assertEquals(3L, product.version)
+        }
+
+        @Test
+        fun `a product loaded from 5 events is version 5, and the next change makes it 6`() {
+            val original = newProduct().withColor(101, "black").withColor(102, "lilac")
+            original.changePrice(priceTag(1_450_000), admin, later)
+            original.publish(admin, later)
+            val loaded = Product(original.getRecordedEvents())
+            assertEquals(5L, loaded.version)
+
+            loaded.unpublish(admin, later)
+
+            assertEquals(6L, loaded.version)
+        }
+
+        @Test
+        fun `saving the same details again leaves the version where it was`() {
+            val product = newProduct()
+
+            product.changeDetails(details(), admin, later)
+
+            assertEquals(1L, product.version)
+        }
+
+        @Test
         fun `a loaded product goes on numbering after its last event`() {
             val original = newProduct().withColor(101, "lilac")
             val loaded = Product(original.getRecordedEvents())

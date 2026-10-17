@@ -1,0 +1,137 @@
+package com.kiva.infrastructure.httpserver.controller.httprest.web
+
+import com.kiva.application.usecase.admin.usecase.command.CheckPanelAccessUc
+import com.kiva.application.usecase.admin.usecase.command.SetUserRolesUc
+import com.kiva.application.usecase.admin.usecase.query.FindCustomersUc
+import com.kiva.application.usecase.admin.usecase.query.GetCustomerUc
+import com.kiva.common.patch.Patch
+import com.kiva.common.valueobject.IranianMobileNumber
+import com.kiva.common.valueobject.UserId
+import com.kiva.domain.aggregate.session.entity.AuthSession
+import com.kiva.domain.aggregate.session.model.valueobject.SessionDevice
+import com.kiva.domain.aggregate.user.entity.User
+import com.kiva.domain.aggregate.user.model.ProfilePatch
+import com.kiva.domain.aggregate.user.model.valueobject.Role
+import com.kiva.domain.aggregate.user.model.valueobject.Roles
+import com.kiva.infrastructure.MutableClock
+import com.kiva.infrastructure.TestDatabase
+import com.kiva.infrastructure.auth.JwtAccessTokens
+import com.kiva.infrastructure.auth.RandomSessionTokens
+import com.kiva.infrastructure.common.persistence.ExposedTransactionManager
+import com.kiva.infrastructure.httpserver.API_V1
+import com.kiva.infrastructure.httpserver.auth.configureAuthentication
+import com.kiva.infrastructure.httpserver.configureHttp
+import com.kiva.infrastructure.persistence.exposed.AdminCustomerRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.AuthSessionRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.OrderQmRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.SecurityEventLogImpl
+import com.kiva.infrastructure.persistence.exposed.UserRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.tbl.AuthSessionTbl
+import com.kiva.infrastructure.persistence.exposed.tbl.OtpChallengeTbl
+import com.kiva.infrastructure.persistence.exposed.tbl.RefreshTokenTbl
+import com.kiva.infrastructure.persistence.exposed.tbl.UserTbl
+import io.ktor.server.config.MapApplicationConfig
+import io.ktor.server.routing.route
+import io.ktor.server.routing.routing
+import io.ktor.server.testing.ApplicationTestBuilder
+import io.ktor.server.testing.testApplication
+import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.like
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.jdbc.select
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import java.time.ZoneOffset
+import java.util.concurrent.ConcurrentHashMap
+
+/**
+ * The panel's routes over kiva_test, wired by hand as the app wires them (with a test clock and fixed secrets), and a
+ * staff member for every role whose session is ready, as a login would leave it: [callerWith] gives the token.
+ *
+ * Every test user's phone starts with 09900; [deleteWhatWasStored] removes them with their sessions.
+ * A route of a later step is added to [app] (and its use cases built here) the day it exists.
+ */
+class PanelTestStack(val clock: MutableClock) {
+
+    val db = TestDatabase.database
+    val sms = RecordingSmsSender()
+    val accessTokens = JwtAccessTokens(AuthTestStack.JWT_SECRET, clock)
+
+    val transactions = ExposedTransactionManager(db)
+    val users = UserRepositoryImpl()
+    val sessions = AuthSessionRepositoryImpl()
+    private val events = SecurityEventLogImpl()
+
+    val checkPanelAccess = CheckPanelAccessUc(transactions, sessions, users, events, clock)
+
+    // --- the customers page (login phase), the first panel routes ---
+    val findCustomers = FindCustomersUc(transactions, AdminCustomerRepositoryImpl(), OrderQmRepositoryImpl())
+    val getCustomer = GetCustomerUc(transactions, AdminCustomerRepositoryImpl(), OrderQmRepositoryImpl())
+    val setUserRoles = SetUserRolesUc(transactions, users, sessions, events, clock)
+
+    /** A logged-in user of the panel: who they are and the access token of their session. */
+    class Caller(val user: User, val token: String) {
+        val userId: Long get() = user.id.value
+        val bearer: String get() = "Bearer $token"
+    }
+
+    private val callers = ConcurrentHashMap<Role, Caller>()
+
+    /**
+     * The staff member with exactly [role] (and CUSTOMER, which everyone has), made on first use. [Role.CUSTOMER] gives
+     * a plain customer, whose session isn't a panel session.
+     */
+    fun callerWith(role: Role): Caller = callers.computeIfAbsent(role) {
+        val n = Role.entries.indexOf(role) + 1
+        if (role == Role.CUSTOMER) caller(phone(n)) else caller(phone(n), role)
+    }
+
+    /** A user with [roles] and a session started now; [name] as "first last" if given. */
+    fun caller(phone: String, vararg roles: Role, name: String? = null): Caller = transaction(db) {
+        var user = users.findOrRegister(IranianMobileNumber.constructFromPersisted(phone), clock.now).user
+        if (roles.isNotEmpty()) user = user.setPanelRoles(roles.toList(), by = UserId.SYSTEM).getOrNull() ?: error("refused")
+        if (name != null) {
+            val (first, last) = name.split(' ')
+            val patch = ProfilePatch(firstName = Patch.Set(first), lastName = Patch.Set(last))
+            user = user.updateProfile(patch, clock.now.atZone(ZoneOffset.UTC).toLocalDate()).getOrNull() ?: error("refused")
+        }
+        if (roles.isNotEmpty() || name != null) users.save(user)
+        val stored = users.findById(user.id) ?: error("not stored")
+        val session = AuthSession.start(sessions.nextId(), stored.id, Roles.of(roles.toList()), clock.now, SessionDevice.UNKNOWN)
+        sessions.add(session, RandomSessionTokens().newRefreshToken().hash)
+        Caller(stored, accessTokens.issue(stored, session, clock.now).value)
+    }
+
+    fun app(block: suspend ApplicationTestBuilder.() -> Unit) = testApplication {
+        environment { config = MapApplicationConfig() }
+        application {
+            configureHttp()
+            configureAuthentication(accessTokens)
+            routing {
+                route(API_V1) {
+                    webV1AdminCustomers(AdminCustomerUseCases(checkPanelAccess, findCustomers, getCustomer, setUserRoles))
+                }
+            }
+        }
+        block()
+    }
+
+    /** Every test user (phones 09900…) with their sessions and codes. Security events stay: that table is append-only. */
+    fun deleteWhatWasStored() {
+        callers.clear()
+        transaction(db) {
+            val userIds = UserTbl.select(UserTbl.id).where { UserTbl.phone like TEST_PHONES }.map { it[UserTbl.id].value }
+            val sessionIds = AuthSessionTbl.select(AuthSessionTbl.id).where { AuthSessionTbl.userId inList userIds }.map { it[AuthSessionTbl.id].value }
+            RefreshTokenTbl.deleteWhere { RefreshTokenTbl.sessionId inList sessionIds }
+            AuthSessionTbl.deleteWhere { AuthSessionTbl.userId inList userIds }
+            OtpChallengeTbl.deleteWhere { OtpChallengeTbl.phone like TEST_PHONES }
+            UserTbl.deleteWhere { UserTbl.phone like TEST_PHONES }
+        }
+    }
+
+    companion object {
+        private const val TEST_PHONES = "09900%"
+
+        /** `0990000000n`: the panel's test phones. */
+        fun phone(n: Int) = "09900" + n.toString().padStart(6, '0')
+    }
+}

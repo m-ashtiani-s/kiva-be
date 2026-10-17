@@ -1,6 +1,22 @@
 package com.kiva.infrastructure.httpserver
 
 import com.kiva.application.usecase.admin.usecase.command.CheckPanelAccessUc
+import com.kiva.common.valueobject.IranianMobileNumber
+import com.kiva.common.valueobject.UserId
+import com.kiva.domain.aggregate.session.entity.AuthSession
+import com.kiva.domain.aggregate.session.model.valueobject.SessionDevice
+import com.kiva.domain.aggregate.user.model.valueobject.Roles
+import com.kiva.infrastructure.auth.RandomSessionTokens
+import com.kiva.infrastructure.persistence.exposed.tbl.AuthSessionTbl
+import com.kiva.infrastructure.persistence.exposed.tbl.RefreshTokenTbl
+import com.kiva.infrastructure.persistence.exposed.tbl.UserTbl
+import io.ktor.client.request.header
+import io.ktor.http.HttpHeaders
+import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.like
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.jdbc.select
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import com.kiva.domain.aggregate.user.model.valueobject.Role
 import com.kiva.infrastructure.MutableClock
 import com.kiva.infrastructure.TestDatabase
@@ -56,6 +72,8 @@ import kotlin.test.assertTrue
  *    tested on its own (RequireRolesOnDatabaseTest).
  * 3. Every endpoint the app has whose contract operation says `security: [{ bearerAuth: [] }]` refuses a call without a
  *    token, wherever it lives: `/checkout`, `/orders`, `/payments/...` and `/cart/merge` are covered the day they exist.
+ * 4. Every endpoint under `/api/v1/admin` refuses a real panel session whose roles aren't among its own (403): a staff
+ *    member of another panel role, or a plain customer where every staff role is allowed.
  */
 class RouteGuardsTest {
 
@@ -70,18 +88,23 @@ class RouteGuardsTest {
     }
 
     /** The app's routing as boot builds it (Koin of its own, so tests don't share one), and every endpoint in it. */
-    private fun withTheApp(block: suspend ApplicationTestBuilder.(List<Endpoint>) -> Unit) = testApplication {
+    private fun withTheApp(block: suspend ApplicationTestBuilder.(List<Endpoint>) -> Unit) = withTheAppAndTokens { endpoints, _ -> block(endpoints) }
+
+    /** [withTheApp], plus the app's own token signer, so a test can log in a user it made. */
+    private fun withTheAppAndTokens(block: suspend ApplicationTestBuilder.(List<Endpoint>, JwtAccessTokens) -> Unit) = testApplication {
         environment { config = MapApplicationConfig() }
         var endpoints = emptyList<Endpoint>()
+        lateinit var tokens: JwtAccessTokens
         application {
             this.install(KoinIsolated) { modules(appModules(appConfig, TestDatabase.database)) }
             configureHttp()
+            tokens = get()
             configureAuthentication(get())
             configureRouting()
             endpoints = endpointsOf(this)
         }
         startApplication()
-        block(endpoints)
+        block(endpoints, tokens)
     }
 
     private fun endpointsOf(application: Application): List<Endpoint> =
@@ -154,6 +177,54 @@ class RouteGuardsTest {
         }
 
         assertEquals(emptyList(), wrong)
+    }
+
+    @Test
+    fun `every admin endpoint refuses a panel session without one of its roles`() = withTheAppAndTokens { endpoints, tokens ->
+        val admin = endpoints.filter { it.path.isUnder("$API_V1/admin") && it.requiredRoles != null }
+        assertTrue(admin.any { it.path == "$API_V1/admin/customers/{customerId}/roles" }, "The admin routes weren't found: $endpoints")
+        val users = UserRepositoryImpl()
+        val sessions = AuthSessionRepositoryImpl()
+        val staff = mutableMapOf<Role, String>()
+        fun tokenOf(role: Role): String = staff.getOrPut(role) {
+            transaction(TestDatabase.database) {
+                val now = Instant.now()
+                val phone = "09900" + (900 + Role.entries.indexOf(role)).toString().padStart(6, '0')
+                var user = users.findOrRegister(IranianMobileNumber.constructFromPersisted(phone), now).user
+                val roles = if (role == Role.CUSTOMER) emptyList() else listOf(role)
+                if (roles.isNotEmpty()) user = user.setPanelRoles(roles, by = UserId.SYSTEM).getOrNull() ?: error("refused")
+                users.save(user)
+                val stored = users.findById(user.id) ?: error("not stored")
+                val session = AuthSession.start(sessions.nextId(), stored.id, Roles.of(roles), now, SessionDevice.UNKNOWN)
+                sessions.add(session, RandomSessionTokens().newRefreshToken().hash)
+                tokens.issue(stored, session, now).value
+            }
+        }
+
+        try {
+            val letIn = admin.mapNotNull { endpoint ->
+                val outsider = (Role.entries - Role.ADMIN - Role.CUSTOMER - endpoint.requiredRoles.orEmpty()).firstOrNull() ?: Role.CUSTOMER
+                val response = client.request(endpoint.path.replace(Regex("\\{[^}]+}"), "1")) {
+                    method = endpoint.method
+                    header(HttpHeaders.Authorization, "Bearer ${tokenOf(outsider)}")
+                    if (endpoint.method in listOf(HttpMethod.Post, HttpMethod.Put, HttpMethod.Patch)) {
+                        contentType(ContentType.Application.Json)
+                        setBody("{}")
+                    }
+                }
+                if (response.status == HttpStatusCode.Forbidden) null else "$endpoint let $outsider in (${response.status})"
+            }
+
+            assertEquals(emptyList(), letIn)
+        } finally {
+            transaction(TestDatabase.database) {
+                val ids = UserTbl.select(UserTbl.id).where { UserTbl.phone like "0990000090%" }.map { it[UserTbl.id].value }
+                val sessionIds = AuthSessionTbl.select(AuthSessionTbl.id).where { AuthSessionTbl.userId inList ids }.map { it[AuthSessionTbl.id].value }
+                RefreshTokenTbl.deleteWhere { RefreshTokenTbl.sessionId inList sessionIds }
+                AuthSessionTbl.deleteWhere { AuthSessionTbl.userId inList ids }
+                UserTbl.deleteWhere { UserTbl.id inList ids }
+            }
+        }
     }
 
     @Test

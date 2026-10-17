@@ -175,6 +175,16 @@ class EventSourceEntityTest {
         }
 
         @Test
+        fun `a new aggregate not saved yet has the number of events it raised as its version`() {
+            val lamp = Lamp.install("lamp-1", "hall", sara)
+            assertEquals(1L, lamp.version)
+
+            lamp.switchOn(sara)
+
+            assertEquals(2L, lamp.version)
+        }
+
+        @Test
         fun `the recorded events handed out do not change afterwards`() {
             val lamp = Lamp.install("lamp-1", "hall", sara)
             val handedOut = lamp.getRecordedEvents()
@@ -224,6 +234,25 @@ class EventSourceEntityTest {
             assertFailsWith<IllegalArgumentException> { Lamp(listOf(installed, LampSwitchedOn(lamp1, seq(3), sara))) }
             assertFailsWith<IllegalArgumentException> { Lamp(listOf(installed, LampSwitchedOn(lamp1, seq(1), sara))) }
             assertFailsWith<IllegalArgumentException> { Lamp(listOf(LampSwitchedOn(lamp1, seq(2), sara))) }
+        }
+
+        @Test
+        fun `the version is the number of the last event, stored or raised since`() {
+            val loaded = Lamp(listOf(LampInstalled(lamp1, seq(1), sara, "hall"), LampSwitchedOn(lamp1, seq(2), sara)))
+            assertEquals(2L, loaded.version)
+
+            loaded.switchOff(sara)
+
+            assertEquals(3L, loaded.version)
+        }
+
+        @Test
+        fun `a refused change leaves the version where it was`() {
+            val loaded = Lamp(listOf(LampInstalled(lamp1, seq(1), sara, "hall")))
+
+            loaded.switchOff(sara)
+
+            assertEquals(1L, loaded.version)
         }
 
         @Test

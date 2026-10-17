@@ -38,6 +38,13 @@ abstract class EventSourceEntity<E : DomainEvent> {
     /** Events raised since this object was created or loaded, oldest first: what the repository has to store. */
     fun getRecordedEvents(): List<E> = recordedEvents.toList()
 
+    /**
+     * The sequence of the last event, stored or just raised: the aggregate's version. A new aggregate not saved yet
+     * has the number of events it raised. It moves up by one with every event, so an edit form can say which version
+     * it was filled from (`If-Match`) and be refused if it is no longer this one.
+     */
+    val version: Long get() = lastSequence?.value ?: 0
+
     /** The sequence the next raised event must carry: one more than the last event, or 1 for a new aggregate. */
     protected fun nextSequence(): EventSequence = lastSequence?.next() ?: EventSequence.FIRST
 

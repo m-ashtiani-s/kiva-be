@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: KIVA Store API — کیوا
-  version: 1.7.0
+  version: 1.8.0
   contact:
     name: KIVA Engineering
     email: support@kiva.ir
@@ -76,7 +76,10 @@ info:
 
     * **لاگ تغییرات:** هر درخواست **موفقِ** نوشتنی زیر `/admin/*` (`POST`، `PUT`، `PATCH`، `DELETE`؛ به‌جز آپلود مدیا) یک ردیف در لاگ تغییرات می‌گذارد:
       چه کسی، کِی، چه کاری، روی چه چیزی، و هر فیلد از چه به چه شد. خواندن‌ها و کارهای خودکار سیستم (مثل پایان مهلت رزرو) ثبت نمی‌شوند.
-      لاگ فقط اضافه می‌شود و ویرایش یا حذف ندارد: `GET /admin/audit-log`.
+      **یک ردیف برای هر درخواست**: درخواستی که چند چیز را عوض می‌کند (ساخت محصول با رنگ‌هایش) یک ردیف با همه‌ی تغییرها دارد،
+      و درخواستی که چیزی را عوض نکرد (ذخیره‌ی فرم بی‌تغییر، آرشیو ِ محصولِ از قبل آرشیو) ردیفی ندارد.
+      `actor` (نام و موبایل) موقع خواندن از حساب **فعلی** کاربر خوانده می‌شود، نه از ردیف. نوع `MEDIA` استفاده نمی‌شود، چون آپلود ثبت نمی‌شود.
+      لاگ فقط اضافه می‌شود و ویرایش ندارد؛ هر ردیف **۹۰ روز** نگه داشته می‌شود و هر شب ردیف‌های قدیمی‌تر پاک می‌شوند: `GET /admin/audit-log`.
 
     * **محدودیت‌ها** (همه با `429`، هدر `Retry-After` و `meta.retryAfterSeconds`):
 
@@ -2649,6 +2652,15 @@ paths:
       x-roles: [ADMIN, CATALOG_MANAGER]
       operationId: adminListProducts
       summary: "لیست محصولات پنل (همه‌ی وضعیت‌ها، موجودی دقیق)"
+      description: |
+        * **`q`** (حداکثر ۱۰۰ نویسه): محصولی که اسم، دسته، اسم رنگ‌های فعال، اسم متریال یا SKU ِ آن شامل متن است، یا SKU ِ خودش یا یکی از رنگ‌هایش
+          با `q` شروع می‌شود (بی‌توجه به حروف بزرگ و کوچک)، یا بارکد یکی از رنگ‌هایش دقیقاً `q` است.
+        * **`totalStock`** = جمع موجودی قابل فروش (`stockOnHand − stockReserved`) رنگ‌های **فعال**. **`variantsCount`** = همه‌ی رنگ‌ها (فعال و غیرفعال).
+          **`lowStockVariants`** = رنگ‌های فعالی که موجودی‌شان بیشتر از صفر و کمتر از `lowStockThreshold` است.
+        * **`stockStatus`**: `OUT_OF_STOCK` = `totalStock = 0`؛ `LOW_STOCK` = `totalStock > 0` و `lowStockVariants > 0`؛ `IN_STOCK` = بقیه.
+        * **`sort`**: `updated` آخرین تغییر (نزولی، پیش‌فرض)، `newest` تاریخ ساخت (نزولی)، `name` اسم (صعودی)، `price_asc`/`price_desc` قیمت رنگ پیش‌فرض،
+          `bestselling` تعداد فروش (نزولی)، `stock_asc` `totalStock` (صعودی). در تساوی، شناسه‌ی بزرگ‌تر اول. ناموجودها اینجا ته لیست نمی‌روند.
+        * `imageUrl` = نسخه‌ی کوچک (`thumbnailUrl`) اولین مدیای رنگ پیش‌فرض، یا `null`.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/SearchQuery'
@@ -2678,6 +2690,13 @@ paths:
       x-roles: [ADMIN, CATALOG_MANAGER]
       operationId: adminCreateProduct
       summary: "ساخت محصول (می‌توان ورینت‌ها را هم‌زمان فرستاد)"
+      description: |
+        ترتیب بررسی: اول همه‌ی خطاهای شکل با هم (`400` با مسیر هر فیلد، مثل `variants.1.media.0.mediaId` یا `specs.straps.0.lengthCm`)؛
+        رنگ تکراری در خود ورودی `409 COLOR_ALREADY_ON_PRODUCT` روی `variants.i.colorKey`. بعد: slug ِ گرفته‌شده `409 DUPLICATE_SLUG`؛
+        دسته، متریال و رنگ‌های ناموجود `400` روی همان فیلد؛ مدیای ناموجود یا با `purpose` ِ دیگر `400` روی `variants.i.media.j.mediaId`؛
+        SKU ِ گرفته‌شده `409 DUPLICATE_SKU`؛ و `status = ACTIVE` بدون رنگ فعال `422 NO_ACTIVE_VARIANT`.
+        `stockQuantity` ِ هر رنگ موجودی اولیه است و در همان درخواست با دلیل `RESTOCK` در تاریخچه‌ی موجودی ثبت می‌شود.
+        رنگی که `isActive = false` دارد اضافه و همان لحظه غیرفعال می‌شود. `status` پیش‌فرض `DRAFT` است.
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -2687,12 +2706,19 @@ paths:
       responses:
         '201':
           description: ساخته شد
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AdminProduct' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '409':
-          description: slug یا SKU تکراری
+          description: '`DUPLICATE_SLUG`، `DUPLICATE_SKU` یا `COLOR_ALREADY_ON_PRODUCT` (یک رنگ دو بار در `variants`)'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422':
+          description: '`NO_ACTIVE_VARIANT` — `status = ACTIVE` بدون هیچ رنگ فعال'
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -2704,12 +2730,17 @@ paths:
       x-roles: [ADMIN, CATALOG_MANAGER]
       operationId: adminGetProduct
       summary: "جزئیات محصول در پنل"
+      description: |
+        محصول در **هر** وضعیت (پیش‌نویس و آرشیو هم). نبود یا شناسه‌ای که عدد مثبت نیست ← `404 PRODUCT_NOT_FOUND`.
+        هدر `ETag` همان `etag` ِ بدنه است: `W/"{نسخه}"`، که با هر تغییر محصول یا رنگ‌هایش یک پله بالا می‌رود (تغییر موجودی نه).
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/ProductId'
       responses:
         '200':
           description: OK
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AdminProduct' }
@@ -2721,6 +2752,15 @@ paths:
       x-roles: [ADMIN, CATALOG_MANAGER]
       operationId: adminUpdateProduct
       summary: "ویرایش کامل محصول"
+      description: |
+        **`If-Match`** (اختیاری؛ پنل همیشه می‌فرستد): `ETag` ِ نسخه‌ای که فرم از آن پر شده (`W/"12"`، `"12"` و `12` هر سه پذیرفته‌اند؛
+        شکل دیگر ← `400 IF_MATCH_INVALID` روی `If-Match`). اگر با نسخه‌ی فعلی جور نباشد ← `412` با کد `CHANGED_BY_SOMEONE_ELSE`
+        و `meta.currentEtag`، **قبل از** هر قانون دیگری و بدون ذخیره‌ی هیچ‌چیز. `If-Match` ِ نیامده یعنی بدون این بررسی.
+        دو ذخیره در یک لحظه با یک نسخه: یکی ذخیره می‌شود و دیگری `409 CHANGED_BY_SOMEONE_ELSE` می‌گیرد.
+
+        `slug` و `sku` بعد از ساخت عوض نمی‌شوند: مقدار دیگر ← `400 SLUG_IMMUTABLE` / `SKU_IMMUTABLE` (`sku` ِ نیامده یا خالی یعنی همان).
+        `status` و `variants` در این درخواست **نادیده** گرفته می‌شوند: وضعیت با `PATCH …/status` و `DELETE`، رنگ‌ها با endpointهای ورینت.
+        ذخیره‌ی بی‌تغییر `200` است و در لاگ تغییرات ردیفی ندارد. محصول آرشیوشده ← `422 PRODUCT_ARCHIVED`.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/ProductId'
@@ -2733,13 +2773,23 @@ paths:
       responses:
         '200':
           description: OK
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AdminProduct' }
         '412':
-          description: نسخه تغییر کرده (optimistic locking با ETag)
+          description: '`CHANGED_BY_SOMEONE_ELSE` — نسخه‌ی `If-Match` کهنه است (`meta.currentEtag`)؛ هیچ‌چیز ذخیره نشد. صفحه را تازه کنید.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '409':
-          description: "`CHANGED_BY_SOMEONE_ELSE` — همزمان با این درخواست کس دیگه‌ای محصول را تغییر داد؛ هیچ‌چیز ذخیره نشد. صفحه را تازه کنید. یا `DUPLICATE_SLUG` / `DUPLICATE_SKU`"
+          description: "`CHANGED_BY_SOMEONE_ELSE` — همزمان با این درخواست کس دیگه‌ای محصول را تغییر داد؛ هیچ‌چیز ذخیره نشد. صفحه را تازه کنید."
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422':
+          description: '`PRODUCT_ARCHIVED`'
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -2752,6 +2802,9 @@ paths:
       x-roles: [ADMIN, CATALOG_MANAGER]
       operationId: adminArchiveProduct
       summary: "آرشیو محصول (حذف نرم؛ سفارش‌های قبلی سالم می‌مانند)"
+      description: |
+        محصولِ از قبل آرشیو هم `204` است (بدون تغییر و بدون ردیف لاگ). سفارش‌های قبلی و رزروهای باز دست نمی‌خورند؛
+        ردیف این محصول در سبدها `purchasable = false` می‌شود.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/ProductId'
@@ -2766,6 +2819,20 @@ paths:
       x-roles: [ADMIN, CATALOG_MANAGER]
       operationId: adminSetProductStatus
       summary: "انتشار / پیش‌نویس / آرشیو"
+      description: |
+        | وضعیت فعلی | `status` | `publishAt` | نتیجه |
+        |---|---|---|---|
+        | `DRAFT` | `ACTIVE` | نیامده یا الان/گذشته | منتشر می‌شود (برنامه‌ی قبلی هم پاک). بدون رنگ فعال ← `422 NO_ACTIVE_VARIANT` |
+        | `DRAFT` | `ACTIVE` | آینده | `DRAFT` می‌ماند و برای همان زمان برنامه‌ریزی می‌شود (`AdminProduct.publishAt`). بدون رنگ فعال ← `422 NO_ACTIVE_VARIANT`؛ بیشتر از ۳۶۵ روز بعد ← `400 PUBLISH_AT_TOO_FAR` |
+        | `DRAFT` | `DRAFT` | نیامده | برنامه دارد ← برنامه لغو می‌شود؛ ندارد ← `422 PRODUCT_ALREADY_DRAFT` |
+        | `ACTIVE` | `ACTIVE` | نیامده | `422 PRODUCT_ALREADY_ACTIVE` |
+        | `ACTIVE` | `DRAFT` | نیامده | از انتشار درمی‌آید |
+        | `DRAFT` یا `ACTIVE` | `ARCHIVED` | نیامده | آرشیو می‌شود |
+        | `ARCHIVED` | `DRAFT` یا `ACTIVE` | — | `422 INVALID_STATUS_TRANSITION` (`meta.from`، `meta.to`) |
+        | `ARCHIVED` | `ARCHIVED` | — | `422 PRODUCT_ALREADY_ARCHIVED` |
+        | هر | `DRAFT` یا `ARCHIVED`، یا محصولِ `ACTIVE` | آمده | `400 PUBLISH_AT_NOT_ALLOWED` روی `publishAt` |
+
+        محصول برنامه‌ریزی‌شده در موعد (با دقت یک دقیقه) خودکار منتشر می‌شود؛ اگر تا آن موقع رنگ فعالی نداشته باشد منتشر نمی‌شود و برنامه‌اش پاک می‌شود.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/ProductId'
@@ -2778,13 +2845,20 @@ paths:
               required: [status]
               properties:
                 status: { $ref: '#/components/schemas/ProductStatus' }
-                publishAt: { type: string, format: date-time, nullable: true, description: انتشار زمان‌بندی‌شده }
+                publishAt: { type: string, format: date-time, nullable: true, description: 'انتشار زمان‌بندی‌شده؛ فقط با `status = ACTIVE` روی محصول پیش‌نویس' }
       responses:
         '200':
           description: OK
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AdminProduct' }
+        '422':
+          description: '`NO_ACTIVE_VARIANT`، `PRODUCT_ALREADY_ACTIVE`، `PRODUCT_ALREADY_DRAFT`، `PRODUCT_ALREADY_ARCHIVED` یا `INVALID_STATUS_TRANSITION`'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
@@ -2795,6 +2869,11 @@ paths:
       x-roles: [ADMIN, CATALOG_MANAGER]
       operationId: adminCreateVariant
       summary: "افزودن ورینت رنگی"
+      description: |
+        ترتیب: شکل (`400`) ← محصول هست (`404`) ← آرشیو نیست (`422 PRODUCT_ARCHIVED`) ← رنگ در پالت (`400 COLOR_NOT_FOUND` روی `colorKey`)
+        ← رنگ از قبل روی محصول نیست، حتی غیرفعال (`409 COLOR_ALREADY_ON_PRODUCT`) ← SKU گرفته نشده (`409 DUPLICATE_SKU`) ← مدیاها.
+        `stockQuantity` موجودی اولیه است (با دلیل `RESTOCK` در تاریخچه)؛ `isActive = false` یعنی اضافه و همان لحظه غیرفعال.
+        پاسخ `AdminVariant` ِ همین رنگ است و هدر `ETag` نسخه‌ی تازه‌ی **محصول**.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/ProductId'
@@ -2806,11 +2885,18 @@ paths:
       responses:
         '201':
           description: ساخته شد
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AdminVariant' }
         '409':
-          description: این رنگ قبلاً برای محصول تعریف شده
+          description: '`COLOR_ALREADY_ON_PRODUCT` (این رنگ قبلاً برای محصول تعریف شده) یا `DUPLICATE_SKU`'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422':
+          description: '`PRODUCT_ARCHIVED`'
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -2823,7 +2909,15 @@ paths:
       tags: [Admin · Catalog]
       x-roles: [ADMIN, CATALOG_MANAGER]
       operationId: adminUpdateVariant
-      summary: "ویرایش ورینت (قیمت اختصاصی، موجودی، مدیا، وضعیت)"
+      summary: "ویرایش ورینت (قیمت اختصاصی، مدیا، وضعیت)"
+      description: |
+        رنگی که مال همین محصول نیست، نیست، یا شناسه‌اش عدد مثبت نیست ← `404 VARIANT_NOT_FOUND`.
+        `colorKey` و `sku` عوض نمی‌شوند (`400 COLOR_KEY_IMMUTABLE` / `SKU_IMMUTABLE`؛ `sku` ِ نیامده یعنی همان). `stockQuantity` نادیده
+        گرفته می‌شود: موجودی فقط با `POST /admin/inventory/adjustments` عوض می‌شود. `priceOverride: null` یعنی «قیمت خود محصول».
+        `isDefault: false` پیش‌فرض بودن را برنمی‌دارد؛ برای عوض کردنش رنگ دیگری را پیش‌فرض کنید.
+        ترتیب اعمال: فعال کردن، تغییر قیمت/ترتیب/پیش‌فرض/بارکد، گالری، و آخر غیرفعال کردن. پس «رنگ غیرفعال را فعال و پیش‌فرض کن» در یک درخواست کار می‌کند.
+        `isDefault: true` با `isActive: false` ← `422 INACTIVE_VARIANT_CANNOT_BE_DEFAULT`؛ غیرفعال کردن آخرین رنگ فعال محصول منتشرشده ← `422 LAST_ACTIVE_VARIANT`.
+        درخواست بی‌تغییر `200` است و ردیف لاگ ندارد.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/ProductId'
@@ -2836,9 +2930,16 @@ paths:
       responses:
         '200':
           description: OK
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AdminVariant' }
+        '422':
+          description: '`PRODUCT_ARCHIVED`، `INACTIVE_VARIANT_CANNOT_BE_DEFAULT` یا `LAST_ACTIVE_VARIANT`'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
@@ -2848,12 +2949,20 @@ paths:
       x-roles: [ADMIN, CATALOG_MANAGER]
       operationId: adminDeleteVariant
       summary: "غیرفعال کردن ورینت"
+      description: |
+        رنگ روی محصول می‌ماند (سفارش‌های قبلی به آن اشاره می‌کنند) و فقط از فروشگاه خارج می‌شود. رنگِ از قبل غیرفعال هم `204` است.
+        اگر پیش‌فرض بود، رنگ فعال بعدی (به ترتیب `sortOrder`، بعد شناسه) پیش‌فرض می‌شود.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/ProductId'
         - $ref: '#/components/parameters/VariantId'
       responses:
         '204': { $ref: '#/components/responses/NoContent' }
+        '422':
+          description: '`LAST_ACTIVE_VARIANT` (آخرین رنگ فعال محصول منتشرشده؛ اول محصول را از انتشار دربیاورید) یا `PRODUCT_ARCHIVED`'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -2863,7 +2972,12 @@ paths:
       x-roles: [ADMIN, CATALOG_MANAGER]
       operationId: adminAdjustInventory
       summary: "ثبت تغییر موجودی (ورود کالا، شمارش انبار، آسیب‌دیده) با لاگ"
-      description: با موجود شدن ورینتی که قبلاً صفر بوده، پیامک «موجود شد» برای مشترکین صف می‌شود.
+      description: |
+        `delta` غیرصفر و حداکثر ±۱۰٬۰۰۰ (`STOCK_DELTA_INVALID`). جهت هر دلیل: `RESTOCK` و `RETURNED` فقط مثبت، `DAMAGED` فقط منفی،
+        `STOCKTAKE` و `MANUAL_CORRECTION` هر دو (`ADJUSTMENT_DIRECTION_INVALID`). `STOCKTAKE` هم یک **تفاوت** است، نه عدد شمارش:
+        پنل خودش تفاوت شمارش با موجودی فعلی را حساب می‌کند. رنگ ناموجود ← `400 VARIANT_NOT_FOUND` روی `variantId`.
+        موجودی بعد از تغییر نباید از رزروشده کمتر شود ← `422 QUANTITY_EXCEEDS_STOCK` با `meta.availableQuantity` (چقدر می‌شود کم کرد).
+        با موجود شدن ورینتی که قبلاً صفر بوده، پیامک «موجود شد» برای مشترکین صف می‌شود.
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -2876,6 +2990,11 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/InventoryAdjustment' }
+        '422':
+          description: '`QUANTITY_EXCEEDS_STOCK` (`meta.availableQuantity`)'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
@@ -2884,10 +3003,13 @@ paths:
       x-roles: [ADMIN, CATALOG_MANAGER]
       operationId: adminListInventoryAdjustments
       summary: "تاریخچه‌ی تغییرات موجودی"
+      description: |
+        فقط تغییرهای دستی (و موجودی اولیه‌ی ساخت رنگ)، **تازه‌ترین اول**. رزرو، آزادسازی و ارسال سفارش‌ها در این لیست نیستند.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: variantId
           in: query
+          description: 'فقط همین رنگ؛ شناسه‌ای که عدد مثبت نیست ← `400`'
           schema: { type: integer }
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/Size'
@@ -2912,7 +3034,25 @@ paths:
       x-roles: [ADMIN, CATALOG_MANAGER, CONTENT_EDITOR, OPERATOR]
       operationId: adminUploadMedia
       summary: "آپلود عکس/ویدیو (محصول، بلاگ، بنر، عکس قبل از ارسال)"
-      description: سرور نسخه‌های بهینه (webp/avif در چند اندازه، poster ویدیو، blurhash) را می‌سازد.
+      description: |
+        **پردازش همگام است؛ پاسخ کامل است**: سرور نسخه‌های بهینه را همین‌جا می‌سازد و `201` با `MediaAsset` ِ کامل برمی‌گرداند.
+        عکس: webp در عرض‌های ۱۶۰، ۴۸۰، ۸۰۰، ۱۲۰۰ و ۱۶۰۰ (فقط عرض‌های کوچک‌تر از عکس اصلی، و همیشه حداقل یکی)، با چرخش از روی EXIF،
+        **همه‌ی metadata (EXIF و GPS) پاک**، و `blurhash`. اصل فایل نگه داشته نمی‌شود. **avif ساخته نمی‌شود.**
+        ویدیو: همان mp4 (H.264) بدون انکود دوباره با metadata ِ پاک، و فریم کاور (`posterUrl`) در عرض‌های ۴۸۰ و ۸۰۰.
+        `url` = بزرگ‌ترین نسخه، `thumbnailUrl` = نسخه‌ی ۱۶۰ (برای ویدیو کاور ۴۸۰)، `srcSet` = همه‌ی نسخه‌ها.
+
+        نوع فایل از روی **محتوا** تشخیص داده می‌شود، نه پسوند یا هدر. اسم فایل کلاینت هیچ‌جا استفاده یا ذخیره نمی‌شود.
+
+        | `purpose` | عکس | ویدیو |
+        |---|---|---|
+        | `PRODUCT`، `BLOG` | jpeg، png، webp؛ حداکثر ۱۵ مگابایت و ۴۰ مگاپیکسل؛ کوتاه‌ترین ضلع حداقل ۳۲۰ | mp4 با H.264؛ حداکثر ۲۰۰ مگابایت و ۱۸۰ ثانیه |
+        | `PRE_SHIPMENT` | همان | mp4 یا mov با H.264؛ حداکثر ۲۰۰ مگابایت و ۱۸۰ ثانیه |
+        | `CATEGORY`، `BANNER`، `TESTIMONIAL` | همان | ممنوع (`415`) |
+
+        SVG، GIF، HEIC و هر نوع دیگری پذیرفته نمی‌شود (`415`). ویدیوی HEVC (پیش‌فرض آیفون) هم `415` با `meta.hint = "H264"` می‌گیرد:
+        دوربین را روی «Most Compatible» بگذارید.
+        مدیایی که تا ۴۸ ساعت به چیزی (رنگ محصول، دسته، ...) وصل نشود خودکار پاک می‌شود؛ مدیای وصل‌شده هیچ‌وقت پاک نمی‌شود.
+        آپلود در لاگ تغییرات ثبت نمی‌شود.
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -2922,16 +3062,32 @@ paths:
               type: object
               required: [file, purpose]
               properties:
-                file: { type: string, format: binary }
-                purpose: { type: string, enum: [PRODUCT, PRE_SHIPMENT, BLOG, BANNER, CATEGORY, TESTIMONIAL] }
-                alt: { type: string, maxLength: 200 }
+                file: { type: string, format: binary, description: 'دقیقاً یک فایل؛ بیشتر ← `400 FILE_COUNT_INVALID` روی `file`' }
+                purpose: { type: string, enum: [PRODUCT, PRE_SHIPMENT, BLOG, BANNER, CATEGORY, TESTIMONIAL], description: 'مقدار دیگر ← `400 MEDIA_PURPOSE_INVALID`' }
+                alt: { type: string, maxLength: 200, description: 'خالی = بدون متن جایگزین؛ بیشتر از ۲۰۰ ← `400 MEDIA_ALT_TOO_LONG`' }
       responses:
         '201':
           description: OK
           content:
             application/json:
               schema: { $ref: '#/components/schemas/MediaAsset' }
-        '400': { $ref: '#/components/responses/ValidationError' }
+        '400':
+          description: |
+            `VALIDATION_ERROR`: `file` یا `purpose` نیامده، `purpose` نامعتبر (`MEDIA_PURPOSE_INVALID`)، `alt` بلند،
+            یا ابعاد غلط: `IMAGE_TOO_SMALL` (کوتاه‌ترین ضلع کمتر از ۳۲۰)، `IMAGE_TOO_LARGE` (بیشتر از ۴۰ مگاپیکسل)، `VIDEO_TOO_LONG`.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '413':
+          description: '`UPLOAD_TOO_LARGE` — حجم از سقف همان نوع بیشتر است (`meta.maxBytes`). سرور همان لحظه‌ای که سقف رد شد خواندن را قطع می‌کند.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '415':
+          description: '`UPLOAD_TYPE_NOT_ALLOWED` — نوع فایل مجاز نیست (`meta.allowed`: فهرست نوع‌های مجاز همین `purpose`؛ `meta.hint = "H264"` برای ویدیوی HEVC)'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
   /admin/categories:
@@ -2940,6 +3096,10 @@ paths:
       x-roles: [ADMIN, CATALOG_MANAGER]
       operationId: adminListCategories
       summary: "دسته‌بندی‌ها (همه، با شناسه‌ی مدیای عکس برای فرم)"
+      description: |
+        همه‌ی دسته‌ها به ترتیب `sortOrder`، بعد شناسه. `productCount` ِ پنل محصول‌های **همه‌ی** وضعیت‌هاست (پیش‌نویس و آرشیو هم)،
+        تا معلوم باشد چرا دسته‌ای حذف نمی‌شود؛ `GET /categories` ِ فروشگاه همان «فقط منتشرشده» را می‌شمرد.
+        `imageUrl` نسخه‌ی ۸۰۰ ِ عکس دسته است و `icon.imageUrl` فعلاً همیشه `null`.
       security: [{ bearerAuth: [] }]
       responses:
         '200':
@@ -2956,6 +3116,9 @@ paths:
       x-roles: [ADMIN, CATALOG_MANAGER]
       operationId: adminCreateCategory
       summary: "ساخت دسته‌بندی"
+      description: |
+        ترتیب: شکل (`400`، همه با هم) ← `iconColorKey` در پالت (`400 COLOR_NOT_FOUND` روی `iconColorKey`) ← `imageMediaId` (فقط مدیای
+        `CATEGORY`؛ ناموجود `400 MEDIA_NOT_FOUND`، `purpose` ِ دیگر `400 MEDIA_PURPOSE_MISMATCH`) ← slug ِ تکراری `409 DUPLICATE_SLUG`.
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -2969,6 +3132,11 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/AdminCategory' }
         '400': { $ref: '#/components/responses/ValidationError' }
+        '409':
+          description: '`DUPLICATE_SLUG`'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
   /admin/categories/{categoryId}:
@@ -2977,6 +3145,9 @@ paths:
       x-roles: [ADMIN, CATALOG_MANAGER]
       operationId: adminUpdateCategory
       summary: "ویرایش دسته‌بندی"
+      description: |
+        همان قانون‌های ساخت؛ دسته‌ای که نیست یا شناسه‌ای که عدد مثبت نیست ← `404 NOT_FOUND`. slug عوض می‌شود (لینک‌های قدیمی دیگر کار نمی‌کنند)
+        و تکراری‌اش (به‌جز خود همین دسته) `409 DUPLICATE_SLUG` است. اسم و slug ِ تازه در همان لحظه در جستجو و فیلتر محصولات می‌نشیند.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: categoryId
@@ -2994,6 +3165,11 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AdminCategory' }
+        '409':
+          description: '`DUPLICATE_SLUG`'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
@@ -3025,6 +3201,9 @@ paths:
       x-roles: [ADMIN, CATALOG_MANAGER]
       operationId: adminCreateColor
       summary: "افزودن رنگ به پالت"
+      description: |
+        `hex` با حروف بزرگ ذخیره می‌شود؛ `isLight` پیش‌فرض `false`، `sortOrder` پیش‌فرض بعد از آخرین رنگ. کلید تکراری ← `409 DUPLICATE_CODE` روی `key`.
+        پالت کامل همیشه در `GET /colors` است.
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -3037,6 +3216,11 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Color' }
+        '409':
+          description: '`DUPLICATE_CODE` — رنگی با این کلید هست'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
@@ -3046,6 +3230,9 @@ paths:
       x-roles: [ADMIN, CATALOG_MANAGER]
       operationId: adminUpdateColor
       summary: "ویرایش رنگ"
+      description: |
+        کلید رنگ عوض نمی‌شود: `key` ِ بدنه باید همان کلید مسیر باشد، وگرنه `400 COLOR_KEY_IMMUTABLE` روی `key`.
+        اسم تازه در همان لحظه در جستجوی محصولات می‌نشیند.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: colorKey
@@ -3073,7 +3260,7 @@ paths:
       operationId: adminDeleteColor
       summary: "حذف رنگ از پالت (فقط اگر هیچ‌جا استفاده نشده باشد)"
       description: |
-        رنگی که روی ورینتی از هر محصولی هست (فعال یا غیرفعال، در هر وضعیت محصول) یا پیام رضایتی به آن اشاره می‌کند حذف نمی‌شود.
+        رنگی که روی ورینتی از هر محصولی هست (فعال یا غیرفعال، در هر وضعیت محصول)، آیکن دسته‌ای است، یا پیام رضایتی به آن اشاره می‌کند حذف نمی‌شود.
         برای کنار گذاشتن چنین رنگی، ورینت‌هایش را غیرفعال کنید.
       security: [{ bearerAuth: [] }]
       parameters:
@@ -3084,7 +3271,7 @@ paths:
       responses:
         '204': { $ref: '#/components/responses/NoContent' }
         '409':
-          description: "`IN_USE` — رنگ استفاده شده است؛ `meta.productCount`"
+          description: "`IN_USE` — رنگ استفاده شده است؛ `meta.productCount` (ورینت‌ها)، `meta.categoryCount` (آیکن دسته‌ها)، `meta.testimonialCount`"
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -3097,6 +3284,7 @@ paths:
       x-roles: [ADMIN, CATALOG_MANAGER]
       operationId: adminListMaterials
       summary: "متریال‌ها (همه، با تعداد محصول)"
+      description: '`productCount` ِ پنل محصول‌های **همه‌ی** وضعیت‌هاست؛ `GET /materials` ِ فروشگاه همان «فقط منتشرشده» را می‌شمرد.'
       security: [{ bearerAuth: [] }]
       responses:
         '200':
@@ -3125,7 +3313,11 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Material' }
-
+        '409':
+          description: '`DUPLICATE_SLUG`'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
@@ -3135,7 +3327,9 @@ paths:
       x-roles: [ADMIN, CATALOG_MANAGER]
       operationId: adminUpdateMaterial
       summary: "ویرایش متریال"
-      description: نام و توضیح تازه در متن جستجوی محصولات همین متریال هم می‌نشیند.
+      description: |
+        اسم تازه در همان لحظه در متن جستجوی محصولات همین متریال می‌نشیند (توضیح متریال در جستجو نیست).
+        slug عوض می‌شود و تکراری‌اش (به‌جز خود همین متریال) `409 DUPLICATE_SLUG` است. متریالی که نیست ← `404 NOT_FOUND`.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: materialId
@@ -4621,8 +4815,12 @@ paths:
       operationId: adminListAuditLog
       summary: "لاگ تغییرات پنل: چه کسی، کِی، چه کاری، روی چه چیزی (تازه‌ترین اول)"
       description: |
-        هر درخواست موفق نوشتنی زیر `/admin/*` یک ردیف (بخش ۲). لاگ فقط اضافه می‌شود؛ ویرایش و حذف ندارد.
-        برای تاریخچه‌ی یک مورد: `entityType` + `entityId` (مثلاً `PRODUCT` و `12`، یا `ORDER` و `KV-218340`).
+        هر درخواست موفق نوشتنی زیر `/admin/*` یک ردیف (بخش ۲). لاگ فقط اضافه می‌شود و ویرایش ندارد؛ بعد از ۹۰ روز خودکار پاک می‌شود،
+        پس بازه‌ی قدیمی‌تر فقط خالی برمی‌گردد.
+        برای تاریخچه‌ی یک مورد: `entityType` + `entityId` (مثلاً `PRODUCT` و `12`، یا `ORDER` و `KV-218340`). `entityId` بدون `entityType` هم مجاز است.
+        `from` و `to` روزهای تهران‌اند و هر دو شامل: `from` از ساعت ۰۰:۰۰ همان روز و `to` تا پایان همان روز (۰۰:۰۰ ِ روز بعد، نابسته).
+        `from` بعد از `to` ← `400` روی `to` با `DATE_RANGE_INVALID`. ترتیب: تازه‌ترین اول (`at`، بعد `id`، نزولی).
+        `actor` موقع خواندن از حساب فعلی کاربر می‌آید (موبایل کامل، چون فقط `ADMIN` می‌بیند)؛ `summary` جمله‌ی فارسی همان ردیف است.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: entityType
@@ -5117,6 +5315,8 @@ components:
         - RESERVATION_UNAVAILABLE
         - ACCOUNT_HAS_ACTIVE_ORDERS
         - ROLE_CHANGE_NOT_ALLOWED
+        # --- پنل ادمین: کلید تکراری (رنگ) ---
+        - DUPLICATE_CODE
         # --- پنل ادمین: محصول و رنگ‌هایش ---
         - COLOR_ALREADY_ON_PRODUCT
         - PRODUCT_ARCHIVED
@@ -5143,7 +5343,7 @@ components:
       type: object
       required: [id, type, url]
       properties:
-        id: { type: string, example: 'med_5Hq2' }
+        id: { type: string, pattern: '^med_[0-9A-Za-z]{22}$', example: 'med_5Hq2xT9aLmQ0vB3nR7sK1w' }
         type: { type: string, enum: [IMAGE, VIDEO] }
         url: { type: string, format: uri, example: 'https://cdn.kiva.ir/p/1/lilac/front.webp' }
         thumbnailUrl: { type: string, format: uri, nullable: true, example: 'https://cdn.kiva.ir/p/1/lilac/front_160.webp' }
@@ -5363,10 +5563,16 @@ components:
           description: همه‌ی رنگ‌ها به ترتیب نمایش (کارت ۵ تای اول + «+n»)
           items: { $ref: '#/components/schemas/ProductColorOption' }
         colorsCount: { type: integer, example: 4 }
-        defaultColorKey: { $ref: '#/components/schemas/ColorKey' }
+        defaultColorKey:
+          allOf: [{ $ref: '#/components/schemas/ColorKey' }]
+          nullable: true
+          description: فقط برای محصول بدون رنگ فعال (پیش‌نویس در پنل) `null` است؛ در فروشگاه هیچ‌وقت `null` نیست
         displayColorKey:
           allOf: [{ $ref: '#/components/schemas/ColorKey' }]
-          description: رنگی که عکس کارت با آن نمایش داده شود (اگر فیلتر رنگ فعال باشد = اولین رنگ منطبق)
+          nullable: true
+          description: |
+            رنگی که عکس کارت با آن نمایش داده شود (اگر فیلتر رنگ فعال باشد = اولین رنگ منطبق).
+            فقط برای محصول بدون رنگ فعال (پیش‌نویس در پنل) `null` است؛ در فروشگاه هیچ‌وقت `null` نیست
         image:
           allOf: [{ $ref: '#/components/schemas/MediaAsset' }]
           nullable: true
@@ -5402,7 +5608,7 @@ components:
       required: [id, sku, color, price, stock, media]
       properties:
         id: { type: integer, example: 101 }
-        sku: { type: string, example: KV-1001-LIL }
+        sku: { type: string, example: KV-1001-LILAC }
         color: { $ref: '#/components/schemas/Color' }
         isDefault: { type: boolean, example: false }
         price: { $ref: '#/components/schemas/PriceInfo' }
@@ -7473,8 +7679,11 @@ components:
     ProductMediaInput:
       type: object
       required: [mediaId, view]
+      description: |
+        یک مدیای گالری رنگ: فقط مدیای آپلودشده با `purpose = PRODUCT` (ناموجود ← `400 MEDIA_NOT_FOUND`، `purpose` ِ دیگر ← `400 MEDIA_PURPOSE_MISMATCH`).
+        ترتیب نهایی گالری: `isPrimary` اول (حداکثر یکی؛ دومی ← `400 MEDIA_PRIMARY_DUPLICATE`)، بعد `sortOrder`، بعد ترتیب همین لیست.
       properties:
-        mediaId: { type: string, example: 'med_5Hq2' }
+        mediaId: { type: string, pattern: '^med_[0-9A-Za-z]{22}$', example: 'med_5Hq2xT9aLmQ0vB3nR7sK1w' }
         view: { $ref: '#/components/schemas/MediaView' }
         sortOrder: { type: integer, example: 0 }
         isPrimary: { type: boolean, default: false }
@@ -7483,52 +7692,145 @@ components:
       type: object
       required: [colorKey]
       properties:
-        colorKey: { $ref: '#/components/schemas/ColorKey' }
-        sku: { type: string, nullable: true, description: خالی = تولید خودکار (KV-1001-LIL), example: KV-1001-LIL }
-        barcode: { type: string, nullable: true }
-        priceOverride: { type: integer, allOf: [{ $ref: '#/components/schemas/Money' }], nullable: true, description: اگر این رنگ قیمت متفاوت دارد }
-        compareAtPriceOverride: { type: integer, allOf: [{ $ref: '#/components/schemas/Money' }], nullable: true }
-        stockQuantity: { type: integer, minimum: 0, description: موجودی اولیه (برای تغییرات بعدی از adjustments استفاده کنید), example: 12 }
-        isDefault: { type: boolean, default: false }
+        colorKey: { allOf: [{ $ref: '#/components/schemas/ColorKey' }], description: 'در `PUT` عوض نمی‌شود (`400 COLOR_KEY_IMMUTABLE`)' }
+        sku: { type: string, nullable: true, maxLength: 40, pattern: '^[A-Za-z][A-Za-z0-9]*(-[A-Za-z0-9]+)*$', description: 'خالی = تولید خودکار (KV-1001-LILAC)؛ با حروف بزرگ ذخیره می‌شود. در `PUT` عوض نمی‌شود (`400 SKU_IMMUTABLE`)', example: KV-1001-LILAC }
+        barcode: { type: string, nullable: true, pattern: '^[0-9A-Za-z-]{4,32}$' }
+        priceOverride: { type: integer, allOf: [{ $ref: '#/components/schemas/Money' }], nullable: true, description: 'اگر این رنگ قیمت متفاوت دارد؛ `null` = قیمت خود محصول' }
+        compareAtPriceOverride: { type: integer, allOf: [{ $ref: '#/components/schemas/Money' }], nullable: true, description: 'فقط همراه `priceOverride` (`400 PRICE_OVERRIDE_REQUIRED`) و بیشتر از آن' }
+        stockQuantity: { type: integer, minimum: 0, maximum: 10000, description: 'موجودی اولیه، فقط در ساخت (در `PUT` نادیده گرفته می‌شود؛ برای تغییرات بعدی از adjustments استفاده کنید)', example: 12 }
+        isDefault: { type: boolean, default: false, description: '`false` پیش‌فرض بودن را برنمی‌دارد' }
         isActive: { type: boolean, default: true }
         sortOrder: { type: integer, example: 0 }
         media:
           type: array
+          maxItems: 20
+          description: 'کل گالری این رنگ (حداکثر ۲۰ تا؛ بیشتر ← `400 MEDIA_TOO_MANY`؛ یک مدیا دو بار ← `400 MEDIA_DUPLICATE`)'
           items: { $ref: '#/components/schemas/ProductMediaInput' }
     ProductUpsertRequest:
       type: object
       required: [name, slug, categoryId, bagType, price, materialId]
+      description: |
+        همه‌ی خطاهای شکل با هم در یک `400` با مسیر هر فیلد برمی‌گردند. `canonicalUrl`، `ogImageUrl` و `jsonLd` ِ `seo` نادیده گرفته می‌شوند:
+        سرور خودش آن‌ها را می‌سازد. `description` قبل از ذخیره sanitize می‌شود (فقط تگ‌های `HtmlString`؛ `<script>`، `on*` و لینک `javascript:` حذف).
       properties:
-        name: { type: string, maxLength: 120, example: کیف دوشی ماهک }
-        slug: { type: string, pattern: '^(?=.*[a-z])[a-z0-9]+(-[a-z0-9]+)*$', description: 'حروف کوچک لاتین، رقم و خط تیره؛ حداقل یک حرف (تا با id عددی اشتباه نشود)', example: mahak-shoulder-bag }
-        sku: { type: string, nullable: true, description: خالی = تولید خودکار (KV-xxxx), example: KV-1001 }
+        name: { type: string, minLength: 1, maxLength: 120, example: کیف دوشی ماهک }
+        slug: { type: string, maxLength: 100, pattern: '^(?=.*[a-z])[a-z0-9]+(-[a-z0-9]+)*$', description: 'حروف کوچک لاتین، رقم و خط تیره؛ حداقل یک حرف (تا با id عددی اشتباه نشود). در `PUT` عوض نمی‌شود (`400 SLUG_IMMUTABLE`)', example: mahak-shoulder-bag }
+        sku: { type: string, nullable: true, maxLength: 40, pattern: '^[A-Za-z][A-Za-z0-9]*(-[A-Za-z0-9]+)*$', description: 'خالی = تولید خودکار (KV-xxxx)؛ با حروف بزرگ ذخیره می‌شود. در `PUT` عوض نمی‌شود (`400 SKU_IMMUTABLE`)', example: KV-1001 }
         categoryId: { type: integer, example: 1 }
         bagType: { $ref: '#/components/schemas/BagType' }
         materialId: { type: integer, example: 3 }
         materialDescription: { type: string, maxLength: 120, example: چرم مصنوعی مات درجه یک }
         price: { allOf: [{ $ref: '#/components/schemas/Money' }], example: 1890000 }
-        compareAtPrice: { type: integer, allOf: [{ $ref: '#/components/schemas/Money' }], nullable: true }
+        compareAtPrice: { type: integer, allOf: [{ $ref: '#/components/schemas/Money' }], nullable: true, description: 'بیشتر از `price` (`400 COMPARE_AT_PRICE_NOT_ABOVE_PRICE`)' }
         shortDescription: { type: string, maxLength: 300, nullable: true }
-        description: { $ref: '#/components/schemas/HtmlString' }
+        description: { allOf: [{ $ref: '#/components/schemas/HtmlString' }], description: 'حداکثر ۱۰٬۰۰۰ نویسه **بعد از** sanitize' }
         highlights:
           type: array
           maxItems: 8
           items: { type: string, maxLength: 160 }
-        specs: { $ref: '#/components/schemas/ProductSpecs' }
+        specs: { $ref: '#/components/schemas/ProductSpecsInput' }
         tags:
           type: array
-          items: { type: string }
+          maxItems: 20
+          description: 'حداکثر ۲۰ برچسب (`TAGS_TOO_MANY`)، هر کدام ۱ تا ۳۰ نویسه (`TAG_INVALID`)'
+          items: { type: string, minLength: 1, maxLength: 30 }
         newUntil: { type: string, format: date-time, nullable: true, description: تا این تاریخ تگ «جدید» می‌خورد (به‌جای فیلد دستی isNew) }
-        maxPerOrder: { type: integer, minimum: 1, default: 5 }
+        maxPerOrder: { type: integer, minimum: 1, maximum: 20, default: 5 }
         returnable: { type: boolean, default: true }
         reservable: { type: boolean, default: true }
         sortPriority: { type: integer, default: 0, description: برای چیدمان دستی (pin) در لیست }
-        status: { $ref: '#/components/schemas/ProductStatus' }
-        seo: { $ref: '#/components/schemas/SeoMeta' }
+        status: { allOf: [{ $ref: '#/components/schemas/ProductStatus' }], description: 'فقط در ساخت (پیش‌فرض `DRAFT`)؛ در `PUT` نادیده گرفته می‌شود' }
+        seo:
+          type: object
+          description: 'فقط این سه فیلد خوانده می‌شوند'
+          properties:
+            title: { type: string, maxLength: 70, nullable: true }
+            description: { type: string, maxLength: 170, nullable: true }
+            noIndex: { type: boolean, default: false }
         variants:
           type: array
-          description: فقط در ساخت؛ برای ویرایش از endpointهای ورینت استفاده کنید
+          description: فقط در ساخت؛ برای ویرایش از endpointهای ورینت استفاده کنید (در `PUT` نادیده گرفته می‌شود)
           items: { $ref: '#/components/schemas/VariantUpsertRequest' }
+    ProductSpecsInput:
+      type: object
+      description: |
+        مشخصات در فرم محصول؛ همان `ProductSpecs` با سقف‌ها. `label` ِ `closure` و `occasions` را سرور می‌سازد و از ورودی خوانده نمی‌شود.
+        هر مشکل یک خطای فیلد با مسیر کامل است (`specs.straps.1.lengthCm`).
+      properties:
+        dimensions: { allOf: [{ $ref: '#/components/schemas/ProductDimensions' }], nullable: true, description: 'هر ضلع بیشتر از ۰ و حداکثر ۲۰۰' }
+        weightGrams: { type: integer, nullable: true, minimum: 1, maximum: 20000 }
+        closure:
+          type: object
+          nullable: true
+          properties:
+            type: { $ref: '#/components/schemas/ClosureType' }
+        straps:
+          type: array
+          nullable: true
+          maxItems: 4
+          items:
+            type: object
+            properties:
+              type: { $ref: '#/components/schemas/StrapType' }
+              label: { type: string, maxLength: 200 }
+              lengthCm: { type: number, nullable: true, minimum: 0, exclusiveMinimum: true, maximum: 200 }
+              minLengthCm: { type: number, nullable: true, minimum: 0, exclusiveMinimum: true, maximum: 200 }
+              maxLengthCm: { type: number, nullable: true, minimum: 0, exclusiveMinimum: true, maximum: 200, description: 'حداقل `minLengthCm`' }
+              adjustable: { type: boolean, default: false }
+              detachable: { type: boolean, default: false }
+              material: { type: string, nullable: true, maxLength: 60 }
+        pockets:
+          type: object
+          nullable: true
+          description: 'هر شمارنده ۰ تا ۲۰'
+          properties:
+            internal: { type: integer, minimum: 0, maximum: 20 }
+            internalZip: { type: integer, minimum: 0, maximum: 20 }
+            external: { type: integer, minimum: 0, maximum: 20 }
+            phone: { type: integer, minimum: 0, maximum: 20 }
+            cardSlots: { type: integer, minimum: 0, maximum: 20 }
+            billSlots: { type: integer, minimum: 0, maximum: 20 }
+            coinPocket: { type: boolean, default: false }
+            detachablePouch: { type: boolean, default: false }
+            laptopSleeve: { type: boolean, default: false }
+            summary: { type: string, maxLength: 200 }
+        laptopMaxInch: { type: number, nullable: true, minimum: 0, exclusiveMinimum: true, maximum: 20 }
+        capacityLiters: { type: number, nullable: true, minimum: 0, exclusiveMinimum: true, maximum: 100 }
+        waterproof: { type: boolean, default: false }
+        occasions:
+          type: array
+          items:
+            type: object
+            properties:
+              code: { $ref: '#/components/schemas/Occasion' }
+        fits:
+          type: array
+          items: { $ref: '#/components/schemas/FitItem' }
+        lining:
+          type: object
+          nullable: true
+          properties:
+            material: { type: string, maxLength: 60 }
+            color: { type: string, maxLength: 40 }
+        hardware:
+          type: object
+          nullable: true
+          properties:
+            material: { type: string, maxLength: 60 }
+            finish: { type: string, maxLength: 40 }
+        stitching: { type: string, nullable: true, maxLength: 100 }
+        handmade: { type: boolean, default: false }
+        madeIn: { type: string, nullable: true, maxLength: 40 }
+        careInstructions:
+          type: array
+          maxItems: 10
+          items: { type: string, minLength: 1, maxLength: 200 }
+        warranty:
+          type: object
+          nullable: true
+          properties:
+            months: { type: integer, minimum: 1, maximum: 60 }
+            description: { type: string, maxLength: 200 }
     AdminVariant:
       allOf:
         - $ref: '#/components/schemas/ProductVariant'
@@ -7542,6 +7844,10 @@ components:
             soldCount: { type: integer, example: 64 }
             stockAlertSubscribers: { type: integer, example: 7 }
     AdminProduct:
+      description: |
+        همه‌ی فیلدهای `ProductDetail` (همان چیزی که مشتری می‌بیند) به‌اضافه‌ی فیلدهای پنل. `variants` فقط رنگ‌های **فعال** است و
+        موجودی‌اش همان قانون فروشگاه را دارد؛ `adminVariants` **همه‌ی** رنگ‌ها (فعال و غیرفعال) با موجودی دقیق.
+        فیلدهای فقط‌مشتری: `isWishlisted` و `stockAlert` و `campaign` همیشه `null`، `perks` خالی، `selectedColorKey` رنگ پیش‌فرض.
       allOf:
         - $ref: '#/components/schemas/ProductDetail'
         - type: object
@@ -7552,24 +7858,25 @@ components:
               items: { $ref: '#/components/schemas/AdminVariant' }
             newUntil: { type: string, format: date-time, nullable: true }
             sortPriority: { type: integer }
-            viewsCount: { type: integer, example: 5230 }
-            conversionRate: { type: number, example: 3.5 }
+            publishAt: { type: string, format: date-time, nullable: true, description: 'زمان انتشار برنامه‌ریزی‌شده‌ی محصول پیش‌نویس؛ بدون برنامه `null`' }
+            viewsCount: { type: integer, nullable: true, description: 'تا آمار بازدید ساخته نشده `null`', example: 5230 }
+            conversionRate: { type: number, nullable: true, description: 'تا آمار بازدید ساخته نشده `null`', example: 3.5 }
             createdAt: { type: string, format: date-time }
-            createdBy: { type: string, example: admin@kiva.ir }
-            etag: { type: string }
+            createdBy: { type: string, description: 'اسم نمایشی سازنده: نام کامل، وگرنه موبایل ماسک‌شده؛ برای کار سیستم «سیستم»', example: لیلا احمدی }
+            etag: { type: string, description: 'همان هدر `ETag`: `W/"{نسخه}"`', example: 'W/"12"' }
     AdminProductListItem:
       type: object
       properties:
         id: { type: integer }
         sku: { type: string }
         name: { type: string }
-        imageUrl: { type: string, format: uri }
+        imageUrl: { type: string, format: uri, nullable: true, description: 'نسخه‌ی کوچک اولین مدیای رنگ پیش‌فرض؛ بدون مدیا `null`' }
         category: { $ref: '#/components/schemas/CategoryRef' }
         status: { $ref: '#/components/schemas/ProductStatus' }
         price: { $ref: '#/components/schemas/PriceInfo' }
-        totalStock: { type: integer, example: 12 }
-        variantsCount: { type: integer, example: 4 }
-        lowStockVariants: { type: integer, example: 1 }
+        totalStock: { type: integer, description: 'جمع موجودی قابل فروش رنگ‌های فعال', example: 12 }
+        variantsCount: { type: integer, description: 'همه‌ی رنگ‌ها (فعال و غیرفعال)', example: 4 }
+        lowStockVariants: { type: integer, description: 'رنگ‌های فعال با موجودی بین صفر و آستانه', example: 1 }
         soldCount: { type: integer, example: 184 }
         rating: { $ref: '#/components/schemas/RatingBrief' }
         updatedAt: { type: string, format: date-time }
@@ -7585,8 +7892,8 @@ components:
       required: [variantId, delta, reason]
       properties:
         variantId: { type: integer, example: 101 }
-        delta: { type: integer, description: مثبت = ورود، منفی = خروج, example: 10 }
-        reason: { type: string, enum: [RESTOCK, STOCKTAKE, DAMAGED, RETURNED, MANUAL_CORRECTION] }
+        delta: { type: integer, minimum: -10000, maximum: 10000, description: 'مثبت = ورود، منفی = خروج؛ صفر نه. `STOCKTAKE` هم تفاوت است، نه عدد شمارش', example: 10 }
+        reason: { type: string, enum: [RESTOCK, STOCKTAKE, DAMAGED, RETURNED, MANUAL_CORRECTION], description: '`RESTOCK` و `RETURNED` فقط مثبت، `DAMAGED` فقط منفی، `STOCKTAKE` و `MANUAL_CORRECTION` هر دو' }
         note: { type: string, maxLength: 300 }
     InventoryAdjustment:
       type: object
@@ -7595,44 +7902,52 @@ components:
         variantId: { type: integer }
         sku: { type: string }
         delta: { type: integer }
-        reason: { type: string }
+        reason: { type: string, enum: [RESTOCK, STOCKTAKE, DAMAGED, RETURNED, MANUAL_CORRECTION] }
         note: { type: string, nullable: true }
-        stockAfter: { type: integer }
+        stockAfter: { type: integer, description: 'موجودی فیزیکی (`stockOnHand`) بعد از همین تغییر' }
         createdAt: { type: string, format: date-time }
-        createdBy: { type: string }
+        createdBy: { type: string, description: 'اسم نمایشی: نام کامل، وگرنه موبایل ماسک‌شده؛ برای کار سیستم «سیستم»', example: لیلا احمدی }
     CategoryUpsertRequest:
       type: object
-      required: [name, slug]
+      required: [name, slug, iconBagType, iconColorKey]
       properties:
-        name: { type: string, example: کیف دوشی }
-        slug: { type: string, pattern: '^(?=.*[a-z])[a-z0-9]+(-[a-z0-9]+)*$', description: 'حداقل یک حرف (تا با id عددی اشتباه نشود)', example: shoulder }
-        description: { type: string, nullable: true }
+        name: { type: string, minLength: 1, maxLength: 100, example: کیف دوشی }
+        slug: { type: string, maxLength: 100, pattern: '^(?=.*[a-z])[a-z0-9]+(-[a-z0-9]+)*$', description: 'حداقل یک حرف (تا با id عددی اشتباه نشود)؛ یکتا (`409 DUPLICATE_SLUG`)', example: shoulder }
+        description: { type: string, nullable: true, maxLength: 500 }
         iconBagType: { $ref: '#/components/schemas/BagType' }
-        iconColorKey: { $ref: '#/components/schemas/ColorKey' }
-        imageMediaId: { type: string, nullable: true }
-        sortOrder: { type: integer }
+        iconColorKey: { allOf: [{ $ref: '#/components/schemas/ColorKey' }], description: 'رنگی از پالت (`400 COLOR_NOT_FOUND`)' }
+        imageMediaId: { type: string, nullable: true, description: 'فقط مدیای آپلودشده با `purpose = CATEGORY` (فقط عکس)' }
+        sortOrder: { type: integer, default: 0 }
         showInMenu: { type: boolean, default: true }
-        seo: { $ref: '#/components/schemas/SeoMeta' }
+        seo:
+          type: object
+          description: 'فقط این سه فیلد خوانده می‌شوند'
+          properties:
+            title: { type: string, maxLength: 70, nullable: true }
+            description: { type: string, maxLength: 170, nullable: true }
+            noIndex: { type: boolean, default: false }
     ColorUpsertRequest:
       type: object
       required: [key, name, hex]
       properties:
-        key: { $ref: '#/components/schemas/ColorKey' }
-        name: { type: string, example: یاسی }
+        key: { allOf: [{ $ref: '#/components/schemas/ColorKey' }], description: 'یکتا (`409 DUPLICATE_CODE`)؛ در `PUT` باید همان کلید مسیر باشد (`400 COLOR_KEY_IMMUTABLE`)' }
+        name: { type: string, minLength: 1, maxLength: 50, example: یاسی }
         hex: { type: string, pattern: '^#[0-9A-Fa-f]{6}$', example: '#C8B6E2' }
-        isLight: { type: boolean }
-        sortOrder: { type: integer }
+        isLight: { type: boolean, default: false }
+        sortOrder: { type: integer, description: 'پیش‌فرض در ساخت: بعد از آخرین رنگ' }
     MaterialUpsertRequest:
       type: object
       required: [name, slug, family]
       properties:
-        name: { type: string, example: چرم طبیعی گاوی }
-        slug: { type: string, example: genuine-cow-leather }
+        name: { type: string, minLength: 1, maxLength: 120, example: چرم طبیعی گاوی }
+        slug: { type: string, maxLength: 100, pattern: '^(?=.*[a-z])[a-z0-9]+(-[a-z0-9]+)*$', description: 'یکتا (`409 DUPLICATE_SLUG`)', example: genuine-cow-leather }
         family: { $ref: '#/components/schemas/MaterialFamily' }
-        description: { type: string, nullable: true }
+        description: { type: string, nullable: true, maxLength: 1000 }
         careInstructions:
           type: array
-          items: { type: string }
+          maxItems: 10
+          description: 'حداکثر ۱۰ تا، هر کدام ۱ تا ۲۰۰ نویسه (`CARE_INSTRUCTIONS_INVALID`)'
+          items: { type: string, minLength: 1, maxLength: 200 }
     AdminCategory:
       description: دسته‌بندی در پنل؛ `Category` به‌اضافه‌ی شناسه‌ی مدیای عکس تا فرم ویرایش بداند عکس فعلی کدام است
       allOf:
@@ -8162,7 +8477,7 @@ components:
               orders: { type: integer }
     AuditEntityType:
       type: string
-      description: نوع چیزی که در پنل تغییر کرد
+      description: 'نوع چیزی که در پنل تغییر کرد. `MEDIA` استفاده نمی‌شود: آپلود مدیا در لاگ تغییرات ثبت نمی‌شود.'
       enum: [PRODUCT, VARIANT, INVENTORY, MEDIA, CATEGORY, COLOR, MATERIAL, ORDER, RETURN, REFUND, DISCOUNT_CODE, CAMPAIGN, BANNER, ANNOUNCEMENT, TESTIMONIAL, FAQ, PAGE, SETTINGS, REVIEW, CONTACT_MESSAGE, USER]
     AuditLogEntry:
       type: object

@@ -49,6 +49,9 @@ fun FailureKind.toHttpStatus(): HttpStatusCode = when (this) {
     FailureKind.CONFLICT -> HttpStatusCode.Conflict
     FailureKind.BUSINESS_RULE -> HttpStatusCode.UnprocessableEntity
     FailureKind.RATE_LIMITED -> HttpStatusCode.TooManyRequests
+    FailureKind.PRECONDITION_FAILED -> HttpStatusCode.PreconditionFailed
+    FailureKind.PAYLOAD_TOO_LARGE -> HttpStatusCode.PayloadTooLarge
+    FailureKind.UNSUPPORTED_MEDIA_TYPE -> HttpStatusCode.UnsupportedMediaType
 }
 
 /**

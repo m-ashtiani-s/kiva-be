@@ -761,7 +761,7 @@ Route: 201 با MediaAsset
 
 | گام | عنوان | اندازه | وضعیت |
 |---|---|---|---|
-| ۱.۰ | کانترکت 1.8.0 و آماده‌سازی | M | ⬜ |
+| ۱.۰ | کانترکت 1.8.0 و آماده‌سازی | M | ✅ |
 | ۱.۱ | لاگ تغییرات | M | ⬜ |
 | ۱.۲ | آپلود مدیا | L | ⬜ |
 | ۱.۳ | دسته، رنگ و متریال | M | ⬜ |
@@ -1149,8 +1149,9 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 | 16 | متریال‌ها | الگوی `slug` و ≤ ۱۰۰؛ `409 DUPLICATE_SLUG` روی `POST`؛ `description` ≤ ۱۰۰۰؛ `careInstructions` حداکثر ۱۰ × ≤ ۲۰۰؛ توضیح `PUT`: «اسم تازه در متن جستجو می‌نشیند» (بدون «توضیح») | تصمیم ۱۷ |
 | 17 | `ErrorCode` | `DUPLICATE_CODE` (تازه؛ متن: «این کد قبلاً استفاده شده») | ردیف ۱۵ |
 | 18 | مثال‌های SKU | `KV-1001-LIL` ← `KV-1001-LILAC` | قانون واقعی `Sku.forVariant` |
+| 19 | `ProductUpsertRequest.specs` | شِمای تازه‌ی `ProductSpecsInput`: همون `ProductSpecs` با سقف هر فیلد (ردیف `ProductSpecs` ِ ۶.۳)، و `seo` ِ ورودی محصول و دسته فقط با `title`، `description`، `noIndex` | `ProductSpecs` ِ پاسخ هیچ سقفی نداشت و `label`ها رو سرور می‌سازه (گام ۱.۰) |
 
-**کدهای فیلدی تازه** (در enum ِ کانترکت نیستن، ولی متن فارسی تو `ErrorMessages.kt` می‌گیرن): `SLUG_IMMUTABLE`، `SKU_IMMUTABLE`، `COLOR_KEY_IMMUTABLE`، `IF_MATCH_INVALID`، `PUBLISH_AT_NOT_ALLOWED`، `PUBLISH_AT_TOO_FAR`، `MEDIA_ID_INVALID`، `MEDIA_NOT_FOUND`، `MEDIA_PURPOSE_MISMATCH`، `MEDIA_TYPE_NOT_ALLOWED`، `MEDIA_VIEW_INVALID`، `MEDIA_PRIMARY_DUPLICATE`، `MEDIA_DUPLICATE`، `MEDIA_TOO_MANY`، `MEDIA_ALT_TOO_LONG` (هست)، `IMAGE_TOO_SMALL`، `IMAGE_TOO_LARGE`، `VIDEO_TOO_LONG`، `FILE_COUNT_INVALID`، `MEDIA_PURPOSE_INVALID`، `BARCODE_INVALID`، `TAG_INVALID`، `TAGS_TOO_MANY`، `SEO_TITLE_TOO_LONG`، `SEO_DESCRIPTION_TOO_LONG`، `MATERIAL_FAMILY_INVALID`، `CATEGORY_DESCRIPTION_TOO_LONG`، `MATERIAL_NOTE_TOO_LONG`، `CARE_INSTRUCTIONS_INVALID`، `DATE_RANGE_INVALID`، و کدهای هر فیلد تازه‌ی `specs`. `MEDIA_INVALID` و `SPECS_INVALID` هم که الان متن ندارن، متن می‌گیرن.
+**کدهای فیلدی تازه** (در enum ِ کانترکت نیستن، ولی متن فارسی تو `ErrorMessages.kt` می‌گیرن؛ گام ۱.۰ این‌ها رو هم اضافه کرد: `FIELD_REQUIRED` برای فیلد اجباری ِ نیومده، `STOCK_QUANTITY_INVALID`، `DATE_INVALID`، `AUDIT_ENTITY_TYPE_INVALID`، `ENTITY_ID_TOO_LONG`، و کدهای `specs`: `STRAPS_TOO_MANY`، `STRAP_TYPE_INVALID`، `STRAP_LENGTH_INVALID`، `STRAP_LENGTH_RANGE_INVALID`، `STRAP_MATERIAL_TOO_LONG`، `POCKET_COUNT_INVALID`، `LAPTOP_MAX_INCH_INVALID`، `CAPACITY_LITERS_INVALID`، `FIT_ITEM_INVALID`، `LINING_MATERIAL_TOO_LONG`، `LINING_COLOR_TOO_LONG`، `HARDWARE_MATERIAL_TOO_LONG`، `HARDWARE_FINISH_TOO_LONG`، `STITCHING_TOO_LONG`، `MADE_IN_TOO_LONG`، `WARRANTY_MONTHS_INVALID`، `WARRANTY_DESCRIPTION_TOO_LONG`): `SLUG_IMMUTABLE`، `SKU_IMMUTABLE`، `COLOR_KEY_IMMUTABLE`، `IF_MATCH_INVALID`، `PUBLISH_AT_NOT_ALLOWED`، `PUBLISH_AT_TOO_FAR`، `MEDIA_ID_INVALID`، `MEDIA_NOT_FOUND`، `MEDIA_PURPOSE_MISMATCH`، `MEDIA_TYPE_NOT_ALLOWED`، `MEDIA_VIEW_INVALID`، `MEDIA_PRIMARY_DUPLICATE`، `MEDIA_DUPLICATE`، `MEDIA_TOO_MANY`، `MEDIA_ALT_TOO_LONG` (هست)، `IMAGE_TOO_SMALL`، `IMAGE_TOO_LARGE`، `VIDEO_TOO_LONG`، `FILE_COUNT_INVALID`، `MEDIA_PURPOSE_INVALID`، `BARCODE_INVALID`، `TAG_INVALID`، `TAGS_TOO_MANY`، `SEO_TITLE_TOO_LONG`، `SEO_DESCRIPTION_TOO_LONG`، `MATERIAL_FAMILY_INVALID`، `CATEGORY_DESCRIPTION_TOO_LONG`، `MATERIAL_NOTE_TOO_LONG`، `CARE_INSTRUCTIONS_INVALID`، `DATE_RANGE_INVALID`، و کدهای هر فیلد تازه‌ی `specs`. `MEDIA_INVALID` و `SPECS_INVALID` هم که الان متن ندارن، متن می‌گیرن.
 
 **پیام برای فرانت:** همه‌ی ردیف‌ها رفتار پنل رو تعریف می‌کنن؛ ردیف‌های ۹ و جدول ۶.۷ رفتار فروشگاه رو هم عوض می‌کنن. `docs/FRONTEND_PANEL_CATALOG.md` (گام ۱.۱۰).
 
@@ -1170,7 +1171,7 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 
 ---
 
-#### گام ۱.۰: کانترکت 1.8.0 و آماده‌سازی · M ⬜
+#### گام ۱.۰: کانترکت 1.8.0 و آماده‌سازی · M ✅
 
 **می‌سازی:**
 - برنچ `panel-catalog`.
@@ -1187,11 +1188,11 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 - چرا همه‌ی متن‌ها اول کار؟ تا `ErrorMessagesTest` از اول سبز باشه و هیچ گامی با متن نصفه تموم نشه.
 
 **تموم شده یعنی:**
-- [ ] کانترکت 1.8.0 با هر ۱۸ ردیف؛ YAML معتبره؛ `ErrorMessagesTest` سبزه (`DUPLICATE_CODE` متن داره).
-- [ ] `FailureKind.PRECONDITION_FAILED` ← 412، `PAYLOAD_TOO_LARGE` ← 413، `UNSUPPORTED_MEDIA_TYPE` ← 415، با تست `Problem`.
-- [ ] `version` ِ Aggregate ِ تازه بعد از `create` با دو رنگ ۳ ـه، و بعد از بارگذاری از ۵ رویداد ۵.
-- [ ] `RouteGuardsTest` تست ۴۰۳ رو داره و روی `/admin/customers` سبزه (یه کاربر `SUPPORT` به `PUT …/roles` ← 403).
-- [ ] `PanelTestStack` با یه تست نمونه کار می‌کنه.
+- [x] کانترکت 1.8.0 با هر ۱۸ ردیف؛ YAML معتبره؛ `ErrorMessagesTest` سبزه (`DUPLICATE_CODE` متن داره).
+- [x] `FailureKind.PRECONDITION_FAILED` ← 412، `PAYLOAD_TOO_LARGE` ← 413، `UNSUPPORTED_MEDIA_TYPE` ← 415، با تست `Problem`.
+- [x] `version` ِ Aggregate ِ تازه بعد از `create` با دو رنگ ۳ ـه، و بعد از بارگذاری از ۵ رویداد ۵.
+- [x] `RouteGuardsTest` تست ۴۰۳ رو داره و روی `/admin/customers` سبزه (یه کاربر `SUPPORT` به `PUT …/roles` ← 403).
+- [x] `PanelTestStack` با یه تست نمونه کار می‌کنه.
 
 ---
 
@@ -5859,3 +5860,4 @@ kiva {
 | تاریخ | گام | کامیت | یادداشت |
 |---|---|---|---|
 | ۲۵ مهر ۱۴۰۵ | — | — | سند نوشته شد. تصمیم‌های بخش ۱ (ردیف‌های ۱ تا ۱۰) پذیرفته شدن؛ بقیه پیشنهاد این سنده و با هر گام ۰ در کانترکت نوشته می‌شه |
+| ۲۶ مهر ۱۴۰۵ | ۱.۰ | Phase 1 step 1.0 | کانترکت 1.8.0 با هر ۱۸ ردیف ِ ۶.۸ و ردیف تازه‌ی ۱۹ (`ProductSpecsInput`). سه `FailureKind` ِ تازه، `EventSourceEntity.version`، متن همه‌ی کدهای تازه، تست چهارم `RouteGuardsTest` و `PanelTestStack`. کار روی برنچ `claude/sweet-lamport-v3gy0d` (برنچ تعیین‌شده‌ی این جلسه) به‌جای `panel-catalog` |

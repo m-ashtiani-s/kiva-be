@@ -28,4 +28,13 @@ enum class FailureKind {
 
     /** Too many attempts in a short time (OTP, tracking lookup). -> 429 */
     RATE_LIMITED,
+
+    /** The version the caller edited (`If-Match`) is no longer the current one: someone saved in between. -> 412 */
+    PRECONDITION_FAILED,
+
+    /** An upload bigger than its limit. -> 413 */
+    PAYLOAD_TOO_LARGE,
+
+    /** An upload of a type that isn't accepted, judged by its content. -> 415 */
+    UNSUPPORTED_MEDIA_TYPE,
 }
