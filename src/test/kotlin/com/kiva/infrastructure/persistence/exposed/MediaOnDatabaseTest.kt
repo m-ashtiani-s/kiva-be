@@ -2,6 +2,8 @@ package com.kiva.infrastructure.persistence.exposed
 
 import com.kiva.application.usecase.media.usecase.command.DeleteUnattachedMediaUc
 import com.kiva.application.usecase.media.usecase.query.FindUnattachedMediaUc
+import com.kiva.application.usecase.product.usecase.command.PublishScheduledProductUc
+import com.kiva.application.usecase.product.usecase.query.FindDueScheduledProductsUc
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.media.entity.MediaAsset
 import com.kiva.domain.aggregate.media.model.valueobject.MediaAlt
@@ -128,6 +130,8 @@ class MediaOnDatabaseTest {
             DeleteOldAuditEntriesUc(transactions, AuditTrailImpl(), clock),
             FindUnattachedMediaUc(transactions, repository, clock),
             DeleteUnattachedMediaUc(transactions, repository, storage, clock),
+            FindDueScheduledProductsUc(transactions, ProductQmRepositoryImpl(), clock),
+            PublishScheduledProductUc(transactions, ProductRepositoryImpl(), clock),
         )
 
         jobs.deleteUnattachedMedia()

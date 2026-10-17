@@ -41,6 +41,7 @@ abstract class UnusedProductQmRepository : ProductQmRepository {
     override fun findForAdmin(filter: AdminProductFilter, pageable: Pageable): Page<AdminProductQm> = unused()
     override fun findAdminDetail(productId: ProductId): AdminProductDetailQm? = unused()
     override fun findVariant(variantId: VariantId): VariantQm? = unused()
+    override fun findDueScheduled(now: Instant, limit: Int): List<ProductId> = unused()
     override fun isSlugTaken(slug: Slug): Boolean = unused()
     override fun findTakenSkus(skus: Collection<Sku>): Set<Sku> = unused()
     override fun countActiveByCategory(): Map<Slug, Int> = unused()

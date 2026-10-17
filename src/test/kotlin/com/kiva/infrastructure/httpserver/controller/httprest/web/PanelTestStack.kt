@@ -23,9 +23,13 @@ import com.kiva.application.usecase.catalog.usecase.query.ListAdminMaterialsUc
 import com.kiva.application.usecase.media.MediaAttachments
 import com.kiva.application.usecase.media.usecase.command.UploadMediaUc
 import com.kiva.application.usecase.product.ProductInput
+import com.kiva.application.usecase.product.usecase.command.ArchiveProductUc
+import com.kiva.application.usecase.product.usecase.command.ChangeProductStatusUc
 import com.kiva.application.usecase.product.usecase.command.CreateProductUc
+import com.kiva.application.usecase.product.usecase.command.PublishScheduledProductUc
 import com.kiva.application.usecase.product.usecase.command.UpdateProductUc
 import com.kiva.application.usecase.product.usecase.query.FindAdminProductsUc
+import com.kiva.application.usecase.product.usecase.query.FindDueScheduledProductsUc
 import com.kiva.application.usecase.product.usecase.query.GetAdminProductUc
 import com.kiva.common.patch.Patch
 import com.kiva.common.valueobject.IranianMobileNumber
@@ -164,7 +168,13 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
             auditTrail, clock,
         ),
         updateProduct = UpdateProductUc(transactions, productDomainService, products, productInput, auditTrail, clock),
+        changeStatus = ChangeProductStatusUc(transactions, products, auditTrail, clock),
+        archiveProduct = ArchiveProductUc(transactions, products, auditTrail, clock),
     )
+
+    // The publish job's two use cases, run by the tests the way PanelJobs runs them.
+    val findDueScheduled = FindDueScheduledProductsUc(transactions, productQm, clock)
+    val publishScheduled = PublishScheduledProductUc(transactions, products, clock)
 
     /** A logged-in user of the panel: who they are and the access token of their session. */
     class Caller(val user: User, val token: String) {

@@ -17,6 +17,8 @@ import com.kiva.domain.aggregate.product.entity.event.ProductCreated
 import com.kiva.domain.aggregate.product.entity.event.ProductDetailsChanged
 import com.kiva.domain.aggregate.product.entity.event.ProductDomainEvent
 import com.kiva.domain.aggregate.product.entity.event.ProductPriceChanged
+import com.kiva.domain.aggregate.product.entity.event.ProductPublishScheduled
+import com.kiva.domain.aggregate.product.entity.event.ProductPublishUnscheduled
 import com.kiva.domain.aggregate.product.entity.event.ProductPublished
 import com.kiva.domain.aggregate.product.entity.event.ProductUnpublished
 import com.kiva.domain.aggregate.product.entity.event.VariantAdded
@@ -38,6 +40,8 @@ import com.kiva.infrastructure.persistence.event.serializer.payload.product.Prod
 import com.kiva.infrastructure.persistence.event.serializer.payload.product.ProductCreatedPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.product.ProductDetailsChangedPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.product.ProductPriceChangedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.product.ProductPublishScheduledPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.product.ProductPublishUnscheduledPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.product.ProductPublishedPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.product.ProductUnpublishedPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.product.VariantAddedPayload
@@ -72,6 +76,8 @@ object DomainEventSerializer {
         is ProductPriceChanged -> json.encodeToString(ProductPriceChangedPayload(event))
         is ProductPublished -> json.encodeToString(ProductPublishedPayload(event))
         is ProductUnpublished -> json.encodeToString(ProductUnpublishedPayload(event))
+        is ProductPublishScheduled -> json.encodeToString(ProductPublishScheduledPayload(event))
+        is ProductPublishUnscheduled -> json.encodeToString(ProductPublishUnscheduledPayload(event))
         is ProductArchived -> json.encodeToString(ProductArchivedPayload(event))
         is VariantAdded -> json.encodeToString(VariantAddedPayload(event))
         is VariantChanged -> json.encodeToString(VariantChangedPayload(event))
@@ -90,6 +96,8 @@ object DomainEventSerializer {
             ProductPriceChanged.TYPE.value -> json.decodeFromString<ProductPriceChangedPayload>(payload)
             ProductPublished.TYPE.value -> json.decodeFromString<ProductPublishedPayload>(payload)
             ProductUnpublished.TYPE.value -> json.decodeFromString<ProductUnpublishedPayload>(payload)
+            ProductPublishScheduled.TYPE.value -> json.decodeFromString<ProductPublishScheduledPayload>(payload)
+            ProductPublishUnscheduled.TYPE.value -> json.decodeFromString<ProductPublishUnscheduledPayload>(payload)
             ProductArchived.TYPE.value -> json.decodeFromString<ProductArchivedPayload>(payload)
             VariantAdded.TYPE.value -> json.decodeFromString<VariantAddedPayload>(payload)
             VariantChanged.TYPE.value -> json.decodeFromString<VariantChangedPayload>(payload)

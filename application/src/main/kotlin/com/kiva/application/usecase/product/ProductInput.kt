@@ -43,7 +43,6 @@ import com.kiva.domain.aggregate.product.model.valueobject.ShortDescription
 import com.kiva.domain.aggregate.product.model.valueobject.Sku
 import com.kiva.domain.aggregate.product.model.valueobject.StrapInfo
 import com.kiva.domain.aggregate.product.model.valueobject.WarrantyInfo
-import java.time.Instant
 
 /**
  * Reads the product form (the contract's ProductUpsertRequest and VariantUpsertRequest) the same way for every use
@@ -78,7 +77,7 @@ class ProductInput(private val htmlSanitizer: HtmlSanitizer) {
         val highlights: List<String>?,
         val specs: Specs?,
         val tags: List<String>?,
-        val newUntil: Instant?,
+        val newUntil: String?,
         val maxPerOrder: Int?,
         val returnable: Boolean?,
         val reservable: Boolean?,
@@ -208,6 +207,7 @@ class ProductInput(private val htmlSanitizer: HtmlSanitizer) {
         val highlights = problems.take(Highlights.makeNew(fields.highlights.orEmpty()))
         val specs = problems.take(specsOf(fields.specs ?: Specs.NONE).forField("specs"))
         val tags = problems.take(ProductTags.makeNew(fields.tags))
+        val newUntil = problems.take(MomentField.makeNew(fields.newUntil).forField("newUntil"))
         val maxPerOrder = problems.take(fields.maxPerOrder?.let { MaxPerOrder.makeNew(it) } ?: Result.success(MaxPerOrder.DEFAULT))
         val seo = problems.take(fields.seo?.let { SeoMeta.makeNew(it.title, it.description, it.noIndex) } ?: Result.success(SeoMeta.NONE))
         val priceTag = problems.take(fields.price.required().forField("price").bind { priceTagOf(it, fields.compareAtPrice, "price", "compareAtPrice") })
@@ -223,7 +223,7 @@ class ProductInput(private val htmlSanitizer: HtmlSanitizer) {
             description = description.value,
             highlights = highlights.value,
             specs = specs.value,
-            newUntil = fields.newUntil,
+            newUntil = newUntil.value,
             maxPerOrder = maxPerOrder.value,
             returnable = fields.returnable ?: true,
             reservable = fields.reservable ?: true,

@@ -12,6 +12,8 @@ import com.kiva.domain.aggregate.product.entity.event.ProductCreated
 import com.kiva.domain.aggregate.product.entity.event.ProductDetailsChanged
 import com.kiva.domain.aggregate.product.entity.event.ProductDomainEvent
 import com.kiva.domain.aggregate.product.entity.event.ProductPriceChanged
+import com.kiva.domain.aggregate.product.entity.event.ProductPublishScheduled
+import com.kiva.domain.aggregate.product.entity.event.ProductPublishUnscheduled
 import com.kiva.domain.aggregate.product.entity.event.ProductPublished
 import com.kiva.domain.aggregate.product.entity.event.ProductUnpublished
 import com.kiva.domain.aggregate.product.entity.event.VariantAdded
@@ -30,6 +32,7 @@ import com.kiva.domain.aggregate.product.model.valueobject.ProductStatus.ARCHIVE
 import com.kiva.domain.aggregate.product.model.valueobject.ProductStatus.DRAFT
 import com.kiva.domain.aggregate.product.model.valueobject.Sku
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
+import java.time.Duration
 import java.time.Instant
 import kotlin.properties.Delegates
 
@@ -66,6 +69,10 @@ class Product private constructor() : EventSourceEntity<ProductDomainEvent>() {
     var status: ProductStatus = DRAFT
         private set
 
+    /** When a draft is set to go into the shop (the job publishes it then), or null. Only a draft has one. */
+    var publishAt: Instant? = null
+        private set
+
     private val variantList = mutableListOf<Variant>()
 
     /** The colors, in the order they were added (deactivated ones included). */
@@ -90,6 +97,9 @@ class Product private constructor() : EventSourceEntity<ProductDomainEvent>() {
     }
 
     companion object {
+        /** How far ahead a draft can be scheduled (the contract's 365 days). */
+        val MAX_SCHEDULE_AHEAD: Duration = Duration.ofDays(365)
+
         /**
          * A new product, always a DRAFT and without colors (add them with [addVariant]). Without a typed SKU it gets one
          * from its id (`KV-1001`). It can't fail: every part is already a valid value.
@@ -257,6 +267,34 @@ class Product private constructor() : EventSourceEntity<ProductDomainEvent>() {
         return Result.success(this)
     }
 
+    /**
+     * Sets a draft to go into the shop at [at]: it stays a draft until then (the job publishes it). Only a draft with an
+     * active color can be scheduled, at most [MAX_SCHEDULE_AHEAD] ahead; a moment already passed is for the caller to
+     * publish right away instead. The same moment again changes nothing; another one replaces it.
+     */
+    fun schedulePublish(at: Instant, by: UserId, now: Instant): Result<Product, SchedulePublishFailure> {
+        when (status) {
+            ACTIVE -> return Result.failure(SchedulePublishFailure.PublishAtNotAllowed)
+            ARCHIVED -> return Result.failure(SchedulePublishFailure.ProductIsArchived)
+            DRAFT -> Unit
+        }
+        require(at.isAfter(now)) { "A schedule in the past is a publish now: $at <= $now" }
+        if (activeVariants().isEmpty()) return Result.failure(SchedulePublishFailure.NoActiveVariant)
+        if (at.isAfter(now.plus(MAX_SCHEDULE_AHEAD))) return Result.failure(SchedulePublishFailure.PublishAtTooFar)
+        if (at == publishAt) return Result.success(this)
+
+        raiseEvent(ProductPublishScheduled(id, nextSequence(), now, by, at))
+        return Result.success(this)
+    }
+
+    /** Calls off a draft's schedule; it stays a draft. */
+    fun unschedulePublish(by: UserId, now: Instant): Result<Product, UnschedulePublishFailure> {
+        if (publishAt == null) return Result.failure(UnschedulePublishFailure.NotScheduled)
+
+        raiseEvent(ProductPublishUnscheduled(id, nextSequence(), now, by))
+        return Result.success(this)
+    }
+
     /** ACTIVE back to DRAFT: out of the shop for now. */
     fun unpublish(by: UserId, now: Instant): Result<Product, UnpublishFailure> {
         when (status) {
@@ -290,9 +328,21 @@ class Product private constructor() : EventSourceEntity<ProductDomainEvent>() {
             }
             is ProductDetailsChanged -> details = event.details
             is ProductPriceChanged -> priceTag = event.priceTag
-            is ProductPublished -> status = ACTIVE
-            is ProductUnpublished -> status = DRAFT
-            is ProductArchived -> status = ARCHIVED
+            // Publishing, taking out or archiving always ends a schedule.
+            is ProductPublished -> {
+                status = ACTIVE
+                publishAt = null
+            }
+            is ProductUnpublished -> {
+                status = DRAFT
+                publishAt = null
+            }
+            is ProductArchived -> {
+                status = ARCHIVED
+                publishAt = null
+            }
+            is ProductPublishScheduled -> publishAt = event.publishAt
+            is ProductPublishUnscheduled -> publishAt = null
             is VariantAdded -> {
                 if (event.isDefault) variantList.replaceAll { it.copy(isDefault = false) }
                 variantList += Variant(
@@ -409,6 +459,24 @@ class Product private constructor() : EventSourceEntity<ProductDomainEvent>() {
 
         data class InvalidStatusTransition(val from: ProductStatus, val to: ProductStatus) :
             PublishFailure("INVALID_STATUS_TRANSITION", FailureKind.BUSINESS_RULE, mapOf("from" to from.name, "to" to to.name))
+    }
+
+    sealed class SchedulePublishFailure(code: String, kind: FailureKind, field: String? = null, meta: Map<String, Any> = emptyMap()) :
+        ResultFailure(code, kind, field, meta = meta) {
+        /** Only a draft waits for its moment; a product in the shop is there already. */
+        data object PublishAtNotAllowed : SchedulePublishFailure("PUBLISH_AT_NOT_ALLOWED", FailureKind.INVALID, "publishAt")
+
+        data object ProductIsArchived : SchedulePublishFailure("PRODUCT_ARCHIVED", FailureKind.BUSINESS_RULE)
+
+        data object NoActiveVariant : SchedulePublishFailure("NO_ACTIVE_VARIANT", FailureKind.BUSINESS_RULE)
+
+        data object PublishAtTooFar :
+            SchedulePublishFailure("PUBLISH_AT_TOO_FAR", FailureKind.INVALID, "publishAt", mapOf("maxDays" to MAX_SCHEDULE_AHEAD.toDays().toInt()))
+    }
+
+    sealed class UnschedulePublishFailure(code: String, kind: FailureKind) : ResultFailure(code, kind) {
+        /** No schedule to call off: the draft is a draft already. */
+        data object NotScheduled : UnschedulePublishFailure("PRODUCT_ALREADY_DRAFT", FailureKind.BUSINESS_RULE)
     }
 
     sealed class UnpublishFailure(code: String, kind: FailureKind, meta: Map<String, Any> = emptyMap()) :

@@ -80,9 +80,13 @@ import com.kiva.application.usecase.payment.PaymentConfirmation
 import com.kiva.application.usecase.payment.usecase.command.ReconcilePaymentUc
 import com.kiva.application.usecase.payment.usecase.query.FindStalePaymentsUc
 import com.kiva.application.usecase.product.ProductInput
+import com.kiva.application.usecase.product.usecase.command.ArchiveProductUc
+import com.kiva.application.usecase.product.usecase.command.ChangeProductStatusUc
 import com.kiva.application.usecase.product.usecase.command.CreateProductUc
+import com.kiva.application.usecase.product.usecase.command.PublishScheduledProductUc
 import com.kiva.application.usecase.product.usecase.command.UpdateProductUc
 import com.kiva.application.usecase.product.usecase.query.FindAdminProductsUc
+import com.kiva.application.usecase.product.usecase.query.FindDueScheduledProductsUc
 import com.kiva.application.usecase.product.usecase.query.FindProductsUc
 import com.kiva.application.usecase.product.usecase.query.FindRelatedProductsUc
 import com.kiva.application.usecase.product.usecase.query.GetAdminProductUc
@@ -337,6 +341,10 @@ val useCaseModule = module(createdAtStart = true) {
         )
     }
     single { ProductInput(htmlSanitizer = get()) }
+    single { ChangeProductStatusUc(transactionManager = get(), productRepository = get(), auditTrail = get(), clock = get()) }
+    single { ArchiveProductUc(transactionManager = get(), productRepository = get(), auditTrail = get(), clock = get()) }
+    single { FindDueScheduledProductsUc(transactionManager = get(), productQmRepository = get(), clock = get()) }
+    single { PublishScheduledProductUc(transactionManager = get(), productRepository = get(), clock = get()) }
     single {
         UpdateProductUc(
             transactionManager = get(), productDomainService = get(), productRepository = get(), productInput = get(), auditTrail = get(), clock = get(),

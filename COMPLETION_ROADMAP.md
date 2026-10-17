@@ -767,7 +767,7 @@ Route: 201 با MediaAsset
 | ۱.۳ | دسته، رنگ و متریال | M | ✅ |
 | ۱.۴ | read model ِ پنل و دو Query ِ محصول | M | ✅ |
 | ۱.۵ | ساخت و ویرایش محصول، `If-Match` | L | ✅ |
-| ۱.۶ | وضعیت، آرشیو و انتشار زمان‌بندی‌شده | M | ⬜ |
+| ۱.۶ | وضعیت، آرشیو و انتشار زمان‌بندی‌شده | M | ✅ |
 | ۱.۷ | رنگ‌ها (ورینت‌ها) | M | ⬜ |
 | ۱.۸ | تغییر موجودی و تاریخچه‌اش | M | ⬜ |
 | ۱.۹ | عکس‌ها در فروشگاه، سبد و سفارش | M | ⬜ |
@@ -1370,7 +1370,7 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 
 ---
 
-#### گام ۱.۶: وضعیت، آرشیو و انتشار زمان‌بندی‌شده · M ⬜
+#### گام ۱.۶: وضعیت، آرشیو و انتشار زمان‌بندی‌شده · M ✅
 
 **می‌سازی:** `schedulePublish`، `unschedulePublish`، دو رویداد تازه و payloadهاشون؛ Projector (`publishAt`)؛ `ChangeProductStatusUc` (جدول ۶.۶)، `ArchiveProductUc`؛ `FindDueScheduledProductsUc` + `PublishScheduledProductUc` و job ِ `publish-scheduled-products` در `PanelJobs`؛ routeهای `PATCH …/status` و `DELETE /admin/products/{productId}`.
 
@@ -1381,13 +1381,23 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 - چرا job دوباره رنگ فعال رو چک می‌کنه؟ بین برنامه‌ریزی و موعد ممکنه آخرین رنگ غیرفعال شده باشه؛ قانون انتشار باید لحظه‌ی انتشار برقرار باشه.
 
 **تموم شده یعنی:**
-- [ ] هر ردیف جدول ۶.۶ یه تست.
-- [ ] برنامه برای ۱۰ دقیقه‌ی بعد ← `DRAFT` با `publishAt`؛ `MutableClock` ۱۱ دقیقه جلو و اجرای job ← `ACTIVE` و `publishedOn` = زمان اجرا.
-- [ ] محصولی که بعد از برنامه رنگ فعالش رو از دست داده ← job منتشرش نمی‌کنه، برنامه پاک می‌شه و یه WARN.
-- [ ] دو اجرای همزمان job ← یه `ProductPublished`.
-- [ ] `DELETE` ← `204` و آرشیو؛ دوباره ← `204` بدون رویداد و بدون لاگ.
-- [ ] محصول آرشیو‌شده در سبد ← ردیف `purchasable = false`.
-- [ ] دیتابیس رد می‌کنه: `publishAt` روی محصول `ACTIVE`.
+- [x] هر ردیف جدول ۶.۶ یه تست.
+- [x] برنامه برای ۱۰ دقیقه‌ی بعد ← `DRAFT` با `publishAt`؛ `MutableClock` ۱۱ دقیقه جلو و اجرای job ← `ACTIVE` و `publishedOn` = زمان اجرا.
+- [x] محصولی که بعد از برنامه رنگ فعالش رو از دست داده ← job منتشرش نمی‌کنه، برنامه پاک می‌شه و یه WARN.
+- [x] دو اجرای همزمان job ← یه `ProductPublished`.
+- [x] `DELETE` ← `204` و آرشیو؛ دوباره ← `204` بدون رویداد و بدون لاگ.
+- [x] محصول آرشیو‌شده در سبد ← ردیف `purchasable = false`.
+- [x] دیتابیس رد می‌کنه: `publishAt` روی محصول `ACTIVE`.
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- «گذشته = انتشار فوری» تصمیم UseCase ـه؛ `schedulePublish` با `at ≤ now` یه `require` ِ دامنه‌ست (باگ، نه خطای کاربر). خطاهای `schedulePublish` یه خانواده‌ی جدا دارن (`SchedulePublishFailure`)؛ `unschedulePublish` بدون برنامه ← `PRODUCT_ALREADY_DRAFT` (همون ردیف جدول).
+- `publish`، `unpublish` و `archive` در `apply` و در Projector برنامه رو پاک می‌کنن؛ قید `productqm_publish_at_only_draft` ِ `V24` دیوار دومه (تست: `UPDATE` ِ مستقیم روی محصول `ACTIVE` رد می‌شه).
+- `publishAt` (و `newUntil` ِ فرم محصول) با `MomentField` خونده می‌شه: ISO-8601 با offset، وگرنه `400 DATE_TIME_INVALID` روی همون فیلد (کد و متن تازه). این یه باگ ِ ۱.۵ رو هم درست کرد: `newUntil` ِ بدشکل بی‌صدا null می‌شد.
+- دو اجرای همزمان job: هر دو پیش‌نویس رو می‌خونن؛ event store اولی رو نگه می‌داره و `ConcurrentChangeException` ِ دومی در `PublishScheduledProductUc` یعنی «اجرای دیگه انجامش داد» (`Outcome.NOTHING`). تست با `CyclicBarrier` بعد از خوندن.
+- لاگ تغییرات: `PRODUCT_PUBLISHED`، `PRODUCT_UNPUBLISHED`، `PRODUCT_ARCHIVED`، `PRODUCT_PUBLISH_SCHEDULED`، `PRODUCT_PUBLISH_UNSCHEDULED` با `status` و `publishAt` ِ قبل و بعد. job لاگ نمی‌نویسه.
+- `DELETE` ِ دوباره ← `204` بدون رویداد و لاگ؛ «در سبد خریدنی نیست» با `OfferQmRepository` (منبع سبد) تست شد.
+- فایل‌های نمونه‌ی تست (`SampleMedia`) حالا «وصل‌شده» ذخیره می‌شن تا job ِ پاک‌سازی مدیا در تست خودش اون‌ها رو برنداره. `MutableClock` یه کپی هم در تست‌های application گرفت.
+- خرابکاری: حذف `catch (ConcurrentChangeException)` از `PublishScheduledProductUc` ← `two runs of the job on one product at the same moment publish it once` قرمز.
 
 ---
 
@@ -5919,3 +5929,4 @@ kiva {
 | ۲۵ مهر ۱۴۰۵ | ۱.۳ | Phase 1 step 1.3 | `V23`، `create`/`change` ِ دسته، رنگ و متریال با VOهای تازه (`CategoryDescription`، `MaterialNote`، `CareInstructions`، `SeoMeta` ِ مشترک)، ۱۱ UseCase ِ پنل و سه Query ِ بدنه، `MediaAttachments`، `webV1AdminCatalog.kt`، عکس و سئوی دسته در فروشگاه. خرابکاری: بدون `refreshSearchText` ← تست جستجوی اسم تازه قرمز |
 | ۲۵ مهر ۱۴۰۵ | ۱.۴ | Phase 1 step 1.4 | `V24` با backfillها (`version`، `createdByUserId`، `availableTotal`، `soldCount` ِ رنگ‌ها، کد محصول در متن جستجو)، Projectorها، `findForAdmin` و `findAdminDetail`، `AdminProductSorts`، `FindAdminProductsUc` و `GetAdminProductUc`، `webV1AdminProducts.kt` (دو GET با `ETag`) |
 | ۲۶ مهر ۱۴۰۵ | ۱.۵ | Phase 1 step 1.5 | شکل کامل محصول در دامنه (`ProductSpecs` ِ کامل با `StrapInfo`/`PocketInfo`/…، `ProductTags`، `SeoMeta`، `Barcode`، `ProductMedia` با `mediaId`، `ProductGalleryPolicy`، `MaxPerOrder` تا ۲۰) با payloadهای سازگار با رویدادهای قبلی، `GalleryItemPayload` در read model، `ProductInput`، گسترش `CreateProductUc` (گالری، موجودی اولیه، لاگ)، `UpdateProductUc` با `If-Match`، `POST`/`PUT /admin/products`. دیتابیس توسعه: ۰ از ۶۵ فیلد `media` غیرخالی. خرابکاری: بدون چک `If-Match` و بدون sanitize ← تست‌هاشون قرمز |
+| ۲۶ مهر ۱۴۰۵ | ۱.۶ | Phase 1 step 1.6 | `schedulePublish`/`unschedulePublish` با دو رویداد و payloadشون، Projector ِ `publishAt`، `ChangeProductStatusUc` (همه‌ی ردیف‌های ۶.۶)، `ArchiveProductUc`، job ِ `publish-scheduled-products` (`FindDueScheduledProductsUc` + `PublishScheduledProductUc`)، `PATCH …/status` و `DELETE`، `MomentField` (`DATE_TIME_INVALID`). خرابکاری: بدون catch ِ همزمانی در job ← تست «یه انتشار» قرمز |

@@ -8,6 +8,8 @@ import com.kiva.domain.aggregate.product.entity.event.ProductCreated
 import com.kiva.domain.aggregate.product.entity.event.ProductDetailsChanged
 import com.kiva.domain.aggregate.product.entity.event.ProductDomainEvent
 import com.kiva.domain.aggregate.product.entity.event.ProductPriceChanged
+import com.kiva.domain.aggregate.product.entity.event.ProductPublishScheduled
+import com.kiva.domain.aggregate.product.entity.event.ProductPublishUnscheduled
 import com.kiva.domain.aggregate.product.entity.event.ProductPublished
 import com.kiva.domain.aggregate.product.entity.event.ProductUnpublished
 import com.kiva.domain.aggregate.product.entity.event.VariantAdded
@@ -70,14 +72,24 @@ object ProductQmProjector {
                 updateProduct(productId) {
                     it[status] = ProductStatus.ACTIVE
                     it[publishedOn] = event.occurredOn.utc()
+                    // Published, by hand or by the job: no schedule any more (and the database allows none on ACTIVE).
+                    it[publishAt] = null
                 }
                 // Only the first time: taken out of the shop and put back, a product is not new again.
                 ProductQmTbl.update({ (ProductQmTbl.productId eq productId) and ProductQmTbl.firstPublishedOn.isNull() }) {
                     it[firstPublishedOn] = event.occurredOn.utc()
                 }
             }
-            is ProductUnpublished -> updateProduct(productId) { it[status] = ProductStatus.DRAFT }
-            is ProductArchived -> updateProduct(productId) { it[status] = ProductStatus.ARCHIVED }
+            is ProductUnpublished -> updateProduct(productId) {
+                it[status] = ProductStatus.DRAFT
+                it[publishAt] = null
+            }
+            is ProductArchived -> updateProduct(productId) {
+                it[status] = ProductStatus.ARCHIVED
+                it[publishAt] = null
+            }
+            is ProductPublishScheduled -> updateProduct(productId) { it[publishAt] = event.publishAt.utc() }
+            is ProductPublishUnscheduled -> updateProduct(productId) { it[publishAt] = null }
             is VariantAdded -> addColor(event)
             is VariantChanged -> {
                 // As in Product.apply: a new default takes it from the old one. First, or the unique index refuses.

@@ -252,6 +252,7 @@ object ErrorMessages {
         "MATERIAL_NOTE_TOO_LONG" to "توضیح متریال حداکثر {maxLength} حرفه",
         "CARE_INSTRUCTIONS_INVALID" to "حداکثر {maxItems} دستور نگه‌داری، هر کدوم ۱ تا {maxLength} حرف",
         "DATE_INVALID" to "تاریخ باید به شکل YYYY-MM-DD باشه",
+        "DATE_TIME_INVALID" to "زمان باید به شکل کامل با منطقه‌ی زمانی باشه، مثل 2026-11-01T10:00:00+03:30",
         "DATE_RANGE_INVALID" to "تاریخ پایان نمی‌تونه قبل از تاریخ شروع باشه",
         "AUDIT_ENTITY_TYPE_INVALID" to "نوع مورد از گزینه‌های مجاز نیست",
         "ENTITY_ID_TOO_LONG" to "شناسه حداکثر {maxLength} حرفه",

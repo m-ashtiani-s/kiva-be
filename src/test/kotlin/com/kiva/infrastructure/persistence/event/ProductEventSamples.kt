@@ -18,6 +18,8 @@ import com.kiva.domain.aggregate.product.entity.event.ProductCreated
 import com.kiva.domain.aggregate.product.entity.event.ProductDetailsChanged
 import com.kiva.domain.aggregate.product.entity.event.ProductDomainEvent
 import com.kiva.domain.aggregate.product.entity.event.ProductPriceChanged
+import com.kiva.domain.aggregate.product.entity.event.ProductPublishScheduled
+import com.kiva.domain.aggregate.product.entity.event.ProductPublishUnscheduled
 import com.kiva.domain.aggregate.product.entity.event.ProductPublished
 import com.kiva.domain.aggregate.product.entity.event.ProductUnpublished
 import com.kiva.domain.aggregate.product.entity.event.VariantAdded
@@ -171,6 +173,8 @@ object ProductEventSamples {
         VariantReactivated(product, sequence(9), at, admin, variant(21), isDefault = true, id = eventId(9)),
         ProductUnpublished(product, sequence(10), at, UserId.SYSTEM, id = eventId(10)),
         ProductArchived(product, sequence(11), at, admin, id = eventId(11)),
+        ProductPublishScheduled(product, sequence(12), at, admin, publishAt = Instant.parse("2026-10-10T06:30:00Z"), id = eventId(12)),
+        ProductPublishUnscheduled(product, sequence(13), at, UserId.SYSTEM, id = eventId(13)),
     )
 
     /** The kinds that have optional parts, with all of them left empty. */

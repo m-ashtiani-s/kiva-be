@@ -63,7 +63,12 @@ fun infrastructureModule(config: AppConfig, database: Database) = module {
     single<MediaStorage> { get<DiskMediaStorage>() }
     single<MediaProcessor> { VipsFfmpegMediaProcessor(config.media) }
     single { MediaUrls(config.media.publicBaseUrl) }
-    single { PanelJobs(deleteOldAuditEntries = get(), findUnattachedMedia = get(), deleteUnattachedMedia = get()) }
+    single {
+        PanelJobs(
+            deleteOldAuditEntries = get(), findUnattachedMedia = get(), deleteUnattachedMedia = get(),
+            findDueScheduledProducts = get(), publishScheduledProduct = get(),
+        )
+    }
     single { JobScheduler(get<PurchaseJobs>().all() + get<PanelJobs>().all(), clock = get()) }
     // The adapters behind the gateways. A gateway without one here is never available, whatever the settings say.
     when (config.payment.provider) {

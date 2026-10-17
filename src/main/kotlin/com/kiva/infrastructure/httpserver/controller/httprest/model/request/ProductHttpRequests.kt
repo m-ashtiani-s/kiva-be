@@ -2,7 +2,6 @@ package com.kiva.infrastructure.httpserver.controller.httprest.model.request
 
 import com.kiva.application.usecase.product.ProductInput
 import kotlinx.serialization.Serializable
-import java.time.Instant
 
 /**
  * The body of `POST` and `PUT /admin/products*` (contract ProductUpsertRequest). Every field nullable, so one left out
@@ -36,7 +35,7 @@ data class ProductUpsertHttpRequest(
 ) {
     fun toFields() = ProductInput.Fields(
         name, slug, sku, categoryId, bagType, materialId, materialDescription, price, compareAtPrice, shortDescription, description,
-        highlights, specs?.toSpecs(), tags, newUntil?.let { runCatching { Instant.parse(it) }.getOrNull() }, maxPerOrder, returnable, reservable,
+        highlights, specs?.toSpecs(), tags, newUntil, maxPerOrder, returnable, reservable,
         sortPriority, seo?.let { ProductInput.Seo(it.title, it.description, it.noIndex) },
     )
 
@@ -159,3 +158,7 @@ data class MediaInputHttpRequest(
     val isPrimary: Boolean? = null,
     val alt: String? = null,
 )
+
+/** The body of `PATCH /admin/products/{productId}/status`. */
+@Serializable
+data class ProductStatusHttpRequest(val status: String? = null, val publishAt: String? = null)

@@ -246,7 +246,8 @@ fun Application.configureRouting() {
         getColor = get(), createColor = get(), updateColor = get(), deleteColor = get(),
         listMaterials = get(), getMaterial = get(), createMaterial = get(), updateMaterial = get(), deleteMaterial = get(),
     )
-    val adminProductUseCases = AdminProductUseCases(checkPanelAccess = checkPanelAccessUc, findProducts = get(), getProduct = get(), createProduct = get(), updateProduct = get())
+    val adminProductUseCases = AdminProductUseCases(checkPanelAccess = checkPanelAccessUc, findProducts = get(), getProduct = get(), createProduct = get(), updateProduct = get(), changeStatus = get(), archiveProduct = get(),
+    )
     val config by inject<AppConfig>()
 
     routing {

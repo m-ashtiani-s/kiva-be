@@ -1,6 +1,8 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
 import com.kiva.application.usecase.admin.usecase.command.CheckPanelAccessUc
+import com.kiva.application.usecase.product.usecase.command.ArchiveProductUc
+import com.kiva.application.usecase.product.usecase.command.ChangeProductStatusUc
 import com.kiva.application.usecase.product.usecase.command.CreateProductUc
 import com.kiva.application.usecase.product.usecase.command.UpdateProductUc
 import com.kiva.application.usecase.product.usecase.query.AdminProductSorts
@@ -16,6 +18,7 @@ import com.kiva.infrastructure.common.http.respondResultWithETag
 import com.kiva.infrastructure.common.http.toHttpResponse
 import com.kiva.infrastructure.httpserver.auth.panelActor
 import com.kiva.infrastructure.httpserver.auth.requireRoles
+import com.kiva.infrastructure.httpserver.controller.httprest.model.request.ProductStatusHttpRequest
 import com.kiva.infrastructure.httpserver.controller.httprest.model.request.ProductUpsertHttpRequest
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.AdminProductHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.AdminProductListItemHttpResponse
@@ -25,7 +28,9 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.request.receive
 import io.ktor.server.routing.Route
+import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
+import io.ktor.server.routing.patch
 import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 
@@ -36,6 +41,8 @@ class AdminProductUseCases(
     val getProduct: GetAdminProductUc,
     val createProduct: CreateProductUc,
     val updateProduct: UpdateProductUc,
+    val changeStatus: ChangeProductStatusUc,
+    val archiveProduct: ArchiveProductUc,
 )
 
 private const val PRODUCT_ID = "productId"
@@ -86,6 +93,17 @@ fun Route.webV1AdminProducts(useCases: AdminProductUseCases, siteUrl: String, me
             )
             val id = useCases.updateProduct.execute(command).unwrapOr { return@put call.respondFailure(it) }
             call.respondProduct(useCases, id.value.toString(), HttpStatusCode.OK, siteUrl, mediaUrls)
+        }
+
+        patch("/admin/products/{$PRODUCT_ID}/status") {
+            val request = call.receive<ProductStatusHttpRequest>()
+            val command = ChangeProductStatusUc.Cmd(call.pathParameters[PRODUCT_ID].orEmpty(), request.status, request.publishAt, call.panelActor())
+            val id = useCases.changeStatus.execute(command).unwrapOr { return@patch call.respondFailure(it) }
+            call.respondProduct(useCases, id.value.toString(), HttpStatusCode.OK, siteUrl, mediaUrls)
+        }
+
+        delete("/admin/products/{$PRODUCT_ID}") {
+            call.respondResult(useCases.archiveProduct.execute(ArchiveProductUc.Cmd(call.pathParameters[PRODUCT_ID].orEmpty(), call.panelActor())))
         }
     }
 }

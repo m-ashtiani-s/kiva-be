@@ -77,7 +77,7 @@ class DevCatalogSeeder(
             highlights = DevCatalogData.highlights(bag),
             specs = DevCatalogData.specsByBagType.getValue(bag.bagType),
             tags = null,
-            newUntil = newUntil.takeIf { bag.isNew },
+            newUntil = newUntil.takeIf { bag.isNew }?.toString(),
             maxPerOrder = null,
             returnable = null,
             reservable = bag.reservable,

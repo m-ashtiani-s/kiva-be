@@ -3,9 +3,12 @@ package com.kiva.infrastructure.job
 import com.kiva.application.usecase.audit.usecase.command.DeleteOldAuditEntriesUc
 import com.kiva.application.usecase.media.usecase.command.DeleteUnattachedMediaUc
 import com.kiva.application.usecase.media.usecase.query.FindUnattachedMediaUc
+import com.kiva.application.usecase.product.usecase.command.PublishScheduledProductUc
+import com.kiva.application.usecase.product.usecase.query.FindDueScheduledProductsUc
 import com.kiva.common.logging.getLogger
 import com.kiva.common.railway.unwrapOr
 import com.kiva.domain.aggregate.order.model.policy.ShopCalendar
+import java.time.Duration
 import java.time.LocalTime
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -17,11 +20,14 @@ import kotlin.coroutines.cancellation.CancellationException
  * |---|---|
  * | removing the change log's rows past 90 days | daily, 03:30 Tehran |
  * | removing uploads nothing used within 48 hours | daily, 04:30 Tehran |
+ * | publishing the drafts whose scheduled moment has come | every minute |
  */
 class PanelJobs(
     private val deleteOldAuditEntries: DeleteOldAuditEntriesUc,
     private val findUnattachedMedia: FindUnattachedMediaUc,
     private val deleteUnattachedMedia: DeleteUnattachedMediaUc,
+    private val findDueScheduledProducts: FindDueScheduledProductsUc,
+    private val publishScheduledProduct: PublishScheduledProductUc,
 ) {
     private val logger = getLogger()
 
@@ -30,7 +36,14 @@ class PanelJobs(
             deleteOldAuditEntries.execute(DeleteOldAuditEntriesUc.Cmd)
         },
         ScheduledJob("delete-unattached-media", Schedule.DailyAt(LocalTime.of(4, 30), ShopCalendar.ZONE)) { deleteUnattachedMedia() },
+        ScheduledJob("publish-scheduled-products", Schedule.Every(Duration.ofMinutes(1))) { publishScheduledProducts() },
     )
+
+    /** One run of the publish job: every due draft, each by itself (one that breaks doesn't hold the others). */
+    suspend fun publishScheduledProducts() {
+        val due = findDueScheduledProducts.execute(FindDueScheduledProductsUc.Qry).unwrapOr { it }
+        due.forEach { productId -> each("product ${productId.value}") { publishScheduledProduct.execute(PublishScheduledProductUc.Cmd(productId)) } }
+    }
 
     /**
      * One run of the media clean-up: every upload nothing used, each removed by itself, batch after batch, at most

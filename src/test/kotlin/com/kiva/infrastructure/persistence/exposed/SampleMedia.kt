@@ -16,7 +16,8 @@ import java.time.Instant
 /**
  * The uploaded files behind ProductEventSamples' gallery (its photo and its video), stored once in kiva_test's
  * media_tbl: the product projector copies a file's sizes from there, so an event with a gallery needs its files.
- * They are never removed (events of other tests point to them), and storing them again is a no-op.
+ * They are never removed (events of other tests point to them; stored as attached, so the clean-up job leaves them
+ * too), and storing them again is a no-op.
  */
 object SampleMedia {
 
@@ -40,7 +41,10 @@ object SampleMedia {
     fun ensureStored() {
         transaction(TestDatabase.database) {
             val media = MediaRepositoryImpl()
-            listOf(photo, video).filter { media.find(it.id) == null }.forEach(media::insert)
+            val missing = listOf(photo, video).filter { media.find(it.id) == null }
+            missing.forEach(media::insert)
+            // Attached, as a product's files are: the clean-up job never removes them.
+            media.markAttached(listOf(photo.id, video.id), uploadedOn)
         }
     }
 

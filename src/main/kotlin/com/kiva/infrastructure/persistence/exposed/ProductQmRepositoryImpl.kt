@@ -363,6 +363,14 @@ class ProductQmRepositoryImpl : ProductQmRepository {
         return productIds.size
     }
 
+    // productqm_publish_due_idx (V24) holds only scheduled rows.
+    override fun findDueScheduled(now: Instant, limit: Int): List<ProductId> =
+        ProductQmTbl.select(ProductQmTbl.productId)
+            .where { (ProductQmTbl.status eq ProductStatus.DRAFT) and (ProductQmTbl.publishAt lessEq now.atOffset(ZoneOffset.UTC)) }
+            .orderBy(ProductQmTbl.publishAt to SortOrder.ASC, ProductQmTbl.productId to SortOrder.ASC)
+            .limit(limit)
+            .map { ProductId.constructFromPersisted(it[ProductQmTbl.productId]) }
+
     override fun isSlugTaken(slug: Slug): Boolean =
         !ProductQmTbl.select(ProductQmTbl.id).where { ProductQmTbl.slug eq slug.value }.empty()
 

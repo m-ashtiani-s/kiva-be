@@ -111,7 +111,7 @@ class CreateProductUcTest {
         highlights = listOf("یراق‌آلات فلزی ضدزنگ"),
         specs = specs,
         tags = listOf("چرم", "روزمره"),
-        newUntil = Instant.parse("2026-11-01T00:00:00Z"),
+        newUntil = "2026-11-01T00:00:00Z",
         maxPerOrder = null,
         returnable = null,
         reservable = null,
