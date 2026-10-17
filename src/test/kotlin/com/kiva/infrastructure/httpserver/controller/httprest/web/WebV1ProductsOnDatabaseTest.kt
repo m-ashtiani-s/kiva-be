@@ -9,7 +9,6 @@ import com.kiva.infrastructure.TestDatabase
 import com.kiva.infrastructure.common.persistence.ExposedTransactionManager
 import com.kiva.infrastructure.httpserver.API_V1
 import com.kiva.infrastructure.httpserver.configureHttp
-import com.kiva.infrastructure.media.MediaUrls
 import com.kiva.infrastructure.persistence.exposed.CategoryRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ColorRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.MaterialRepositoryImpl
@@ -92,7 +91,7 @@ class WebV1ProductsOnDatabaseTest {
         environment { config = MapApplicationConfig() }
         application {
             configureHttp()
-            routing { route(API_V1) { webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, siteUrl = "https://kiva.ir", mediaUrls = MediaUrls("https://media.kiva.test")) } }
+            routing { route(API_V1) { webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, siteUrl = "https://kiva.ir", mediaUrls = testMediaUrls) } }
         }
         block()
     }

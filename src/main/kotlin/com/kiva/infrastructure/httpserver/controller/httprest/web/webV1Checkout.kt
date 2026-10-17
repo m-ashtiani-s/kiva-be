@@ -21,6 +21,7 @@ import com.kiva.infrastructure.httpserver.controller.httprest.model.response.Pay
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.PlaceOrderHttpResponse
 import com.kiva.infrastructure.httpserver.idempotency.RequestFingerprint
 import com.kiva.infrastructure.httpserver.idempotency.idempotencyKeyHeader
+import com.kiva.infrastructure.media.MediaUrls
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.auth.authenticate
 import io.ktor.server.request.receive
@@ -47,14 +48,14 @@ class CheckoutUseCases(
  * order, StartPaymentUc opens the gateway's session, and queries build the answer. A repeat with the same
  * `Idempotency-Key` walks the same three steps and gets the same order, the same attempt, and the same answer.
  */
-fun Route.webV1Checkout(useCases: CheckoutUseCases) {
+fun Route.webV1Checkout(useCases: CheckoutUseCases, mediaUrls: MediaUrls) {
     authenticate(ACCESS) {
         // Like GET /cart, the cart is opened first: brought up to date with the shop and its issues told once.
         get("/checkout") {
             val userId = call.accessPrincipal().userId
             val change = useCases.openCart.execute(OpenCartUc.Cmd(CartCaller.Customer(userId))).unwrapOr { it }
             val query = GetCheckoutContextUc.Qry(userId, change.cartId.value, call.request.queryParameters["addressId"])
-            call.respondResult(useCases.getCheckoutContext.execute(query)) { CheckoutContextHttpResponse.from(it, change.issues) }
+            call.respondResult(useCases.getCheckoutContext.execute(query)) { CheckoutContextHttpResponse.from(it, change.issues, mediaUrls) }
         }
 
         post("/orders") {
@@ -71,7 +72,7 @@ fun Route.webV1Checkout(useCases: CheckoutUseCases) {
                 useCases.getPaymentInit.execute(GetPaymentInitUc.Qry(userId, paymentId)).unwrapOr { return@post call.respondFailure(it) }
             }
             val order = useCases.getOrderSummary.execute(GetOrderSummaryUc.Qry(userId, placed.orderCode)).unwrapOr { return@post call.respondFailure(it) }
-            call.respond(HttpStatusCode.Created, PlaceOrderHttpResponse(OrderSummaryHttpResponse.from(order), payment?.let(PaymentInitHttpResponse::from)))
+            call.respond(HttpStatusCode.Created, PlaceOrderHttpResponse(OrderSummaryHttpResponse.from(order, mediaUrls), payment?.let(PaymentInitHttpResponse::from)))
         }
     }
 }

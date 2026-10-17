@@ -1,6 +1,7 @@
 package com.kiva.infrastructure.persistence.exposed
 
 import com.kiva.application.dto.GalleryItemDto
+import com.kiva.application.dto.UploadedMediaDto
 import com.kiva.application.repository.AdminProductDetailQm
 import com.kiva.application.repository.AdminProductFilter
 import com.kiva.application.repository.AdminProductQm
@@ -127,6 +128,13 @@ class ProductQmRepositoryImpl : ProductQmRepository {
     private class Overlaps(column: Column<List<String>>, values: List<String>) :
         ComparisonOp(column, QueryParameter(values, column.columnType), "&&")
 
+    /**
+     * A color's first two photos, for its card: already in its row (the gallery's copy of each file), so a page of cards
+     * reads no more than its colors' rows.
+     */
+    private fun cardPhotosOf(color: ResultRow): List<UploadedMediaDto> =
+        color[ProductVariantQmTbl.media].filterNot { it.isVideo }.take(2).map { it.toDto().media }
+
     /** The active colors of these products, in display order, by product. */
     private fun activeColorsOf(productIds: List<Long>): Map<Long, List<ProductCardQm.Color>> {
         if (productIds.isEmpty()) return emptyMap()
@@ -140,6 +148,7 @@ class ProductQmRepositoryImpl : ProductQmRepository {
                     colorKey = ColorKey.constructFromPersisted(it[ProductVariantQmTbl.colorKey]),
                     isDefault = it[ProductVariantQmTbl.isDefault],
                     available = it[ProductVariantQmTbl.onHand] - it[ProductVariantQmTbl.reserved],
+                    photos = cardPhotosOf(it),
                 )
             }
     }
@@ -191,7 +200,12 @@ class ProductQmRepositoryImpl : ProductQmRepository {
         }
 
         return ProductDetailQm(
-            card = cardOf(row, variants.map { ProductCardQm.Color(it.variantId, it.colorKey, it.isDefault, it.available) }),
+            card = cardOf(
+                row,
+                variants.zip(activeColors).map { (variant, color) ->
+                    ProductCardQm.Color(variant.variantId, variant.colorKey, variant.isDefault, variant.available, cardPhotosOf(color))
+                },
+            ),
             materialSlug = Slug.constructFromPersisted(row[ProductQmTbl.materialSlug]),
             materialDescription = row[ProductQmTbl.materialDescription]?.let { MaterialDescription.constructFromPersisted(it) },
             shortDescription = row[ProductQmTbl.shortDescription]?.let { ShortDescription.constructFromPersisted(it) },

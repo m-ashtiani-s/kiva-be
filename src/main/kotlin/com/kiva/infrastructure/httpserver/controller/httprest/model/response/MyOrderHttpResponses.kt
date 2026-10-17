@@ -5,6 +5,7 @@ import com.kiva.application.dto.OrderListDto
 import com.kiva.application.usecase.order.usecase.command.ReorderUc
 import com.kiva.domain.aggregate.order.model.valueobject.OrderTotals
 import com.kiva.infrastructure.common.http.PageMetaHttpResponse
+import com.kiva.infrastructure.media.MediaUrls
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 
@@ -16,8 +17,8 @@ data class OrderListHttpResponse(
     val counts: OrderCountsHttpResponse,
 ) {
     companion object {
-        fun from(list: OrderListDto) = OrderListHttpResponse(
-            items = list.page.items.map(OrderSummaryHttpResponse::from),
+        fun from(list: OrderListDto, urls: MediaUrls) = OrderListHttpResponse(
+            items = list.page.items.map { OrderSummaryHttpResponse.from(it, urls) },
             meta = list.page.let { PageMetaHttpResponse(it.page, it.size, it.totalItems, it.totalPages, it.hasNext) },
             counts = list.counts.let { OrderCountsHttpResponse(it.all, it.current, it.delivered, it.cancelled) },
         )
@@ -64,8 +65,8 @@ data class OrderDetailHttpResponse(
     val invoiceUrl: String?,
 ) {
     companion object {
-        fun from(order: OrderDetailDto): OrderDetailHttpResponse {
-            val card = OrderSummaryHttpResponse.from(order.summary)
+        fun from(order: OrderDetailDto, urls: MediaUrls): OrderDetailHttpResponse {
+            val card = OrderSummaryHttpResponse.from(order.summary, urls)
             val messengerName = OrderTexts.messengerName(order.messenger.channel)
             return OrderDetailHttpResponse(
                 code = card.code,
@@ -83,7 +84,7 @@ data class OrderDetailHttpResponse(
                 shipment = card.shipment,
                 preShipmentMedia = card.preShipmentMedia,
                 actions = card.actions,
-                items = order.items.map(OrderItemHttpResponse::from),
+                items = order.items.map { OrderItemHttpResponse.from(it, urls) },
                 address = OrderAddressHttpResponse.from(order.address),
                 totals = OrderTotalsHttpResponse.from(order.totals),
                 payment = order.payment?.let(OrderPaymentInfoHttpResponse::from),
@@ -135,7 +136,7 @@ data class OrderItemHttpResponse(
     val returnableUntil: String?,
 ) {
     companion object {
-        fun from(item: OrderDetailDto.Item) = OrderItemHttpResponse(
+        fun from(item: OrderDetailDto.Item, urls: MediaUrls) = OrderItemHttpResponse(
             id = item.lineId,
             productId = item.productId,
             variantId = item.variantId,
@@ -143,7 +144,7 @@ data class OrderItemHttpResponse(
             name = item.name,
             slug = item.slug,
             color = item.color.let { ColorHttpResponse(it.key, it.name, it.hex, it.isLight, it.sortOrder) },
-            image = item.imageUrl,
+            image = item.imageUrl?.let(urls::of),
             quantity = item.quantity,
             unitPrice = item.unitPrice.toman,
             unitCompareAtPrice = item.unitCompareAtPrice?.toman,

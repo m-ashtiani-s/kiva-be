@@ -7,6 +7,8 @@ import com.kiva.application.usecase.address.AddressFields
 import com.kiva.application.usecase.address.usecase.command.AddAddressUc
 import com.kiva.application.usecase.cart.CartCaller
 import com.kiva.application.usecase.cart.usecase.command.AddCartItemUc
+import com.kiva.application.usecase.cart.usecase.command.OpenCartUc
+import com.kiva.application.usecase.cart.usecase.query.GetCartUc
 import com.kiva.application.usecase.checkout.usecase.command.PlaceOrderUc
 import com.kiva.application.usecase.checkout.usecase.command.StartPaymentUc
 import com.kiva.application.usecase.media.MediaAttachments
@@ -35,6 +37,7 @@ import com.kiva.infrastructure.persistence.exposed.AuditTrailImpl
 import com.kiva.infrastructure.persistence.exposed.MediaRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ProductQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ProductRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.SampleMedia
 import com.kiva.infrastructure.persistence.exposed.StoredCatalog
 import com.kiva.infrastructure.persistence.exposed.tbl.AddressTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.OrderQmTbl
@@ -471,6 +474,34 @@ class WebV1OrdersOnDatabaseTest {
             // The order goes through, or (bought at the old price while the new one landed) is refused as a business rule.
             assertTrue(results[0] is Result.Success || results[0].failureOrNull()?.kind == FailureKind.BUSINESS_RULE, "round $round: ${results[0]}")
         }
+    }
+
+    @Test
+    fun `a cart line shows its color's photo, a new order keeps the 480 one, an order placed before the photo keeps none`() {
+        restock(nilaOlive, 10)
+        val before = purchase.customer(phone(1300))
+        putInCart(before, nilaOlive)
+        val oldOrder = runBlocking { purchase.placeOrder.execute(command(before)) }.getOrNull()!!.orderCode
+
+        val nila = transaction(purchase.db) { ProductQmRepositoryImpl().findVariant(VariantId.constructFromPersisted(nilaOlive))!!.productId }
+        val photo = SampleMedia.photo(9)
+        others.change(nila) { it.replaceVariantMedia(VariantId.constructFromPersisted(nilaOlive), listOf(photo), others.staff, clock.now) }
+        val after = purchase.customer(phone(1301))
+        putInCart(after, nilaOlive)
+
+        val cart = runBlocking { purchase.openCart.execute(OpenCartUc.Cmd(CartCaller.Customer(after))) }.getOrNull()!!
+        val line = runBlocking { purchase.getCart.execute(GetCartUc.Qry(cart.cartId.value)) }.getOrNull()!!.items.single()
+        val newOrder = runBlocking { purchase.placeOrder.execute(command(after)) }.getOrNull()!!.orderCode
+
+        assertEquals(photo.mediaId.value, line.image?.id)
+        assertEquals("2026/10/med_00000000000000000000P9/480.webp", imageOf(after, newOrder))
+        assertEquals(null, imageOf(before, oldOrder))
+    }
+
+    /** The picture an order's line kept, as stored with the order. */
+    private fun imageOf(userId: UserId, code: OrderCode): String? = transaction(purchase.db) {
+        val orderId = purchase.orderQm.findOfCustomer(userId, code)!!.orderId
+        purchase.orders.get(orderId)!!.lines.single().item.imageUrl
     }
 
     @Test

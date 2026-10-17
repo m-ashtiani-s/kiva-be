@@ -6618,7 +6618,7 @@ components:
         name: { type: string, description: snapshot نام در زمان خرید, example: کیف دستی آیدا }
         slug: { type: string, example: aida-satchel }
         color: { $ref: '#/components/schemas/Color' }
-        image: { $ref: '#/components/schemas/MediaAsset' }
+        image: { type: string, format: uri, nullable: true, description: 'عکس رنگ در لحظه‌ی خرید (نسخه‌ی ۴۸۰، snapshot)؛ سفارش‌های پیش از آپلود مدیا و رنگ بی‌عکس `null`' }
         quantity: { type: integer, example: 1 }
         unitPrice: { allOf: [{ $ref: '#/components/schemas/Money' }], example: 2790000 }
         unitCompareAtPrice: { type: integer, allOf: [{ $ref: '#/components/schemas/Money' }], nullable: true, example: 3290000 }

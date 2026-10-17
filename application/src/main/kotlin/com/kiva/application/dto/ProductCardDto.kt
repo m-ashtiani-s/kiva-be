@@ -35,7 +35,10 @@ data class ProductCardDto(
 ) {
     data class CategoryRef(val id: Long, val slug: String, val name: String)
 
-    /** One color swatch of the card. */
+    /**
+     * One color swatch of the card. [image] and [hoverImage] are its first two photos: the card shows those of the
+     * color it is drawn in (the filtered one, or the default).
+     */
     data class ColorOption(
         val variantId: Long,
         val key: String,
@@ -44,5 +47,7 @@ data class ProductCardDto(
         val isLight: Boolean,
         val sortOrder: Int,
         val stockStatus: StockStatus,
+        val image: UploadedMediaDto? = null,
+        val hoverImage: UploadedMediaDto? = null,
     )
 }

@@ -75,6 +75,7 @@ internal fun cartDtoOf(
                 lineTotals = totals,
                 stock = StockPolicy.stockOf(qm.offer.available, qm.offer.maxPerOrder),
                 addedAt = line.addedOn,
+                image = qm.image,
             )
         },
         totals = quote.totals,

@@ -51,6 +51,8 @@ object ProductCards {
                     isLight = swatch.isLight,
                     sortOrder = swatch.sortOrder,
                     stockStatus = StockPolicy.stockOf(color.available, qm.maxPerOrder).status,
+                    image = color.photos.getOrNull(0),
+                    hoverImage = color.photos.getOrNull(1),
                 )
             },
             // A product in the shop always has an active default color (Product keeps that); only a draft the panel

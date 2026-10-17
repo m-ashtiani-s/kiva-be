@@ -11,7 +11,9 @@ import com.kiva.domain.aggregate.product.model.valueobject.Sku
  * زمان خرید»).
  *
  * @property sku the color's SKU (`KV-1004-CARAMEL`), which the warehouse picks by.
- * @property imageUrl the color's first picture; null while the catalog has no uploaded media.
+ * @property imageUrl the color's first photo at the size a line shows it (480), as a path under the media root
+ *   (`2026/10/med_…/480.webp`): the HTTP layer puts the public address in front, so moving the files is a change of
+ *   configuration. Null when the color had no photo then, as for every order placed before photos (step 1.9).
  */
 data class OrderItemSnapshot(
     val name: ProductName,

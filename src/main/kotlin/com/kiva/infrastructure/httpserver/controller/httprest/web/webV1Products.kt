@@ -48,7 +48,7 @@ fun Route.webV1Products(
         } else {
             null
         }
-        call.respond(ProductListHttpResponse.from(list, facets, sort = pageable.sort ?: ProductSorts.DEFAULT))
+        call.respond(ProductListHttpResponse.from(list, facets, sort = pageable.sort ?: ProductSorts.DEFAULT, mediaUrls))
     }
 
     get("/products/facets") {
@@ -65,7 +65,7 @@ fun Route.webV1Products(
 
     get("/products/{productId}/related") {
         val query = FindRelatedProductsUc.Qry(productId = call.pathParameters["productId"].orEmpty(), limit = call.request.queryParameters["limit"])
-        call.respondResult(findRelatedProductsUc.execute(query)) { cards -> cards.map { ProductSummaryHttpResponse.from(it, filterColors = emptyList()) } }
+        call.respondResult(findRelatedProductsUc.execute(query)) { cards -> cards.map { ProductSummaryHttpResponse.from(it, filterColors = emptyList(), mediaUrls) } }
     }
 }
 

@@ -770,7 +770,7 @@ Route: 201 با MediaAsset
 | ۱.۶ | وضعیت، آرشیو و انتشار زمان‌بندی‌شده | M | ✅ |
 | ۱.۷ | رنگ‌ها (ورینت‌ها) | M | ✅ |
 | ۱.۸ | تغییر موجودی و تاریخچه‌اش | M | ✅ |
-| ۱.۹ | عکس‌ها در فروشگاه، سبد و سفارش | M | ⬜ |
+| ۱.۹ | عکس‌ها در فروشگاه، سبد و سفارش | M | ✅ |
 | ۱.۱۰ | ریویو، حمله‌ی آزمایشی و دور با پنل | M | ⬜ |
 
 ### ۶.۲ تصمیم‌های این فاز
@@ -1151,6 +1151,7 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 | 18 | مثال‌های SKU | `KV-1001-LIL` ← `KV-1001-LILAC` | قانون واقعی `Sku.forVariant` |
 | 19 | `ProductUpsertRequest.specs` | شِمای تازه‌ی `ProductSpecsInput`: همون `ProductSpecs` با سقف هر فیلد (ردیف `ProductSpecs` ِ ۶.۳)، و `seo` ِ ورودی محصول و دسته فقط با `title`، `description`، `noIndex` | `ProductSpecs` ِ پاسخ هیچ سقفی نداشت و `label`ها رو سرور می‌سازه (گام ۱.۰) |
 | 20 | پارامتر `SearchQuery` | «جستجو روی نام، دسته، رنگ‌های فعال، متریال و کد محصول (SKU)» | تصمیم ۱۷: کد محصول در متن جستجو (گام ۱.۴) |
+| 21 | `OrderItem.image` | `MediaAsset` ← آدرس رشته‌ای (`uri`، nullable): نسخه‌ی ۴۸۰ ِ عکس رنگ در لحظه‌ی خرید | سفارش فقط مسیر یه اندازه رو snapshot می‌کنه (نه کل فایل)، و پیاده‌سازی از اول رشته می‌فرستاد (گام ۱.۹) |
 
 **کدهای فیلدی تازه** (در enum ِ کانترکت نیستن، ولی متن فارسی تو `ErrorMessages.kt` می‌گیرن؛ گام ۱.۰ این‌ها رو هم اضافه کرد: `FIELD_REQUIRED` برای فیلد اجباری ِ نیومده، `STOCK_QUANTITY_INVALID`، `DATE_INVALID`، `AUDIT_ENTITY_TYPE_INVALID`، `ENTITY_ID_TOO_LONG`، و کدهای `specs`: `STRAPS_TOO_MANY`، `STRAP_TYPE_INVALID`، `STRAP_LENGTH_INVALID`، `STRAP_LENGTH_RANGE_INVALID`، `STRAP_MATERIAL_TOO_LONG`، `POCKET_COUNT_INVALID`، `LAPTOP_MAX_INCH_INVALID`، `CAPACITY_LITERS_INVALID`، `FIT_ITEM_INVALID`، `LINING_MATERIAL_TOO_LONG`، `LINING_COLOR_TOO_LONG`، `HARDWARE_MATERIAL_TOO_LONG`، `HARDWARE_FINISH_TOO_LONG`، `STITCHING_TOO_LONG`، `MADE_IN_TOO_LONG`، `WARRANTY_MONTHS_INVALID`، `WARRANTY_DESCRIPTION_TOO_LONG`): `SLUG_IMMUTABLE`، `SKU_IMMUTABLE`، `COLOR_KEY_IMMUTABLE`، `IF_MATCH_INVALID`، `PUBLISH_AT_NOT_ALLOWED`، `PUBLISH_AT_TOO_FAR`، `MEDIA_ID_INVALID`، `MEDIA_NOT_FOUND`، `MEDIA_PURPOSE_MISMATCH`، `MEDIA_TYPE_NOT_ALLOWED`، `MEDIA_VIEW_INVALID`، `MEDIA_PRIMARY_DUPLICATE`، `MEDIA_DUPLICATE`، `MEDIA_TOO_MANY`، `MEDIA_ALT_TOO_LONG` (هست)، `IMAGE_TOO_SMALL`، `IMAGE_TOO_LARGE`، `VIDEO_TOO_LONG`، `FILE_COUNT_INVALID`، `MEDIA_PURPOSE_INVALID`، `BARCODE_INVALID`، `TAG_INVALID`، `TAGS_TOO_MANY`، `SEO_TITLE_TOO_LONG`، `SEO_DESCRIPTION_TOO_LONG`، `MATERIAL_FAMILY_INVALID`، `CATEGORY_DESCRIPTION_TOO_LONG`، `MATERIAL_NOTE_TOO_LONG`، `CARE_INSTRUCTIONS_INVALID`، `DATE_RANGE_INVALID`، و کدهای هر فیلد تازه‌ی `specs`. `MEDIA_INVALID` و `SPECS_INVALID` هم که الان متن ندارن، متن می‌گیرن.
 
@@ -1462,19 +1463,30 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 
 ---
 
-#### گام ۱.۹: عکس‌ها در فروشگاه، سبد و سفارش · M ⬜
+#### گام ۱.۹: عکس‌ها در فروشگاه، سبد و سفارش · M ✅
 
 **می‌سازی:** جدول ۶.۷: `ProductCardQm` و `ProductDetailQm` با مدیا، کوئری مدیای یه صفحه، `ProductSummaryHttpResponse.image`/`hoverImage`، `ProductColorOptionHttpResponse.imageUrl`/`thumbnailUrl`، `ProductMediaHttpResponse` ِ کامل، `OfferQm.imageUrl` و `CartItemHttpResponse.image`، `PlaceOrderUc` ← `OrderItemSnapshot.imageUrl`، و `MediaAssetHttpResponse.from` (آدرس کامل از `publicBaseUrl` و مسیر نسبی).
 
 وابسته به: ۱.۵ و ۱.۷
 
 **تموم شده یعنی:**
-- [ ] کارت محصول با عکس رنگ پیش‌فرض؛ با فیلتر `color=lilac`، عکس رنگ یاسی؛ `hoverImage` دومین عکس.
-- [ ] محصول بدون مدیا ← `image = null` مثل قبل (فرانت ایلاستریشن نشون می‌ده).
-- [ ] رنگ بدون مدیا ← `imageUrl = null` برای همون رنگ.
-- [ ] سبد با عکس هر ردیف؛ سفارش تازه با `imageUrl` در ردیف‌ها؛ سفارش قبلی `null` می‌مونه.
-- [ ] ویدیو تو گالری `type = VIDEO` با `posterUrl` و `durationSec`؛ `image` ِ کارت هیچ‌وقت ویدیو نیست.
-- [ ] لیست ۲۴ تایی فروشگاه یه کوئری بیشتر از قبل می‌زنه، نه ۲۴ تا.
+- [x] کارت محصول با عکس رنگ پیش‌فرض؛ با فیلتر `color=lilac`، عکس رنگ یاسی؛ `hoverImage` دومین عکس.
+- [x] محصول بدون مدیا ← `image = null` مثل قبل (فرانت ایلاستریشن نشون می‌ده).
+- [x] رنگ بدون مدیا ← `imageUrl = null` برای همون رنگ.
+- [x] سبد با عکس هر ردیف؛ سفارش تازه با `imageUrl` در ردیف‌ها؛ سفارش قبلی `null` می‌مونه.
+- [x] ویدیو تو گالری `type = VIDEO` با `posterUrl` و `durationSec`؛ `image` ِ کارت هیچ‌وقت ویدیو نیست.
+- [x] لیست ۲۴ تایی فروشگاه یه کوئری بیشتر از قبل می‌زنه، نه ۲۴ تا.
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- `ProductMediaHttpResponse` ِ کامل از ۱.۵ ساخته شده بود (چون `ProductMedia` دیگه `url` نداشت). اینجا کارت، سواچ‌ها، سبد و سفارش.
+- عکس کارت و hover مال **رنگ نمایش** ـه (فیلتر رنگ، وگرنه پیش‌فرض)، پس هر `ColorOption` ِ DTO دو عکس اولش (`image`، `hoverImage`) رو داره و لایه‌ی HTTP رنگ نمایش رو انتخاب می‌کنه (همون‌جا که `displayColorKey` حساب می‌شد). ویدیو هیچ‌وقت عکس کارت نیست.
+- کوئری اضافه لازم نشد: گالری هر رنگ (با اندازه‌ها) در همون ستون `media` ِ ردیف رنگه که لیست از قبل می‌خوند. تست: یه صفحه‌ی ۲۴ تایی همون‌قدر statement می‌زنه که یه صفحه‌ی ۱ تایی.
+- `UploadedMediaDto.pathFor(width)` (مثل `MediaAsset.pathFor`): `imageUrl`/`thumbnailUrl` ِ سواچ نسخه‌ی ۴۸۰ و ۱۶۰.
+- `OfferQm.image` (اولین عکس رنگ) ← `CartItem.image` و `PlaceOrderUc`. `OrderItemSnapshot.imageUrl` مسیر نسبیه (`2026/10/med_…/480.webp`) و HTTP آدرس کامل می‌سازه (تصمیم ۶.۲: فقط مسیر نسبی ذخیره می‌شه)؛ سفارش‌های قبلی `null`.
+- کانترکت: `OrderItem.image` از `MediaAsset` به آدرس رشته‌ای (ردیف ۲۱ ِ ۶.۸): سفارش فقط مسیر یه اندازه رو نگه می‌داره، و پیاده‌سازی از قبل رشته می‌فرستاد.
+- routeهای سبد، ورود، checkout و سفارش‌های من حالا `mediaUrls` می‌گیرن؛ تست‌ها `testMediaUrls` ِ مشترک.
+- `ProductRef.imageUrl` هنوز جایی ساخته نمی‌شه (هیچ پاسخی `ProductRef` نمی‌فرسته تا فاز ۸/۱۰).
+- خرابکاری: `imageUrl = null` در `PlaceOrderUc` ← `a cart line shows its color's photo, a new order keeps the 480 one …` قرمز.
 
 ---
 
@@ -5950,3 +5962,4 @@ kiva {
 | ۲۶ مهر ۱۴۰۵ | ۱.۶ | Phase 1 step 1.6 | `schedulePublish`/`unschedulePublish` با دو رویداد و payloadشون، Projector ِ `publishAt`، `ChangeProductStatusUc` (همه‌ی ردیف‌های ۶.۶)، `ArchiveProductUc`، job ِ `publish-scheduled-products` (`FindDueScheduledProductsUc` + `PublishScheduledProductUc`)، `PATCH …/status` و `DELETE`، `MomentField` (`DATE_TIME_INVALID`). خرابکاری: بدون catch ِ همزمانی در job ← تست «یه انتشار» قرمز |
 | ۲۶ مهر ۱۴۰۵ | ۱.۷ | Phase 1 step 1.7 | `AddVariantUc` (با موجودی اولیه و گالری)، `UpdateVariantUc` (ترتیب فعال‌سازی، تغییر، گالری، غیرفعال‌سازی)، `DeactivateVariantUc`، سه route با پاسخ `AdminVariant` و `ETag` ِ محصول، لاگ `VARIANT_*`، تست بن‌بست با خرید. خرابکاری: جابه‌جایی ترتیب فعال‌سازی و پیش‌فرض ← تست قرمز |
 | ۲۶ مهر ۱۴۰۵ | ۱.۸ | Phase 1 step 1.8 | `V25` با backfill، ردیف تاریخچه در `InventoryQmProjector`، `InventoryAdjustmentQmRepository`، `AdjustInventoryUc` با `actor`، لاگ و `id` از read model، `holdForChange` برای صف کشیدن تغییرهای همزمان، `ListInventoryAdjustmentsUc`، `webV1AdminInventory.kt`. خرابکاری: بدون `holdForChange` ← تست ۲۰ تغییر همزمان قرمز |
+| ۲۶ مهر ۱۴۰۵ | ۱.۹ | Phase 1 step 1.9 | عکس و hover ِ کارت از رنگ نمایش، `imageUrl`/`thumbnailUrl` ِ سواچ‌ها، عکس صفحه‌ی محصول، `CartItem.image`، `OrderItemSnapshot.imageUrl` (مسیر ۴۸۰، سفارش‌های قبلی null)، کانترکت `OrderItem.image` رشته (ردیف ۲۱). بدون کوئری اضافه. خرابکاری: `imageUrl = null` در ثبت سفارش ← تست قرمز |

@@ -3,9 +3,11 @@ package com.kiva.infrastructure.persistence.exposed
 import com.kiva.application.dto.GalleryItemDto
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.media.entity.MediaAsset
+import com.kiva.domain.aggregate.media.model.valueobject.MediaId
 import com.kiva.domain.aggregate.media.model.valueobject.MediaPurpose
 import com.kiva.domain.aggregate.media.model.valueobject.MediaType
 import com.kiva.domain.aggregate.media.model.valueobject.MediaVariant
+import com.kiva.domain.aggregate.product.model.valueobject.MediaView
 import com.kiva.domain.aggregate.product.model.valueobject.ProductMedia
 import com.kiva.infrastructure.TestDatabase
 import com.kiva.infrastructure.persistence.event.ProductEventSamples
@@ -46,6 +48,26 @@ object SampleMedia {
             // Attached, as a product's files are: the clean-up job never removes them.
             media.markAttached(listOf(photo.id, video.id), uploadedOn)
         }
+    }
+
+    /**
+     * Photo number [n] of a test gallery (`med_…n`, its sizes 160, 480 and 1600), stored once like the samples, as a
+     * [view] item of a gallery.
+     */
+    fun photo(n: Int, view: MediaView = MediaView.FRONT): ProductMedia {
+        val id = MediaId.constructFromPersisted("med_" + "P${n}".padStart(22, '0'))
+        val dir = "2026/10/${id.value}"
+        val asset = MediaAsset.upload(
+            id, MediaPurpose.PRODUCT, MediaType.IMAGE, 1600, 1200, null, 90_000, null,
+            listOf(MediaVariant.of(160, "$dir/160.webp"), MediaVariant.of(480, "$dir/480.webp"), MediaVariant.of(1600, "$dir/1600.webp")), null, null,
+            dir, UserId.SYSTEM, uploadedOn,
+        )
+        transaction(TestDatabase.database) {
+            val media = MediaRepositoryImpl()
+            if (media.find(id) == null) media.insert(asset)
+            media.markAttached(listOf(id), uploadedOn)
+        }
+        return ProductMedia.constructFromPersisted(id, MediaType.IMAGE, view, null)
     }
 
     /** What the read model gives back for [item] of the samples' gallery. */

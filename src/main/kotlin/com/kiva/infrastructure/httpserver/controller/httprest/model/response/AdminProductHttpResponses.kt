@@ -134,7 +134,7 @@ data class AdminProductHttpResponse(
                 defaultColorKey = shop.defaultColorKey,
                 displayColorKey = shop.displayColorKey,
                 image = shop.image,
-                hoverImage = null,
+                hoverImage = shop.hoverImage,
                 badges = shop.badges,
                 stock = shop.stock,
                 isNew = shop.isNew,

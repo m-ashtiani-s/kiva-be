@@ -68,6 +68,7 @@ data class CartItemDto(
     val lineTotals: LineTotals,
     val stock: StockInfo,
     val addedAt: Instant,
+    val image: UploadedMediaDto? = null,
 )
 
 /** The «رزرو ۴ روزه» switch. [shipAfterDate] is today plus [holdDays], in Tehran. */

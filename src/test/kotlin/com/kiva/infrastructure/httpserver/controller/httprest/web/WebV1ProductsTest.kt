@@ -32,7 +32,6 @@ import com.kiva.domain.aggregate.product.model.valueobject.StockStatus
 import com.kiva.domain.aggregate.product.model.valueobject.StrapInfo
 import com.kiva.infrastructure.httpserver.API_V1
 import com.kiva.infrastructure.httpserver.configureHttp
-import com.kiva.infrastructure.media.MediaUrls
 import io.ktor.client.request.get
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
@@ -72,7 +71,7 @@ class WebV1ProductsTest {
         environment { config = MapApplicationConfig() }
         application {
             configureHttp()
-            routing { route(API_V1) { webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, siteUrl = "https://kiva.ir", mediaUrls = MediaUrls("https://media.kiva.test")) } }
+            routing { route(API_V1) { webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, siteUrl = "https://kiva.ir", mediaUrls = testMediaUrls) } }
         }
         block()
     }
@@ -220,9 +219,11 @@ class WebV1ProductsTest {
                  "category":{"id":3,"slug":"cross","name":"کراس‌بادی"},"bagType":"CROSSBODY",
                  "price":{"price":1450000,"compareAtPrice":1750000,"discountPercent":17,"discountAmount":300000,"currency":"IRT"},
                  "colors":[
-                   {"variantId":201,"color":{"key":"black","name":"مشکی","hex":"#2B2930","isLight":false,"sortOrder":1,"productCount":null},"stockStatus":"IN_STOCK"},
-                   {"variantId":202,"color":{"key":"lilac","name":"یاسی","hex":"#C8B6E2","isLight":true,"sortOrder":4,"productCount":null},"stockStatus":"LOW_STOCK"}],
-                 "colorsCount":2,"defaultColorKey":"black","displayColorKey":"black","image":null,
+                   {"variantId":201,"color":{"key":"black","name":"مشکی","hex":"#2B2930","isLight":false,"sortOrder":1,"productCount":null},"stockStatus":"IN_STOCK",
+                    "imageUrl":null,"thumbnailUrl":null},
+                   {"variantId":202,"color":{"key":"lilac","name":"یاسی","hex":"#C8B6E2","isLight":true,"sortOrder":4,"productCount":null},"stockStatus":"LOW_STOCK",
+                    "imageUrl":null,"thumbnailUrl":null}],
+                 "colorsCount":2,"defaultColorKey":"black","displayColorKey":"black","image":null,"hoverImage":null,
                  "badges":[
                    {"code":"NEW","label":"جدید","tone":"DEFAULT","icon":null},
                    {"code":"SALE","label":"۱۷٪ تخفیف","tone":"SALE","icon":null},
@@ -353,9 +354,9 @@ class WebV1ProductsTest {
                 {"id":201,"sku":"KV-1002-BLACK","color":{"key":"black","name":"مشکی","hex":"#2B2930","isLight":false,"sortOrder":1,"productCount":null},
                  "isDefault":true,"price":{"price":1450000,"compareAtPrice":1750000,"discountPercent":17,"discountAmount":300000,"currency":"IRT"},
                  "stock":{"status":"IN_STOCK","availableQuantity":null,"maxOrderQuantity":5,"label":"موجود در انبار"},
-                 "media":[{"id":"med_0000000000000000000201","type":"IMAGE","url":"https://media.kiva.test/p/2/black/1600.webp",
-                           "thumbnailUrl":"https://media.kiva.test/p/2/black/320.webp",
-                           "srcSet":[{"width":320,"url":"https://media.kiva.test/p/2/black/320.webp"},{"width":1600,"url":"https://media.kiva.test/p/2/black/1600.webp"}],
+                 "media":[{"id":"med_0000000000000000000201","type":"IMAGE","url":"https://api.kivashop.test/media/p/2/black/1600.webp",
+                           "thumbnailUrl":"https://api.kivashop.test/media/p/2/black/320.webp",
+                           "srcSet":[{"width":320,"url":"https://api.kivashop.test/media/p/2/black/320.webp"},{"width":1600,"url":"https://api.kivashop.test/media/p/2/black/1600.webp"}],
                            "posterUrl":null,"width":1600,"height":1200,"durationSec":null,"mimeType":"image/webp","alt":"نمای جلو","blurhash":null,
                            "view":"FRONT","viewLabel":"نمای جلو","sortOrder":0,"isPrimary":true,"isUnedited":true}],
                  "hasVideo":false}

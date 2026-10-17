@@ -402,8 +402,9 @@ class PlaceOrderUc(
                 slug = Slug.constructFromPersisted(qm.product.slug),
                 sku = Sku.constructFromPersisted(qm.color.sku),
                 color = OrderItemSnapshot.Color(ColorKey.constructFromPersisted(qm.color.key), qm.color.name, qm.color.hex),
-                // No uploaded photos yet, as on the cart's lines.
-                imageUrl = null,
+                // The color's first photo at the size a line shows it, as it is now: a later change of the gallery
+                // doesn't change what was bought.
+                imageUrl = qm.image?.pathFor(ORDER_LINE_IMAGE_WIDTH),
             ),
         )
     }
@@ -423,6 +424,9 @@ class PlaceOrderUc(
 
     companion object {
         const val MAX_ATTEMPTS = 3
+
+        /** The size an order line shows its picture at (the contract's 480 version). */
+        const val ORDER_LINE_IMAGE_WIDTH = 480
     }
 
     /** The request's shape, field by field (400 VALIDATION_ERROR), besides what the value objects say themselves. */

@@ -27,6 +27,12 @@ data class UploadedMediaDto(
 ) {
     data class Variant(val width: Int, val path: String)
 
+    /**
+     * The size to show in a box [width] pixels wide: the largest not wider than it, or the smallest when every size is
+     * wider (as MediaAsset.pathFor). A photo's swatch asks for 160, its color option for 480.
+     */
+    fun pathFor(width: Int): String = (variants.lastOrNull { it.width <= width } ?: variants.first()).path
+
     companion object {
         fun from(asset: MediaAsset) = UploadedMediaDto(
             id = asset.id.value,

@@ -16,6 +16,7 @@ import com.kiva.infrastructure.httpserver.controller.httprest.model.response.Ord
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.OrderListHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.ReorderHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.ReservationInfoHttpResponse
+import com.kiva.infrastructure.media.MediaUrls
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.auth.authenticate
 import io.ktor.server.response.respond
@@ -40,18 +41,18 @@ private const val ORDER_CODE = "orderCode"
  * token's customer's: someone else's, or a code that can't be one, is the same 404 as one that doesn't exist. Paying
  * an order again (`POST /me/orders/{orderCode}/payments`) is in webV1Payments.
  */
-fun Route.webV1MyOrders(useCases: MyOrderUseCases) {
+fun Route.webV1MyOrders(useCases: MyOrderUseCases, mediaUrls: MediaUrls) {
     authenticate(ACCESS) {
         get("/me/orders") {
             // Newest first is the only order; 20 a page by default.
             val pageable = call.pageable().unwrapOr { return@get call.respondFailure(it) }
             val query = ListMyOrdersUc.Qry(call.accessPrincipal().userId, call.request.queryParameters["filter"], pageable)
-            call.respondResult(useCases.listMyOrders.execute(query)) { OrderListHttpResponse.from(it) }
+            call.respondResult(useCases.listMyOrders.execute(query)) { OrderListHttpResponse.from(it, mediaUrls) }
         }
 
         get("/me/orders/{$ORDER_CODE}") {
             val query = GetMyOrderUc.Qry(call.accessPrincipal().userId, call.parameters[ORDER_CODE].orEmpty())
-            call.respondResult(useCases.getMyOrder.execute(query)) { OrderDetailHttpResponse.from(it) }
+            call.respondResult(useCases.getMyOrder.execute(query)) { OrderDetailHttpResponse.from(it, mediaUrls) }
         }
 
         // «رزرو ۴ روزه» while one holds; 204 when none does.
@@ -65,7 +66,7 @@ fun Route.webV1MyOrders(useCases: MyOrderUseCases) {
             val command = ReorderUc.Cmd(call.accessPrincipal().userId, call.parameters[ORDER_CODE].orEmpty())
             val reorder = useCases.reorder.execute(command).unwrapOr { return@post call.respondFailure(it) }
             val cart = useCases.getCart.execute(GetCartUc.Qry(reorder.change.cartId.value)).unwrapOr { return@post call.respondFailure(it) }
-            call.respond(ReorderHttpResponse.from(CartHttpResponse.from(cart, reorder.change.issues), reorder))
+            call.respond(ReorderHttpResponse.from(CartHttpResponse.from(cart, reorder.change.issues, mediaUrls), reorder))
         }
     }
 }

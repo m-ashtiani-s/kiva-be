@@ -1,5 +1,6 @@
 package com.kiva.application.repository
 
+import com.kiva.application.dto.UploadedMediaDto
 import com.kiva.common.valueobject.Slug
 import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
 import com.kiva.domain.aggregate.product.model.valueobject.BagType
@@ -32,11 +33,18 @@ data class ProductCardQm(
     val maxPerOrder: MaxPerOrder,
     val colors: List<Color>,
 ) {
-    /** One active color. @property available what can still be sold: on hand minus reserved. */
+    /**
+     * One active color.
+     *
+     * @property available what can still be sold: on hand minus reserved.
+     * @property photos its gallery's first two photos (videos left out), in gallery order: the card's picture and the
+     *   one shown on hover.
+     */
     data class Color(
         val variantId: VariantId,
         val colorKey: ColorKey,
         val isDefault: Boolean,
         val available: Int,
+        val photos: List<UploadedMediaDto> = emptyList(),
     )
 }

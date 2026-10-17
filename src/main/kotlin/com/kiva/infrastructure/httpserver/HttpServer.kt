@@ -265,6 +265,7 @@ fun Application.configureRouting() {
             webV1Auth(
                 AuthUseCases(sendLoginCodeUc, verifyLoginCodeUc, getMeUc, refreshSessionUc, logoutUc, mergeGuestCartUc, getCartUc),
                 config.http.allowedOrigins,
+                mediaUrls,
             )
             webV1Me(MeUseCases(getMeUc, updateMyProfileUc, requestPhoneChangeUc, confirmPhoneChangeUc))
             webV1AdminCustomers(AdminCustomerUseCases(checkPanelAccessUc, findCustomersUc, getCustomerUc, setUserRolesUc))
@@ -282,13 +283,14 @@ fun Application.configureRouting() {
                     openCartUc, getCartUc, addCartItemUc, changeCartItemUc, removeCartItemUc, clearCartUc, chooseShippingMethodUc,
                     setCartReservationUc, mergeGuestCartUc, applyDiscountCodeUc, removeDiscountCodeUc,
                 ),
+                mediaUrls,
             )
-            webV1Checkout(CheckoutUseCases(openCartUc, getCheckoutContextUc, placeOrderUc, startPaymentUc, getOrderSummaryUc, getPaymentInitUc))
+            webV1Checkout(CheckoutUseCases(openCartUc, getCheckoutContextUc, placeOrderUc, startPaymentUc, getOrderSummaryUc, getPaymentInitUc), mediaUrls)
             webV1Payments(
                 PaymentUseCases(handleGatewayCallbackUc, getPaymentResultUc, startPaymentAttemptUc, startPaymentUc, getPaymentInitUc),
                 config.payment.resultUrl,
             )
-            webV1MyOrders(MyOrderUseCases(listMyOrdersUc, getMyOrderUc, reorderUc, getCartUc, getMyReservationUc))
+            webV1MyOrders(MyOrderUseCases(listMyOrdersUc, getMyOrderUc, reorderUc, getCartUc, getMyReservationUc), mediaUrls)
         }
     }
 }

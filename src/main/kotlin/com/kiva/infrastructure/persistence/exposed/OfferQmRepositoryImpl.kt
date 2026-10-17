@@ -58,5 +58,6 @@ class OfferQmRepositoryImpl : OfferQmRepository {
         color = OfferQm.Color(
             this[ColorTbl.colorKey], this[ColorTbl.name], this[ColorTbl.hex], this[ColorTbl.isLight], this[ColorTbl.sortOrder], this[ProductVariantQmTbl.sku],
         ),
+        image = this[ProductVariantQmTbl.media].firstOrNull { !it.isVideo }?.toDto()?.media,
     )
 }

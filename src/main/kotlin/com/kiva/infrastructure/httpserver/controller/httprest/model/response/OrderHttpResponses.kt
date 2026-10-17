@@ -4,6 +4,7 @@ import com.kiva.application.dto.OrderSummaryDto
 import com.kiva.application.dto.PaymentInitDto
 import com.kiva.application.dto.ReservationInfoDto
 import com.kiva.domain.aggregate.order.model.valueobject.OrderActions
+import com.kiva.infrastructure.media.MediaUrls
 import kotlinx.serialization.Serializable
 
 /** Contract schema `PlaceOrderResponse`: the order, and where to pay it; [payment] is `null` for an order paid at once. */
@@ -33,7 +34,7 @@ data class OrderSummaryHttpResponse(
     val actions: OrderActionsHttpResponse,
 ) {
     companion object {
-        fun from(order: OrderSummaryDto): OrderSummaryHttpResponse {
+        fun from(order: OrderSummaryDto, urls: MediaUrls): OrderSummaryHttpResponse {
             val current = OrderTexts.currentStepOf(order.status)
             return OrderSummaryHttpResponse(
                 code = order.code,
@@ -44,7 +45,7 @@ data class OrderSummaryHttpResponse(
                 payable = order.payable.toman,
                 balanceDue = 0,
                 shippingMethod = OrderShippingMethodHttpResponse(order.shippingMethod.name, order.shippingMethodName),
-                itemsPreview = order.items.map { OrderItemPreviewHttpResponse(it.productId, it.name, it.colorKey, it.imageUrl, it.quantity) },
+                itemsPreview = order.items.map { OrderItemPreviewHttpResponse(it.productId, it.name, it.colorKey, it.imageUrl?.let(urls::of), it.quantity) },
                 itemsCount = order.itemsCount,
                 progress = OrderProgressHttpResponse(
                     currentStepIndex = current ?: 0,

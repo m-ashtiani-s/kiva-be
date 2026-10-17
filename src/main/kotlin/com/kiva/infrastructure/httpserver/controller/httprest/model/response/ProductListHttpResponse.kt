@@ -5,6 +5,7 @@ import com.kiva.application.dto.ProductListDto
 import com.kiva.infrastructure.common.http.PageMetaHttpResponse
 import com.kiva.infrastructure.common.http.toHttpResponse
 import com.kiva.infrastructure.common.http.toPersianNumber
+import com.kiva.infrastructure.media.MediaUrls
 import kotlinx.serialization.Serializable
 
 /**
@@ -23,9 +24,9 @@ data class ProductListHttpResponse(
     val facets: ProductFacetsHttpResponse? = null,
 ) {
     companion object {
-        fun from(list: ProductListDto, facets: ProductFacetsDto?, sort: String): ProductListHttpResponse {
+        fun from(list: ProductListDto, facets: ProductFacetsDto?, sort: String, urls: MediaUrls): ProductListHttpResponse {
             val applied = list.applied
-            val page = list.page.toHttpResponse { ProductSummaryHttpResponse.from(it, filterColors = applied.colors.map { color -> color.key }) }
+            val page = list.page.toHttpResponse { ProductSummaryHttpResponse.from(it, filterColors = applied.colors.map { color -> color.key }, urls) }
             val oneCategory = applied.categories.singleOrNull()
 
             return ProductListHttpResponse(

@@ -126,7 +126,7 @@ class AuthTestStack(val clock: MutableClock, maxSmsPerHour: Int = 300, val otpCo
                 configureAuthentication(accessTokens)
                 routing {
                     route(API_V1) {
-                        webV1Auth(authUseCases, allowedOrigins)
+                        webV1Auth(authUseCases, allowedOrigins, testMediaUrls)
                         webV1Me(MeUseCases(getMe, updateProfile, requestPhoneChange, confirmPhoneChange))
                         webV1AdminCustomers(AdminCustomerUseCases(checkPanelAccess, findCustomers, getCustomer, setUserRoles))
                     }

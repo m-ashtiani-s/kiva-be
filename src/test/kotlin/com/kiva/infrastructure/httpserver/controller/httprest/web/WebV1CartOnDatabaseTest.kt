@@ -151,8 +151,8 @@ class WebV1CartOnDatabaseTest {
             configureAuthentication(stack.accessTokens)
             routing {
                 route(API_V1) {
-                    webV1Auth(stack.authUseCases, listOf(ORIGIN))
-                    webV1Cart(useCases)
+                    webV1Auth(stack.authUseCases, listOf(ORIGIN), testMediaUrls)
+                    webV1Cart(useCases, testMediaUrls)
                 }
             }
         }

@@ -232,12 +232,12 @@ class PurchaseTestStack(val clock: MutableClock) {
             configureAuthentication(auth.accessTokens)
             routing {
                 route(API_V1) {
-                    webV1Auth(auth.authUseCases, listOf(ORIGIN))
-                    webV1Cart(cartUseCases)
+                    webV1Auth(auth.authUseCases, listOf(ORIGIN), testMediaUrls)
+                    webV1Cart(cartUseCases, testMediaUrls)
                     webV1Addresses(addressUseCases)
-                    webV1Checkout(checkoutUseCases)
+                    webV1Checkout(checkoutUseCases, testMediaUrls)
                     webV1Payments(paymentUseCases, PaymentConfig.DEFAULT.resultUrl)
-                    webV1MyOrders(myOrderUseCases)
+                    webV1MyOrders(myOrderUseCases, testMediaUrls)
                 }
             }
         }

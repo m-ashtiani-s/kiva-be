@@ -143,8 +143,8 @@ class WebV1CartMergeOnDatabaseTest {
             configureAuthentication(stack.accessTokens)
             routing {
                 route(API_V1) {
-                    webV1Auth(stack.authUseCases, listOf(ORIGIN))
-                    webV1Cart(cartUseCases)
+                    webV1Auth(stack.authUseCases, listOf(ORIGIN), testMediaUrls)
+                    webV1Cart(cartUseCases, testMediaUrls)
                 }
             }
         }

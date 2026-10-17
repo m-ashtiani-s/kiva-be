@@ -31,6 +31,7 @@ import com.kiva.infrastructure.httpserver.controller.httprest.model.response.Car
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.CartMutationHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.CartTexts
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.RemovedItemHttpResponse
+import com.kiva.infrastructure.media.MediaUrls
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.auth.authenticate
 import io.ktor.server.request.receive
@@ -66,20 +67,20 @@ private const val ITEM_ID = "itemId"
  * (it records the cart as seen); after it the answer is built by GetCartUc, and a new guest cart's token goes in the
  * `X-Cart-Token` header. Merging a guest's cart into the customer's (`POST /cart/merge`) needs a login.
  */
-fun Route.webV1Cart(useCases: CartUseCases) {
+fun Route.webV1Cart(useCases: CartUseCases, mediaUrls: MediaUrls) {
     authenticate(ACCESS, optional = true) {
         get("/cart") {
-            call.respondCart(useCases, useCases.openCart.execute(OpenCartUc.Cmd(call.cartCaller())))
+            call.respondCart(useCases, mediaUrls, useCases.openCart.execute(OpenCartUc.Cmd(call.cartCaller())))
         }
 
         delete("/cart") {
-            call.respondCart(useCases, useCases.clearCart.execute(ClearCartUc.Cmd(call.cartCaller())))
+            call.respondCart(useCases, mediaUrls, useCases.clearCart.execute(ClearCartUc.Cmd(call.cartCaller())))
         }
 
         post("/cart/items") {
             val request = call.receive<AddCartItemHttpRequest>()
             val result = useCases.addCartItem.execute(AddCartItemUc.Cmd(call.cartCaller(), request.variantId, request.quantity))
-            call.respondCartMutation(useCases, result) { change, cart ->
+            call.respondCartMutation(useCases, mediaUrls, result) { change, cart ->
                 val line = cart.items.firstOrNull { it.id == change.affectedItemId?.value }
                 line?.let { CartTexts.added(it.product.name, it.color.name, change.addedQuantity ?: 0) }
             }
@@ -88,33 +89,33 @@ fun Route.webV1Cart(useCases: CartUseCases) {
         patch("/cart/items/{$ITEM_ID}") {
             val request = call.receive<UpdateCartItemHttpRequest>()
             val command = ChangeCartItemUc.Cmd(call.cartCaller(), call.itemIdSegment(), request.quantity, request.variantId)
-            call.respondCartMutation(useCases, useCases.changeCartItem.execute(command)) { _, _ -> null }
+            call.respondCartMutation(useCases, mediaUrls, useCases.changeCartItem.execute(command)) { _, _ -> null }
         }
 
         delete("/cart/items/{$ITEM_ID}") {
             val result = useCases.removeCartItem.execute(RemoveCartItemUc.Cmd(call.cartCaller(), call.itemIdSegment()))
-            call.respondCartMutation(useCases, result) { change, _ ->
+            call.respondCartMutation(useCases, mediaUrls, result) { change, _ ->
                 change.removedItem?.let { CartTexts.removed(it.productName, it.colorName) }
             }
         }
 
         put("/cart/shipping-method") {
             val request = call.receive<ChooseShippingMethodHttpRequest>()
-            call.respondCart(useCases, useCases.chooseShippingMethod.execute(ChooseShippingMethodUc.Cmd(call.cartCaller(), request.method)))
+            call.respondCart(useCases, mediaUrls, useCases.chooseShippingMethod.execute(ChooseShippingMethodUc.Cmd(call.cartCaller(), request.method)))
         }
 
         put("/cart/reservation") {
             val request = call.receive<SetCartReservationHttpRequest>()
-            call.respondCart(useCases, useCases.setCartReservation.execute(SetCartReservationUc.Cmd(call.cartCaller(), request.enabled)))
+            call.respondCart(useCases, mediaUrls, useCases.setCartReservation.execute(SetCartReservationUc.Cmd(call.cartCaller(), request.enabled)))
         }
 
         post("/cart/discount-code") {
             val request = call.receive<ApplyDiscountCodeHttpRequest>()
-            call.respondCart(useCases, useCases.applyDiscountCode.execute(ApplyDiscountCodeUc.Cmd(call.cartCaller(), request.code)))
+            call.respondCart(useCases, mediaUrls, useCases.applyDiscountCode.execute(ApplyDiscountCodeUc.Cmd(call.cartCaller(), request.code)))
         }
 
         delete("/cart/discount-code") {
-            call.respondCart(useCases, useCases.removeDiscountCode.execute(RemoveDiscountCodeUc.Cmd(call.cartCaller())))
+            call.respondCart(useCases, mediaUrls, useCases.removeDiscountCode.execute(RemoveDiscountCodeUc.Cmd(call.cartCaller())))
         }
     }
 
@@ -123,22 +124,23 @@ fun Route.webV1Cart(useCases: CartUseCases) {
         post("/cart/merge") {
             val request = call.receive<MergeCartHttpRequest>()
             val command = MergeGuestCartUc.Cmd(call.accessPrincipal().userId, request.guestCartToken)
-            call.respondCart(useCases, useCases.mergeGuestCart.execute(command))
+            call.respondCart(useCases, mediaUrls, useCases.mergeGuestCart.execute(command))
         }
     }
 }
 
 /** A command's failure as a problem; its success as the whole cart (contract `Cart`). */
-private suspend fun ApplicationCall.respondCart(useCases: CartUseCases, result: Result<CartChange, ResultFailure>) {
+private suspend fun ApplicationCall.respondCart(useCases: CartUseCases, mediaUrls: MediaUrls, result: Result<CartChange, ResultFailure>) {
     val change = result.unwrapOr { return respondFailure(it) }
     val cart = useCases.getCart.execute(GetCartUc.Qry(change.cartId.value)).unwrapOr { return respondFailure(it) }
     sendNewCartToken(change)
-    respond(CartHttpResponse.from(cart, change.issues))
+    respond(CartHttpResponse.from(cart, change.issues, mediaUrls))
 }
 
 /** Like [respondCart], wrapped as the contract's `CartMutationResponse`, with the toast [message] gives. */
 private suspend fun ApplicationCall.respondCartMutation(
     useCases: CartUseCases,
+    mediaUrls: MediaUrls,
     result: Result<CartChange, ResultFailure>,
     message: (CartChange, CartDto) -> String?,
 ) {
@@ -147,7 +149,7 @@ private suspend fun ApplicationCall.respondCartMutation(
     sendNewCartToken(change)
     respond(
         CartMutationHttpResponse(
-            cart = CartHttpResponse.from(cart, change.issues),
+            cart = CartHttpResponse.from(cart, change.issues, mediaUrls),
             affectedItemId = change.affectedItemId?.value,
             removedItem = change.removedItem?.let(RemovedItemHttpResponse::from),
             message = message(change, cart),
