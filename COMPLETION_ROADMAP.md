@@ -1530,7 +1530,7 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 |---|---|---|---|
 | ۲.۰ | کانترکت 1.9.0 | M | ✅ |
 | ۲.۱ | دامنه‌ی سفارش بعد از پرداخت، و Aggregate ِ استرداد | L | ✅ |
-| ۲.۲ | read model ِ سفارش برای پنل و تایم‌لاین تازه | L | ⬜ |
+| ۲.۲ | read model ِ سفارش برای پنل و تایم‌لاین تازه | L | ✅ |
 | ۲.۳ | صف و جزئیات سفارش در پنل | M | ⬜ |
 | ۲.۴ | یادداشت داخلی | S | ⬜ |
 | ۲.۵ | عکس قبل از ارسال، تأیید مشتری و تأیید خودکار | L | ⬜ |
@@ -2043,18 +2043,25 @@ Route: 200 با AdminOrder ِ همون سفارش
 
 ---
 
-#### گام ۲.۲: read model ِ سفارش برای پنل و تایم‌لاین تازه · L ⬜
+#### گام ۲.۲: read model ِ سفارش برای پنل و تایم‌لاین تازه · L ✅
 
 **می‌سازی:** `V26__order_admin_read_model.sql` (با backfill ِ `searchText` و `kind` ِ تایم‌لاین)؛ `OrderTimelineEntry` با `kind` و `note`؛ Projector برای همه‌ی رویدادهای تازه (ستون‌ها، تایم‌لاین، `soldCount` ِ محصول و رنگ منفی با `OrderCancelled` زیر قفل ۷ و قبل از stream ِ سفارش، مثل `OrderPaid`)؛ `OrderQm` با فیلدهای تازه؛ `OrderQmRepository`: `findByCode(code)` (بدون مالک)، `findForAdmin(filter, pageable)`، `statusCounts(filter)`، `findOfGroup(groupId)`، `findSilentPhotos(now, limit)`، `dailyShipments(day, q, pageable)`، `shippedOfCustomer(userId)`؛ `lockOrder(orderId)` (قفل ۹)؛ `purchasesOf` با `refunded`؛ `paidCodesIn` با `countsAsPurchase`.
 
 وابسته به: ۲.۱
 
 **تموم شده یعنی:**
-- [ ] backfill: تایم‌لاین سفارش رزروی ِ آزادشده ← `PLACED`، `PAID`، `RELEASED_FROM_RESERVATION`؛ `searchText` ِ همه‌ی ردیف‌ها پر.
-- [ ] هر رویداد تازه فقط همون ردیف رو عوض می‌کنه و یه ردیف تایم‌لاین با `kind` ِ درست می‌ذاره.
-- [ ] لغو ← `soldCount` ِ محصول و رنگ همون اندازه‌ای کم می‌شه که با پرداخت زیاد شده بود، و هیچ‌وقت منفی نمی‌شه.
-- [ ] پرداخت و لغو یه سفارش در یه لحظه، ۲۰ بار ← یکی‌شون، هیچ بن‌بست.
-- [ ] دیتابیس رد می‌کنه: `SHIPPED` بدون کد، `CANCELLED` بدون `cancelledOn`.
+- [x] backfill: تایم‌لاین سفارش رزروی ِ آزادشده ← `PLACED`، `PAID`، `RELEASED_FROM_RESERVATION`؛ `searchText` ِ همه‌ی ردیف‌ها پر.
+- [x] هر رویداد تازه فقط همون ردیف رو عوض می‌کنه و یه ردیف تایم‌لاین با `kind` ِ درست می‌ذاره.
+- [x] لغو ← `soldCount` ِ محصول و رنگ همون اندازه‌ای کم می‌شه که با پرداخت زیاد شده بود، و هیچ‌وقت منفی نمی‌شه.
+- [x] پرداخت و لغو یه سفارش در یه لحظه، ۲۰ بار ← یکی‌شون، هیچ بن‌بست.
+- [x] دیتابیس رد می‌کنه: `SHIPPED` بدون کد، `CANCELLED` بدون `cancelledOn`.
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- `OrderPhotosAttached` (پیش‌نویس) ردیف تایم‌لاین نمی‌ذاره: تایم‌لاین مال مشتریه و پیش‌نویس رو نمی‌بینه. بقیه‌ی رویدادهای تازه هر کدوم یه ردیف با `kind` ِ خودشون (`OrderTimelineKind` در application: `PLACED`، `PAYMENT_FAILED`، `PAID`، `EXPIRED`، `RELEASED_FROM_RESERVATION`، `PHOTOS_SENT`، `PHOTOS_APPROVED`، `PHOTOS_AUTO_APPROVED`، `SHIPPED`، `SHIPMENT_CORRECTED`، `DELIVERED`، `CANCELLED`، `REFUNDED`). ردیف `note` (لغو و تحویل) و `amount` (استرداد) هم داره.
+- `searchText` = `normalizePersian` ِ «کد، اسم و موبایل گیرنده، شهر» (`OrderQmProjector.searchTextOf`). SQL ِ backfill عین همون قانون‌هاست (نیم‌فاصله‌ی تکی می‌مونه، چسبیده به فاصله فاصله می‌شه) و `OrderAdminReadModelMigrationTest` هر دو رو با یه آدرس پر از حرف عربی، رقم فارسی و نیم‌فاصله با هم مقایسه می‌کنه، و خود دو `UPDATE` ِ فایل migration رو روی یه ردیف با شکل قدیم اجرا می‌کنه.
+- دو `CHECK` ِ بیشتر: `orderqm_photo_sent_check` (عکس غیر `WAITING` ← `photoEverSent` و زمان‌ها) و `orderqm_refunded_check` (`refunded ≤ payable`)، و ایندکس `orderqm_group_idx` برای سفارش‌های یه گروه.
+- لغو `soldCount` رو زیر همون قفل ۷ کم می‌کنه (`lockFor` حالا برای `OrderCancelled` هم قفل می‌گیره). «پرداخت و لغو در یه لحظه» به‌صورت پرداخت یه سفارش و لغو سفارش دیگه از همون دو رنگ با ترتیب برعکس، ۲۰ بار، تست شد (یه سفارش رو نمی‌شه همزمان پرداخت و لغو کرد).
+- از متدهای تازه‌ی `OrderQmRepository` این گام `findByCode`، `lockOrder`، `hasPurchase` و تغییر `purchasesOf` (`totalSpent` = پرداخت − برگشت) و `paidCodesIn` (`countsAsPurchase`) رو داره؛ `Discounts` «خرید اول» رو از `hasPurchase` می‌پرسه. `findForAdmin`/`statusCounts`/`findOfGroup` با گام ۲.۳، `findSilentPhotos` با ۲.۵ و رهگیری‌ها با ۲.۹ میان، هر کدوم با تست همون گام. برچسب تایم‌لاین هنوز از وضعیته و با گام ۲.۵ از `kind` می‌شه.
 
 ---
 
@@ -5984,3 +5991,4 @@ kiva {
 | ۲۶ مهر ۱۴۰۵ | ۱.۱۰ | Phase 1 step 1.10 | `PANEL_CATALOG_REVIEW.md` (ردیف‌های ۱، ۳، ۴، ۵، ۱۵، ۱۶، ۱۸، ۲۰ با تست‌هاشون و ۱۳ خرابکاری)، `PanelCatalogLogScanOnDatabaseTest`، `ProductLockOrderOnDatabaseTest`، تست «در استفاده» با `productCount 2`، `docs/FRONTEND_PANEL_CATALOG.md`، README. ۲۲۶۳ تست سبز. مونده: دور با پنل و تست‌های `vips` (ابزار و پنل اینجا نیست) و merge به `main` |
 | ۲۶ مهر ۱۴۰۵ | ۲.۰ | Phase 2 step 2.0 | کانترکت 1.9.0 با هر ۱۶ ردیف ِ ۷.۱۰ و دو ردیف تازه (۱۷: قانون `media` و `media-feedback`؛ ۱۸: `customer.fullName` nullable). `STORE_CREDIT` از هر چهار enum رفت. YAML با snakeyaml معتبره و همه‌ی `$ref`ها پیدا می‌شن. متن همه‌ی کدهای تازه. برنچ `panel-orders` از نوک فاز ۱ |
 | ۲۶ مهر ۱۴۰۵ | ۲.۱ | Phase 2 step 2.1 | هشت رویداد تازه‌ی سفارش با payload و JSON ِ طلایی، وضعیت و متدهای عکس، ارسال، تحویل، لغو و استرداد در `Order`، `OrderTransitionPolicy`، `PreShipmentPolicy`، `OrderActionFacts`، `countsAsPurchase`، `shipForOrder`، `giveBack` با `storedStatus`، Aggregate ِ `Refund` و `RefundDomainService`. `OrderDelivered` یادداشت پنل رو هم داره. ۲۳۱۶ تست سبز |
+| ۲۶ مهر ۱۴۰۵ | ۲.۲ | Phase 2 step 2.2 | `V26` با backfill ِ `searchText` و `kind` ِ تایم‌لاین، ستون‌ها و `CHECK`های بعد از پرداخت، `trackingUrlTemplate`؛ Projector برای همه‌ی رویدادهای تازه (کم شدن `soldCount` با لغو زیر قفل ۷)، `OrderQm` و `OrderTimelineKind`، `findByCode`، `lockOrder`، `hasPurchase`. ۲۳۲۹ تست سبز |

@@ -1,11 +1,13 @@
 package com.kiva.infrastructure.persistence.exposed.tbl
 
 import com.kiva.domain.aggregate.order.model.valueobject.OrderStatus
+import com.kiva.domain.aggregate.order.model.valueobject.PhotoStatus
 import com.kiva.domain.aggregate.settings.model.valueobject.ShippingMethodCode
 import com.kiva.domain.aggregate.user.model.valueobject.MessengerChannel
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.AddressSnapshotPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.GiftNotePayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderLinePayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderPhotoPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderTotalsPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.PreShipmentMessengerPayload
 import kotlinx.serialization.Serializable
@@ -15,8 +17,9 @@ import org.jetbrains.exposed.v1.javatime.timestampWithTimeZone
 import org.jetbrains.exposed.v1.json.jsonb
 
 /**
- * One row per order, ready for the customer's lists and pages and for the jobs. Written only by OrderQmProjector.
- * Created by V15__orders.sql (Exposed never creates tables); keep both in step.
+ * One row per order, ready for the customer's lists and pages, the panel's queue and the jobs. Written only by
+ * OrderQmProjector. Created by V15__orders.sql and grown by V26__order_admin_read_model.sql (Exposed never creates
+ * tables); keep them in step.
  */
 object OrderQmTbl : LongIdTable(name = "orderqm_tbl", columnName = "pId") {
     val orderId = long("orderId").uniqueIndex()
@@ -41,15 +44,71 @@ object OrderQmTbl : LongIdTable(name = "orderqm_tbl", columnName = "pId") {
     val gift = jsonb<GiftNotePayload>("gift", Json).nullable()
     val customerNote = varchar("customerNote", 300).nullable()
     val updatedOn = timestampWithTimeZone("updatedOn")
+
+    // ---- V26: after the payment ----
+    val searchText = text("searchText")
+    val photoStatus = enumerationByName<PhotoStatus>("photoStatus", 16)
+    val photoEverSent = bool("photoEverSent")
+    val photos = jsonb<OrderPhotosQm>("photos", Json)
+    val photosSentOn = timestampWithTimeZone("photosSentOn").nullable()
+    val feedbackDeadline = timestampWithTimeZone("feedbackDeadline").nullable()
+    val feedback = jsonb<OrderFeedbackQm>("feedback", Json).nullable()
+    val trackingCode = varchar("trackingCode", 40).nullable()
+    val shippedOn = timestampWithTimeZone("shippedOn").nullable()
+    val showInDailyList = bool("showInDailyList")
+    val deliveredOn = timestampWithTimeZone("deliveredOn").nullable()
+    val returnableUntil = timestampWithTimeZone("returnableUntil").nullable()
+    val cancelledOn = timestampWithTimeZone("cancelledOn").nullable()
+    val cancellation = jsonb<OrderCancellationQm>("cancellation", Json).nullable()
+    val refunded = long("refunded")
 }
 
 /**
- * One entry of an order's timeline, as the projector writes it for each event: the status the order went to and
- * when, and for a failed payment attempt its reason. The Persian label is the HTTP layer's.
+ * One entry of an order's timeline, as the projector writes it for each event the customer sees: what happened ([kind]),
+ * the status the order was in after it, and when. The Persian label is the HTTP layer's, made from the kind.
+ *
+ * @property failureReason why an attempt to pay failed.
+ * @property kind an OrderTimelineKind; every row has one (V26 gave the rows before it theirs).
+ * @property note staff's or the customer's note of a cancellation or a delivery, shown as it was written.
+ * @property amount money given back, in toman, for a REFUNDED entry.
  */
 @Serializable
 data class OrderTimelineEntry(
     val status: String,
     val at: String,
     val failureReason: String?,
+    val kind: String,
+    val note: String? = null,
+    val amount: Long? = null,
 )
+
+/** The photos before shipping: the operator's draft (the panel's only), the last batch sent, and how many were sent. */
+@Serializable
+data class OrderPhotosQm(val draft: List<OrderPhotoPayload>, val sent: List<OrderPhotoPayload>, val batch: Int) {
+    companion object {
+        val NONE = OrderPhotosQm(emptyList(), emptyList(), 0)
+    }
+}
+
+/**
+ * The customer's last answer to the photos (`PreShipmentMedia.feedback`). In this phase only «همونه!» (APPROVE); the
+ * change request's fields and its resolution come with phase 3, and stay null until then.
+ */
+@Serializable
+data class OrderFeedbackQm(
+    val decision: String,
+    val changeType: String?,
+    val orderItemId: Int?,
+    val desiredVariantId: Long?,
+    val note: String?,
+    val at: String,
+    val resolution: String?,
+) {
+    override fun toString(): String = "OrderFeedbackQm(decision=$decision, at=$at)"
+}
+
+/** How the order was cancelled; the note is personal. */
+@Serializable
+data class OrderCancellationQm(val by: String, val reason: String?, val note: String?) {
+    override fun toString(): String = "OrderCancellationQm(by=$by, reason=$reason)"
+}

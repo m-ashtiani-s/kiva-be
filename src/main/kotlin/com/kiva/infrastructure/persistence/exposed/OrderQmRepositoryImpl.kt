@@ -1,35 +1,41 @@
 package com.kiva.infrastructure.persistence.exposed
 
+import com.kiva.application.repository.FeedbackDecision
 import com.kiva.application.repository.OrderQm
 import com.kiva.application.repository.OrderQmRepository
+import com.kiva.application.repository.OrderTimelineKind
 import com.kiva.common.pagination.Page
 import com.kiva.common.pagination.Pageable
 import com.kiva.common.valueobject.Money
 import com.kiva.common.valueobject.UserId
+import com.kiva.domain.aggregate.order.model.valueobject.CancelReason
+import com.kiva.domain.aggregate.order.model.valueobject.CancelledBy
 import com.kiva.domain.aggregate.order.model.valueobject.CustomerNote
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
 import com.kiva.domain.aggregate.order.model.valueobject.OrderId
 import com.kiva.domain.aggregate.order.model.valueobject.OrderStatus
+import com.kiva.domain.aggregate.order.model.valueobject.TrackingCode
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentFailureReason
 import com.kiva.domain.aggregate.reservation.model.valueobject.ReservationGroupId
 import com.kiva.infrastructure.common.persistence.SortOrders
 import com.kiva.infrastructure.common.persistence.paginate
 import com.kiva.infrastructure.persistence.exposed.tbl.OrderQmTbl
+import java.time.Instant
+import java.time.ZoneOffset
 import org.jetbrains.exposed.v1.core.Op
-import org.jetbrains.exposed.v1.core.SortOrder
-import org.jetbrains.exposed.v1.core.count
-import org.jetbrains.exposed.v1.core.max
-import org.jetbrains.exposed.v1.core.sum
 import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.count
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greater
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.lessEq
+import org.jetbrains.exposed.v1.core.max
+import org.jetbrains.exposed.v1.core.minus
+import org.jetbrains.exposed.v1.core.sum
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import java.time.Instant
-import java.time.ZoneOffset
 
 /** Reads orderqm_tbl. Runs inside the use case's transaction; it never opens one itself. */
 class OrderQmRepositoryImpl : OrderQmRepository {
@@ -39,6 +45,12 @@ class OrderQmRepositoryImpl : OrderQmRepository {
             .where { (OrderQmTbl.userId eq userId.value) and (OrderQmTbl.code eq code.value) }
             .singleOrNull()
             ?.toOrderQm()
+
+    override fun findByCode(code: OrderCode): OrderQm? =
+        OrderQmTbl.selectAll().where { OrderQmTbl.code eq code.value }.singleOrNull()?.toOrderQm()
+
+    override fun lockOrder(orderId: OrderId): OrderQm? =
+        OrderQmTbl.selectAll().where { OrderQmTbl.orderId eq orderId.value }.forUpdate().singleOrNull()?.toOrderQm()
 
     override fun unpaidHoldingUntil(userId: UserId, now: Instant): List<Instant> =
         OrderQmTbl.select(OrderQmTbl.holdUntil)
@@ -79,7 +91,7 @@ class OrderQmRepositoryImpl : OrderQmRepository {
     override fun purchasesOf(userIds: Collection<UserId>): Map<UserId, OrderQmRepository.Purchases> {
         if (userIds.isEmpty()) return emptyMap()
         val count = OrderQmTbl.orderId.count()
-        val spent = OrderQmTbl.payable.sum()
+        val spent = (OrderQmTbl.payable - OrderQmTbl.refunded).sum()
         val latest = OrderQmTbl.placedOn.max()
         return OrderQmTbl.select(OrderQmTbl.userId, count, spent, latest)
             .where { (OrderQmTbl.userId inList userIds.map { it.value }) and (OrderQmTbl.status inList OrderStatus.entries.filter { it.isPaid }) }
@@ -93,6 +105,12 @@ class OrderQmRepositoryImpl : OrderQmRepository {
             }
     }
 
+    override fun hasPurchase(userId: UserId): Boolean =
+        OrderQmTbl.select(OrderQmTbl.orderId)
+            .where { (OrderQmTbl.userId eq userId.value) and (OrderQmTbl.status inList OrderStatus.entries.filter { it.countsAsPurchase }) }
+            .limit(1)
+            .any()
+
     override fun findHeldIn(groupId: ReservationGroupId): List<OrderId> =
         OrderQmTbl.select(OrderQmTbl.orderId)
             .where { (OrderQmTbl.reservationGroupId eq groupId.value) and (OrderQmTbl.status eq OrderStatus.RESERVED) }
@@ -102,7 +120,7 @@ class OrderQmRepositoryImpl : OrderQmRepository {
     override fun paidCodesIn(groupIds: Collection<ReservationGroupId>): Map<ReservationGroupId, List<OrderCode>> {
         if (groupIds.isEmpty()) return emptyMap()
         return OrderQmTbl.select(OrderQmTbl.reservationGroupId, OrderQmTbl.code)
-            .where { (OrderQmTbl.reservationGroupId inList groupIds.map { it.value }) and (OrderQmTbl.status inList OrderStatus.entries.filter { it.isPaid }) }
+            .where { (OrderQmTbl.reservationGroupId inList groupIds.map { it.value }) and (OrderQmTbl.status inList OrderStatus.entries.filter { it.countsAsPurchase }) }
             .orderBy(OrderQmTbl.paidOn to SortOrder.ASC, OrderQmTbl.orderId to SortOrder.ASC)
             .groupBy({ ReservationGroupId.constructFromPersisted(it[OrderQmTbl.reservationGroupId]!!) }, { OrderCode.constructFromPersisted(it[OrderQmTbl.code]) })
     }
@@ -124,12 +142,34 @@ class OrderQmRepositoryImpl : OrderQmRepository {
         totals = this[OrderQmTbl.totals].toDomain(),
         timeline = this[OrderQmTbl.timeline].map { entry ->
             OrderQm.TimelineEntry(
+                kind = OrderTimelineKind.valueOf(entry.kind),
                 status = OrderStatus.valueOf(entry.status),
                 at = Instant.parse(entry.at),
                 failureReason = entry.failureReason?.let { PaymentFailureReason.valueOf(it) },
+                note = entry.note,
+                amount = entry.amount?.let { Money.constructFromPersisted(it) },
             )
         },
         customerNote = this[OrderQmTbl.customerNote]?.let { CustomerNote.constructFromPersisted(it) },
         gift = this[OrderQmTbl.gift]?.toDomain(),
+        photoStatus = this[OrderQmTbl.photoStatus],
+        photoEverSent = this[OrderQmTbl.photoEverSent],
+        photoDraft = this[OrderQmTbl.photos].draft.map { it.toDomain() },
+        photosSent = this[OrderQmTbl.photos].sent.map { it.toDomain() },
+        photoBatch = this[OrderQmTbl.photos].batch,
+        photosSentOn = this[OrderQmTbl.photosSentOn]?.toInstant(),
+        feedbackDeadline = this[OrderQmTbl.feedbackDeadline]?.toInstant(),
+        feedback = this[OrderQmTbl.feedback]?.let { OrderQm.Feedback(FeedbackDecision.valueOf(it.decision), Instant.parse(it.at)) },
+        shipment = this[OrderQmTbl.trackingCode]?.let { code ->
+            OrderQm.Shipment(TrackingCode.constructFromPersisted(code), checkNotNull(this[OrderQmTbl.shippedOn]).toInstant(), this[OrderQmTbl.showInDailyList])
+        },
+        deliveredOn = this[OrderQmTbl.deliveredOn]?.toInstant(),
+        returnableUntil = this[OrderQmTbl.returnableUntil]?.toInstant(),
+        cancellation = this[OrderQmTbl.cancellation]?.let {
+            OrderQm.Cancellation(
+                CancelledBy.valueOf(it.by), it.reason?.let(CancelReason::valueOf), it.note, checkNotNull(this[OrderQmTbl.cancelledOn]).toInstant(),
+            )
+        },
+        refunded = Money.constructFromPersisted(this[OrderQmTbl.refunded]),
     )
 }
