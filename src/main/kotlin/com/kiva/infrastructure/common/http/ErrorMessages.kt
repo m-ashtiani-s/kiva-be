@@ -78,7 +78,7 @@ object ErrorMessages {
         "ORDER_NOT_RETURNABLE" to "این سفارش قابل مرجوع کردن نیست",
         "RETURN_WINDOW_EXPIRED" to "مهلت مرجوع کردن این سفارش تموم شده",
         "ORDER_ALREADY_PAID" to "این سفارش قبلاً پرداخت شده",
-        "CHANGE_REQUEST_NOT_ALLOWED" to "سفارش ارسال شده و دیگه نمی‌شه تغییرش داد",
+        "CHANGE_REQUEST_NOT_ALLOWED" to "الان نمی‌شه برای این سفارش درخواست تغییر داد؛ فقط بعد از دیدن عکس و قبل از ارسال، و یکی یکی",
         "INVALID_STATUS_TRANSITION" to "این تغییر وضعیت مجاز نیست",
         "PAYMENT_NOT_FOUND" to "پرداخت پیدا نشد",
         "PAYMENT_FAILED" to "پرداخت انجام نشد. اگه مبلغی کم شده، خودکار برمی‌گرده",
@@ -281,7 +281,7 @@ object ErrorMessages {
         "WARRANTY_MONTHS_INVALID" to "مدت ضمانت باید بین ۱ و {max} ماه باشه",
         "WARRANTY_DESCRIPTION_TOO_LONG" to "توضیح ضمانت حداکثر {maxLength} حرفه",
         // --- work on orders in the panel (phase 2) ---
-        "NOTE_REQUIRED" to "متن یادداشت رو بنویس",
+        "NOTE_REQUIRED" to "توضیحش رو بنویس",
         "NOTE_TOO_LONG" to "یادداشت حداکثر {maxLength} حرفه",
         "ORDER_ITEM_NOT_FOUND" to "این کالا توی این سفارش نیست",
         "MANUAL_ONLY" to "ارسال عکس فقط دستیه؛ عکس‌ها رو توی پیام‌رسان بفرست و بعد ثبت کن",
@@ -312,6 +312,14 @@ object ErrorMessages {
         "REFUND_STATUS_FILTER_INVALID" to "وضعیت استرداد باید PENDING یا PROCESSING باشه",
         "DAYS_INVALID" to "تعداد روزها باید بین ۱ و {max} باشه",
         "TRACKING_QUERY_TOO_LONG" to "متن جستجو حداکثر {maxLength} حرفه",
+        // --- a change request after the photos, and paying what is left (phase 3) ---
+        "CHANGE_TYPE_REQUIRED" to "بگو چه تغییری می‌خوای",
+        "CHANGE_TYPE_INVALID" to "نوع تغییر باید COLOR، MODEL، CANCEL_ITEM یا OTHER باشه",
+        "ORDER_ITEM_REQUIRED" to "کالایی که می‌خوای تغییر کنه رو انتخاب کن",
+        "DESIRED_VARIANT_REQUIRED" to "رنگ یا مدلی که می‌خوای رو انتخاب کن",
+        "DESIRED_VARIANT_INVALID" to "این رنگ یا مدل برای این تغییر درست نیست",
+        "RESOLUTION_DECISION_INVALID" to "تصمیم باید APPLY یا REJECT باشه",
+        "VARIANT_NOT_ALLOWED" to "رنگ جایگزین فقط برای اجرای تغییر رنگ یا مدل معنی داره",
     )
 
     // Used when a code has no text of its own (or its placeholders can't be filled).

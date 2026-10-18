@@ -2305,7 +2305,7 @@ Route: 200 با AdminOrder ِ همون سفارش
 
 | گام | عنوان | اندازه | وضعیت |
 |---|---|---|---|
-| ۳.۰ | کانترکت 1.10.0 | S | ⬜ |
+| ۳.۰ | کانترکت 1.10.0 | S | ✅ |
 | ۳.۱ | دامنه: درخواست تغییر، ردیف عوض‌شده، مانده و جمع‌های بعد از تغییر | L | ⬜ |
 | ۳.۲ | پرداخت مانده | L | ⬜ |
 | ۳.۳ | درخواست تغییر مشتری | M | ⬜ |
@@ -2327,6 +2327,12 @@ Route: 200 با AdminOrder ِ همون سفارش
 | 9 | مهلت پرداخت مانده | ندارن (سفارش تا پرداخت `PROCESSING` می‌مونه و ارسال نمی‌شه). `PaymentInit.expiresAt` برای `BALANCE` = پایان پنجره‌ی ۲۰ دقیقه‌ای همون تلاش. سقف ۱۰ تلاش برای هر `(سفارش، purpose)` | مانده موجودی رو قفل نمی‌کنه؛ موجودی از ثبت سفارش رزرو شده |
 | 10 | پیامک رسیدگی | `notifyCustomer` ← پیامک «درخواستت بررسی شد؛ جزئیات تو صفحه‌ی سفارش» بدون `note` (متن آزاد پیامک نداریم). `note` در `feedback.resolution.note` و تایم‌لاین دیده می‌شه | بخش ۱، ردیف ۱۴ |
 | 11 | عکس‌ها بعد از رسیدگی | دسته‌ی قبلی تو تاریخچه می‌مونه (رویدادها) و تا دسته‌ی تازه فرستاده نشده در `items` دیده می‌شه؛ عکس `WAITING` و پیش‌نویس خالی | کانترکت: «پاسخ قبلی مشتری با نتیجه‌اش می‌ماند تا عکس تازه برسد» |
+| 12 | `codeDiscount` بعد از حذف قلم (تازه، گام ۳.۰) | `codeDiscount` ِ نمایشی = کد ِ لحظه‌ی ثبت منهای سهم کد ِ قلم‌های حذف‌شده (`floor(lineTotal × codeDiscount ÷ subtotal)`، همون سهم تصمیم ۶). با تعویض رنگ/مدل کد ثابت می‌مونه. کد با قانون‌های خودش (حداقل خرید و …) دوباره حساب نمی‌شه | با کد ثابت، هویت تصمیم ۷ بعد از `CANCEL_ITEM` به اندازه‌ی سهم کد اون قلم نمی‌خوند (۶۹٬۰۰۰ در مثال گام ۳.۱) و مشتری عددهایی می‌دید که جمع نمی‌شن |
+| 13 | ورینت ناموجود (تازه، گام ۳.۰) | `desiredVariantId` یا `variantId` ِ ناموجود ← `400 DESIRED_VARIANT_INVALID` (سیاست ۴.۳: ارجاع به چیزی که نیست)؛ موجود ولی غیرفعال یا محصولش منتشرنشده ← `422 PRODUCT_UNAVAILABLE` | ۸.۵ فقط «هست و فعاله» رو گفته بود |
+| 14 | `variantId` ِ بی‌معنی در رسیدگی (تازه، گام ۳.۰) | با `REJECT` (قبل از تراکنش) یا با `APPLY` روی `CANCEL_ITEM`/`OTHER` (داخل تراکنش) ← `400 VARIANT_NOT_ALLOWED` روی `variantId`. `variantId` ِ `COLOR`/`MODEL` همون قانون `desiredVariantId` رو داره | ساکت نادیده گرفتنش یعنی اپراتور فکر کنه رنگ عوض شده |
+| 15 | `CANCEL_ITEM` ِ تنها قلم (تازه، گام ۳.۰) | همون لغو پنل: `OrderCancellation.run(STAFF)`، و با `notifyCustomer` پیامک «لغو شد» (نه «بررسی شد»). `feedback.resolution` نمی‌گیره؛ لغو خودش جوابه | دو پیامک برای یه کار گیج‌کننده‌ست |
+| 16 | مانده‌ی سفارش لغوشده (تازه، گام ۳.۰) | `OrderCancelled` مانده رو صفر می‌کنه: سفارش لغوشده چیزی بدهکار نیست و `canPay` نداره | پرداخت مانده‌ی سفارش لغوشده پولیه که باید بلافاصله برگرده |
+| 17 | `note` ِ درخواست و رسیدگی (تازه، گام ۳.۰) | همون VO ِ `StatusNote` (≤ ۵۰۰، `STATUS_NOTE_TOO_LONG`)، که تو لاگ چاپ نمی‌شه | یادداشتیه که مشتری می‌بینه، مثل یادداشت لغو و تحویل |
 
 ### ۸.۳ تغییرات دامنه
 
@@ -2445,15 +2451,22 @@ Route: 200 با AdminOrder
 | 5 | `/payment-callbacks/{gateway}` | «برای پرداخت مانده، verify فقط وقتی مانده هنوز همان مبلغ است» |
 | 6 | `OrderPaymentInfo` | فیلدهای تازه‌ی `purpose` (`ORDER`، `BALANCE`) و `amount` (هر دو non-null)، تا پرداخت‌های مانده تو جزئیات جدا دیده بشن |
 | 7 | `ErrorCode` | — (همه‌ی کدهای این فاز تو enum هستن) |
+| 8 | `OrderTotals` (تازه، گام ۳.۰) | `codeDiscount` بعد از حذف قلم (تصمیم ۱۲)؛ «سفارش لغوشده مانده ندارد» (تصمیم ۱۶) |
+| 9 | بخش ۵ (پیامک‌ها) (تازه، گام ۳.۰) | ردیف «درخواست تغییر بررسی شد»، بدون `note` |
+| 10 | `AdminChangeRequestResolutionRequest.variantId` و `.note` (تازه، گام ۳.۰) | `VARIANT_NOT_ALLOWED` و قانون `desiredVariantId` (تصمیم ۱۴)؛ «`note` با پیامک نمی‌ره» |
+
+**کدهای فیلدی تازه** (فقط متن فارسی): `CHANGE_TYPE_REQUIRED`، `CHANGE_TYPE_INVALID`، `ORDER_ITEM_REQUIRED`، `DESIRED_VARIANT_REQUIRED`، `DESIRED_VARIANT_INVALID`، `RESOLUTION_DECISION_INVALID`، `VARIANT_NOT_ALLOWED`.
 
 ### ۸.۷ گام‌ها
 
-#### گام ۳.۰: کانترکت 1.10.0 · S ⬜
+#### گام ۳.۰: کانترکت 1.10.0 · S ✅
 
 برنچ `change-requests`؛ ردیف‌های ۸.۶؛ متن کدهای فیلدی.
 
 **تموم شده یعنی:**
-- [ ] کانترکت معتبر، `ErrorMessagesTest` سبز.
+- [x] کانترکت معتبر، `ErrorMessagesTest` سبز.
+
+**یادداشت پیاده‌سازی:** برنچ `change-requests` از نوک فاز ۲ (`origin/panel-orders`) ساخته شد، چون فاز ۲ هنوز منتظر merge به `main` ـه. شش تصمیم تازه (۱۲ تا ۱۷ ِ ۸.۲) و سه ردیف تازه‌ی ۸.۶ (۸ تا ۱۰). متن `CHANGE_REQUEST_NOT_ALLOWED` عمومی شد (حالا قبل از عکس و با درخواست باز هم میاد، نه فقط بعد از ارسال) و متن `NOTE_REQUIRED` («توضیحش رو بنویس») که حالا برای یادداشت، لغو، درخواست و رسیدگی مشترکه. YAML با snakeyaml معتبره و هر ۱۳۲۱ `$ref` پیدا می‌شن. تست‌های روی دیتابیس این‌جا روی یه Postgres ِ موقت (پورت ۵۴۳۳، `KIVA_TEST_DB_URL`) اجرا شدن، چون Postgres ِ محلی با `kiva`/`kiva` ِ پیش‌فرض باز نمی‌شد.
 
 ---
 
@@ -6071,3 +6084,4 @@ kiva {
 | ۲۶ مهر ۱۴۰۵ | ۲.۹ | Phase 2 step 2.9 | `LookupGuestTrackingUc` (۴۰۴ ِ یکسان، ۱۰ در ۱۰ دقیقه)، `ListDailyShipmentDaysUc`، `ListDailyShipmentsUc` (یه ردیف برای هر کد، `q`)، `ListMyTrackingUc`، `DailyShipmentMask`، `webV1Tracking.kt`، `GET /me/tracking`، `meta.retryAfterSeconds` برای ۴۲۹ ِ plugin. ۲۳۸۱ تست سبز |
 | ۲۶ مهر ۱۴۰۵ | ۲.۱۰ | Phase 2 step 2.10 | `progress.steps[].at` و `items[].returnableUntil` ِ واقعی، تست کل مسیر با مقایسه‌ی فیلدها با کانترکت (`ContractSchemas`)، `totalSpent` بعد از لغو و استرداد کامل. ۲۳۸۳ تست سبز |
 | ۲۶ مهر ۱۴۰۵ | ۲.۱۱ | Phase 2 step 2.11 | `PANEL_ORDERS_REVIEW.md` (۷ ردیف، ۱۲ خرابکاری)، `PanelOrdersLogScanOnDatabaseTest`، دو تست مالکیت تقویت شد، تست‌های لغو/ارسال همزمان و مرز ساعت تهران، `docs/FRONTEND_PANEL_ORDERS.md`، بخش ۶ ِ `docs/FRONTEND_PURCHASE.md`. ۲۳۸۷ تست سبز. merge منتظر تأیید |
+| ۲۷ مهر ۱۴۰۵ | ۳.۰ | Phase 3 step 3.0 | کانترکت 1.10.0 با هر ۷ ردیف ِ ۸.۶ و سه ردیف تازه (۸ تا ۱۰)؛ شش تصمیم تازه (۱۲ تا ۱۷ ِ ۸.۲: `codeDiscount` بعد از حذف قلم، ورینت ناموجود ۴۰۰، `VARIANT_NOT_ALLOWED`، `CANCEL_ITEM` ِ تنها قلم = لغو پنل، مانده‌ی لغوشده صفر، `StatusNote`). YAML با snakeyaml معتبره و هر ۱۳۲۱ `$ref` پیدا می‌شن. متن هفت کد فیلدی تازه. برنچ `change-requests` از نوک فاز ۲. پایه: ۲۳۸۷ تست سبز روی Postgres ِ موقت |

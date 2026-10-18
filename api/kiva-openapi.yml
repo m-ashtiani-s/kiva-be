@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: KIVA Store API — کیوا
-  version: 1.9.0
+  version: 1.10.0
   contact:
     name: KIVA Engineering
     email: support@kiva.ir
@@ -183,9 +183,10 @@ info:
     **درخواست تغییر:** مشتری با `POST /me/orders/{orderCode}/media-feedback` (`REQUEST_CHANGE`) سفارش را `CHANGE_REQUESTED` می‌کند.
     اپراتور آن را با `POST /admin/orders/{orderCode}/change-request/resolution` اجرا یا رد می‌کند و سفارش به `PROCESSING` برمی‌گردد
     (`preShipmentMedia.status = WAITING`: عکس تازه، بعد ارسال). از `CHANGE_REQUESTED` فقط همین endpoint یا لغو (`CANCELLED`) بیرون می‌برد.
-    اگر رنگ/مدل تازه **ارزان‌تر** باشد، مابه‌التفاوت خودکار استرداد می‌شود؛ اگر **گران‌تر** باشد، روی سفارش `balanceDue` می‌نشیند
-    (در `OrderSummary` و `totals`) و `actions.canPay = true`؛ مشتری با `POST /me/orders/{orderCode}/payments` آن را می‌پردازد
-    و تا صفر نشود سفارش ارسال نمی‌شود (`422 BALANCE_DUE`).
+    اگر رنگ/مدل تازه **ارزان‌تر** باشد، مابه‌التفاوت اول از مانده‌ی پرداخت (`balanceDue`) کم می‌شود و باقیش خودکار استرداد می‌شود؛
+    اگر **گران‌تر** باشد، روی سفارش `balanceDue` می‌نشیند (در `OrderSummary` و `totals`) و `actions.canPay = true`؛
+    مشتری با `POST /me/orders/{orderCode}/payments` آن را می‌پردازد و تا صفر نشود سفارش ارسال نمی‌شود (`422 BALANCE_DUE`).
+    درخواست تغییر فقط در `PHOTO_SENT` (عکس `SENT` یا `APPROVED`؛ پس بعد از تأیید هم) و یکی در هر لحظه ممکن است؛ بعد از ارسال هیچ‌وقت.
 
     **چرخه‌ی مرجوعی** (`ReturnStatus`):
 
@@ -215,6 +216,7 @@ info:
     | تحویل شد | SMS | درخواست ثبت نظر (با `notifyCustomer`) |
     | لغو شد | SMS | کد سفارش؛ لغو مشتری همیشه، لغو پنل با `notifyCustomer` |
     | پول برگشت | SMS | کد سفارش؛ وقتی استرداد `COMPLETED` می‌شود |
+    | درخواست تغییر بررسی شد | SMS | کد سفارش + «جزئیات در صفحه‌ی سفارش»؛ با `notifyCustomer`. **بدون `note`**: متن آزاد پیامک نداریم، `note` در `feedback.resolution` و تایم‌لاین دیده می‌شود |
     | موجود شد | SMS | لینک محصول (اشتراک «موجود شد خبرم کن») |
     | افت قیمت علاقه‌مندی | SMS | فقط با رضایت بازاریابی [پیشنهادی] |
 
@@ -1490,6 +1492,8 @@ paths:
         * تراکنش از روی شناسه‌ای که خود درگاه داده (زرین‌پال: `Authority`) پیدا می‌شود، و verify سرور به سرور با مبلغی انجام می‌شود که سرور خودش ذخیره کرده، نه با چیزی از این درخواست.
         * verify فقط وقتی انجام می‌شود که سفارش هنوز در انتظار پرداخت باشد. اگر سفارش منقضی شده یا با تلاش دیگری پرداخت شده، verify **نمی‌شود**،
           تراکنش `FAILED` می‌شود و درگاه مبلغ را خودش به کارت برمی‌گرداند.
+        * **پرداخت مانده** (تلاش با `purpose = BALANCE`، بعد از درخواست تغییر): verify فقط وقتی انجام می‌شود که `balanceDue` ِ سفارش هنوز **دقیقاً همان مبلغ تلاش** باشد.
+          اگر مانده صفر شده (تلاش دیگری پرداختش کرده) یا عوض شده (اپراتور دوباره تغییر داده) یا سفارش لغو شده، verify نمی‌شود و همان مسیر بالا (`FAILED`) را می‌رود.
         * اگر تلاش دیگری از **همین سفارش** همان لحظه در حال verify است، این تلاش فعلاً verify نمی‌شود و `PENDING` می‌ماند (هیچ‌وقت دو تلاش یک سفارش با هم verify نمی‌شوند).
           سرور بعداً خودش تمامش می‌کند: اگر آن تلاش موفق شد این یکی `FAILED` می‌شود و درگاه مبلغش را برمی‌گرداند، وگرنه همین یکی verify می‌شود.
         * این مسیر هیچ‌وقت JSON یا صفحه‌ی خطا نشان نمی‌دهد و **همیشه** `302` است. تراکنش پیدا نشد (یا پارامترها مال این درگاه نیست، یا درگاهی است که هنوز
@@ -2200,7 +2204,12 @@ paths:
         مثل `POST /payments/{paymentId}/retry`، ولی با کد سفارش؛ چون صفحه‌ی سفارش `paymentId` ندارد. همان ترتیب قانون‌ها و همان دو حالت `PAYMENT_GATEWAY_UNAVAILABLE`؛
         `gateway` نیامده = درگاه آخرین تلاش سفارش. کد سفارش کاربر دیگر یا کد بدشکل ← `404 ORDER_NOT_FOUND`.
         فقط وقتی مجاز است که `actions.canPay = true` باشد. یک تراکنش جدید ساخته می‌شود: برای سفارش پرداخت‌نشده به مبلغ `totals.payable`،
-        و برای سفارش پرداخت‌شده‌ای که بعد از درخواست تغییر مانده‌ی پرداخت دارد به مبلغ `totals.balanceDue` (فاز بعد؛ تا آن موقع سفارش پرداخت‌شده `ORDER_ALREADY_PAID` می‌گیرد).
+        و برای سفارش پرداخت‌شده‌ای که بعد از درخواست تغییر مانده‌ی پرداخت دارد به مبلغ `totals.balanceDue` ِ همین لحظه (`purpose = BALANCE`).
+
+        **پرداخت مانده:** فقط وقتی `totals.balanceDue > 0` و سفارش `PROCESSING`، `PHOTO_SENT` یا `CHANGE_REQUESTED` است؛ سفارش پرداخت‌شده بدون مانده
+        `422 ORDER_ALREADY_PAID`. مانده مهلت ندارد (موجودی از ثبت سفارش رزرو شده و سفارش تا پرداخت ارسال نمی‌شود)، پس `PaymentInit.expiresAt` پایان
+        پنجره‌ی همین تلاش روی درگاه است (۲۰ دقیقه بعد)، نه مهلت سفارش. سقف ۱۰ تلاش از تلاش‌های مانده ِ همین سفارش شمرده می‌شود.
+        بعد از تأیید، `balanceDue = 0` و `totals.payable` (پرداخت‌شده) به اندازه‌ی مانده بالا می‌رود؛ وضعیت سفارش عوض نمی‌شود.
         بازگشت از درگاه مثل تسویه است: `https://kiva.ir/checkout/result?paymentId=...`
       security: [{ bearerAuth: [] }]
       parameters:
@@ -2225,12 +2234,12 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
         '422':
-          description: "`ORDER_ALREADY_PAID`، `PAYMENT_EXPIRED` (موجودی آزاد شده) یا `PAYMENT_GATEWAY_UNAVAILABLE`"
+          description: "`ORDER_ALREADY_PAID` (پرداخت‌شده و بدون مانده)، `PAYMENT_EXPIRED` (موجودی آزاد شده) یا `PAYMENT_GATEWAY_UNAVAILABLE`"
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
         '429':
-          description: "`RATE_LIMITED` — این سفارش ۱۰ تلاش پرداخت داشته است (مثل `POST /payments/{paymentId}/retry`)"
+          description: "`RATE_LIMITED` — این سفارش ۱۰ تلاش پرداخت (یا ۱۰ تلاش پرداخت مانده) داشته است (مثل `POST /payments/{paymentId}/retry`)"
           headers:
             Retry-After: { $ref: '#/components/headers/RetryAfter' }
           content:
@@ -2271,9 +2280,27 @@ paths:
         مطابق FAQ: «تا قبل از ارسال، می‌تونی رنگ یا مدل رو عوض کنی یا سفارش رو لغو کنی».
         `APPROVE` سفارش را برای ارسال آزاد می‌کند (بدون منتظر ماندن برای پایان مهلت پاسخ). فقط وقتی عکس فرستاده شده و هنوز جواب نگرفته
         (`preShipmentMedia.status = SENT`)؛ وگرنه `422 INVALID_STATUS_TRANSITION`. تأیید دوباره‌ی عکسی که تأیید شده `200` و بی‌اثر است.
-        `REQUEST_CHANGE` تا ساخته شدن درخواست تغییر `422 CHANGE_REQUEST_NOT_ALLOWED` می‌گیرد.
-        `REQUEST_CHANGE` وضعیت را `CHANGE_REQUESTED` می‌کند و اپراتور با مشتری هماهنگ می‌کند و درخواست را اجرا یا رد می‌کند
-        (`POST /admin/orders/{orderCode}/change-request/resolution`)؛ اختلاف قیمت با استرداد یا `totals.balanceDue` تسویه می‌شود (بخش ۴).
+
+        `REQUEST_CHANGE` وضعیت را `CHANGE_REQUESTED` (و `preShipmentMedia.status` را `CHANGE_REQUESTED`) می‌کند و اپراتور با مشتری هماهنگ می‌کند
+        و درخواست را اجرا یا رد می‌کند (`POST /admin/orders/{orderCode}/change-request/resolution`)؛ اختلاف قیمت با استرداد یا `totals.balanceDue` تسویه می‌شود (بخش ۴).
+        فقط وقتی سفارش `PHOTO_SENT` است و عکس `SENT` یا `APPROVED` (**بعد از تأیید هم مجاز است**)، و **یک درخواست باز در هر لحظه**؛
+        وگرنه (قبل از عکس، درخواست باز، بعد از ارسال) `422 CHANGE_REQUEST_NOT_ALLOWED`. `actions.canRequestChange` همین را می‌گوید.
+
+        **شکل درخواست** (همه‌ی خطاها با هم، `400` روی همان فیلد):
+
+        | `changeType` | لازم | یعنی |
+        |---|---|---|
+        | `COLOR` | `orderItemId`، `desiredVariantId` | رنگ دیگری از **همان** محصول ِ قلم |
+        | `MODEL` | `orderItemId`، `desiredVariantId` | رنگی از محصول **دیگر** |
+        | `CANCEL_ITEM` | `orderItemId` | حذف قلم (تنها قلم سفارش = لغو کامل سفارش، بعد از تأیید اپراتور) |
+        | `OTHER` | `note` | هر درخواست دیگری؛ اپراتور دستی انجامش می‌دهد |
+
+        کدها: `CHANGE_TYPE_REQUIRED` / `CHANGE_TYPE_INVALID` (روی `changeType`)، `ORDER_ITEM_REQUIRED` (روی `orderItemId`)، `DESIRED_VARIANT_REQUIRED` (روی `desiredVariantId`)،
+        `NOTE_REQUIRED` / `STATUS_NOTE_TOO_LONG` (روی `note`، حداکثر ۵۰۰). فیلدی که برای آن `changeType` معنی ندارد نادیده گرفته می‌شود.
+        بعد از شکل، به این ترتیب: سفارش کاربر دیگر ← `404 ORDER_NOT_FOUND`؛ ورینت ناموجود ← `400 DESIRED_VARIANT_INVALID`؛ ورینت غیرفعال یا محصولش
+        منتشرنشده ← `422 PRODUCT_UNAVAILABLE` (موجودی این‌جا چک نمی‌شود؛ اپراتور موقع اجرا چک می‌کند)؛ وضعیت ← `422 CHANGE_REQUEST_NOT_ALLOWED`؛
+        `orderItemId` ِ ناموجود در سفارش ← `400 ORDER_ITEM_NOT_FOUND`؛ `COLOR` با رنگ محصول دیگر یا همان رنگ فعلی، یا `MODEL` با رنگی از همان محصول ← `400 DESIRED_VARIANT_INVALID`.
+        پاسخ مشتری با همین فیلدها در `preShipmentMediaDetail.feedback` دیده می‌شود.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/OrderCode'
@@ -2289,7 +2316,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/OrderDetail' }
         '422':
-          description: "`INVALID_STATUS_TRANSITION` — عکسی منتظر جواب نیست؛ `CHANGE_REQUEST_NOT_ALLOWED` — درخواست تغییر ممکن نیست"
+          description: "`INVALID_STATUS_TRANSITION` — عکسی منتظر جواب نیست؛ `CHANGE_REQUEST_NOT_ALLOWED` — درخواست تغییر الان ممکن نیست؛ `PRODUCT_UNAVAILABLE` — رنگ/مدل خواسته‌شده قابل فروش نیست"
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -3677,13 +3704,27 @@ paths:
         |---|---|---|
         | `REJECT` | هر کدام | همان کالا ارسال می‌شود. `note` (دلیل، برای مشتری) لازم است. |
         | `APPLY` | `COLOR`، `MODEL` | قلم `orderItemId` به `variantId` (پیش‌فرض: `desiredVariantId`) عوض می‌شود: رزرو انبار ورینت قبلی آزاد و ورینت تازه رزرو می‌شود. نام، SKU و قیمت قلم از ورینت تازه با قیمت **امروزش** است. |
-        | `APPLY` | `CANCEL_ITEM` | قلم حذف و رزروش آزاد می‌شود و سهم پرداخت‌شده‌ی آن استرداد می‌شود. اگر تنها قلم سفارش بود، سفارش `CANCELLED` با استرداد کامل. |
+        | `APPLY` | `CANCEL_ITEM` | قلم حذف و رزروش آزاد می‌شود و سهم پرداخت‌شده‌ی آن استرداد می‌شود. **اگر تنها قلم سفارش بود، سفارش `CANCELLED` می‌شود، دقیقاً مثل لغو پنل** (`POST …/status` با `CANCELLED`: موجودی آزاد، استفاده‌ی کد تخفیف برگشت، استرداد کامل ِ مانده‌ی پرداخت‌شده). |
         | `APPLY` | `OTHER` | کار دستی انجام شده؛ فقط وضعیت برمی‌گردد. `note` لازم است. |
 
-        **اختلاف قیمت** = (قیمت ورینت تازه − قیمت پرداخت‌شده‌ی قلم) × تعداد. منفی ← یک `Refund` با وضعیت `PENDING` خودکار ساخته می‌شود.
-        مثبت ← `totals.balanceDue` و `actions.canPay`؛ مشتری با `POST /me/orders/{orderCode}/payments` می‌پردازد و تا آن موقع ارسال ممکن نیست.
+        شماره‌ی قلم (`orderItemId`) هیچ‌وقت عوض نمی‌شود (عکس‌ها و مرجوعی به آن اشاره می‌کنند)؛ قلم حذف‌شده از `items` بیرون می‌رود و شماره‌اش دوباره استفاده نمی‌شود.
+
+        **اختلاف قیمت** = (قیمت امروز ِ ورینت تازه − قیمت پرداخت‌شده‌ی قلم) × تعداد، و همان لحظه ثابت می‌شود.
+        مثبت ← به `totals.balanceDue` اضافه می‌شود و `actions.canPay = true`؛ مشتری با `POST /me/orders/{orderCode}/payments` می‌پردازد و تا آن موقع ارسال ممکن نیست.
+        منفی ← **اول از `balanceDue` ِ موجود کم می‌شود**، و فقط باقیش یک `Refund` با وضعیت `PENDING` (`BANK_TRANSFER`) می‌شود.
         هزینه‌ی ارسال و کد تخفیف سفارش دوباره حساب نمی‌شوند.
-        با `notifyCustomer` نتیجه (و `note`) برای مشتری پیامک می‌شود.
+
+        **سهم پرداخت‌شده‌ی قلم حذف‌شده** = `lineTotal − floor(lineTotal × codeDiscount ÷ subtotal)` (کد تخفیف و `subtotal` ِ موقع ثبت سفارش؛ هزینه‌ی ارسال برنمی‌گردد،
+        و گرد کردن رو به پایین یعنی هیچ‌وقت بیشتر از پرداخت‌شده برنمی‌گردد). این سهم هم مثل اختلاف منفی اول از `balanceDue` کم می‌شود.
+
+        **ترتیب قانون‌ها:** شکل (`400`: `decision` لازم، `RESOLUTION_DECISION_INVALID`؛ `note` حداکثر ۵۰۰ (`STATUS_NOTE_TOO_LONG`)؛ `REJECT` بدون `note` ← `NOTE_REQUIRED`؛ `variantId` با `REJECT` ← `VARIANT_NOT_ALLOWED`)
+        ← سفارش ← `404` ← پرداخت مانده‌ای در حال تأیید ← `422 PAYMENT_IN_PROGRESS` ← سفارش `CHANGE_REQUESTED` نیست ← `422 INVALID_STATUS_TRANSITION`
+        ← `APPLY` با `OTHER` بدون `note` ← `400 NOTE_REQUIRED`؛ `variantId` با `CANCEL_ITEM`/`OTHER` ← `400 VARIANT_NOT_ALLOWED`
+        ← `COLOR`/`MODEL`: ورینت ناموجود یا نامتناسب با نوع تغییر ← `400 DESIRED_VARIANT_INVALID` روی `variantId`؛ غیرفعال یا محصولش منتشرنشده ← `422 PRODUCT_UNAVAILABLE`؛
+        موجودی کم ← `422 QUANTITY_EXCEEDS_STOCK` (`meta.availableQuantity`)؛ بیش از سقف هر سفارش ِ محصول ← `422 QUANTITY_EXCEEDS_LIMIT`. با هر خطا **هیچ‌چیز** عوض نمی‌شود.
+
+        با `notifyCustomer` (پیش‌فرض) پیامک «درخواستت بررسی شد؛ جزئیات تو صفحه‌ی سفارش» می‌رود، **بدون `note`** (متن آزاد پیامک نداریم)؛
+        `note` در `feedback.resolution.note` و تایم‌لاین سفارش دیده می‌شود. برای `CANCEL_ITEM` ِ تنها قلم پیامک «لغو شد» می‌رود.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/OrderCode'
@@ -3699,7 +3740,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/AdminOrder' }
         '422':
-          description: "`INVALID_STATUS_TRANSITION` (سفارش `CHANGE_REQUESTED` نیست)، `QUANTITY_EXCEEDS_STOCK` (`meta.availableQuantity`) یا `PRODUCT_UNAVAILABLE` (ورینت تازه فعال یا قابل فروش نیست)"
+          description: "`INVALID_STATUS_TRANSITION` (سفارش `CHANGE_REQUESTED` نیست)، `PAYMENT_IN_PROGRESS` (پرداخت مانده در حال تأیید)، `QUANTITY_EXCEEDS_STOCK` (`meta.availableQuantity`)، `QUANTITY_EXCEEDS_LIMIT` یا `PRODUCT_UNAVAILABLE` (ورینت تازه فعال یا قابل فروش نیست)"
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -6580,7 +6621,7 @@ components:
               type: object
               additionalProperties: { type: string }
               example: {}
-        expiresAt: { type: string, format: date-time, description: 'پایان مهلت پرداخت سفارش و رزرو موقت موجودی (ثبت سفارش + ۱۵ دقیقه). برای همه‌ی تلاش‌های پرداخت یک سفارش یکی است و تمدید نمی‌شود.' }
+        expiresAt: { type: string, format: date-time, description: 'پایان مهلت پرداخت سفارش و رزرو موقت موجودی (ثبت سفارش + ۱۵ دقیقه). برای همه‌ی تلاش‌های پرداخت یک سفارش یکی است و تمدید نمی‌شود. برای پرداخت مانده (`purpose = BALANCE`) پایان پنجره‌ی همین تلاش روی درگاه (شروع + ۲۰ دقیقه)؛ مانده خودش مهلت ندارد.' }
     PlaceOrderResponse:
       type: object
       required: [order]
@@ -6747,20 +6788,29 @@ components:
         returnableUntil: { type: string, format: date-time, nullable: true }
     OrderTotals:
       type: object
+      description: |
+        جمع‌های سفارش. قبل از هر درخواست تغییر همان جمع‌های لحظه‌ی ثبت‌اند. **بعد از درخواست تغییر** (رنگ/مدل عوض شد یا قلمی حذف شد):
+
+        * `itemsCompareAtTotal`، `productDiscount` و `subtotal` از قلم‌های **فعلی** سفارش حساب می‌شوند (قلم تازه با قیمت لحظه‌ی رسیدگی)؛
+        * `shippingCost` همان لحظه‌ی ثبت است؛ `codeDiscount` هم، منهای سهم کد ِ قلم‌های حذف‌شده (`floor(lineTotal × codeDiscount ÷ subtotal)` ِ لحظه‌ی ثبت)؛
+          کد با قانون‌های خودش دوباره حساب نمی‌شود؛
+        * `payable` کل پرداخت‌شده تا الان است و `balanceDue` مانده؛ `refunded` استردادهای `COMPLETED`.
+
+        همیشه: `subtotal − codeDiscount + shippingCost = payable + balanceDue − (استردادهای ساخته‌شده از درخواست تغییر)`.
       properties:
         itemsCompareAtTotal: { allOf: [{ $ref: '#/components/schemas/Money' }], example: 4080000 }
         productDiscount: { allOf: [{ $ref: '#/components/schemas/Money' }], example: 600000 }
         subtotal: { allOf: [{ $ref: '#/components/schemas/Money' }], example: 3480000 }
         discountCode: { type: string, nullable: true, description: کد تخفیفی که سفارش با آن ثبت شد (`codeDiscount` مال آن است), example: null }
-        codeDiscount: { allOf: [{ $ref: '#/components/schemas/Money' }], example: 0 }
+        codeDiscount: { allOf: [{ $ref: '#/components/schemas/Money' }], description: 'تخفیف کد؛ بعد از حذف قلم، منهای سهم کد ِ آن قلم', example: 0 }
         shippingCost: { allOf: [{ $ref: '#/components/schemas/Money' }], example: 0 }
         shippingFreeReason: { type: string, nullable: true, example: THRESHOLD }
         giftWrapCost: { allOf: [{ $ref: '#/components/schemas/Money' }], example: 0 }
-        payable: { allOf: [{ $ref: '#/components/schemas/Money' }], description: «پرداخت شده», example: 3480000 }
-        refunded: { allOf: [{ $ref: '#/components/schemas/Money' }], example: 0 }
+        payable: { allOf: [{ $ref: '#/components/schemas/Money' }], description: '«پرداخت شده»: **کل پرداخت‌شده تا الان** (مبلغ ثبت سفارش + مانده‌های پرداخت‌شده). برای سفارش پرداخت‌نشده، مبلغی که باید پرداخت شود', example: 3480000 }
+        refunded: { allOf: [{ $ref: '#/components/schemas/Money' }], description: 'جمع استردادهای `COMPLETED`', example: 0 }
         balanceDue:
           allOf: [{ $ref: '#/components/schemas/Money' }]
-          description: مانده‌ی پرداخت بعد از درخواست تغییر به رنگ/مدل گران‌تر؛ در بقیه‌ی موارد ۰. تا صفر نشود سفارش ارسال نمی‌شود.
+          description: مانده‌ی پرداخت بعد از درخواست تغییر به رنگ/مدل گران‌تر؛ در بقیه‌ی موارد ۰. تا صفر نشود سفارش ارسال نمی‌شود. سفارش لغوشده مانده ندارد.
           example: 0
         currency: { $ref: '#/components/schemas/Currency' }
     AddressSnapshot:
@@ -6831,7 +6881,14 @@ components:
         note: { type: string, nullable: true }
     OrderPaymentInfo:
       type: object
+      required: [purpose, amount]
       properties:
+        purpose:
+          type: string
+          enum: [ORDER, BALANCE]
+          description: '`ORDER` پرداخت خود سفارش؛ `BALANCE` پرداخت مانده بعد از درخواست تغییر'
+          example: ORDER
+        amount: { allOf: [{ $ref: '#/components/schemas/Money' }], description: مبلغ همین تلاش, example: 3480000 }
         gateway: { $ref: '#/components/schemas/PaymentGatewayCode' }
         gatewayName: { type: string, example: زرین‌پال }
         status: { $ref: '#/components/schemas/PaymentStatus' }
@@ -6888,11 +6945,16 @@ components:
     PreShipmentFeedbackRequest:
       type: object
       required: [decision]
+      description: |
+        `APPROVE` بقیه‌ی فیلدها را نمی‌خواهد. `REQUEST_CHANGE` با `changeType` (`400 CHANGE_TYPE_REQUIRED`):
+        `COLOR` و `MODEL` با `orderItemId` (`ORDER_ITEM_REQUIRED`) و `desiredVariantId` (`DESIRED_VARIANT_REQUIRED`)؛
+        `CANCEL_ITEM` با `orderItemId`؛ `OTHER` با `note` (`NOTE_REQUIRED`). فیلدی که برای آن `changeType` معنی ندارد نادیده گرفته می‌شود.
+        `COLOR` = رنگ دیگری از همان محصول ِ قلم؛ `MODEL` = رنگی از محصول دیگر (وگرنه `400 DESIRED_VARIANT_INVALID`).
       properties:
         decision: { type: string, enum: [APPROVE, REQUEST_CHANGE] }
         changeType: { type: string, nullable: true, enum: [COLOR, MODEL, CANCEL_ITEM, OTHER, null] }
-        orderItemId: { type: integer, nullable: true }
-        desiredVariantId: { type: integer, nullable: true, description: رنگ/مدل جایگزین }
+        orderItemId: { type: integer, nullable: true, description: 'قلم سفارش (`OrderItem.id`)؛ برای `COLOR`، `MODEL` و `CANCEL_ITEM`' }
+        desiredVariantId: { type: integer, nullable: true, description: 'رنگ/مدل جایگزین؛ برای `COLOR` و `MODEL`' }
         note: { type: string, maxLength: 500, nullable: true, example: می‌شه رنگ مشکی‌اش رو بفرستید؟ }
     CancelOrderRequest:
       type: object
@@ -8227,12 +8289,12 @@ components:
         variantId:
           type: integer
           nullable: true
-          description: 'فقط برای `APPLY` و `changeType` = `COLOR`/`MODEL`: ورینت جایگزین؛ اگر نیاید همان `desiredVariantId` ِ مشتری'
+          description: 'فقط برای `APPLY` و `changeType` = `COLOR`/`MODEL`: ورینت جایگزین؛ اگر نیاید همان `desiredVariantId` ِ مشتری. همان قانون `desiredVariantId` را دارد (`400 DESIRED_VARIANT_INVALID`)؛ با `REJECT`، `CANCEL_ITEM` یا `OTHER` ← `400 VARIANT_NOT_ALLOWED`'
         note:
           type: string
           maxLength: 500
           nullable: true
-          description: 'برای مشتری (پیامک و جزئیات سفارش)؛ برای `REJECT` و `OTHER` لازم'
+          description: 'برای مشتری: در `feedback.resolution.note` و تایم‌لاین سفارش دیده می‌شود (پیامک متن آزاد ندارد)؛ برای `REJECT` و `OTHER` لازم'
           example: رنگ مشکی تموم شده بود؛ همون رنگ قبلی برات ارسال می‌شه.
         notifyCustomer: { type: boolean, default: true }
     AdminRefundUpdateRequest:
