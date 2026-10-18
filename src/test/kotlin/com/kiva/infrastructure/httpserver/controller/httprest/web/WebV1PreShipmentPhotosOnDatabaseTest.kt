@@ -237,6 +237,9 @@ class WebV1PreShipmentPhotosOnDatabaseTest {
 
         assertEquals(HttpStatusCode.OK, answer(code, sara).status)
         assertEquals(HttpStatusCode.NotFound, answer(code, customer(6)).status)
+        val other = panel.paidOrders.paid(sara.user.id, nila[1]).also { photographed(it) }
+        assertEquals(HttpStatusCode.NotFound, answer(other, customer(6)).status)
+        assertEquals("SENT", get("/me/orders/${other.value}/media", sara).text("status"), "someone else's answer changes nothing")
         val change = answer(code, sara, "REQUEST_CHANGE")
         assertEquals(HttpStatusCode.UnprocessableEntity, change.status)
         assertEquals("CHANGE_REQUEST_NOT_ALLOWED", change.json().text("code"))

@@ -215,6 +215,8 @@ class WebV1OrderCancellationOnDatabaseTest {
         assertEquals("note" to "NOTE_REQUIRED", cancel(code, sara, """{"reason":"OTHER"}""").json()["errors"]!!.jsonArray.single().jsonObject.let { it.text("field") to it.text("code") })
         assertEquals("reason" to "CANCEL_REASON_INVALID", cancel(code, sara, """{"reason":"BORED"}""").json()["errors"]!!.jsonArray.single().jsonObject.let { it.text("field") to it.text("code") })
         assertEquals(HttpStatusCode.NotFound, cancel(code, customer(6)).status)
+        assertEquals(emptyList(), refundsOf(code), "someone else's cancel leaves the order as it was")
+        assertEquals("PROCESSING", transaction(db) { OrderQmTbl.select(OrderQmTbl.status).where { OrderQmTbl.code eq code.value }.single()[OrderQmTbl.status].name })
         assertEquals(HttpStatusCode.Forbidden, status(code, """{"status":"CANCELLED"}""", panel.callerWith(Role.CATALOG_MANAGER)).status)
     }
 

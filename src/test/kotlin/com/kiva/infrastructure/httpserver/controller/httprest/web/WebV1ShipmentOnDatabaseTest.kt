@@ -2,6 +2,7 @@ package com.kiva.infrastructure.httpserver.controller.httprest.web
 
 import com.kiva.application.port.PanelActor
 import com.kiva.application.usecase.inventory.usecase.command.AdjustInventoryUc
+import com.kiva.application.usecase.order.usecase.command.ChangeOrderStatusUc
 import com.kiva.application.usecase.order.usecase.command.ShipOrderUc
 import com.kiva.application.usecase.reservation.usecase.command.ReleaseReservationGroupUc
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
@@ -348,6 +349,39 @@ class WebV1ShipmentOnDatabaseTest {
 
         assertEquals(1L, eventsOf(code, "OrderShipped"))
         assertEquals(onHand - 1, stockOf(nila[0]).first)
+    }
+
+    @Test
+    fun `an operator cancels while another ships, 20 times - one of them, never a cancelled order shipped, the stock right`() = panel.app {
+        val staff = PanelActor(operator().user.id, null)
+        val pool = Executors.newFixedThreadPool(2)
+        try {
+            repeat(20) { round ->
+                val sara = customer(100 + round)
+                val variant = nila[round % nila.size]
+                val code = ready(sara, variant)
+                val (onHand, reserved) = stockOf(variant)
+                val start = CountDownLatch(1)
+                val shipping = pool.submit<Boolean> {
+                    start.await()
+                    runBlocking { panel.adminOrders.ship.execute(ShipOrderUc.Cmd(code.value, "POST", "PT-C$round-0000", null, null, staff)) }.isSuccess
+                }
+                val cancelling = pool.submit<Boolean> {
+                    start.await()
+                    runBlocking { panel.adminOrders.changeStatus.execute(ChangeOrderStatusUc.Cmd(code.value, "CANCELLED", null, false, staff)) }.isSuccess
+                }
+                start.countDown()
+                val (shipped, cancelled) = shipping.get(30, TimeUnit.SECONDS) to cancelling.get(30, TimeUnit.SECONDS)
+
+                assertEquals(1, listOf(shipped, cancelled).count { it }, "round $round: shipped=$shipped cancelled=$cancelled")
+                assertEquals(if (shipped) "SHIPPED" else "CANCELLED", statusOf(code), "round $round")
+                assertEquals(if (shipped) 0L else 1L, eventsOf(code, "OrderCancelled"), "round $round")
+                // Shipped: it left the shelf. Cancelled: the bag is back on sale, nothing left.
+                assertEquals(if (shipped) onHand - 1 to reserved - 1 else onHand to reserved - 1, stockOf(variant), "round $round")
+            }
+        } finally {
+            pool.shutdownNow()
+        }
     }
 
     @Test

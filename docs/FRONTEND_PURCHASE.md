@@ -190,6 +190,15 @@ Idempotency-Key: …                           // its own key, as for placing an
 - «خرید دوباره»: `POST /me/orders/{code}/reorder`. هر چیزی که هنوز هست به سبد میاد (`addedCount`)، و بقیه با دلیلشون (`ALREADY_AT_MAX` وقتی سبد سقفش رو داره).
 - رزرو فعال: `GET /me/reservation` (`200` با شمارش معکوس، یا `204` وقتی رزروی نیست)؛ کارت سفارش رزروی `reservation` و `actions.canAddToReservation` داره.
 
+### بعد از پرداخت (فاز ۲ ِ `COMPLETION_ROADMAP.md`، کانترکت 1.9.0)
+
+- **همه‌ی بخش‌های صفحه‌ی سفارش واقعی‌ان:** `progress.steps[].at` (پرداخت، اولین ارسال عکس، ارسال، تحویل)، `shipment` (کد، `trackingUrl`، `shippedAt`، `deliveredAt`؛ تا ارسال فقط `waitingMessage`)، `preShipmentMedia` و `preShipmentMediaDetail`، `refunds` و `totals.refunded`، `items[].returnableUntil` بعد از تحویل. برچسب‌های تایم‌لاین از سرور میان («عکس کیفت فرستاده شد»، «تحویل پست شد»، «لغو شد»، «… تومان برگشت داده شد»)؛ `note` ِ هر ردیف رو زیرش نشون بده.
+- **عکس قبل از ارسال:** `GET /me/orders/{code}/media` (فقط دسته‌ی فرستاده‌شده؛ پیش‌نویس اپراتور هیچ‌وقت). «همونه!» با `POST /me/orders/{code}/media-feedback { "decision": "APPROVE" }` و فقط وقتی `actions.canApproveMedia`. تکرار بی‌اثره (`200`). `REQUEST_CHANGE` فعلاً `422 CHANGE_REQUEST_NOT_ALLOWED` (فاز ۳). مشتری ۲۴ ساعت وقت داره (`feedbackDeadline`)؛ بعدش خودکار تأیید می‌شه.
+- **لغو:** دکمه فقط با `actions.canCancel` (رزرو یا آماده‌سازی، و هنوز هیچ عکسی فرستاده نشده). `POST /me/orders/{code}/cancel { "reason": "CHANGED_MIND", "note": null }`؛ `reason = OTHER` بدون `note` ← `400 NOTE_REQUIRED`. جواب `{ order, refund, message }`: `refund` وقتی چیزی پرداخت شده بود (`PENDING`، همکارها برای گرفتن شبا زنگ می‌زنن)، `message` رو همون‌طور نشون بده. بعد از عکس ← `422 ORDER_NOT_CANCELLABLE` (مشتری باید با پشتیبانی تماس بگیره).
+- **رهگیری مهمان (بدون ورود):** `POST /tracking/lookup { "orderCode": "218340", "phone": "0912…" }`. کد با یا بدون `KV-` و با ارقام فارسی. موبایل خریدار یا گیرنده. هر «پیدا نشد» (کد اشتباه، موبایل دیگه، سفارش پرداخت‌نشده) همون `404 TRACKING_NOT_FOUND` ـه: یه پیام کلی نشون بده. موبایل بدشکل ← `400` روی `phone`. سقف ۱۰ بار در ۱۰ دقیقه (`429` با `meta.retryAfterSeconds`). جواب آدرس، قیمت و اسم نداره؛ حداکثر ۴ عکس (`preview`) و `loginHint`.
+- **رهگیری روزانه (عمومی):** `GET /tracking/daily/days?days=10` (تب‌ها: «امروز»، «دیروز»، اسم روز؛ `isNonShippingDay`) و `GET /tracking/daily?date=2026-10-18&q=4821`. `q`: چهار رقم آخر موبایل، یه حرف اول اسم، یا اسم شهر. اسم و موبایل همیشه ماسک‌شده از سرور میان؛ جمعه `emptyMessage` داره. فقط ۳۰ روز اخیر.
+- **رهگیری‌های من:** `GET /me/tracking`: کدهای خود کاربر، گروه‌بندی‌شده بر اساس روز ارسال، تازه‌ترین اول (حداکثر ۵۰).
+
 ## ۷. جاهایی که راحت می‌شه اشتباه کرد
 
 - **مبلغ رو خودت حساب نکن.** حتی «جمع قبل از تخفیف» هم تو `totals` هست. اگه عددی که نشون دادی با سرور فرق داشته باشه، `PRICE_CHANGED` می‌گیری.

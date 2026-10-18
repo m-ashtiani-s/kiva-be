@@ -198,6 +198,27 @@ class WebV1TrackingOnDatabaseTest {
     }
 
     @Test
+    fun `a parcel handed over at a quarter to nine UTC is on the next day's list - Tehran's day, not UTC's`() = panel.app {
+        val sara = customer(6)
+        val code = panel.paidOrders.paid(sara.user.id, nila[5])
+        with(shippedOrders) {
+            photographed(code)
+            approved(code, sara)
+        }
+        clock.advance(Duration.between(clock.now, Instant.parse("2026-10-12T20:45:00Z")))
+        val shipped = with(shippedOrders) { ship(code, """{"carrier":"POST","trackingCode":"PT-4000001"}""") }
+        assertEquals(HttpStatusCode.OK, shipped.status, shipped.bodyAsText())
+
+        suspend fun codesOn(date: String) = client.get("$API_V1/tracking/daily?date=$date").json()["items"]!!.jsonArray.map { it.jsonObject.text("trackingCode") }
+        assertEquals(listOf("PT-4000001"), codesOn("2026-10-13"))
+        assertEquals(emptyList(), codesOn("2026-10-12"))
+        val tabs = Json.parseToJsonElement(client.get("$API_V1/tracking/daily/days?days=2").bodyAsText()).jsonArray.map { it.jsonObject }
+        assertEquals(listOf("2026-10-13" to "1", "2026-10-12" to "0"), tabs.map { it.text("date") to it.text("shipmentCount") })
+        val mine = Json.parseToJsonElement(client.get("$API_V1/me/tracking") { header(HttpHeaders.Authorization, customer(6).bearer) }.bodyAsText()).jsonArray
+        assertEquals("2026-10-13", mine.single().jsonObject.text("date"))
+    }
+
+    @Test
     fun `«رهگیری‌های من» - only the customer's own, by the day they left, the latest day first`() = panel.app {
         val sara = customer(4)
         val first = panel.paidOrders.paid(sara.user.id, nila[0])
