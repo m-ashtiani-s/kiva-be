@@ -229,7 +229,7 @@ class WebV1AdminRefundsOnDatabaseTest {
         follow(id, """{"status":"COMPLETED","referenceId":"99887766"}""")
 
         val rows = transaction(db) {
-            AuditLogTbl.selectAll().where { (AuditLogTbl.actorId eq admin.userId) and (AuditLogTbl.entityId eq id.toString()) }.map {
+            AuditLogTbl.selectAll().where { (AuditLogTbl.actorId eq admin.userId) and (AuditLogTbl.entityId eq id.toString()) }.orderBy(AuditLogTbl.id).map {
                 it[AuditLogTbl.action] to it[AuditLogTbl.changes].toString()
             }
         }

@@ -73,6 +73,8 @@ import com.kiva.infrastructure.httpserver.controller.httprest.web.MeUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.MyOrderUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.OTP_SEND_RATE_LIMIT
 import com.kiva.infrastructure.httpserver.controller.httprest.web.PaymentUseCases
+import com.kiva.infrastructure.httpserver.controller.httprest.web.TRACKING_LOOKUP_RATE_LIMIT
+import com.kiva.infrastructure.httpserver.controller.httprest.web.TrackingUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.devFakeGateway
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Addresses
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminAudit
@@ -92,6 +94,7 @@ import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Me
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1MyOrders
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Payments
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Products
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Tracking
 import com.kiva.infrastructure.httpserver.route.healthRoutes
 import com.kiva.infrastructure.media.DiskMediaStorage
 import com.kiva.infrastructure.media.MediaUrls
@@ -117,6 +120,7 @@ import org.koin.ktor.ext.get
 import org.koin.ktor.ext.inject
 import org.slf4j.event.Level
 import java.util.UUID
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.toKotlinDuration
 
 /** Every public API route lives under this prefix (from the API contract). `/health` stays outside it. */
@@ -127,6 +131,10 @@ const val TRACE_ID_HEADER = "X-Trace-Id"
 
 /** Request header of POST /orders and the payment retries (contract `Idempotency-Key`). */
 const val IDEMPOTENCY_KEY_HEADER = "Idempotency-Key"
+
+/** `POST /tracking/lookup`: this many per address in [TRACKING_LOOKUP_WINDOW]. */
+const val TRACKING_LOOKUPS_PER_IP = 10
+val TRACKING_LOOKUP_WINDOW = 10.minutes
 
 /** A guest's cart, sent by the client and handed out by the server (contract `X-Cart-Token`). */
 const val CART_TOKEN_HEADER = "X-Cart-Token"
@@ -149,6 +157,10 @@ fun Application.configureHttp(allowedOrigins: List<String> = emptyList(), truste
     install(RateLimit) {
         register(OTP_SEND_RATE_LIMIT) {
             rateLimiter(limit = OtpPolicy.MAX_SENDS_PER_IP, refillPeriod = OtpPolicy.IP_WINDOW.toKotlinDuration())
+            requestKey { call -> call.request.origin.remoteAddress }
+        }
+        register(TRACKING_LOOKUP_RATE_LIMIT) {
+            rateLimiter(limit = TRACKING_LOOKUPS_PER_IP, refillPeriod = TRACKING_LOOKUP_WINDOW)
             requestKey { call -> call.request.origin.remoteAddress }
         }
     }
@@ -300,7 +312,8 @@ fun Application.configureRouting() {
                 PaymentUseCases(handleGatewayCallbackUc, getPaymentResultUc, startPaymentAttemptUc, startPaymentUc, getPaymentInitUc),
                 config.payment.resultUrl,
             )
-            webV1MyOrders(MyOrderUseCases(listMyOrdersUc, getMyOrderUc, reorderUc, getCartUc, getMyReservationUc, get(), get(), get()), mediaUrls)
+            webV1MyOrders(MyOrderUseCases(listMyOrdersUc, getMyOrderUc, reorderUc, getCartUc, getMyReservationUc, get(), get(), get(), get()), mediaUrls)
+            webV1Tracking(TrackingUseCases(get(), get(), get()), mediaUrls)
         }
     }
 }

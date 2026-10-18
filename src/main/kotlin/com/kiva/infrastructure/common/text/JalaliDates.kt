@@ -51,6 +51,12 @@ object JalaliDates {
     /** «پنجشنبه ۲۳ مهر». */
     fun weekdayDayAndMonth(date: LocalDate): String = "${WEEKDAYS.getValue(date.dayOfWeek)} ${dayAndMonth(date)}"
 
+    /** «یکشنبه ۱۳ مهر ۱۴۰۵». */
+    fun weekdayDayMonthAndYear(date: LocalDate): String = "${weekdayDayAndMonth(date)} ${persianDigits(of(date).year)}"
+
+    /** «جمعه». */
+    fun weekday(date: LocalDate): String = WEEKDAYS.getValue(date.dayOfWeek)
+
     /** A number in Persian digits («۴»). */
     fun persianDigits(n: Int): String = n.toString().map { if (it in '0'..'9') '۰' + (it - '0') else it }.joinToString("")
 }

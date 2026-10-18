@@ -297,6 +297,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
                     webV1AdminRefunds(adminRefunds)
                     // The customer's side of an order, for the tests that follow it from the panel to «سفارش‌های من».
                     webV1MyOrders(purchase.myOrderUseCases, mediaUrls)
+                    webV1Tracking(purchase.trackingUseCases, mediaUrls)
                 }
             }
         }

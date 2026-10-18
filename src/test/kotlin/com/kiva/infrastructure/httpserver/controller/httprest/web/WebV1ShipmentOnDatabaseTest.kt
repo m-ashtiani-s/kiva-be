@@ -200,7 +200,7 @@ class WebV1ShipmentOnDatabaseTest {
         assertTrue(transaction(db) { OrderQmTbl.select(OrderQmTbl.showInDailyList).where { OrderQmTbl.code eq code.value }.single()[OrderQmTbl.showInDailyList] })
         val card = client.get("$API_V1/me/orders/${code.value}") { header(HttpHeaders.Authorization, sara.bearer) }.json()
         assertEquals("PT-1234567", card["shipment"]!!.jsonObject.text("trackingCode"))
-        val rows = transaction(db) { AuditLogTbl.selectAll().where { AuditLogTbl.entityId eq code.value }.map { it[AuditLogTbl.action] to it[AuditLogTbl.changes].toString() } }
+        val rows = transaction(db) { AuditLogTbl.selectAll().where { AuditLogTbl.entityId eq code.value }.orderBy(AuditLogTbl.id).map { it[AuditLogTbl.action] to it[AuditLogTbl.changes].toString() } }
         assertEquals(listOf("ORDER_PHOTO_SENT", "ORDER_SHIPPED"), rows.map { it.first }.filter { it != "ORDER_MEDIA_SET" })
         assertTrue("PT-1234567" in rows.last().second && "POST" in rows.last().second, rows.toString())
     }

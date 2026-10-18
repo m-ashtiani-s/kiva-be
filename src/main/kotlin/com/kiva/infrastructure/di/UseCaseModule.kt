@@ -118,6 +118,10 @@ import com.kiva.application.usecase.reservation.Reservations
 import com.kiva.application.usecase.reservation.usecase.command.ReleaseReservationGroupUc
 import com.kiva.application.usecase.reservation.usecase.query.FindDueReservationGroupsUc
 import com.kiva.application.usecase.reservation.usecase.query.GetMyReservationUc
+import com.kiva.application.usecase.tracking.usecase.query.ListDailyShipmentDaysUc
+import com.kiva.application.usecase.tracking.usecase.query.ListDailyShipmentsUc
+import com.kiva.application.usecase.tracking.usecase.query.ListMyTrackingUc
+import com.kiva.application.usecase.tracking.usecase.query.LookupGuestTrackingUc
 import com.kiva.infrastructure.config.AppConfig
 import org.koin.dsl.module
 
@@ -300,6 +304,16 @@ val useCaseModule = module(createdAtStart = true) {
     }
     single { GetMyOrderMediaUc(transactionManager = get(), orderByCode = get(), orderDetails = get()) }
     single { SubmitMediaFeedbackUc(transactionManager = get(), orderByCode = get(), orderRepository = get(), clock = get()) }
+    single { ListMyTrackingUc(transactionManager = get(), orderQmRepository = get(), shopSettingsRepository = get()) }
+
+    // --- tracking (phase 2) ---
+    single {
+        LookupGuestTrackingUc(
+            transactionManager = get(), orderQmRepository = get(), orderDetails = get(), userRepository = get(), shopSettingsRepository = get(), clock = get(),
+        )
+    }
+    single { ListDailyShipmentDaysUc(transactionManager = get(), orderQmRepository = get(), shopSettingsRepository = get(), clock = get()) }
+    single { ListDailyShipmentsUc(transactionManager = get(), orderQmRepository = get(), shopSettingsRepository = get(), clock = get()) }
     single { FindSilentPhotoOrdersUc(transactionManager = get(), orderQmRepository = get(), clock = get()) }
     single { ApproveSilentPhotosUc(transactionManager = get(), orderRepository = get(), clock = get()) }
     single { GetMyOrderUc(transactionManager = get(), orderByCode = get(), orderDetails = get(), shopSettingsRepository = get(), clock = get()) }

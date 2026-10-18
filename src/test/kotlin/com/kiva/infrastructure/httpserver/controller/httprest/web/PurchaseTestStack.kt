@@ -51,6 +51,10 @@ import com.kiva.application.usecase.reservation.Reservations
 import com.kiva.application.usecase.reservation.usecase.command.ReleaseReservationGroupUc
 import com.kiva.application.usecase.reservation.usecase.query.FindDueReservationGroupsUc
 import com.kiva.application.usecase.reservation.usecase.query.GetMyReservationUc
+import com.kiva.application.usecase.tracking.usecase.query.ListDailyShipmentDaysUc
+import com.kiva.application.usecase.tracking.usecase.query.ListDailyShipmentsUc
+import com.kiva.application.usecase.tracking.usecase.query.ListMyTrackingUc
+import com.kiva.application.usecase.tracking.usecase.query.LookupGuestTrackingUc
 import com.kiva.common.valueobject.IranianMobileNumber
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.address.AddressBookDomainService
@@ -214,6 +218,13 @@ class PurchaseTestStack(val clock: MutableClock) {
         GetMyOrderMediaUc(transactions, orderByCode, orderDetails),
         SubmitMediaFeedbackUc(transactions, orderByCode, orders, clock),
         CancelMyOrderUc(transactions, orderByCode, orderCancellation, users, orderNotices, clock),
+        ListMyTrackingUc(transactions, orderQm, settings),
+    )
+
+    val trackingUseCases = TrackingUseCases(
+        LookupGuestTrackingUc(transactions, orderQm, orderDetails, users, settings, clock),
+        ListDailyShipmentDaysUc(transactions, orderQm, settings, clock),
+        ListDailyShipmentsUc(transactions, orderQm, settings, clock),
     )
 
     val cartUseCases = CartUseCases(

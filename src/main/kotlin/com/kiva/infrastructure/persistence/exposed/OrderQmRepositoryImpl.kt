@@ -49,6 +49,7 @@ import org.jetbrains.exposed.v1.core.like
 import org.jetbrains.exposed.v1.core.lowerCase
 import org.jetbrains.exposed.v1.core.max
 import org.jetbrains.exposed.v1.core.minus
+import org.jetbrains.exposed.v1.core.neq
 import org.jetbrains.exposed.v1.core.not
 import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.core.sum
@@ -154,6 +155,22 @@ class OrderQmRepositoryImpl : OrderQmRepository {
             .groupBy(OrderQmTbl.status)
             .associate { it[OrderQmTbl.status] to it[count] }
     }
+
+    override fun findInDailyList(from: Instant, until: Instant): List<OrderQm> =
+        OrderQmTbl.selectAll()
+            .where {
+                OrderQmTbl.showInDailyList and (OrderQmTbl.status neq OrderStatus.CANCELLED) and
+                    (OrderQmTbl.shippedOn greaterEq from.atOffset(ZoneOffset.UTC)) and (OrderQmTbl.shippedOn less until.atOffset(ZoneOffset.UTC))
+            }
+            .orderBy(OrderQmTbl.shippedOn to SortOrder.DESC, OrderQmTbl.orderId to SortOrder.ASC)
+            .map { it.toOrderQm() }
+
+    override fun findShippedOfCustomer(userId: UserId, limit: Int): List<OrderQm> =
+        OrderQmTbl.selectAll()
+            .where { (OrderQmTbl.userId eq userId.value) and OrderQmTbl.shippedOn.isNotNull() and (OrderQmTbl.status neq OrderStatus.CANCELLED) }
+            .orderBy(OrderQmTbl.shippedOn to SortOrder.DESC, OrderQmTbl.orderId to SortOrder.DESC)
+            .limit(limit)
+            .map { it.toOrderQm() }
 
     override fun findOfGroup(groupId: ReservationGroupId): List<OrderQm> =
         OrderQmTbl.selectAll()

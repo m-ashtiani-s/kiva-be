@@ -284,7 +284,7 @@ class WebV1PreShipmentPhotosOnDatabaseTest {
         send(code)
 
         val rows = transaction(db) {
-            AuditLogTbl.selectAll().where { (AuditLogTbl.actorId eq operator.userId) and (AuditLogTbl.entityId eq code.value) }.map { row ->
+            AuditLogTbl.selectAll().where { (AuditLogTbl.actorId eq operator.userId) and (AuditLogTbl.entityId eq code.value) }.orderBy(AuditLogTbl.id).map { row ->
                 row[AuditLogTbl.action] to row[AuditLogTbl.changes]?.map { change -> change.jsonObject.let { Triple(it.text("field"), it.text("from"), it.text("to")) } }
             }
         }

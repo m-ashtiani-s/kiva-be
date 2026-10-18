@@ -8,6 +8,7 @@ import com.kiva.application.usecase.order.usecase.query.GetMyOrderMediaUc
 import com.kiva.application.usecase.order.usecase.query.GetMyOrderUc
 import com.kiva.application.usecase.order.usecase.query.ListMyOrdersUc
 import com.kiva.application.usecase.reservation.usecase.query.GetMyReservationUc
+import com.kiva.application.usecase.tracking.usecase.query.ListMyTrackingUc
 import com.kiva.common.railway.unwrapOr
 import com.kiva.infrastructure.common.http.pageable
 import com.kiva.infrastructure.common.http.respondFailure
@@ -26,6 +27,7 @@ import com.kiva.infrastructure.httpserver.controller.httprest.model.response.Pre
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.RefundHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.ReorderHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.ReservationInfoHttpResponse
+import com.kiva.infrastructure.httpserver.controller.httprest.model.response.TrackingDayGroupHttpResponse
 import com.kiva.infrastructure.media.MediaUrls
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.auth.authenticate
@@ -45,6 +47,7 @@ class MyOrderUseCases(
     val getMyOrderMedia: GetMyOrderMediaUc,
     val submitMediaFeedback: SubmitMediaFeedbackUc,
     val cancelMyOrder: CancelMyOrderUc,
+    val listMyTracking: ListMyTrackingUc,
 )
 
 /** The path parameter every order route names its order by. */
@@ -97,6 +100,11 @@ fun Route.webV1MyOrders(useCases: MyOrderUseCases, mediaUrls: MediaUrls) {
                     message = CancelTexts.cancelled(cancelled.refund != null),
                 )
             }
+        }
+
+        // «رهگیری‌های من»: the customer's parcels by the day they left.
+        get("/me/tracking") {
+            call.respondResult(useCases.listMyTracking.execute(ListMyTrackingUc.Qry(call.accessPrincipal().userId))) { days -> days.map(TrackingDayGroupHttpResponse::from) }
         }
 
         // «رزرو ۴ روزه» while one holds; 204 when none does.

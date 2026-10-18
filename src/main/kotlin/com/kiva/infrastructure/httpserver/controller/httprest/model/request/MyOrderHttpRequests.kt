@@ -22,3 +22,9 @@ data class PreShipmentFeedbackHttpRequest(
 data class CancelOrderHttpRequest(val reason: String? = null, val note: String? = null) {
     override fun toString(): String = "CancelOrderHttpRequest(reason=$reason)"
 }
+
+/** The body of `POST /tracking/lookup` (contract GuestTrackingRequest). The phone never reaches a log ([toString]). */
+@Serializable
+data class GuestTrackingHttpRequest(val orderCode: String? = null, val phone: String? = null) {
+    override fun toString(): String = "GuestTrackingHttpRequest(orderCode=$orderCode)"
+}

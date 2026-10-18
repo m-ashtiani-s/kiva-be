@@ -78,6 +78,15 @@ interface OrderQmRepository {
     /** How many orders [filter] lets through in each status, every status there (zero too); the filter's statuses are ignored. */
     fun statusCounts(filter: AdminOrderFilter): Map<OrderStatus, Long>
 
+    /**
+     * The parcels of the public daily list: orders shipped from [from] (inclusive) to [until] (exclusive) with
+     * `showInDailyList`, the latest shipped first. A group's orders share one tracking code: the caller makes them one row.
+     */
+    fun findInDailyList(from: Instant, until: Instant): List<OrderQm>
+
+    /** The customer's shipped orders that weren't cancelled, the latest shipped first, at most [limit]. */
+    fun findShippedOfCustomer(userId: UserId, limit: Int): List<OrderQm>
+
     /** Every order of [groupId], in the order they were paid (unpaid ones last). */
     fun findOfGroup(groupId: ReservationGroupId): List<OrderQm>
 
