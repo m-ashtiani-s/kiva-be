@@ -2,9 +2,11 @@ package com.kiva.application.dto
 
 import com.kiva.application.repository.OrderQm
 import com.kiva.common.valueobject.Money
+import com.kiva.domain.aggregate.order.model.policy.OrderActionFacts
 import com.kiva.domain.aggregate.order.model.policy.OrderActionsPolicy
 import com.kiva.domain.aggregate.order.model.valueobject.OrderActions
 import com.kiva.domain.aggregate.order.model.valueobject.OrderStatus
+import com.kiva.domain.aggregate.order.model.valueobject.PhotoStatus
 import com.kiva.domain.aggregate.settings.entity.ShopSettings
 import com.kiva.domain.aggregate.settings.model.valueobject.ShippingMethodCode
 import com.kiva.domain.aggregate.user.model.valueobject.MessengerChannel
@@ -44,7 +46,9 @@ data class OrderSummaryDto(
         fun of(order: OrderQm, settings: ShopSettings, now: Instant, reservation: ReservationInfoDto? = null): OrderSummaryDto = from(
             order,
             settings.shippingMethods.firstOrNull { it.code == order.shippingMethod }?.name ?: order.shippingMethod.name,
-            OrderActionsPolicy.actionsOf(order.status, order.holdUntil, now),
+            // Until the read model has the photos (step 2.2) and the cancel and approve endpoints exist (step 2.10), their buttons stay off.
+            OrderActionsPolicy.actionsOf(OrderActionFacts(order.status, order.holdUntil, photoEverSent = false, photoStatus = PhotoStatus.WAITING, now))
+                .copy(canCancel = false, canApproveMedia = false),
         ).copy(reservation = reservation)
 
         fun from(order: OrderQm, shippingMethodName: String, actions: OrderActions) = OrderSummaryDto(

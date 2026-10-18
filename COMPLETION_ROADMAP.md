@@ -1529,7 +1529,7 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 | گام | عنوان | اندازه | وضعیت |
 |---|---|---|---|
 | ۲.۰ | کانترکت 1.9.0 | M | ✅ |
-| ۲.۱ | دامنه‌ی سفارش بعد از پرداخت، و Aggregate ِ استرداد | L | ⬜ |
+| ۲.۱ | دامنه‌ی سفارش بعد از پرداخت، و Aggregate ِ استرداد | L | ✅ |
 | ۲.۲ | read model ِ سفارش برای پنل و تایم‌لاین تازه | L | ⬜ |
 | ۲.۳ | صف و جزئیات سفارش در پنل | M | ⬜ |
 | ۲.۴ | یادداشت داخلی | S | ⬜ |
@@ -2012,7 +2012,7 @@ Route: 200 با AdminOrder ِ همون سفارش
 
 ---
 
-#### گام ۲.۱: دامنه‌ی سفارش بعد از پرداخت، و Aggregate ِ استرداد · L ⬜
+#### گام ۲.۱: دامنه‌ی سفارش بعد از پرداخت، و Aggregate ِ استرداد · L ✅
 
 **می‌سازی:** رویدادها، وضعیت و متدهای ۷.۴ با payload و JSON ِ طلایی؛ `OrderTransitionPolicy`؛ `PreShipmentPolicy` (`FEEDBACK_HOURS = 24`، `MAX_PHOTOS = 20`)؛ `OrderActionsPolicy` با `OrderActionFacts`؛ `OrderStatus.countsAsPurchase`؛ `InventoryDomainService.shipForOrder`؛ `DiscountRedemption.giveBack`؛ Aggregate و Domain Service ِ `refund`؛ `CancelReason` و `CancelledBy`.
 
@@ -2023,15 +2023,23 @@ Route: 200 با AdminOrder ِ همون سفارش
 - چرا `returnableUntil` تو رویداد `OrderDelivered` و نه حساب‌شده موقع خوندن؟ چون از تنظیمات اون لحظه میاد؛ replay نباید با تنظیمات امروز دوباره حساب کنه (همون اصل `heldForReservation` ِ `OrderPaid`).
 
 **تموم شده یعنی:**
-- [ ] هر سطر جدول متدهای ۷.۴ یه تست موفق و یه تست شکست.
-- [ ] replay: ثبت، پرداخت، عکس، تأیید، ارسال، تحویل ← دقیقاً همون وضعیت؛ و ثبت، پرداخت، لغو، استرداد ← `refunded` درست.
-- [ ] مشتری: لغو `PROCESSING` ِ بدون عکس ← موفق؛ بعد از یه بار عکس (حتی اگه دوباره `PROCESSING` شده) ← `ORDER_NOT_CANCELLABLE`.
-- [ ] ارسال قبل از تأیید و قبل از مهلت ← `AWAITING_CUSTOMER_FEEDBACK`؛ بعد از مهلت بدون تأیید ← موفق.
-- [ ] `Refund`: هر انتقال مجاز موفق، هر انتقال دیگه `INVALID_STATUS_TRANSITION`؛ `COMPLETED` بدون شماره‌ی پیگیری رد.
-- [ ] `RefundDomainService`: پرداخت ۲٬۰۰۰٬۰۰۰، استرداد قبلی ۵۰۰٬۰۰۰ (`PENDING`) و ۳۰۰٬۰۰۰ (`FAILED`) ← قابل استرداد ۱٬۵۰۰٬۰۰۰.
-- [ ] `shipForOrder` ردیف‌ها رو به ترتیب قفل برمی‌گردونه و بار دوم هیچی.
-- [ ] `giveBack` فقط از `CONFIRMED`.
-- [ ] `NoFloatingPointMoneyTest` پکیج `refund` رو هم می‌گرده.
+- [x] هر سطر جدول متدهای ۷.۴ یه تست موفق و یه تست شکست.
+- [x] replay: ثبت، پرداخت، عکس، تأیید، ارسال، تحویل ← دقیقاً همون وضعیت؛ و ثبت، پرداخت، لغو، استرداد ← `refunded` درست.
+- [x] مشتری: لغو `PROCESSING` ِ بدون عکس ← موفق؛ بعد از یه بار عکس (حتی اگه دوباره `PROCESSING` شده) ← `ORDER_NOT_CANCELLABLE`.
+- [x] ارسال قبل از تأیید و قبل از مهلت ← `AWAITING_CUSTOMER_FEEDBACK`؛ بعد از مهلت بدون تأیید ← موفق.
+- [x] `Refund`: هر انتقال مجاز موفق، هر انتقال دیگه `INVALID_STATUS_TRANSITION`؛ `COMPLETED` بدون شماره‌ی پیگیری رد.
+- [x] `RefundDomainService`: پرداخت ۲٬۰۰۰٬۰۰۰، استرداد قبلی ۵۰۰٬۰۰۰ (`PENDING`) و ۳۰۰٬۰۰۰ (`FAILED`) ← قابل استرداد ۱٬۵۰۰٬۰۰۰.
+- [x] `shipForOrder` ردیف‌ها رو به ترتیب قفل برمی‌گردونه و بار دوم هیچی.
+- [x] `giveBack` فقط از `CONFIRMED`.
+- [x] `NoFloatingPointMoneyTest` پکیج `refund` رو هم می‌گرده.
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- `OrderDelivered` به‌جز `returnableUntil` یه `note` (`StatusNote`) هم داره: کانترکت می‌گه `note` ِ `POST …/status` تو تایم‌لاین مشتری دیده می‌شه، پس باید تو رویداد باشه. لحظه‌ی تحویل همون `occurredOn` ِ رویداده (فیلد جدای `deliveredOn` تکراری بود).
+- `OrderPhotosApproved` با `automatic = true` فقط از `feedbackDeadline` به بعد (`PHOTOS_NOT_DUE`، `CONFLICT`؛ به کلاینت نمی‌رسه، job فقط رد می‌شه).
+- `ship` اول وضعیت، بعد حامل و `shippedOn` (۴۰۰ها)، بعد تأیید یا مهلت (۴۲۲) رو چک می‌کنه، تا خطای ورودی ِ سفارش آماده هم همون ۴۰۰ باشه.
+- `StatusNote` (≤ ۵۰۰) یه VO برای هر یادداشت تغییر وضعیته (لغو مشتری، لغو و تحویل پنل): `STATUS_NOTE_TOO_LONG` / `STATUS_NOTE_INVALID` روی `note`. `CANCEL_NOTE_TOO_LONG` ِ گام ۲.۰ حذف شد.
+- `DiscountRedemption.storedStatus` همون «وضعیتی که خونده شد» ِ قفل خوش‌بینانه‌ی `save` ـه.
+- تا گام ۲.۲ Projector رویدادهای تازه رو نمی‌شناسه (هیچ‌کس هم نمی‌سازدشون)، و تا گام ۲.۱۰ دکمه‌های `canCancel` و `canApproveMedia` ِ کارت سفارش خاموش می‌مونن.
 
 ---
 
@@ -5975,3 +5983,4 @@ kiva {
 | ۲۶ مهر ۱۴۰۵ | ۱.۹ | Phase 1 step 1.9 | عکس و hover ِ کارت از رنگ نمایش، `imageUrl`/`thumbnailUrl` ِ سواچ‌ها، عکس صفحه‌ی محصول، `CartItem.image`، `OrderItemSnapshot.imageUrl` (مسیر ۴۸۰، سفارش‌های قبلی null)، کانترکت `OrderItem.image` رشته (ردیف ۲۱). بدون کوئری اضافه. خرابکاری: `imageUrl = null` در ثبت سفارش ← تست قرمز |
 | ۲۶ مهر ۱۴۰۵ | ۱.۱۰ | Phase 1 step 1.10 | `PANEL_CATALOG_REVIEW.md` (ردیف‌های ۱، ۳، ۴، ۵، ۱۵، ۱۶، ۱۸، ۲۰ با تست‌هاشون و ۱۳ خرابکاری)، `PanelCatalogLogScanOnDatabaseTest`، `ProductLockOrderOnDatabaseTest`، تست «در استفاده» با `productCount 2`، `docs/FRONTEND_PANEL_CATALOG.md`، README. ۲۲۶۳ تست سبز. مونده: دور با پنل و تست‌های `vips` (ابزار و پنل اینجا نیست) و merge به `main` |
 | ۲۶ مهر ۱۴۰۵ | ۲.۰ | Phase 2 step 2.0 | کانترکت 1.9.0 با هر ۱۶ ردیف ِ ۷.۱۰ و دو ردیف تازه (۱۷: قانون `media` و `media-feedback`؛ ۱۸: `customer.fullName` nullable). `STORE_CREDIT` از هر چهار enum رفت. YAML با snakeyaml معتبره و همه‌ی `$ref`ها پیدا می‌شن. متن همه‌ی کدهای تازه. برنچ `panel-orders` از نوک فاز ۱ |
+| ۲۶ مهر ۱۴۰۵ | ۲.۱ | Phase 2 step 2.1 | هشت رویداد تازه‌ی سفارش با payload و JSON ِ طلایی، وضعیت و متدهای عکس، ارسال، تحویل، لغو و استرداد در `Order`، `OrderTransitionPolicy`، `PreShipmentPolicy`، `OrderActionFacts`، `countsAsPurchase`، `shipForOrder`، `giveBack` با `storedStatus`، Aggregate ِ `Refund` و `RefundDomainService`. `OrderDelivered` یادداشت پنل رو هم داره. ۲۳۱۶ تست سبز |

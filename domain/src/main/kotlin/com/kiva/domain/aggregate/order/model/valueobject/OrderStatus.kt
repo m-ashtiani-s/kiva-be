@@ -1,8 +1,8 @@
 package com.kiva.domain.aggregate.order.model.valueobject
 
 /**
- * Where an order is in its life: the contract's 13 OrderStatus values. This phase reaches only the first five; the
- * rest (the photo before shipping, shipping, cancelling, returns) belong to the phases after the purchase.
+ * Where an order is in its life: the contract's 13 OrderStatus values. The purchase reached the first five, the work
+ * on orders (phase 2) the photo before shipping, shipping, delivery and cancelling; returns are phase 7.
  */
 enum class OrderStatus {
     /** Placed, its stock held until `holdUntil`, waiting for the money. */
@@ -33,6 +33,12 @@ enum class OrderStatus {
     /** Placed and not paid yet: it may still be paid ([PENDING_PAYMENT] or [PAYMENT_FAILED]). */
     val isAwaitingPayment: Boolean get() = this == PENDING_PAYMENT || this == PAYMENT_FAILED
 
-    /** The money came in. */
+    /** The money came in once, even if the order was cancelled afterwards (the panel's `ordersCount` counts those too). */
     val isPaid: Boolean get() = this != PENDING_PAYMENT && this != PAYMENT_FAILED && this != EXPIRED
+
+    /**
+     * A purchase that stands: paid and not cancelled. A cancelled order doesn't take «خرید اول» away from a customer, nor
+     * show among a reservation's orders.
+     */
+    val countsAsPurchase: Boolean get() = isPaid && this != CANCELLED
 }

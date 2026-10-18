@@ -4,6 +4,7 @@ import com.kiva.domain.aggregate.order.OrderFixtures.at
 import com.kiva.domain.aggregate.order.OrderFixtures.now
 import com.kiva.domain.aggregate.order.model.valueobject.OrderActions
 import com.kiva.domain.aggregate.order.model.valueobject.OrderStatus
+import com.kiva.domain.aggregate.order.model.valueobject.PhotoStatus
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentStatus
 import org.junit.jupiter.api.Test
 import java.time.Duration
@@ -74,16 +75,29 @@ class PaymentPolicyTest {
         assertEquals(mapOf("retryAfterSeconds" to 11 * 60L), refusal?.meta)
     }
 
+    private fun actions(status: OrderStatus, at: java.time.Instant = now, photoEverSent: Boolean = false, photoStatus: PhotoStatus = PhotoStatus.WAITING) =
+        OrderActionsPolicy.actionsOf(OrderActionFacts(status, holdUntil, photoEverSent, photoStatus, at))
+
     @Test
-    fun `in this phase only «پرداخت» shows, for an unpaid order in time, and «افزودن به رزرو» for a RESERVED one`() {
+    fun `«پرداخت» shows for an unpaid order in time, «افزودن به رزرو» for a RESERVED one, «لغو» while nothing moved`() {
         val none = OrderActions(false, false, false, false, false, false, false)
 
-        assertEquals(none.copy(canPay = true), OrderActionsPolicy.actionsOf(OrderStatus.PENDING_PAYMENT, holdUntil, at(14)))
-        assertEquals(none.copy(canPay = true), OrderActionsPolicy.actionsOf(OrderStatus.PAYMENT_FAILED, holdUntil, at(14)))
-        assertEquals(none, OrderActionsPolicy.actionsOf(OrderStatus.PENDING_PAYMENT, holdUntil, at(15)))
-        assertEquals(none.copy(canAddToReservation = true), OrderActionsPolicy.actionsOf(OrderStatus.RESERVED, holdUntil, now))
-        OrderStatus.entries.filter { !it.isAwaitingPayment && it != OrderStatus.RESERVED }.forEach {
-            assertEquals(none, OrderActionsPolicy.actionsOf(it, holdUntil, now), "$it")
+        assertEquals(none.copy(canPay = true), actions(OrderStatus.PENDING_PAYMENT, at(14)))
+        assertEquals(none.copy(canPay = true), actions(OrderStatus.PAYMENT_FAILED, at(14)))
+        assertEquals(none, actions(OrderStatus.PENDING_PAYMENT, at(15)))
+        assertEquals(none.copy(canAddToReservation = true, canCancel = true), actions(OrderStatus.RESERVED))
+        assertEquals(none.copy(canCancel = true), actions(OrderStatus.PROCESSING))
+        OrderStatus.entries.filter { !it.isAwaitingPayment && it != OrderStatus.RESERVED && it != OrderStatus.PROCESSING }.forEach {
+            assertEquals(none, actions(it), "$it")
         }
+    }
+
+    @Test
+    fun `«لغو» is gone once a photo was ever sent, even back in PROCESSING - «همونه!» shows only while photos sent wait for an answer`() {
+        val none = OrderActions(false, false, false, false, false, false, false)
+
+        assertEquals(none, actions(OrderStatus.PROCESSING, photoEverSent = true))
+        assertEquals(none.copy(canApproveMedia = true), actions(OrderStatus.PHOTO_SENT, photoEverSent = true, photoStatus = PhotoStatus.SENT))
+        assertEquals(none, actions(OrderStatus.PHOTO_SENT, photoEverSent = true, photoStatus = PhotoStatus.APPROVED))
     }
 }

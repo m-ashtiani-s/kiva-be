@@ -302,7 +302,7 @@ object ErrorMessages {
         "RETURN_NOT_FOUND" to "این مرجوعی پیدا نشد",
         "ORDER_STATUS_INVALID" to "وضعیت سفارش از مقدارهای مجاز نیست",
         "CANCEL_REASON_INVALID" to "دلیل لغو از گزینه‌های مجاز نیست",
-        "CANCEL_NOTE_TOO_LONG" to "توضیح حداکثر {maxLength} حرفه",
+        "STATUS_NOTE_INVALID" to "توضیح علامت نامعتبر داره",
         "STATUS_NOTE_TOO_LONG" to "توضیح حداکثر {maxLength} حرفه",
         "PHOTO_MESSAGE_TOO_LONG" to "پیام حداکثر {maxLength} حرفه",
         "PHOTOS_REQUIRED" to "حداقل یه عکس یا ویدیو انتخاب کن",

@@ -19,6 +19,7 @@ import com.kiva.domain.aggregate.product.model.valueobject.ProductId
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -175,6 +176,32 @@ class InventoryDomainServiceTest {
             val released = service.releaseForOrder(order, listOf(line(1, 20, 201, 2), line(2, 20, 202, 1), line(3, 30, 301, 1)), staff, now)
 
             assertEquals(listOf(201L), released.map { it.variantId.value })
+        }
+
+        @Test
+        fun `shipping takes every line off the shelf, in lock order, and shipping again changes nothing`() {
+            stock(301, 5)
+            stock(202, 5)
+            stock(201, 5)
+            val lines = listOf(line(1, 30, 301, 2), line(2, 20, 202, 1), line(3, 20, 201, 3))
+            service.reserveForOrder(order, lines, staff, now).getOrNull()!!.forEach(inventories::save)
+
+            val shipped = service.shipForOrder(order, lines, staff, now)
+            shipped.forEach(inventories::save)
+
+            assertEquals(listOf(201L, 202L, 301L), shipped.map { it.variantId.value })
+            val after = listOf(201L, 202L, 301L).map { service.getInventory(VariantId.constructFromPersisted(it)).getOrNull()!! }
+            assertEquals(listOf(2, 4, 3), after.map { it.onHand })
+            assertEquals(listOf(0, 0, 0), after.map { it.reserved })
+            assertEquals(emptyList(), service.shipForOrder(order, lines, staff, now), "shipped already")
+        }
+
+        @Test
+        fun `shipping a line that holds nothing for the order is a bug and stops loudly`() {
+            stock(201, 5)
+
+            assertThrows<IllegalStateException> { service.shipForOrder(order, listOf(line(1, 20, 201, 1)), staff, now) }
+            assertThrows<IllegalStateException> { service.shipForOrder(order, listOf(line(1, 30, 301, 1)), staff, now) }
         }
     }
 }

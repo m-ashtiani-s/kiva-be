@@ -85,10 +85,13 @@ class DiscountRedemptionRepositoryImpl : DiscountRedemptionRepository {
         }
     }
 
-    /** Only a HELD row changes: confirming or releasing it twice, or both, never writes twice. */
+    /**
+     * Only a row still in the status it was read in changes (DiscountRedemption.storedStatus): confirming or releasing it
+     * twice, or a payment and a cancellation at once, never write twice.
+     */
     override fun save(redemption: DiscountRedemption) {
         val updated = DiscountRedemptionTbl.update({
-            (DiscountRedemptionTbl.orderId eq redemption.orderId.value) and (DiscountRedemptionTbl.status eq DiscountRedemptionStatus.HELD)
+            (DiscountRedemptionTbl.orderId eq redemption.orderId.value) and (DiscountRedemptionTbl.status eq redemption.storedStatus)
         }) {
             it[status] = redemption.status
             it[settledOn] = redemption.settledOn?.utc()

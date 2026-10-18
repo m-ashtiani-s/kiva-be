@@ -1,12 +1,20 @@
 package com.kiva.infrastructure.persistence.exposed.projector
 
 import com.kiva.domain.aggregate.order.entity.OrderLine
+import com.kiva.domain.aggregate.order.entity.event.OrderCancelled
+import com.kiva.domain.aggregate.order.entity.event.OrderDelivered
 import com.kiva.domain.aggregate.order.entity.event.OrderDomainEvent
 import com.kiva.domain.aggregate.order.entity.event.OrderExpired
 import com.kiva.domain.aggregate.order.entity.event.OrderPaid
 import com.kiva.domain.aggregate.order.entity.event.OrderPaymentFailed
+import com.kiva.domain.aggregate.order.entity.event.OrderPhotosApproved
+import com.kiva.domain.aggregate.order.entity.event.OrderPhotosAttached
+import com.kiva.domain.aggregate.order.entity.event.OrderPhotosSent
 import com.kiva.domain.aggregate.order.entity.event.OrderPlaced
+import com.kiva.domain.aggregate.order.entity.event.OrderRefunded
 import com.kiva.domain.aggregate.order.entity.event.OrderReleasedFromReservation
+import com.kiva.domain.aggregate.order.entity.event.OrderShipmentCorrected
+import com.kiva.domain.aggregate.order.entity.event.OrderShipped
 import com.kiva.domain.aggregate.order.model.valueobject.OrderStatus
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentFailureReason
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.AddressSnapshotPayload
@@ -61,6 +69,10 @@ object OrderQmProjector {
             }
             is OrderExpired -> moveTo(event, OrderStatus.EXPIRED)
             is OrderReleasedFromReservation -> moveTo(event, OrderStatus.PROCESSING)
+            // The read model's columns for the work after the payment come with step 2.2 (V26); nothing raises these before.
+            is OrderPhotosAttached, is OrderPhotosSent, is OrderPhotosApproved, is OrderShipped, is OrderShipmentCorrected, is OrderDelivered,
+            is OrderCancelled, is OrderRefunded,
+            -> error("${event.type.value} is projected from step 2.2 on")
         }
     }
 

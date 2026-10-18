@@ -95,6 +95,20 @@ class InventoryDomainService(
         }
     }
 
+    /**
+     * What an order held leaves with the courier: every line's stock ships, **in lock order** like [reserveForOrder]
+     * (sorted by product, then color; saved in that order). A color that shipped for the order already changes nothing,
+     * so shipping twice is harmless. A paid order not shipped yet always holds its stock: a line holding nothing is a bug.
+     */
+    fun shipForOrder(orderCode: OrderCode, lines: List<OrderLine>, by: UserId, now: Instant): List<Inventory> {
+        logger.info("shipForOrder orderCode=${orderCode.value} variants=${lines.map { it.variantId.value }}")
+        return lines.sortedWith(compareBy({ it.productId.value }, { it.variantId.value })).mapNotNull { line ->
+            val inventory = inventoryRepository.get(line.variantId) ?: error("Order ${orderCode.value} ships variant ${line.variantId.value}, which has no stock")
+            inventory.ship(orderCode, by, now).failureOrNull()?.let { error("Order ${orderCode.value} could not ship variant ${line.variantId.value}: ${it.code}") }
+            inventory.takeIf { it.getRecordedEvents().isNotEmpty() }
+        }
+    }
+
     // ============ failures ============
 
     sealed class AdjustStockFailure(code: String, kind: FailureKind, meta: Map<String, Any>) :
