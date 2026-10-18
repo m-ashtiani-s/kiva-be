@@ -33,9 +33,12 @@ import com.kiva.application.usecase.idempotency.IdempotencyGuard
 import com.kiva.application.usecase.idempotency.usecase.command.DeleteOldIdempotencyKeysUc
 import com.kiva.application.usecase.order.OrderByCode
 import com.kiva.application.usecase.order.OrderDetails
+import com.kiva.application.usecase.order.OrderNotices
 import com.kiva.application.usecase.order.usecase.command.ExpireUnpaidOrderUc
 import com.kiva.application.usecase.order.usecase.command.ReorderUc
+import com.kiva.application.usecase.order.usecase.command.SubmitMediaFeedbackUc
 import com.kiva.application.usecase.order.usecase.query.FindExpirableOrdersUc
+import com.kiva.application.usecase.order.usecase.query.GetMyOrderMediaUc
 import com.kiva.application.usecase.order.usecase.query.GetMyOrderUc
 import com.kiva.application.usecase.order.usecase.query.GetOrderSummaryUc
 import com.kiva.application.usecase.order.usecase.query.ListMyOrdersUc
@@ -76,6 +79,7 @@ import com.kiva.infrastructure.persistence.exposed.DiscountRedemptionRepositoryI
 import com.kiva.infrastructure.persistence.exposed.GeoRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.IdempotencyStoreImpl
 import com.kiva.infrastructure.persistence.exposed.InventoryRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.MediaRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.OfferQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.OrderIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.OrderQmRepositoryImpl
@@ -189,14 +193,17 @@ class PurchaseTestStack(val clock: MutableClock) {
 
     // One order named by its code, and its page: the customer's and the panel's (phase 2).
     val orderByCode = OrderByCode(orderQm, orders)
-    val orderDetails = OrderDetails(payments, ColorRepositoryImpl(), reservations)
+    val orderDetails = OrderDetails(payments, ColorRepositoryImpl(), reservations, MediaRepositoryImpl())
+    val orderNotices = OrderNotices(auth.sms)
 
     val myOrderUseCases = MyOrderUseCases(
-        ListMyOrdersUc(transactions, orderQm, settings, reservations, clock),
+        ListMyOrdersUc(transactions, orderQm, settings, reservations, orderDetails, clock),
         GetMyOrderUc(transactions, orderByCode, orderDetails, settings, clock),
         ReorderUc(transactions, orderQm, cartCommands, cartDomain),
         getCart,
         GetMyReservationUc(transactions, reservations, clock),
+        GetMyOrderMediaUc(transactions, orderByCode, orderDetails),
+        SubmitMediaFeedbackUc(transactions, orderByCode, orders, clock),
     )
 
     val cartUseCases = CartUseCases(

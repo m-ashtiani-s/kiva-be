@@ -42,6 +42,8 @@ object AuditTexts {
             AuditAction.VARIANT_DEACTIVATED -> "رنگ $name غیرفعال شد"
             AuditAction.INVENTORY_ADJUSTED -> stockAdjusted(name, changes)
             AuditAction.ORDER_NOTE_ADDED -> "یادداشت داخلی روی سفارش $name نوشته شد"
+            AuditAction.ORDER_MEDIA_SET -> "عکس‌های قبل از ارسال سفارش $name انتخاب شد"
+            AuditAction.ORDER_PHOTO_SENT -> "ارسال عکس‌های سفارش $name برای مشتری ثبت شد"
         }
     }
 

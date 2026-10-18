@@ -30,4 +30,8 @@ class LogSmsSender : SmsSender {
     override suspend fun sendOrderPaid(to: IranianMobileNumber, orderCode: OrderCode) {
         logger.warn("SMS to ${to.masked()}: order ${orderCode.value} is paid, /track?order=${orderCode.value}")
     }
+
+    override suspend fun sendPhotosSent(to: IranianMobileNumber, orderCode: OrderCode) {
+        logger.warn("SMS to ${to.masked()}: the photos of order ${orderCode.value} were sent on the messenger")
+    }
 }

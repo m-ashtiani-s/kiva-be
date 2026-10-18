@@ -163,6 +163,7 @@ data class SmsConfig(val provider: SmsProvider, val faraz: FarazSmsConfig? = nul
                     codePattern = config.property("kiva.sms.faraz.codePattern").getString().trim(),
                     phoneChangedPattern = optional("phoneChangedPattern"),
                     orderPaidPattern = optional("orderPaidPattern"),
+                    photosSentPattern = optional("photosSentPattern"),
                 ),
             )
         }

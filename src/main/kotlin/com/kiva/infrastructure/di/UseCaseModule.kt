@@ -73,12 +73,19 @@ import com.kiva.application.usecase.media.usecase.command.UploadMediaUc
 import com.kiva.application.usecase.media.usecase.query.FindUnattachedMediaUc
 import com.kiva.application.usecase.order.OrderByCode
 import com.kiva.application.usecase.order.OrderDetails
+import com.kiva.application.usecase.order.OrderNotices
 import com.kiva.application.usecase.order.usecase.command.AddOrderNoteUc
+import com.kiva.application.usecase.order.usecase.command.ApproveSilentPhotosUc
 import com.kiva.application.usecase.order.usecase.command.ExpireUnpaidOrderUc
 import com.kiva.application.usecase.order.usecase.command.ReorderUc
+import com.kiva.application.usecase.order.usecase.command.SendPreShipmentMediaUc
+import com.kiva.application.usecase.order.usecase.command.SetPreShipmentMediaUc
+import com.kiva.application.usecase.order.usecase.command.SubmitMediaFeedbackUc
 import com.kiva.application.usecase.order.usecase.query.FindAdminOrdersUc
 import com.kiva.application.usecase.order.usecase.query.FindExpirableOrdersUc
+import com.kiva.application.usecase.order.usecase.query.FindSilentPhotoOrdersUc
 import com.kiva.application.usecase.order.usecase.query.GetAdminOrderUc
+import com.kiva.application.usecase.order.usecase.query.GetMyOrderMediaUc
 import com.kiva.application.usecase.order.usecase.query.GetMyOrderUc
 import com.kiva.application.usecase.order.usecase.query.GetOrderSummaryUc
 import com.kiva.application.usecase.order.usecase.query.ListMyOrdersUc
@@ -266,9 +273,18 @@ val useCaseModule = module(createdAtStart = true) {
     single { GetMyReservationUc(transactionManager = get(), reservations = get(), clock = get()) }
 
     // --- orders ---
-    single { ListMyOrdersUc(transactionManager = get(), orderQmRepository = get(), shopSettingsRepository = get(), reservations = get(), clock = get()) }
+    single {
+        ListMyOrdersUc(
+            transactionManager = get(), orderQmRepository = get(), shopSettingsRepository = get(), reservations = get(), orderDetails = get(), clock = get(),
+        )
+    }
     single { OrderByCode(orderQmRepository = get(), orderRepository = get()) }
-    single { OrderDetails(paymentRepository = get(), colorRepository = get(), reservations = get()) }
+    single { OrderDetails(paymentRepository = get(), colorRepository = get(), reservations = get(), mediaRepository = get()) }
+    single { OrderNotices(smsSender = get()) }
+    single { GetMyOrderMediaUc(transactionManager = get(), orderByCode = get(), orderDetails = get()) }
+    single { SubmitMediaFeedbackUc(transactionManager = get(), orderByCode = get(), orderRepository = get(), clock = get()) }
+    single { FindSilentPhotoOrdersUc(transactionManager = get(), orderQmRepository = get(), clock = get()) }
+    single { ApproveSilentPhotosUc(transactionManager = get(), orderRepository = get(), clock = get()) }
     single { GetMyOrderUc(transactionManager = get(), orderByCode = get(), orderDetails = get(), shopSettingsRepository = get(), clock = get()) }
     single { ReorderUc(transactionManager = get(), orderQmRepository = get(), cartCommands = get(), cartDomainService = get()) }
     single { GetOrderSummaryUc(transactionManager = get(), orderQmRepository = get(), shopSettingsRepository = get(), reservations = get(), clock = get()) }
@@ -465,6 +481,17 @@ val useCaseModule = module(createdAtStart = true) {
     // --- admin: orders (phase 2) ---
     single { FindAdminOrdersUc(transactionManager = get(), orderQmRepository = get(), adminCustomerRepository = get()) }
     single { AddOrderNoteUc(transactionManager = get(), orderByCode = get(), orderNoteRepository = get(), userRepository = get(), auditTrail = get(), clock = get()) }
+    single {
+        SetPreShipmentMediaUc(
+            transactionManager = get(), orderByCode = get(), orderRepository = get(), mediaAttachments = get(), auditTrail = get(), clock = get(),
+        )
+    }
+    single {
+        SendPreShipmentMediaUc(
+            transactionManager = get(), orderByCode = get(), orderRepository = get(), userRepository = get(), auditTrail = get(), orderNotices = get(),
+            clock = get(),
+        )
+    }
     single {
         GetAdminOrderUc(
             transactionManager = get(), orderByCode = get(), orderDetails = get(), orderQmRepository = get(), paymentRepository = get(),

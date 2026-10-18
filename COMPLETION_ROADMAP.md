@@ -1533,7 +1533,7 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 | ۲.۲ | read model ِ سفارش برای پنل و تایم‌لاین تازه | L | ✅ |
 | ۲.۳ | صف و جزئیات سفارش در پنل | M | ✅ |
 | ۲.۴ | یادداشت داخلی | S | ✅ |
-| ۲.۵ | عکس قبل از ارسال، تأیید مشتری و تأیید خودکار | L | ⬜ |
+| ۲.۵ | عکس قبل از ارسال، تأیید مشتری و تأیید خودکار | L | ✅ |
 | ۲.۶ | استرداد دستی | M | ⬜ |
 | ۲.۷ | تغییر وضعیت از پنل و لغو (پنل و مشتری) | L | ⬜ |
 | ۲.۸ | ارسال (تکی و گروهی) و «تحویل شد» | L | ⬜ |
@@ -2111,7 +2111,7 @@ Route: 200 با AdminOrder ِ همون سفارش
 
 ---
 
-#### گام ۲.۵: عکس قبل از ارسال، تأیید مشتری و تأیید خودکار · L ⬜
+#### گام ۲.۵: عکس قبل از ارسال، تأیید مشتری و تأیید خودکار · L ✅
 
 **می‌سازی:** `SetPreShipmentMediaUc`، `SendPreShipmentMediaUc`، `GetMyOrderMediaUc`، `SubmitMediaFeedbackUc` (فقط `APPROVE`)؛ job ِ `approve-silent-photos` در `PanelJobs`؛ `SmsSender.sendPhotosSent` (و مسیر ۹ مرحله‌ای پیامک)؛ routeها؛ `PreShipmentMediaHttpResponse` ِ واقعی؛ `OrderTexts` (پیام‌های انتظار و برچسب‌های تایم‌لاین عکس).
 
@@ -2122,14 +2122,22 @@ Route: 200 با AdminOrder ِ همون سفارش
 - چرا پیامک بعد از commit؟ قانون پروژه؛ و اگه پیامک نرسه، عکس‌ها هنوز فرستاده‌شده‌ان (اپراتور دستی فرستاده).
 
 **تموم شده یعنی:**
-- [ ] پیش‌نویس دو بار جایگزین می‌شه؛ مشتری چیزی نمی‌بینه؛ `send` ← `PHOTO_SENT`، مشتری دسته رو می‌بینه، پیامک ضبط می‌شه.
-- [ ] سفارش دوردیفه با عکس فقط برای ردیف ۱ ← `422 PHOTOS_INCOMPLETE` با `missingItemIds = [2]`.
-- [ ] مدیای `PRODUCT` در عکس سفارش ← `400 MEDIA_PURPOSE_MISMATCH`.
-- [ ] `manual = false` ← `400 MANUAL_ONLY`.
-- [ ] تأیید مشتری ← `APPROVED`، `canApproveMedia = false`؛ تأیید دوباره ← `200`؛ مشتری دیگه ← `404`.
-- [ ] job: ۲۴ ساعت و یه دقیقه بعد ← `APPROVED` (خودکار) و ردیف تایم‌لاین «خودکار تأیید شد»؛ ۲۳ ساعت ← هیچی.
-- [ ] `REQUEST_CHANGE` ← `422 CHANGE_REQUEST_NOT_ALLOWED` (تا فاز ۳).
-- [ ] `PUT …/pre-shipment-media` روی `RESERVED` ← `422`.
+- [x] پیش‌نویس دو بار جایگزین می‌شه؛ مشتری چیزی نمی‌بینه؛ `send` ← `PHOTO_SENT`، مشتری دسته رو می‌بینه، پیامک ضبط می‌شه.
+- [x] سفارش دوردیفه با عکس فقط برای ردیف ۱ ← `422 PHOTOS_INCOMPLETE` با `missingItemIds = [2]`.
+- [x] مدیای `PRODUCT` در عکس سفارش ← `400 MEDIA_PURPOSE_MISMATCH`.
+- [x] `manual = false` ← `400 MANUAL_ONLY`.
+- [x] تأیید مشتری ← `APPROVED`، `canApproveMedia = false`؛ تأیید دوباره ← `200`؛ مشتری دیگه ← `404`.
+- [x] job: ۲۴ ساعت و یه دقیقه بعد ← `APPROVED` (خودکار) و ردیف تایم‌لاین «خودکار تأیید شد»؛ ۲۳ ساعت ← هیچی.
+- [x] `REQUEST_CHANGE` ← `422 CHANGE_REQUEST_NOT_ALLOWED` (تا فاز ۳).
+- [x] `PUT …/pre-shipment-media` روی `RESERVED` ← `422`.
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- `SetPreShipmentMediaUc`، `SendPreShipmentMediaUc` و `SubmitMediaFeedbackUc` چیزی جز `Unit` برنمی‌گردونن و route بدنه رو با Query می‌سازه: `PUT` با `GetAdminOrderUc` و `PreShipmentMediaHttpResponse.fromDraft` (پیش‌نویس در `items`)، `send` با `AdminOrder`، و `media-feedback` با `GetMyOrderUc`. بدنه‌ی خالی ِ `send` مجازه.
+- `OrderNotices` (سرویس مشترک) همه‌ی پیامک‌های سفارشِ این فاز رو بعد از commit می‌فرسته و شکست رو فقط WARN می‌کنه؛ موبایل حساب داخل تراکنش خونده می‌شه.
+- `PreShipmentMediaDto` (فرستاده‌شده + پیش‌نویس) بخشی از `OrderDetailDto` ـه؛ پاسخ مشتری فقط فرستاده‌شده رو نشون می‌ده. `PreShipmentMedia.username` از پیام‌رسان سفارش. کارت سفارش `count`، `hasVideo` و `sentAt` ِ واقعی داره (فایل‌های کل صفحه‌ی «سفارش‌های من» یه‌جا خونده می‌شن). دکمه‌ی `canApproveMedia` روشن شد؛ `canCancel` با گام ۲.۷.
+- برچسب تایم‌لاین از این گام از `kind` ساخته می‌شه (`OrderTexts.timelineLabel`)؛ `note` ِ ردیف یا دلیل شکست پرداخته یا یادداشت لغو/تحویل.
+- لاگ `ORDER_MEDIA_SET`: `changes` = `media` با تعداد عکس هر ردیف (`{"1":1,"order":1}`)، از پیش‌نویس قبلی (یا `null`) به تازه.
+- job ِ `approve-silent-photos` با `FindSilentPhotoOrdersUc` و `ApproveSilentPhotosUc` در `PanelJobs`، هر ۱۰ دقیقه.
 
 ---
 
@@ -6008,3 +6016,4 @@ kiva {
 | ۲۶ مهر ۱۴۰۵ | ۲.۲ | Phase 2 step 2.2 | `V26` با backfill ِ `searchText` و `kind` ِ تایم‌لاین، ستون‌ها و `CHECK`های بعد از پرداخت، `trackingUrlTemplate`؛ Projector برای همه‌ی رویدادهای تازه (کم شدن `soldCount` با لغو زیر قفل ۷)، `OrderQm` و `OrderTimelineKind`، `findByCode`، `lockOrder`، `hasPurchase`. ۲۳۲۹ تست سبز |
 | ۲۶ مهر ۱۴۰۵ | ۲.۳ | Phase 2 step 2.3 | `FindAdminOrdersUc` (فیلترها، `q` به شکل کد/موبایل/واژه، روز تهران، `sort`، `statusCounts` ِ ۱۳ تایی)، `GetAdminOrderUc` (مشتری، گروه ارسال، همه‌ی تلاش‌ها، `allowedTransitions`)، `OrderByCode`، `OrderDetails`، `webV1AdminOrders.kt`، `PaidOrders`. ۲۳۴۰ تست سبز |
 | ۲۶ مهر ۱۴۰۵ | ۲.۴ | Phase 2 step 2.4 | `V27` (فقط اضافه، با trigger)، `OrderNote`، `AddOrderNoteUc` با لاگ `ORDER_NOTE_ADDED` بدون متن، یادداشت‌ها با اسم نویسنده در `GetAdminOrderUc`، `POST …/notes`. ۲۳۴۵ تست سبز |
+| ۲۶ مهر ۱۴۰۵ | ۲.۵ | Phase 2 step 2.5 | پیش‌نویس عکس (`PUT`)، ثبت ارسال دستی (`send`، `MANUAL_ONLY`، `PHOTOS_INCOMPLETE`)، عکس‌ها و «همونه!» ِ مشتری، job ِ تأیید خودکار، پیامک «عکس کیفت فرستاده شد» (مسیر کامل پیامک)، `PreShipmentMedia` و کارت واقعی، تایم‌لاین از `kind`. ۲۳۵۳ تست سبز |

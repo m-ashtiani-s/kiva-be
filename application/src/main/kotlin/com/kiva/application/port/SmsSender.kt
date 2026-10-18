@@ -31,4 +31,11 @@ interface SmsSender {
      * like [sendCode].
      */
     suspend fun sendOrderPaid(to: IranianMobileNumber, orderCode: OrderCode)
+
+    /**
+     * «عکس کیفت فرستاده شد»: the photos of the packed bag were sent to [to] on their messenger (by the operator, by hand),
+     * with the link to the order's page. Sent after the photos are recorded as sent; when it fails, only the log knows.
+     * Throws like [sendCode].
+     */
+    suspend fun sendPhotosSent(to: IranianMobileNumber, orderCode: OrderCode)
 }

@@ -1,7 +1,10 @@
 package com.kiva.infrastructure.persistence.exposed
 
+import com.kiva.application.usecase.audit.usecase.command.DeleteOldAuditEntriesUc
 import com.kiva.application.usecase.media.usecase.command.DeleteUnattachedMediaUc
 import com.kiva.application.usecase.media.usecase.query.FindUnattachedMediaUc
+import com.kiva.application.usecase.order.usecase.command.ApproveSilentPhotosUc
+import com.kiva.application.usecase.order.usecase.query.FindSilentPhotoOrdersUc
 import com.kiva.application.usecase.product.usecase.command.PublishScheduledProductUc
 import com.kiva.application.usecase.product.usecase.query.FindDueScheduledProductsUc
 import com.kiva.common.valueobject.UserId
@@ -18,7 +21,6 @@ import com.kiva.infrastructure.job.PanelJobs
 import com.kiva.infrastructure.media.DiskMediaStorage
 import com.kiva.infrastructure.media.RandomMediaIds
 import com.kiva.infrastructure.persistence.exposed.tbl.MediaTbl
-import com.kiva.application.usecase.audit.usecase.command.DeleteOldAuditEntriesUc
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
@@ -132,6 +134,8 @@ class MediaOnDatabaseTest {
             DeleteUnattachedMediaUc(transactions, repository, storage, clock),
             FindDueScheduledProductsUc(transactions, ProductQmRepositoryImpl(), clock),
             PublishScheduledProductUc(transactions, ProductRepositoryImpl(), clock),
+            FindSilentPhotoOrdersUc(transactions, OrderQmRepositoryImpl(), clock),
+            ApproveSilentPhotosUc(transactions, OrderRepositoryImpl(), clock),
         )
 
         jobs.deleteUnattachedMedia()

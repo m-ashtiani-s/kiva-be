@@ -68,7 +68,7 @@ data class AdminOrderListItemHttpResponse(
 
 /**
  * Contract schema `AdminOrder`: every field of the customer's page (OrderDetail, [OrderDetailHttpResponse]) and the
- * panel's own. Refunds and the draft of photos come with their steps (2.6, 2.5).
+ * panel's own: the draft of photos only the panel sees, every attempt to pay, the notes. Refunds come with step 2.6.
  */
 @Serializable
 data class AdminOrderHttpResponse(
@@ -106,7 +106,7 @@ data class AdminOrderHttpResponse(
     val refunds: List<JsonObject>,
     val notes: List<AdminNoteHttpResponse>,
     val allowedTransitions: List<String>,
-    val draftItems: List<JsonObject>,
+    val draftItems: List<OrderMediaItemHttpResponse>,
 ) {
     override fun toString(): String = "AdminOrderHttpResponse(code=$code, status=$status)"
 
@@ -145,7 +145,7 @@ data class AdminOrderHttpResponse(
                 refunds = emptyList(),
                 notes = order.notes.map(AdminNoteHttpResponse::from),
                 allowedTransitions = order.allowedTransitions.map { it.name }.sorted(),
-                draftItems = emptyList(),
+                draftItems = order.detail.photos.draft.map { OrderMediaItemHttpResponse.from(it, urls) },
             )
         }
     }

@@ -3,6 +3,8 @@ package com.kiva.infrastructure.job
 import com.kiva.application.usecase.audit.usecase.command.DeleteOldAuditEntriesUc
 import com.kiva.application.usecase.media.usecase.command.DeleteUnattachedMediaUc
 import com.kiva.application.usecase.media.usecase.query.FindUnattachedMediaUc
+import com.kiva.application.usecase.order.usecase.command.ApproveSilentPhotosUc
+import com.kiva.application.usecase.order.usecase.query.FindSilentPhotoOrdersUc
 import com.kiva.application.usecase.product.usecase.command.PublishScheduledProductUc
 import com.kiva.application.usecase.product.usecase.query.FindDueScheduledProductsUc
 import com.kiva.common.logging.getLogger
@@ -21,6 +23,7 @@ import kotlin.coroutines.cancellation.CancellationException
  * | removing the change log's rows past 90 days | daily, 03:30 Tehran |
  * | removing uploads nothing used within 48 hours | daily, 04:30 Tehran |
  * | publishing the drafts whose scheduled moment has come | every minute |
+ * | approving the photos nobody answered by their deadline | every 10 minutes |
  */
 class PanelJobs(
     private val deleteOldAuditEntries: DeleteOldAuditEntriesUc,
@@ -28,6 +31,8 @@ class PanelJobs(
     private val deleteUnattachedMedia: DeleteUnattachedMediaUc,
     private val findDueScheduledProducts: FindDueScheduledProductsUc,
     private val publishScheduledProduct: PublishScheduledProductUc,
+    private val findSilentPhotoOrders: FindSilentPhotoOrdersUc,
+    private val approveSilentPhoto: ApproveSilentPhotosUc,
 ) {
     private val logger = getLogger()
 
@@ -37,12 +42,19 @@ class PanelJobs(
         },
         ScheduledJob("delete-unattached-media", Schedule.DailyAt(LocalTime.of(4, 30), ShopCalendar.ZONE)) { deleteUnattachedMedia() },
         ScheduledJob("publish-scheduled-products", Schedule.Every(Duration.ofMinutes(1))) { publishScheduledProducts() },
+        ScheduledJob("approve-silent-photos", Schedule.Every(Duration.ofMinutes(10))) { approveSilentPhotos() },
     )
 
     /** One run of the publish job: every due draft, each by itself (one that breaks doesn't hold the others). */
     suspend fun publishScheduledProducts() {
         val due = findDueScheduledProducts.execute(FindDueScheduledProductsUc.Qry).unwrapOr { it }
         due.forEach { productId -> each("product ${productId.value}") { publishScheduledProduct.execute(PublishScheduledProductUc.Cmd(productId)) } }
+    }
+
+    /** One run of the approve-silent-photos job: every order past its deadline, each by itself. */
+    suspend fun approveSilentPhotos() {
+        val silent = findSilentPhotoOrders.execute(FindSilentPhotoOrdersUc.Qry).unwrapOr { it }
+        silent.forEach { orderId -> each("order ${orderId.value}") { approveSilentPhoto.execute(ApproveSilentPhotosUc.Cmd(orderId)) } }
     }
 
     /**

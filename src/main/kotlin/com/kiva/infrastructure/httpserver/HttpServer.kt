@@ -255,7 +255,9 @@ fun Application.configureRouting() {
         changeStatus = get(), archiveProduct = get(), addVariant = get(), updateVariant = get(), deactivateVariant = get(),
     )
     val adminInventoryUseCases = AdminInventoryUseCases(checkPanelAccess = checkPanelAccessUc, adjustInventory = get(), listAdjustments = get())
-    val adminOrderUseCases = AdminOrderUseCases(checkPanelAccess = checkPanelAccessUc, findOrders = get(), getOrder = get(), addNote = get())
+    val adminOrderUseCases = AdminOrderUseCases(
+        checkPanelAccess = checkPanelAccessUc, findOrders = get(), getOrder = get(), addNote = get(), setPhotos = get(), sendPhotos = get(),
+    )
     val config by inject<AppConfig>()
 
     routing {
@@ -294,7 +296,7 @@ fun Application.configureRouting() {
                 PaymentUseCases(handleGatewayCallbackUc, getPaymentResultUc, startPaymentAttemptUc, startPaymentUc, getPaymentInitUc),
                 config.payment.resultUrl,
             )
-            webV1MyOrders(MyOrderUseCases(listMyOrdersUc, getMyOrderUc, reorderUc, getCartUc, getMyReservationUc), mediaUrls)
+            webV1MyOrders(MyOrderUseCases(listMyOrdersUc, getMyOrderUc, reorderUc, getCartUc, getMyReservationUc, get(), get()), mediaUrls)
         }
     }
 }

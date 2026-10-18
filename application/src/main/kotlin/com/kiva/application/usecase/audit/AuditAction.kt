@@ -37,6 +37,8 @@ enum class AuditAction {
 
     // ---- orders (phase 2) ----
     ORDER_NOTE_ADDED,
+    ORDER_MEDIA_SET,
+    ORDER_PHOTO_SENT,
 }
 
 /** The kind of thing a panel write changed: the contract's AuditEntityType, value for value. */

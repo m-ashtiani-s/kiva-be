@@ -1,8 +1,10 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.model.response
 
+import com.kiva.application.repository.OrderTimelineKind
+import com.kiva.common.valueobject.Money
 import com.kiva.domain.aggregate.order.model.valueobject.OrderStatus
-import com.kiva.infrastructure.common.http.toPersianNumber
 import com.kiva.domain.aggregate.user.model.valueobject.MessengerChannel
+import com.kiva.infrastructure.common.http.toPersianNumber
 
 /**
  * The Persian words of an order's card, made here because the domain only gives its status (contract section 4): the
@@ -61,16 +63,23 @@ object OrderTexts {
     fun shipmentWaiting(methodName: String): String = "بعد از تحویل به $methodName این‌جا نمایش داده می‌شه"
 
     /**
-     * One line of the order's timeline, by the status it moved to. The first line is its placing, whatever came after;
-     * a failed attempt says so, and why in its note.
+     * One line of the order's timeline, by what happened ([kind]); [status] is what the order was after it (a payment
+     * held for a reservation says so). [carrierName] names the courier of a shipment; [amount] is money given back.
      */
-    fun timelineLabel(status: OrderStatus): String = when (status) {
-        OrderStatus.PENDING_PAYMENT -> "سفارش ثبت شد"
-        OrderStatus.PAYMENT_FAILED -> "پرداخت ناموفق"
-        OrderStatus.PROCESSING -> "پرداخت شد"
-        OrderStatus.RESERVED -> "پرداخت شد و رزرو شد"
-        OrderStatus.EXPIRED -> "مهلت پرداخت تموم شد"
-        else -> statusLabel(status)
+    fun timelineLabel(kind: OrderTimelineKind, status: OrderStatus, carrierName: String, amount: Money?): String = when (kind) {
+        OrderTimelineKind.PLACED -> "سفارش ثبت شد"
+        OrderTimelineKind.PAYMENT_FAILED -> "پرداخت ناموفق"
+        OrderTimelineKind.PAID -> if (status == OrderStatus.RESERVED) "پرداخت شد و رزرو شد" else "پرداخت شد"
+        OrderTimelineKind.EXPIRED -> "مهلت پرداخت تموم شد"
+        OrderTimelineKind.RELEASED_FROM_RESERVATION -> "مهلت رزرو تموم شد؛ در حال آماده‌سازی"
+        OrderTimelineKind.PHOTOS_SENT -> "عکس کیفت فرستاده شد"
+        OrderTimelineKind.PHOTOS_APPROVED -> "عکس رو تأیید کردی"
+        OrderTimelineKind.PHOTOS_AUTO_APPROVED -> "خودکار تأیید شد"
+        OrderTimelineKind.SHIPPED -> "تحویل $carrierName شد"
+        OrderTimelineKind.SHIPMENT_CORRECTED -> "کد رهگیری اصلاح شد"
+        OrderTimelineKind.DELIVERED -> "تحویل شد"
+        OrderTimelineKind.CANCELLED -> "لغو شد"
+        OrderTimelineKind.REFUNDED -> amount?.let { "${it.toman.toPersianNumber()} تومان برگشت داده شد" } ?: "مبلغ برگشت داده شد"
     }
 
     /** The photos before shipping, before there are any (contract example). */

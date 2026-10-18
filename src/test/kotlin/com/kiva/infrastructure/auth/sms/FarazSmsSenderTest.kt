@@ -141,6 +141,7 @@ class FarazSmsSenderTest {
             val sms = sender()
             sms.sendPhoneChangedNotice(sara, "9876")
             sms.sendOrderPaid(sara, OrderCode.constructFromPersisted("KV-218340"))
+            sms.sendPhotosSent(sara, OrderCode.constructFromPersisted("KV-218340"))
         }
 
         assertTrue(sent.isEmpty())
@@ -148,15 +149,22 @@ class FarazSmsSenderTest {
 
     @Test
     fun `with their patterns they are sent - the new number's ending, and the order's code`() {
-        val withAll = FarazSmsConfig("https://api.iranpayamak.com", key, "90008361", "vdXmsAfAQs", phoneChangedPattern = "pHoNe1234x", orderPaidPattern = "oRdEr5678y")
+        val withAll = FarazSmsConfig(
+            "https://api.iranpayamak.com", key, "90008361", "vdXmsAfAQs", phoneChangedPattern = "pHoNe1234x", orderPaidPattern = "oRdEr5678y",
+            photosSentPattern = "pH0t05ent1",
+        )
         runBlocking {
             val sms = sender(withAll)
             sms.sendPhoneChangedNotice(sara, "9876")
             sms.sendOrderPaid(sara, OrderCode.constructFromPersisted("KV-218340"))
+            sms.sendPhotosSent(sara, OrderCode.constructFromPersisted("KV-218340"))
         }
 
         assertEquals(
-            listOf("""{"code":"pHoNe1234x","attributes":{"ending":"9876"}}""", """{"code":"oRdEr5678y","attributes":{"order":"KV-218340"}}"""),
+            listOf(
+                """{"code":"pHoNe1234x","attributes":{"ending":"9876"}}""", """{"code":"oRdEr5678y","attributes":{"order":"KV-218340"}}""",
+                """{"code":"pH0t05ent1","attributes":{"order":"KV-218340"}}""",
+            ),
             sent.map { (_, body) -> JsonObject(body.filterKeys { it == "code" || it == "attributes" }).toString() },
         )
     }

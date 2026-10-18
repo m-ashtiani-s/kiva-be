@@ -46,6 +46,13 @@ interface OrderQmRepository {
      */
     fun findExpirable(now: Instant, limit: Int): List<OrderId>
 
+    /**
+     * The approve-silent-photos job's candidates: orders whose photos were sent and wait for an answer past their
+     * deadline at [now], the longest past first, at most [limit]. Only candidates: the order itself decides
+     * (ApproveSilentPhotosUc).
+     */
+    fun findSilentPhotos(now: Instant, limit: Int): List<OrderId>
+
     /** The customer's orders, newest first; only those in [statuses], or all when null («سفارش‌های من» and its tabs). */
     fun listOfCustomer(userId: UserId, statuses: Set<OrderStatus>?, pageable: Pageable): Page<OrderQm>
 

@@ -70,12 +70,12 @@ data class OrderSummaryHttpResponse(
                     waitingMessage = OrderTexts.shipmentWaiting(order.shippingMethodName),
                 ),
                 preShipmentMedia = PreShipmentMediaSummaryHttpResponse(
-                    status = "WAITING",
+                    status = order.photos.status.name,
                     channel = order.messengerChannel.name,
                     channelName = OrderTexts.messengerName(order.messengerChannel),
-                    count = 0,
-                    hasVideo = false,
-                    sentAt = null,
+                    count = order.photos.count,
+                    hasVideo = order.photos.hasVideo,
+                    sentAt = order.photos.sentOn?.toString(),
                 ),
                 actions = OrderActionsHttpResponse.from(order.actions),
             )

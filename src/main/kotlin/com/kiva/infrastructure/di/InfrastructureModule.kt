@@ -66,7 +66,7 @@ fun infrastructureModule(config: AppConfig, database: Database) = module {
     single {
         PanelJobs(
             deleteOldAuditEntries = get(), findUnattachedMedia = get(), deleteUnattachedMedia = get(),
-            findDueScheduledProducts = get(), publishScheduledProduct = get(),
+            findDueScheduledProducts = get(), publishScheduledProduct = get(), findSilentPhotoOrders = get(), approveSilentPhoto = get(),
         )
     }
     single { JobScheduler(get<PurchaseJobs>().all() + get<PanelJobs>().all(), clock = get()) }

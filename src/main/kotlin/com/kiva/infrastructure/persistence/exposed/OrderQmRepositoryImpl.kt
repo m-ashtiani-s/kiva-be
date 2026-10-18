@@ -87,6 +87,13 @@ class OrderQmRepositoryImpl : OrderQmRepository {
             .limit(limit)
             .map { OrderId.constructFromPersisted(it[OrderQmTbl.orderId]) }
 
+    override fun findSilentPhotos(now: Instant, limit: Int): List<OrderId> =
+        OrderQmTbl.select(OrderQmTbl.orderId)
+            .where { (OrderQmTbl.photoStatus eq PhotoStatus.SENT) and (OrderQmTbl.feedbackDeadline lessEq now.atOffset(ZoneOffset.UTC)) }
+            .orderBy(OrderQmTbl.feedbackDeadline)
+            .limit(limit)
+            .map { OrderId.constructFromPersisted(it[OrderQmTbl.orderId]) }
+
     /** Always newest first (the list has no other order); the order id breaks a tie, so a page never repeats an order. */
     override fun listOfCustomer(userId: UserId, statuses: Set<OrderStatus>?, pageable: Pageable): Page<OrderQm> {
         val query = OrderQmTbl.selectAll()

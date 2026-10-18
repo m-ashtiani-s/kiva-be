@@ -25,7 +25,11 @@ import com.kiva.application.usecase.inventory.usecase.query.ListInventoryAdjustm
 import com.kiva.application.usecase.media.MediaAttachments
 import com.kiva.application.usecase.media.usecase.command.UploadMediaUc
 import com.kiva.application.usecase.order.usecase.command.AddOrderNoteUc
+import com.kiva.application.usecase.order.usecase.command.ApproveSilentPhotosUc
+import com.kiva.application.usecase.order.usecase.command.SendPreShipmentMediaUc
+import com.kiva.application.usecase.order.usecase.command.SetPreShipmentMediaUc
 import com.kiva.application.usecase.order.usecase.query.FindAdminOrdersUc
+import com.kiva.application.usecase.order.usecase.query.FindSilentPhotoOrdersUc
 import com.kiva.application.usecase.order.usecase.query.GetAdminOrderUc
 import com.kiva.application.usecase.product.ProductInput
 import com.kiva.application.usecase.product.usecase.command.AddVariantUc
@@ -212,7 +216,13 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
             OrderNoteRepositoryImpl(), users, purchase.settings, clock,
         ),
         addNote = AddOrderNoteUc(transactions, purchase.orderByCode, OrderNoteRepositoryImpl(), users, auditTrail, clock),
+        setPhotos = SetPreShipmentMediaUc(transactions, purchase.orderByCode, purchase.orders, mediaAttachments, auditTrail, clock),
+        sendPhotos = SendPreShipmentMediaUc(transactions, purchase.orderByCode, purchase.orders, users, auditTrail, purchase.orderNotices, clock),
     )
+
+    // The approve-silent-photos job's two use cases, run by the tests the way PanelJobs runs them.
+    val findSilentPhotos = FindSilentPhotoOrdersUc(transactions, purchase.orderQm, clock)
+    val approveSilentPhotos = ApproveSilentPhotosUc(transactions, purchase.orders, clock)
 
     /** A logged-in user of the panel: who they are and the access token of their session. */
     class Caller(val user: User, val token: String) {

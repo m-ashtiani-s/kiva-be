@@ -2,9 +2,13 @@ package com.kiva.application.usecase.order
 
 import com.kiva.application.dto.OrderDetailDto
 import com.kiva.application.dto.OrderSummaryDto
+import com.kiva.application.dto.PreShipmentMediaDto
 import com.kiva.application.repository.OrderQm
 import com.kiva.application.usecase.reservation.Reservations
 import com.kiva.domain.aggregate.color.repository.ColorRepository
+import com.kiva.domain.aggregate.media.entity.MediaAsset
+import com.kiva.domain.aggregate.media.model.valueobject.MediaId
+import com.kiva.domain.aggregate.media.repository.MediaRepository
 import com.kiva.domain.aggregate.payment.entity.Payment
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentStatus
 import com.kiva.domain.aggregate.payment.repository.PaymentRepository
@@ -20,6 +24,7 @@ class OrderDetails(
     private val paymentRepository: PaymentRepository,
     private val colorRepository: ColorRepository,
     private val reservations: Reservations,
+    private val mediaRepository: MediaRepository,
 ) {
 
     /** [order]'s page at [now], with the shop's [settings] of now (the names of its shipping method and gateway). */
@@ -29,8 +34,9 @@ class OrderDetails(
     fun of(order: OrderQm, settings: ShopSettings, now: Instant, attempts: List<Payment>): OrderDetailDto {
         val palette = colorRepository.findAll().associateBy { it.key }
         val latest = attempts.lastOrNull()
+        val media = mediaOf(listOf(order))
         return OrderDetailDto(
-            summary = OrderSummaryDto.of(order, settings, now, reservations.infosOf(listOf(order), now)[order.orderId]),
+            summary = OrderSummaryDto.of(order, settings, now, reservations.infosOf(listOf(order), now)[order.orderId], media),
             items = order.lines.map { line ->
                 val color = line.item.color
                 // A color taken out of the palette since keeps its name and hex, as bought, and sorts last.
@@ -58,11 +64,19 @@ class OrderDetails(
             },
             totals = order.totals,
             payment = latest?.let { paymentOf(it, settings) },
-            messenger = OrderDetailDto.Messenger(order.messenger.channel, order.messenger.phone.value, order.messenger.note),
-            timeline = order.timeline.map { OrderDetailDto.TimelineEntry(it.status, it.at, it.failureReason) },
+            messenger = order.messenger.let { OrderDetailDto.Messenger(it.channel, it.phone.value, it.username, it.note) },
+            photos = PreShipmentMediaDto.of(order, media),
+            timeline = order.timeline.map { OrderDetailDto.TimelineEntry(it.kind, it.status, it.at, it.failureReason, it.note, it.amount) },
             customerNote = order.customerNote?.value,
             gift = order.gift?.let { OrderDetailDto.Gift(it.message, it.hidePrices) },
         )
+    }
+
+    /** The uploads of [orders]' photos, sent and drafted, in one read. */
+    fun mediaOf(orders: List<OrderQm>): Map<MediaId, MediaAsset> {
+        val ids = orders.flatMap { it.photosSent + it.photoDraft }.map { it.mediaId }.distinct()
+        if (ids.isEmpty()) return emptyMap()
+        return mediaRepository.findAll(ids).associateBy { it.id }
     }
 
     /** One attempt to pay, as the order's page shows it; its gateway named as the shop's [settings] call it now. */

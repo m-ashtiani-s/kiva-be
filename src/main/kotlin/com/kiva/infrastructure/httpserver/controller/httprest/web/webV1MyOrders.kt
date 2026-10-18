@@ -2,6 +2,8 @@ package com.kiva.infrastructure.httpserver.controller.httprest.web
 
 import com.kiva.application.usecase.cart.usecase.query.GetCartUc
 import com.kiva.application.usecase.order.usecase.command.ReorderUc
+import com.kiva.application.usecase.order.usecase.command.SubmitMediaFeedbackUc
+import com.kiva.application.usecase.order.usecase.query.GetMyOrderMediaUc
 import com.kiva.application.usecase.order.usecase.query.GetMyOrderUc
 import com.kiva.application.usecase.order.usecase.query.ListMyOrdersUc
 import com.kiva.application.usecase.reservation.usecase.query.GetMyReservationUc
@@ -11,14 +13,17 @@ import com.kiva.infrastructure.common.http.respondFailure
 import com.kiva.infrastructure.common.http.respondResult
 import com.kiva.infrastructure.httpserver.auth.ACCESS
 import com.kiva.infrastructure.httpserver.auth.accessPrincipal
+import com.kiva.infrastructure.httpserver.controller.httprest.model.request.PreShipmentFeedbackHttpRequest
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.CartHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.OrderDetailHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.OrderListHttpResponse
+import com.kiva.infrastructure.httpserver.controller.httprest.model.response.PreShipmentMediaHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.ReorderHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.ReservationInfoHttpResponse
 import com.kiva.infrastructure.media.MediaUrls
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.auth.authenticate
+import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
@@ -31,6 +36,8 @@ class MyOrderUseCases(
     val reorder: ReorderUc,
     val getCart: GetCartUc,
     val getMyReservation: GetMyReservationUc,
+    val getMyOrderMedia: GetMyOrderMediaUc,
+    val submitMediaFeedback: SubmitMediaFeedbackUc,
 )
 
 /** The path parameter every order route names its order by. */
@@ -53,6 +60,21 @@ fun Route.webV1MyOrders(useCases: MyOrderUseCases, mediaUrls: MediaUrls) {
         get("/me/orders/{$ORDER_CODE}") {
             val query = GetMyOrderUc.Qry(call.accessPrincipal().userId, call.parameters[ORDER_CODE].orEmpty())
             call.respondResult(useCases.getMyOrder.execute(query)) { OrderDetailHttpResponse.from(it, mediaUrls) }
+        }
+
+        // The photos before shipping, for the lightbox: the batch sent, never the operator's draft.
+        get("/me/orders/{$ORDER_CODE}/media") {
+            val query = GetMyOrderMediaUc.Qry(call.accessPrincipal().userId, call.parameters[ORDER_CODE].orEmpty())
+            call.respondResult(useCases.getMyOrderMedia.execute(query)) { PreShipmentMediaHttpResponse.from(it.photos, it.messenger, mediaUrls) }
+        }
+
+        // «همونه!»; the answer is the order's page as GET /me/orders/{orderCode} builds it.
+        post("/me/orders/{$ORDER_CODE}/media-feedback") {
+            val userId = call.accessPrincipal().userId
+            val code = call.parameters[ORDER_CODE].orEmpty()
+            val request = call.receive<PreShipmentFeedbackHttpRequest>()
+            useCases.submitMediaFeedback.execute(SubmitMediaFeedbackUc.Cmd(userId, code, request.decision)).unwrapOr { return@post call.respondFailure(it) }
+            call.respondResult(useCases.getMyOrder.execute(GetMyOrderUc.Qry(userId, code))) { OrderDetailHttpResponse.from(it, mediaUrls) }
         }
 
         // «رزرو ۴ روزه» while one holds; 204 when none does.
