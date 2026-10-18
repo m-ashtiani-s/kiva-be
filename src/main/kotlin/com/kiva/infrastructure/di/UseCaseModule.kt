@@ -72,10 +72,13 @@ import com.kiva.application.usecase.media.usecase.command.DeleteUnattachedMediaU
 import com.kiva.application.usecase.media.usecase.command.UploadMediaUc
 import com.kiva.application.usecase.media.usecase.query.FindUnattachedMediaUc
 import com.kiva.application.usecase.order.OrderByCode
+import com.kiva.application.usecase.order.OrderCancellation
 import com.kiva.application.usecase.order.OrderDetails
 import com.kiva.application.usecase.order.OrderNotices
 import com.kiva.application.usecase.order.usecase.command.AddOrderNoteUc
 import com.kiva.application.usecase.order.usecase.command.ApproveSilentPhotosUc
+import com.kiva.application.usecase.order.usecase.command.CancelMyOrderUc
+import com.kiva.application.usecase.order.usecase.command.ChangeOrderStatusUc
 import com.kiva.application.usecase.order.usecase.command.ExpireUnpaidOrderUc
 import com.kiva.application.usecase.order.usecase.command.ReorderUc
 import com.kiva.application.usecase.order.usecase.command.SendPreShipmentMediaUc
@@ -283,6 +286,17 @@ val useCaseModule = module(createdAtStart = true) {
     single { OrderByCode(orderQmRepository = get(), orderRepository = get()) }
     single { OrderDetails(paymentRepository = get(), colorRepository = get(), reservations = get(), mediaRepository = get(), refundRepository = get()) }
     single { OrderNotices(smsSender = get()) }
+    single {
+        OrderCancellation(
+            orderQmRepository = get(), orderRepository = get(), paymentRepository = get(), discountRedemptionRepository = get(), inventoryDomainService = get(),
+            inventoryRepository = get(), refundRepository = get(), refundIdGenerator = get(), refundDomainService = get(),
+        )
+    }
+    single {
+        CancelMyOrderUc(
+            transactionManager = get(), orderByCode = get(), orderCancellation = get(), userRepository = get(), orderNotices = get(), clock = get(),
+        )
+    }
     single { GetMyOrderMediaUc(transactionManager = get(), orderByCode = get(), orderDetails = get()) }
     single { SubmitMediaFeedbackUc(transactionManager = get(), orderByCode = get(), orderRepository = get(), clock = get()) }
     single { FindSilentPhotoOrdersUc(transactionManager = get(), orderQmRepository = get(), clock = get()) }
@@ -499,6 +513,13 @@ val useCaseModule = module(createdAtStart = true) {
             transactionManager = get(), orderByCode = get(), orderDetails = get(), orderQmRepository = get(), paymentRepository = get(),
             reservationGroupRepository = get(), adminCustomerRepository = get(), orderNoteRepository = get(), userRepository = get(),
             shopSettingsRepository = get(), clock = get(),
+        )
+    }
+
+    single {
+        ChangeOrderStatusUc(
+            transactionManager = get(), orderByCode = get(), orderCancellation = get(), userRepository = get(), auditTrail = get(), orderNotices = get(),
+            clock = get(),
         )
     }
 

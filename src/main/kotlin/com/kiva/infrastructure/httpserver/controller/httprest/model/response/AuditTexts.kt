@@ -41,6 +41,7 @@ object AuditTexts {
             AuditAction.VARIANT_UPDATED -> "رنگ $name ویرایش شد"
             AuditAction.VARIANT_DEACTIVATED -> "رنگ $name غیرفعال شد"
             AuditAction.INVENTORY_ADJUSTED -> stockAdjusted(name, changes)
+            AuditAction.ORDER_STATUS_CHANGED -> statusChanged(name, changes)
             AuditAction.ORDER_NOTE_ADDED -> "یادداشت داخلی روی سفارش $name نوشته شد"
             AuditAction.ORDER_MEDIA_SET -> "عکس‌های قبل از ارسال سفارش $name انتخاب شد"
             AuditAction.ORDER_PHOTO_SENT -> "ارسال عکس‌های سفارش $name برای مشتری ثبت شد"
@@ -67,6 +68,12 @@ object AuditTexts {
         val at = changes.firstOrNull { it.field == "publishAt" }?.to?.let { runCatching { Instant.parse(it) }.getOrNull() }
             ?: return "انتشار محصول $name برنامه‌ریزی شد"
         return "انتشار محصول $name برای ${JalaliDates.weekdayDayAndMonth(ShopCalendar.dateOf(at))} برنامه‌ریزی شد"
+    }
+
+    private fun statusChanged(name: String, changes: List<AuditChange>): String = when (changes.firstOrNull { it.field == "status" }?.to) {
+        "CANCELLED" -> "سفارش $name لغو شد"
+        "DELIVERED" -> "سفارش $name تحویل شد"
+        else -> "وضعیت سفارش $name تغییر کرد"
     }
 
     private fun refundCreated(name: String, changes: List<AuditChange>): String {

@@ -31,8 +31,14 @@ interface DiscountRedemptionRepository {
 
     fun findOfOrder(orderId: OrderId): DiscountRedemption?
 
+    /**
+     * Locks the order's use of a code, if any, and reads it (section 4.11, lock 5): a cancellation takes it first, before
+     * the order's payments, so giving the use back never crosses its confirmation.
+     */
+    fun lockOfOrder(orderId: OrderId): DiscountRedemption?
+
     fun add(redemption: DiscountRedemption)
 
-    /** Writes its confirmation or release, only if its row is still HELD. */
+    /** Writes its confirmation, release or giving back, only if its row is still in the status it was read in. */
     fun save(redemption: DiscountRedemption)
 }

@@ -3,6 +3,7 @@ package com.kiva.infrastructure.httpserver.controller.httprest.web
 import com.kiva.application.usecase.admin.usecase.command.CheckPanelAccessUc
 import com.kiva.application.usecase.order.AdminOrderFilterQuery
 import com.kiva.application.usecase.order.usecase.command.AddOrderNoteUc
+import com.kiva.application.usecase.order.usecase.command.ChangeOrderStatusUc
 import com.kiva.application.usecase.order.usecase.command.SendPreShipmentMediaUc
 import com.kiva.application.usecase.order.usecase.command.SetPreShipmentMediaUc
 import com.kiva.application.usecase.order.usecase.query.AdminOrderSorts
@@ -17,6 +18,7 @@ import com.kiva.infrastructure.common.http.respondResult
 import com.kiva.infrastructure.httpserver.auth.panelActor
 import com.kiva.infrastructure.httpserver.auth.requireRoles
 import com.kiva.infrastructure.httpserver.controller.httprest.model.request.AdminNoteHttpRequest
+import com.kiva.infrastructure.httpserver.controller.httprest.model.request.AdminOrderStatusHttpRequest
 import com.kiva.infrastructure.httpserver.controller.httprest.model.request.AdminPreShipmentMediaHttpRequest
 import com.kiva.infrastructure.httpserver.controller.httprest.model.request.AdminRefundHttpRequest
 import com.kiva.infrastructure.httpserver.controller.httprest.model.request.AdminSendPhotosHttpRequest
@@ -43,6 +45,7 @@ class AdminOrderUseCases(
     val setPhotos: SetPreShipmentMediaUc,
     val sendPhotos: SendPreShipmentMediaUc,
     val createRefund: CreateRefundUc,
+    val changeStatus: ChangeOrderStatusUc,
 )
 
 /** The path parameter every panel order route names its order by. */
@@ -80,6 +83,15 @@ fun Route.webV1AdminOrders(useCases: AdminOrderUseCases, mediaUrls: MediaUrls) {
             val request = call.receive<AdminNoteHttpRequest>()
             val command = AddOrderNoteUc.Cmd(call.parameters[ORDER_CODE].orEmpty(), request.text, call.panelActor())
             call.respondResult(useCases.addNote.execute(command), HttpStatusCode.Created) { AdminNoteHttpResponse.from(it) }
+        }
+
+        // Only the moves OrderTransitionPolicy allows (CANCELLED, DELIVERED); the answer is the order as the panel sees it.
+        post("/admin/orders/{$ORDER_CODE}/status") {
+            val code = call.parameters[ORDER_CODE].orEmpty()
+            val request = call.receive<AdminOrderStatusHttpRequest>()
+            val command = ChangeOrderStatusUc.Cmd(code, request.status, request.note, request.notifyCustomer, call.panelActor())
+            useCases.changeStatus.execute(command).unwrapOr { return@post call.respondFailure(it) }
+            call.respondResult(useCases.getOrder.execute(GetAdminOrderUc.Qry(code))) { AdminOrderHttpResponse.from(it, mediaUrls) }
         }
 
         // The draft replaced; the answer is the photos as the panel sees them, the draft in `items`.

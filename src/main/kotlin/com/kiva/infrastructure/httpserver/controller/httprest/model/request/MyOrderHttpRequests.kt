@@ -16,3 +16,9 @@ data class PreShipmentFeedbackHttpRequest(
 ) {
     override fun toString(): String = "PreShipmentFeedbackHttpRequest(decision=$decision, changeType=$changeType)"
 }
+
+/** The body of `POST /me/orders/{orderCode}/cancel` (contract CancelOrderRequest). [note] is never logged. */
+@Serializable
+data class CancelOrderHttpRequest(val reason: String? = null, val note: String? = null) {
+    override fun toString(): String = "CancelOrderHttpRequest(reason=$reason)"
+}

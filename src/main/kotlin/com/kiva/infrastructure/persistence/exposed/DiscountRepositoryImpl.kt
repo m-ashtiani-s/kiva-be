@@ -73,6 +73,9 @@ class DiscountRedemptionRepositoryImpl : DiscountRedemptionRepository {
     override fun findOfOrder(orderId: OrderId): DiscountRedemption? =
         DiscountRedemptionTbl.selectAll().where { DiscountRedemptionTbl.orderId eq orderId.value }.singleOrNull()?.toRedemption()
 
+    override fun lockOfOrder(orderId: OrderId): DiscountRedemption? =
+        DiscountRedemptionTbl.selectAll().where { DiscountRedemptionTbl.orderId eq orderId.value }.forUpdate().singleOrNull()?.toRedemption()
+
     override fun add(redemption: DiscountRedemption) {
         DiscountRedemptionTbl.insert {
             it[codeId] = redemption.codeId.value

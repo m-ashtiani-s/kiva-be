@@ -1535,7 +1535,7 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 | ۲.۴ | یادداشت داخلی | S | ✅ |
 | ۲.۵ | عکس قبل از ارسال، تأیید مشتری و تأیید خودکار | L | ✅ |
 | ۲.۶ | استرداد دستی | M | ✅ |
-| ۲.۷ | تغییر وضعیت از پنل و لغو (پنل و مشتری) | L | ⬜ |
+| ۲.۷ | تغییر وضعیت از پنل و لغو (پنل و مشتری) | L | ✅ |
 | ۲.۸ | ارسال (تکی و گروهی) و «تحویل شد» | L | ⬜ |
 | ۲.۹ | رهگیری: مهمان، روزانه و «رهگیری‌های من» | M | ⬜ |
 | ۲.۱۰ | «سفارش‌های من» کامل و آمار مشتری | M | ⬜ |
@@ -2167,7 +2167,7 @@ Route: 200 با AdminOrder ِ همون سفارش
 
 ---
 
-#### گام ۲.۷: تغییر وضعیت از پنل و لغو (پنل و مشتری) · L ⬜
+#### گام ۲.۷: تغییر وضعیت از پنل و لغو (پنل و مشتری) · L ✅
 
 **می‌سازی:** `OrderCancellation`، `ChangeOrderStatusUc` (فقط `CANCELLED` در این گام؛ `DELIVERED` با ۲.۸)، `CancelMyOrderUc`؛ `SmsSender.sendOrderCancelled`؛ routeها؛ `CancelOrderResponseHttpResponse`، `CancelTexts`.
 
@@ -2178,14 +2178,22 @@ Route: 200 با AdminOrder ِ همون سفارش
 - چرا لغو وقتی پرداخت مانده در جریانه رد می‌شه؟ وگرنه پول اون پرداخت بعد از لغو می‌رسه و هیچ استردادی براش ساخته نشده.
 
 **تموم شده یعنی:**
-- [ ] مشتری `PROCESSING` رو لغو می‌کنه ← `CANCELLED`، موجودی برگشت (`available` ِ read model)، `soldCount` کم، استفاده‌ی کد تخفیف برگشت (کد `usageLimit = 1` دوباره قابل استفاده‌ست)، استرداد `PENDING` ِ کل پرداخت با `BANK_TRANSFER`، پیامک، و `CancelOrderResponse` با `refund`.
-- [ ] سفارش رایگان (`payable = 0`) لغو ← `refund = null`.
-- [ ] مشتری بعد از عکس ← `422 ORDER_NOT_CANCELLABLE`؛ پنل همون سفارش رو لغو می‌کنه ← موفق.
-- [ ] پنل `SHIPPED` رو لغو کنه ← `422 INVALID_STATUS_TRANSITION` با `allowed = [DELIVERED]`.
-- [ ] لغو همزمان مشتری و اپراتور، ۲۰ بار ← یه `OrderCancelled`، یه استرداد، یه آزادسازی.
-- [ ] لغو سفارش اصلی گروه رزرو ← گروه `HOLDING` می‌مونه؛ `groupOrderCodes` سفارش لغوشده رو نداره.
-- [ ] مشتری با تنها سفارش لغوشده‌ش هنوز می‌تونه `WELCOME` (خرید اول) بگیره.
-- [ ] لغو مشتری لاگ تغییرات نمی‌ذاره؛ لغو پنل `ORDER_STATUS_CHANGED`.
+- [x] مشتری `PROCESSING` رو لغو می‌کنه ← `CANCELLED`، موجودی برگشت (`available` ِ read model)، `soldCount` کم، استفاده‌ی کد تخفیف برگشت (کد `usageLimit = 1` دوباره قابل استفاده‌ست)، استرداد `PENDING` ِ کل پرداخت با `BANK_TRANSFER`، پیامک، و `CancelOrderResponse` با `refund`.
+- [x] سفارش رایگان (`payable = 0`) لغو ← `refund = null`.
+- [x] مشتری بعد از عکس ← `422 ORDER_NOT_CANCELLABLE`؛ پنل همون سفارش رو لغو می‌کنه ← موفق.
+- [x] پنل `SHIPPED` رو لغو کنه ← `422 INVALID_STATUS_TRANSITION` با `allowed = [DELIVERED]` (تستش با ۲.۸، چون تا اون موقع راهی برای رسیدن به `SHIPPED` نیست).
+- [x] لغو همزمان مشتری و اپراتور، ۲۰ بار ← یه `OrderCancelled`، یه استرداد، یه آزادسازی.
+- [x] لغو سفارش اصلی گروه رزرو ← گروه `HOLDING` می‌مونه؛ `groupOrderCodes` سفارش لغوشده رو نداره.
+- [x] مشتری با تنها سفارش لغوشده‌ش هنوز می‌تونه `WELCOME` (خرید اول) بگیره.
+- [x] لغو مشتری لاگ تغییرات نمی‌ذاره؛ لغو پنل `ORDER_STATUS_CHANGED`.
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- `OrderCancellation` قفل‌ها رو به ترتیب ۴.۱۱ می‌گیره: استفاده‌ی کد (۵، `DiscountRedemptionRepository.lockOfOrder` ِ تازه)، پرداخت‌ها (۶)، ردیف سفارش (۹)، استردادها، موجودی (۷) و جریان سفارش (۸). پرداخت `VERIFYING` ← `422 PAYMENT_IN_PROGRESS`؛ این مسیر فقط در کد هست و تست HTTP نداره (رسوندن پرداخت به `VERIFYING` وسط لغو در تست پایدار نیست).
+- لغو همزمان: هر دو UseCase روی `ConcurrentChangeException` تا ۳ بار کل تراکنش رو دوباره اجرا می‌کنن؛ دومی سفارش لغوشده رو می‌بینه و `422` می‌گیره.
+- پاسخ پنل `AdminOrder` ِ تازه‌ست (از `GetAdminOrderUc`)؛ پاسخ مشتری `{ order, refund, message }`، `message` از `CancelTexts` (با استرداد: «…تا ۷۲ ساعت کاری باهات تماس می‌گیرن»، بدون: «سفارش لغو شد.»).
+- `notifyCustomer: false` ← بدون پیامک؛ پیش‌فرض `true`. لغو مشتری همیشه پیامک داره.
+- `actions.canCancel` ِ کارت از همین گام روشنه (`OrderActionsPolicy`).
+- `PaidOrders.paid(..., discountCode)` برای تست‌ها اضافه شد.
 
 ---
 
@@ -6025,3 +6033,4 @@ kiva {
 | ۲۶ مهر ۱۴۰۵ | ۲.۴ | Phase 2 step 2.4 | `V27` (فقط اضافه، با trigger)، `OrderNote`، `AddOrderNoteUc` با لاگ `ORDER_NOTE_ADDED` بدون متن، یادداشت‌ها با اسم نویسنده در `GetAdminOrderUc`، `POST …/notes`. ۲۳۴۵ تست سبز |
 | ۲۶ مهر ۱۴۰۵ | ۲.۵ | Phase 2 step 2.5 | پیش‌نویس عکس (`PUT`)، ثبت ارسال دستی (`send`، `MANUAL_ONLY`، `PHOTOS_INCOMPLETE`)، عکس‌ها و «همونه!» ِ مشتری، job ِ تأیید خودکار، پیامک «عکس کیفت فرستاده شد» (مسیر کامل پیامک)، `PreShipmentMedia` و کارت واقعی، تایم‌لاین از `kind`. ۲۳۵۳ تست سبز |
 | ۲۶ مهر ۱۴۰۵ | ۲.۶ | Phase 2 step 2.6 | `V28`، `RefundRepositoryImpl`، `CreateRefundUc` (قفل ۹، `REFUND_EXCEEDS_PAID`) و `UpdateRefundUc` (`REFERENCE_ID_REQUIRED`، `OrderRefunded`)، `webV1AdminRefunds.kt`، پیامک «پولت برگشت»، `refunds` و `totals.refunded` ِ واقعی، فیلتر `refundStatus`. دو خرابکاری قرمز. ۲۳۵۹ تست سبز |
+| ۲۶ مهر ۱۴۰۵ | ۲.۷ | Phase 2 step 2.7 | `OrderCancellation` (قفل‌های ۵، ۶، ۹، ۷، ۸؛ `PAYMENT_IN_PROGRESS`)، `ChangeOrderStatusUc` (فقط `CANCELLED`)، `CancelMyOrderUc`، دو route، پیامک «لغو شد» (مسیر کامل)، `canCancel` روشن، استرداد `PENDING` ِ خودکار. ۲۳۶۷ تست سبز |

@@ -32,3 +32,9 @@ data class AdminRefundHttpRequest(val amount: Long? = null, val reason: String? 
 data class AdminRefundUpdateHttpRequest(val status: String? = null, val referenceId: String? = null, val note: String? = null) {
     override fun toString(): String = "AdminRefundUpdateHttpRequest(status=$status)"
 }
+
+/** The body of `POST /admin/orders/{orderCode}/status` (contract AdminOrderStatusChangeRequest). [note] is never logged. */
+@Serializable
+data class AdminOrderStatusHttpRequest(val status: String? = null, val note: String? = null, val notifyCustomer: Boolean? = null) {
+    override fun toString(): String = "AdminOrderStatusHttpRequest(status=$status, notifyCustomer=$notifyCustomer)"
+}

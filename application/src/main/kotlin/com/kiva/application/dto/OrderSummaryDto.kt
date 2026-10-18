@@ -79,8 +79,7 @@ data class OrderSummaryDto(
                 hasVideo = order.photosSent.any { media[it.mediaId]?.type == MediaType.VIDEO },
                 sentOn = order.photosSentOn,
             ),
-            // The cancel button comes with its endpoint (step 2.7).
-            actions = OrderActionsPolicy.actionsOf(order.actionFactsAt(now)).copy(canCancel = false),
+            actions = OrderActionsPolicy.actionsOf(order.actionFactsAt(now)),
             reservation = reservation,
         )
     }

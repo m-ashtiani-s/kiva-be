@@ -165,6 +165,7 @@ data class SmsConfig(val provider: SmsProvider, val faraz: FarazSmsConfig? = nul
                     orderPaidPattern = optional("orderPaidPattern"),
                     photosSentPattern = optional("photosSentPattern"),
                     refundCompletedPattern = optional("refundCompletedPattern"),
+                    orderCancelledPattern = optional("orderCancelledPattern"),
                 ),
             )
         }

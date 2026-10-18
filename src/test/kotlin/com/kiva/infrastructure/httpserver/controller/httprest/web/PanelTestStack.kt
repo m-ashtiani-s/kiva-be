@@ -26,6 +26,7 @@ import com.kiva.application.usecase.media.MediaAttachments
 import com.kiva.application.usecase.media.usecase.command.UploadMediaUc
 import com.kiva.application.usecase.order.usecase.command.AddOrderNoteUc
 import com.kiva.application.usecase.order.usecase.command.ApproveSilentPhotosUc
+import com.kiva.application.usecase.order.usecase.command.ChangeOrderStatusUc
 import com.kiva.application.usecase.order.usecase.command.SendPreShipmentMediaUc
 import com.kiva.application.usecase.order.usecase.command.SetPreShipmentMediaUc
 import com.kiva.application.usecase.order.usecase.query.FindAdminOrdersUc
@@ -226,6 +227,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
             transactions, purchase.orderByCode, purchase.orderQm, purchase.orders, purchase.payments, purchase.refunds, RefundDomainService(RefundIdGeneratorImpl()),
             auditTrail, clock,
         ),
+        changeStatus = ChangeOrderStatusUc(transactions, purchase.orderByCode, purchase.orderCancellation, users, auditTrail, purchase.orderNotices, clock),
     )
     val adminRefunds = AdminRefundUseCases(
         checkPanelAccess,

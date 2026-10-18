@@ -44,4 +44,10 @@ interface SmsSender {
      * refund is recorded as completed; when it fails, only the log knows. Throws like [sendCode].
      */
     suspend fun sendRefundCompleted(to: IranianMobileNumber, orderCode: OrderCode)
+
+    /**
+     * «لغو شد»: the order [orderCode] was cancelled (by the customer, or by staff when they chose to tell them). Sent after
+     * the cancellation is committed; when it fails, only the log knows. Throws like [sendCode].
+     */
+    suspend fun sendOrderCancelled(to: IranianMobileNumber, orderCode: OrderCode)
 }

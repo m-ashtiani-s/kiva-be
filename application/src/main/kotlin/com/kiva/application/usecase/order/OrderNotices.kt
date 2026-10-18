@@ -23,6 +23,9 @@ class OrderNotices(private val smsSender: SmsSender) {
     /** «پولت برگشت». */
     suspend fun refundCompleted(to: IranianMobileNumber?, orderCode: OrderCode) = send("«پولت برگشت»", to, orderCode) { smsSender.sendRefundCompleted(it, orderCode) }
 
+    /** «لغو شد». */
+    suspend fun cancelled(to: IranianMobileNumber?, orderCode: OrderCode) = send("«لغو شد»", to, orderCode) { smsSender.sendOrderCancelled(it, orderCode) }
+
     private suspend fun send(what: String, to: IranianMobileNumber?, orderCode: OrderCode, sending: suspend (IranianMobileNumber) -> Unit) {
         if (to == null) {
             logger.warn("OrderNotices: $what of order ${orderCode.value} not sent, its account is gone")

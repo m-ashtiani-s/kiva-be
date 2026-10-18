@@ -5,6 +5,7 @@ import com.kiva.application.usecase.address.AddressFields
 import com.kiva.application.usecase.address.usecase.command.AddAddressUc
 import com.kiva.application.usecase.cart.CartCaller
 import com.kiva.application.usecase.cart.usecase.command.AddCartItemUc
+import com.kiva.application.usecase.cart.usecase.command.ApplyDiscountCodeUc
 import com.kiva.application.usecase.checkout.usecase.command.HandleGatewayCallbackUc
 import com.kiva.application.usecase.checkout.usecase.command.PlaceOrderUc
 import com.kiva.application.usecase.checkout.usecase.command.StartPaymentUc
@@ -43,10 +44,15 @@ class PaidOrders(private val purchase: PurchaseTestStack, private val clock: Mut
         reserve: Boolean? = null,
         quantity: Int = 1,
         addressId: Long? = null,
+        discountCode: String? = null,
     ): Pair<OrderCode, String> {
         variants.forEach {
             clock.advance(Duration.ofSeconds(1))
             runBlocking { purchase.addCartItem.execute(AddCartItemUc.Cmd(CartCaller.Customer(userId), it, quantity)) }.getOrNull() ?: error("not added")
+        }
+        if (discountCode != null) {
+            runBlocking { purchase.cartUseCases.applyDiscountCode.execute(ApplyDiscountCodeUc.Cmd(CartCaller.Customer(userId), discountCode)) }.getOrNull()
+                ?: error("code $discountCode refused")
         }
         val key = UUID.randomUUID().toString()
         val command = PlaceOrderUc.Cmd(
@@ -85,8 +91,11 @@ class PaidOrders(private val purchase: PurchaseTestStack, private val clock: Mut
         shippingMethod: String = "POST",
         reserve: Boolean? = null,
         addressId: Long? = null,
+        quantity: Int = 1,
+        discountCode: String? = null,
     ): OrderCode {
-        val (code, paymentId) = place(userId, *variants, to = to, shippingMethod = shippingMethod, reserve = reserve, addressId = addressId)
+        val (code, paymentId) =
+            place(userId, *variants, to = to, shippingMethod = shippingMethod, reserve = reserve, quantity = quantity, addressId = addressId, discountCode = discountCode)
         if (paymentId.isNotEmpty()) back(paymentId)
         return code
     }

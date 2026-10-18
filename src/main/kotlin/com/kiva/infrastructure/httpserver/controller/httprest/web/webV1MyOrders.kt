@@ -1,6 +1,7 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
 import com.kiva.application.usecase.cart.usecase.query.GetCartUc
+import com.kiva.application.usecase.order.usecase.command.CancelMyOrderUc
 import com.kiva.application.usecase.order.usecase.command.ReorderUc
 import com.kiva.application.usecase.order.usecase.command.SubmitMediaFeedbackUc
 import com.kiva.application.usecase.order.usecase.query.GetMyOrderMediaUc
@@ -13,11 +14,16 @@ import com.kiva.infrastructure.common.http.respondFailure
 import com.kiva.infrastructure.common.http.respondResult
 import com.kiva.infrastructure.httpserver.auth.ACCESS
 import com.kiva.infrastructure.httpserver.auth.accessPrincipal
+import com.kiva.infrastructure.httpserver.controller.httprest.model.request.CancelOrderHttpRequest
 import com.kiva.infrastructure.httpserver.controller.httprest.model.request.PreShipmentFeedbackHttpRequest
+import com.kiva.infrastructure.httpserver.controller.httprest.model.response.CancelOrderHttpResponse
+import com.kiva.infrastructure.httpserver.controller.httprest.model.response.CancelTexts
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.CartHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.OrderDetailHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.OrderListHttpResponse
+import com.kiva.infrastructure.httpserver.controller.httprest.model.response.OrderSummaryHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.PreShipmentMediaHttpResponse
+import com.kiva.infrastructure.httpserver.controller.httprest.model.response.RefundHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.ReorderHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.ReservationInfoHttpResponse
 import com.kiva.infrastructure.media.MediaUrls
@@ -38,6 +44,7 @@ class MyOrderUseCases(
     val getMyReservation: GetMyReservationUc,
     val getMyOrderMedia: GetMyOrderMediaUc,
     val submitMediaFeedback: SubmitMediaFeedbackUc,
+    val cancelMyOrder: CancelMyOrderUc,
 )
 
 /** The path parameter every order route names its order by. */
@@ -75,6 +82,21 @@ fun Route.webV1MyOrders(useCases: MyOrderUseCases, mediaUrls: MediaUrls) {
             val request = call.receive<PreShipmentFeedbackHttpRequest>()
             useCases.submitMediaFeedback.execute(SubmitMediaFeedbackUc.Cmd(userId, code, request.decision)).unwrapOr { return@post call.respondFailure(it) }
             call.respondResult(useCases.getMyOrder.execute(GetMyOrderUc.Qry(userId, code))) { OrderDetailHttpResponse.from(it, mediaUrls) }
+        }
+
+        // Only while nothing has moved; the answer has the card as it is now and the refund opened.
+        post("/me/orders/{$ORDER_CODE}/cancel") {
+            val userId = call.accessPrincipal().userId
+            val code = call.parameters[ORDER_CODE].orEmpty()
+            val request = call.receive<CancelOrderHttpRequest>()
+            val cancelled = useCases.cancelMyOrder.execute(CancelMyOrderUc.Cmd(userId, code, request.reason, request.note)).unwrapOr { return@post call.respondFailure(it) }
+            call.respondResult(useCases.getMyOrder.execute(GetMyOrderUc.Qry(userId, code))) { order ->
+                CancelOrderHttpResponse(
+                    order = OrderSummaryHttpResponse.from(order.summary, mediaUrls),
+                    refund = cancelled.refund?.let(RefundHttpResponse::from),
+                    message = CancelTexts.cancelled(cancelled.refund != null),
+                )
+            }
         }
 
         // «رزرو ۴ روزه» while one holds; 204 when none does.

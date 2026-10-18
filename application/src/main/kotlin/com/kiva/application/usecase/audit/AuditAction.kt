@@ -36,6 +36,7 @@ enum class AuditAction {
     INVENTORY_ADJUSTED,
 
     // ---- orders (phase 2) ----
+    ORDER_STATUS_CHANGED,
     ORDER_NOTE_ADDED,
     ORDER_MEDIA_SET,
     ORDER_PHOTO_SENT,

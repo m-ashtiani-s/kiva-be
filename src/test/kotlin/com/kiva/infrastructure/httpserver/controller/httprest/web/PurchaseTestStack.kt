@@ -32,8 +32,10 @@ import com.kiva.application.usecase.discount.Discounts
 import com.kiva.application.usecase.idempotency.IdempotencyGuard
 import com.kiva.application.usecase.idempotency.usecase.command.DeleteOldIdempotencyKeysUc
 import com.kiva.application.usecase.order.OrderByCode
+import com.kiva.application.usecase.order.OrderCancellation
 import com.kiva.application.usecase.order.OrderDetails
 import com.kiva.application.usecase.order.OrderNotices
+import com.kiva.application.usecase.order.usecase.command.CancelMyOrderUc
 import com.kiva.application.usecase.order.usecase.command.ExpireUnpaidOrderUc
 import com.kiva.application.usecase.order.usecase.command.ReorderUc
 import com.kiva.application.usecase.order.usecase.command.SubmitMediaFeedbackUc
@@ -58,6 +60,7 @@ import com.kiva.domain.aggregate.discount.DiscountDomainService
 import com.kiva.domain.aggregate.inventory.InventoryDomainService
 import com.kiva.domain.aggregate.order.OrderDomainService
 import com.kiva.domain.aggregate.payment.PaymentDomainService
+import com.kiva.domain.aggregate.refund.RefundDomainService
 import com.kiva.domain.aggregate.reservation.ReservationDomainService
 import com.kiva.infrastructure.MutableClock
 import com.kiva.infrastructure.cart.RandomCartIds
@@ -85,6 +88,7 @@ import com.kiva.infrastructure.persistence.exposed.OrderIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.OrderQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.OrderRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.PaymentRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.RefundIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.RefundRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ReservationGroupIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.ReservationGroupRepositoryImpl
@@ -197,6 +201,9 @@ class PurchaseTestStack(val clock: MutableClock) {
     val refunds = RefundRepositoryImpl()
     val orderDetails = OrderDetails(payments, ColorRepositoryImpl(), reservations, MediaRepositoryImpl(), refunds)
     val orderNotices = OrderNotices(auth.sms)
+    val orderCancellation = OrderCancellation(
+        orderQm, orders, payments, redemptions, stock, inventories, refunds, RefundIdGeneratorImpl(), RefundDomainService(RefundIdGeneratorImpl()),
+    )
 
     val myOrderUseCases = MyOrderUseCases(
         ListMyOrdersUc(transactions, orderQm, settings, reservations, orderDetails, clock),
@@ -206,6 +213,7 @@ class PurchaseTestStack(val clock: MutableClock) {
         GetMyReservationUc(transactions, reservations, clock),
         GetMyOrderMediaUc(transactions, orderByCode, orderDetails),
         SubmitMediaFeedbackUc(transactions, orderByCode, orders, clock),
+        CancelMyOrderUc(transactions, orderByCode, orderCancellation, users, orderNotices, clock),
     )
 
     val cartUseCases = CartUseCases(
