@@ -12,6 +12,7 @@ import com.kiva.application.repository.OrderQmRepository
 import com.kiva.application.usecase.address.AddressFields
 import com.kiva.application.usecase.discount.Discounts
 import com.kiva.application.usecase.idempotency.IdempotencyGuard
+import com.kiva.application.usecase.order.OrderItems
 import com.kiva.application.usecase.reservation.Reservations
 import com.kiva.common.event.ConcurrentChangeException
 import com.kiva.common.logging.getLogger
@@ -29,7 +30,6 @@ import com.kiva.common.usecase.CommandUseCase
 import com.kiva.common.valueobject.IranianMobileNumber
 import com.kiva.common.valueobject.Money
 import com.kiva.common.valueobject.Quantity
-import com.kiva.common.valueobject.Slug
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.address.AddressBookDomainService
 import com.kiva.domain.aggregate.address.entity.AddressBook
@@ -38,7 +38,6 @@ import com.kiva.domain.aggregate.address.model.valueobject.AddressId
 import com.kiva.domain.aggregate.address.repository.AddressBookRepository
 import com.kiva.domain.aggregate.cart.entity.CartLine
 import com.kiva.domain.aggregate.cart.repository.CartRepository
-import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
 import com.kiva.domain.aggregate.discount.model.DiscountLine
 import com.kiva.domain.aggregate.geo.repository.GeoRepository
 import com.kiva.domain.aggregate.inventory.InventoryDomainService
@@ -49,14 +48,11 @@ import com.kiva.domain.aggregate.order.model.valueobject.AddressSnapshot
 import com.kiva.domain.aggregate.order.model.valueobject.CustomerNote
 import com.kiva.domain.aggregate.order.model.valueobject.GiftNote
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
-import com.kiva.domain.aggregate.order.model.valueobject.OrderItemSnapshot
 import com.kiva.domain.aggregate.order.model.valueobject.PreShipmentMessenger
 import com.kiva.domain.aggregate.order.repository.OrderRepository
 import com.kiva.domain.aggregate.payment.entity.Payment
 import com.kiva.domain.aggregate.payment.repository.PaymentIdGenerator
 import com.kiva.domain.aggregate.payment.repository.PaymentRepository
-import com.kiva.domain.aggregate.product.model.valueobject.ProductName
-import com.kiva.domain.aggregate.product.model.valueobject.Sku
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
 import com.kiva.domain.aggregate.settings.model.valueobject.PaymentGatewayCode
 import com.kiva.domain.aggregate.settings.model.valueobject.ShippingMethodCode
@@ -397,15 +393,7 @@ class PlaceOrderUc(
             itemId = line.itemId,
             quantity = Quantity.constructFromPersisted(line.quantity.value),
             offer = qm.offer,
-            item = OrderItemSnapshot(
-                name = ProductName.constructFromPersisted(qm.product.name),
-                slug = Slug.constructFromPersisted(qm.product.slug),
-                sku = Sku.constructFromPersisted(qm.color.sku),
-                color = OrderItemSnapshot.Color(ColorKey.constructFromPersisted(qm.color.key), qm.color.name, qm.color.hex),
-                // The color's first photo at the size a line shows it, as it is now: a later change of the gallery
-                // doesn't change what was bought.
-                imageUrl = qm.image?.pathFor(ORDER_LINE_IMAGE_WIDTH),
-            ),
+            item = OrderItems.snapshotOf(qm),
         )
     }
 
@@ -424,9 +412,6 @@ class PlaceOrderUc(
 
     companion object {
         const val MAX_ATTEMPTS = 3
-
-        /** The size an order line shows its picture at (the contract's 480 version). */
-        const val ORDER_LINE_IMAGE_WIDTH = 480
     }
 
     /** The request's shape, field by field (400 VALIDATION_ERROR), besides what the value objects say themselves. */

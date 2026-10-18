@@ -146,6 +146,7 @@ class FarazSmsSenderTest {
             sms.sendOrderCancelled(sara, OrderCode.constructFromPersisted("KV-218340"))
             sms.sendOrderShipped(sara, OrderCode.constructFromPersisted("KV-218340"), "TIPAX_NAME", "TRK-123456")
             sms.sendOrderDelivered(sara, OrderCode.constructFromPersisted("KV-218340"))
+            sms.sendChangeResolved(sara, OrderCode.constructFromPersisted("KV-218340"))
         }
 
         assertTrue(sent.isEmpty())
@@ -156,7 +157,7 @@ class FarazSmsSenderTest {
         val withAll = FarazSmsConfig(
             "https://api.iranpayamak.com", key, "90008361", "vdXmsAfAQs", phoneChangedPattern = "pHoNe1234x", orderPaidPattern = "oRdEr5678y",
             photosSentPattern = "pH0t05ent1", refundCompletedPattern = "r3fund0ne1", orderCancelledPattern = "c4ncel1ed1",
-            orderShippedPattern = "sh1pped001", orderDeliveredPattern = "de1ivered1",
+            orderShippedPattern = "sh1pped001", orderDeliveredPattern = "de1ivered1", changeResolvedPattern = "ch4nged001",
         )
         runBlocking {
             val sms = sender(withAll)
@@ -167,6 +168,7 @@ class FarazSmsSenderTest {
             sms.sendOrderCancelled(sara, OrderCode.constructFromPersisted("KV-218340"))
             sms.sendOrderShipped(sara, OrderCode.constructFromPersisted("KV-218340"), "TIPAX_NAME", "TRK-123456")
             sms.sendOrderDelivered(sara, OrderCode.constructFromPersisted("KV-218340"))
+            sms.sendChangeResolved(sara, OrderCode.constructFromPersisted("KV-218340"))
         }
 
         assertEquals(
@@ -176,6 +178,7 @@ class FarazSmsSenderTest {
                 """{"code":"c4ncel1ed1","attributes":{"order":"KV-218340"}}""",
                 """{"code":"sh1pped001","attributes":{"order":"KV-218340","carrier":"TIPAX_NAME","tracking":"TRK-123456"}}""",
                 """{"code":"de1ivered1","attributes":{"order":"KV-218340"}}""",
+                """{"code":"ch4nged001","attributes":{"order":"KV-218340"}}""",
             ),
             sent.map { (_, body) -> JsonObject(body.filterKeys { it == "code" || it == "attributes" }).toString() },
         )

@@ -2,6 +2,8 @@ package com.kiva.application.usecase.order
 
 import com.kiva.application.dto.RefundDto
 import com.kiva.application.repository.OrderQmRepository
+import com.kiva.common.event.ConcurrentChangeException
+import com.kiva.common.event.valueobject.EventAggregateId
 import com.kiva.common.logging.getLogger
 import com.kiva.common.railway.FailureKind
 import com.kiva.common.railway.Result
@@ -12,8 +14,10 @@ import com.kiva.domain.aggregate.discount.repository.DiscountRedemptionRepositor
 import com.kiva.domain.aggregate.inventory.InventoryDomainService
 import com.kiva.domain.aggregate.inventory.repository.InventoryRepository
 import com.kiva.domain.aggregate.order.entity.Order
+import com.kiva.domain.aggregate.order.entity.event.OrderDomainEvent
 import com.kiva.domain.aggregate.order.model.valueobject.CancelReason
 import com.kiva.domain.aggregate.order.model.valueobject.CancelledBy
+import com.kiva.domain.aggregate.order.model.valueobject.ChangeRequest
 import com.kiva.domain.aggregate.order.model.valueobject.OrderId
 import com.kiva.domain.aggregate.order.model.valueobject.StatusNote
 import com.kiva.domain.aggregate.order.repository.OrderRepository
@@ -54,14 +58,30 @@ class OrderCancellation(
     /**
      * Cancels the order [orderId] for [who] ([reason] the customer's, [note] shown on their timeline) by [by] at [now];
      * the refund it opened, or null when nothing was paid.
+     *
+     * [answering] is the change request a cancellation answers (a CANCEL_ITEM of the only line, phase 3), read before the
+     * locks: if the order, locked, no longer has that very request open (staff resolved it meanwhile), nothing happens
+     * and ConcurrentChangeException makes the caller decide again.
      */
-    fun run(orderId: OrderId, who: CancelledBy, reason: CancelReason?, note: StatusNote?, by: UserId, now: Instant): Result<Cancelled, Failure> {
-        logger.info("OrderCancellation.run orderId=${orderId.value} who=$who reason=$reason")
+    fun run(
+        orderId: OrderId,
+        who: CancelledBy,
+        reason: CancelReason?,
+        note: StatusNote?,
+        by: UserId,
+        now: Instant,
+        answering: ChangeRequest? = null,
+    ): Result<Cancelled, Failure> {
+        logger.info("OrderCancellation.run orderId=${orderId.value} who=$who reason=$reason answering=$answering")
         val redemption = discountRedemptionRepository.lockOfOrder(orderId)
         val payments = paymentRepository.lockAttemptsOf(orderId)
         if (payments.any { it.status == PaymentStatus.VERIFYING }) return Result.failure(Failure.PaymentInProgress)
         orderQmRepository.lockOrder(orderId) ?: error("Order ${orderId.value} is not in the read model")
         val order = orderRepository.get(orderId) ?: error("Order ${orderId.value} of the read model has no events")
+        if (answering != null && order.openChange != answering) {
+            logger.info("OrderCancellation: order ${order.code.value} no longer has the change request it answers open; deciding again")
+            throw ConcurrentChangeException(OrderDomainEvent.AGGREGATE_NAME, EventAggregateId.of(orderId.value))
+        }
 
         when (val cancelled = order.cancel(who, reason, note, by, now)) {
             is Result.Success -> {}

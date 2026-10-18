@@ -4,6 +4,7 @@ import com.kiva.application.usecase.admin.usecase.command.CheckPanelAccessUc
 import com.kiva.application.usecase.order.AdminOrderFilterQuery
 import com.kiva.application.usecase.order.usecase.command.AddOrderNoteUc
 import com.kiva.application.usecase.order.usecase.command.ChangeOrderStatusUc
+import com.kiva.application.usecase.order.usecase.command.ResolveChangeRequestUc
 import com.kiva.application.usecase.order.usecase.command.SendPreShipmentMediaUc
 import com.kiva.application.usecase.order.usecase.command.SetPreShipmentMediaUc
 import com.kiva.application.usecase.order.usecase.command.ShipOrderUc
@@ -18,6 +19,7 @@ import com.kiva.infrastructure.common.http.respondFailure
 import com.kiva.infrastructure.common.http.respondResult
 import com.kiva.infrastructure.httpserver.auth.panelActor
 import com.kiva.infrastructure.httpserver.auth.requireRoles
+import com.kiva.infrastructure.httpserver.controller.httprest.model.request.AdminChangeResolutionHttpRequest
 import com.kiva.infrastructure.httpserver.controller.httprest.model.request.AdminNoteHttpRequest
 import com.kiva.infrastructure.httpserver.controller.httprest.model.request.AdminOrderStatusHttpRequest
 import com.kiva.infrastructure.httpserver.controller.httprest.model.request.AdminPreShipmentMediaHttpRequest
@@ -49,14 +51,16 @@ class AdminOrderUseCases(
     val createRefund: CreateRefundUc,
     val changeStatus: ChangeOrderStatusUc,
     val ship: ShipOrderUc,
+    val resolveChange: ResolveChangeRequestUc,
 )
 
 /** The path parameter every panel order route names its order by. */
 private const val ORDER_CODE = "orderCode"
 
 /**
- * The panel's orders (contract tag `Admin · Orders`, `[ADMIN, OPERATOR]`): the queue, one order, and its internal
- * notes. Mounted under `/api/v1`. A code that can't be one, or nobody has, is 404 ORDER_NOT_FOUND.
+ * The panel's orders (contract tag `Admin · Orders`, `[ADMIN, OPERATOR]`): the queue, one order, its internal notes, its
+ * photos, status, shipment and the customer's change request. Mounted under `/api/v1`. A code that can't be one, or
+ * nobody has, is 404 ORDER_NOT_FOUND.
  */
 fun Route.webV1AdminOrders(useCases: AdminOrderUseCases, mediaUrls: MediaUrls) {
     requireRoles(useCases.checkPanelAccess, Role.ADMIN, Role.OPERATOR) {
@@ -94,6 +98,15 @@ fun Route.webV1AdminOrders(useCases: AdminOrderUseCases, mediaUrls: MediaUrls) {
             val request = call.receive<AdminOrderStatusHttpRequest>()
             val command = ChangeOrderStatusUc.Cmd(code, request.status, request.note, request.notifyCustomer, call.panelActor())
             useCases.changeStatus.execute(command).unwrapOr { return@post call.respondFailure(it) }
+            call.respondResult(useCases.getOrder.execute(GetAdminOrderUc.Qry(code))) { AdminOrderHttpResponse.from(it, mediaUrls) }
+        }
+
+        // The customer's change request carried out or turned down; the answer is the order as the panel sees it.
+        post("/admin/orders/{$ORDER_CODE}/change-request/resolution") {
+            val code = call.parameters[ORDER_CODE].orEmpty()
+            val request = call.receive<AdminChangeResolutionHttpRequest>()
+            val command = ResolveChangeRequestUc.Cmd(code, request.decision, request.variantId, request.note, request.notifyCustomer, call.panelActor())
+            useCases.resolveChange.execute(command).unwrapOr { return@post call.respondFailure(it) }
             call.respondResult(useCases.getOrder.execute(GetAdminOrderUc.Qry(code))) { AdminOrderHttpResponse.from(it, mediaUrls) }
         }
 

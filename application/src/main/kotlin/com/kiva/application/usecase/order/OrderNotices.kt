@@ -33,6 +33,10 @@ class OrderNotices(private val smsSender: SmsSender) {
     /** «تحویل شد». */
     suspend fun delivered(to: IranianMobileNumber?, orderCode: OrderCode) = send("«تحویل شد»", to, orderCode) { smsSender.sendOrderDelivered(it, orderCode) }
 
+    /** «درخواستت بررسی شد»: staff resolved the customer's change request; staff's note is on the order's page, never in the SMS. */
+    suspend fun changeResolved(to: IranianMobileNumber?, orderCode: OrderCode) =
+        send("«درخواستت بررسی شد»", to, orderCode) { smsSender.sendChangeResolved(it, orderCode) }
+
     private suspend fun send(what: String, to: IranianMobileNumber?, orderCode: OrderCode, sending: suspend (IranianMobileNumber) -> Unit) {
         if (to == null) {
             logger.warn("OrderNotices: $what of order ${orderCode.value} not sent, its account is gone")

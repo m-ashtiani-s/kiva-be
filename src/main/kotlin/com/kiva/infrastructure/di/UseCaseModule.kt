@@ -81,6 +81,7 @@ import com.kiva.application.usecase.order.usecase.command.CancelMyOrderUc
 import com.kiva.application.usecase.order.usecase.command.ChangeOrderStatusUc
 import com.kiva.application.usecase.order.usecase.command.ExpireUnpaidOrderUc
 import com.kiva.application.usecase.order.usecase.command.ReorderUc
+import com.kiva.application.usecase.order.usecase.command.ResolveChangeRequestUc
 import com.kiva.application.usecase.order.usecase.command.SendPreShipmentMediaUc
 import com.kiva.application.usecase.order.usecase.command.SetPreShipmentMediaUc
 import com.kiva.application.usecase.order.usecase.command.ShipOrderUc
@@ -546,6 +547,15 @@ val useCaseModule = module(createdAtStart = true) {
             transactionManager = get(), orderByCode = get(), orderQmRepository = get(), orderRepository = get(), reservationGroupRepository = get(),
             inventoryDomainService = get(), inventoryRepository = get(), shopSettingsRepository = get(), userRepository = get(), auditTrail = get(),
             orderNotices = get(), clock = get(),
+        )
+    }
+
+    // --- admin: change requests (phase 3) ---
+    single {
+        ResolveChangeRequestUc(
+            transactionManager = get(), orderByCode = get(), orderCancellation = get(), orderQmRepository = get(), orderRepository = get(),
+            paymentRepository = get(), offerQmRepository = get(), inventoryDomainService = get(), inventoryRepository = get(), refundRepository = get(),
+            refundIdGenerator = get(), refundDomainService = get(), userRepository = get(), auditTrail = get(), orderNotices = get(), clock = get(),
         )
     }
 

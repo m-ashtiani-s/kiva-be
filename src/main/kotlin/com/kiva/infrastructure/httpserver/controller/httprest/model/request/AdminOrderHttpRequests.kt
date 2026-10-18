@@ -39,6 +39,17 @@ data class AdminOrderStatusHttpRequest(val status: String? = null, val note: Str
     override fun toString(): String = "AdminOrderStatusHttpRequest(status=$status, notifyCustomer=$notifyCustomer)"
 }
 
+/** The body of `POST /admin/orders/{orderCode}/change-request/resolution` (contract AdminChangeRequestResolutionRequest). [note] is never logged. */
+@Serializable
+data class AdminChangeResolutionHttpRequest(
+    val decision: String? = null,
+    val variantId: Long? = null,
+    val note: String? = null,
+    val notifyCustomer: Boolean? = null,
+) {
+    override fun toString(): String = "AdminChangeResolutionHttpRequest(decision=$decision, variantId=$variantId, notifyCustomer=$notifyCustomer)"
+}
+
 /** The body of `PUT /admin/orders/{orderCode}/shipment` (contract AdminShipmentRequest). Every field nullable. */
 @Serializable
 data class AdminShipmentHttpRequest(

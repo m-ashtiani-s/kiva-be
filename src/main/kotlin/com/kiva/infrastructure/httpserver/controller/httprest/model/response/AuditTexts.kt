@@ -49,6 +49,22 @@ object AuditTexts {
                 if (changes.any { it.field == "trackingCode" && it.from != null }) "کد رهگیری سفارش $name اصلاح شد" else "سفارش $name ارسال شد"
             AuditAction.REFUND_CREATED -> refundCreated(name, changes)
             AuditAction.REFUND_UPDATED -> refundUpdated(name, changes)
+            AuditAction.ORDER_CHANGE_RESOLVED -> changeResolved(name, changes)
+        }
+    }
+
+    /** The decision the change log kept: carried out (with what was changed) or turned down. */
+    private fun changeResolved(name: String, changes: List<AuditChange>): String {
+        val type = changes.firstOrNull { it.field == "changeType" }?.to
+        return when (changes.firstOrNull { it.field == "decision" }?.to) {
+            "REJECT" -> "درخواست تغییر سفارش $name رد شد"
+            "APPLY" -> when (type) {
+                "COLOR" -> "رنگ کالای سفارش $name عوض شد"
+                "MODEL" -> "مدل کالای سفارش $name عوض شد"
+                "CANCEL_ITEM" -> "یه قلم از سفارش $name حذف شد"
+                else -> "درخواست تغییر سفارش $name انجام شد"
+            }
+            else -> "به درخواست تغییر سفارش $name رسیدگی شد"
         }
     }
 

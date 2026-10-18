@@ -187,6 +187,9 @@ class RecordingSmsSender : SmsSender {
     /** «تحویل شد» messages, as (phone, order). */
     val delivered: MutableList<Pair<IranianMobileNumber, OrderCode>> = Collections.synchronizedList(mutableListOf())
 
+    /** «درخواستت بررسی شد» messages, as (phone, order). */
+    val changeResolved: MutableList<Pair<IranianMobileNumber, OrderCode>> = Collections.synchronizedList(mutableListOf())
+
     data class Shipped(val to: IranianMobileNumber, val orderCode: OrderCode, val carrierName: String, val trackingCode: String)
 
     @Volatile
@@ -230,5 +233,10 @@ class RecordingSmsSender : SmsSender {
     override suspend fun sendOrderDelivered(to: IranianMobileNumber, orderCode: OrderCode) {
         check(!down) { "the SMS provider is down" }
         delivered += to to orderCode
+    }
+
+    override suspend fun sendChangeResolved(to: IranianMobileNumber, orderCode: OrderCode) {
+        check(!down) { "the SMS provider is down" }
+        changeResolved += to to orderCode
     }
 }

@@ -43,6 +43,9 @@ enum class AuditAction {
     ORDER_SHIPPED,
     REFUND_CREATED,
     REFUND_UPDATED,
+
+    // ---- change requests (phase 3) ----
+    ORDER_CHANGE_RESOLVED,
 }
 
 /** The kind of thing a panel write changed: the contract's AuditEntityType, value for value. */

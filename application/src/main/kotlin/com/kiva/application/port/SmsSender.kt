@@ -62,4 +62,12 @@ interface SmsSender {
      * when it fails, only the log knows. Throws like [sendCode].
      */
     suspend fun sendOrderDelivered(to: IranianMobileNumber, orderCode: OrderCode)
+
+    /**
+     * «درخواستت بررسی شد»: staff resolved the customer's change request of the order [orderCode] (carried it out or turned
+     * it down) and chose to tell them; the details, staff's note included, are on the order's page, never in the SMS (no
+     * free text in an SMS, roadmap section 1, row 14). Sent after the commit; when it fails, only the log knows. Throws
+     * like [sendCode].
+     */
+    suspend fun sendChangeResolved(to: IranianMobileNumber, orderCode: OrderCode)
 }

@@ -271,7 +271,7 @@ fun Application.configureRouting() {
     val adminInventoryUseCases = AdminInventoryUseCases(checkPanelAccess = checkPanelAccessUc, adjustInventory = get(), listAdjustments = get())
     val adminOrderUseCases = AdminOrderUseCases(
         checkPanelAccess = checkPanelAccessUc, findOrders = get(), getOrder = get(), addNote = get(), setPhotos = get(), sendPhotos = get(),
-        createRefund = get(), changeStatus = get(), ship = get(),
+        createRefund = get(), changeStatus = get(), ship = get(), resolveChange = get(),
     )
     val config by inject<AppConfig>()
 

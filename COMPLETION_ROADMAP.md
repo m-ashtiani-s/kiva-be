@@ -2309,7 +2309,7 @@ Route: 200 با AdminOrder ِ همون سفارش
 | ۳.۱ | دامنه: درخواست تغییر، ردیف عوض‌شده، مانده و جمع‌های بعد از تغییر | L | ✅ |
 | ۳.۲ | پرداخت مانده | L | ✅ |
 | ۳.۳ | درخواست تغییر مشتری | M | ✅ |
-| ۳.۴ | رسیدگی اپراتور | L | ⬜ |
+| ۳.۴ | رسیدگی اپراتور | L | ✅ |
 | ۳.۵ | ریویو و دور واقعی | M | ⬜ |
 
 ### ۸.۲ تصمیم‌های این فاز
@@ -2540,7 +2540,7 @@ Route: 200 با AdminOrder
 
 ---
 
-#### گام ۳.۴: رسیدگی اپراتور · L ⬜
+#### گام ۳.۴: رسیدگی اپراتور · L ✅
 
 **می‌سازی:** `ResolveChangeRequestUc`؛ route در `webV1AdminOrders.kt`؛ `SmsSender.sendChangeResolved` (الگوی `changeResolvedPattern`، متغیر `order`)؛ شرط `BALANCE_DUE` در `ShipOrderUc` (و گروه: عضو با مانده ← `GROUP_NOT_READY`).
 
@@ -6106,3 +6106,4 @@ kiva {
 | ۲۶ مهر ۱۴۰۵ | ۳.۱ | Phase 3 step 3.1 | شش رویداد تازه‌ی سفارش با payload و JSON ِ طلایی، `ChangeRequest`/`ChangeTarget`، متدهای ۸.۳ در `Order` (و `BALANCE_DUE` در `ship`)، `ChangeRequestPolicy` (`BigInteger` برای سهم کد)، `OrderTotalsView`، `OrderLine.replacedBy`، `rebalanceForOrder`، `V29` ِ کامل (با `codeDiscountRemoved`)، Projector (خطوط، `soldCount` ِ جابه‌جا، `feedback.resolution`، هفت `kind` ِ تازه‌ی تایم‌لاین)، جمع‌های نمایشی در پاسخ‌ها. ۲۴۶۳ تست سبز |
 | ۲۷ مهر ۱۴۰۵ | ۳.۲ | Phase 3 step 3.2 | `PaymentPurpose` و ستونش، تلاش `BALANCE` در `startAttempt` (سقف جدا، بدون مهلت)، تأیید فقط وقتی مانده دقیقاً همون مبلغه، `payBalance` در `confirmed`، `Order.isPaidBy`، `canPay` و «تلاش دوباره» ِ مانده، `expiresAt` ِ مانده = شروع + ۲۰ دقیقه، درگاه پیش‌فرض برای سفارش بی‌تلاش، `OrderPaymentInfo.purpose`/`amount`. خرابکاری: بدون چک «همون مبلغ» ← دو تست قرمز. ۲۴۸۱ تست سبز |
 | ۲۷ مهر ۱۴۰۵ | ۳.۳ | Phase 3 step 3.3 | `REQUEST_CHANGE` در `SubmitMediaFeedbackUc` (شکل با همه‌ی خطاها با هم، قفل ۹، رنگ از read model: ناموجود ۴۰۰، غیرفعال ۴۲۲)، `canRequestChange`، `feedback` ِ کامل با `resolution` در پاسخ. دو تست فاز ۲ با قرارداد تازه به‌روز شدن. ۲۴۸۸ تست سبز |
+| ۲۷ مهر ۱۴۰۵ | ۳.۴ | Phase 3 step 3.4 | `ResolveChangeRequestUc` (قفل‌های ۶، ۹، ۷، ۸؛ `CANCEL_ITEM` ِ تنها قلم از راه `OrderCancellation` با قفل ۵ و چک «همون درخواست»)، route ِ `…/change-request/resolution`، `OrderItems.snapshotOf` (مشترک با ثبت سفارش)، پیامک «درخواستت بررسی شد» (مسیر کامل ۹ مرحله‌ای)، `ORDER_CHANGE_RESOLVED` با جمله‌اش، `BALANCE_DUE`/`GROUP_NOT_READY` در ارسال. ترتیب دو ۴۲۲: سقف محصول قبل از موجودی. ۱۲ تست route سبز؛ کل مجموعه برای این گام دوباره اجرا نشد |

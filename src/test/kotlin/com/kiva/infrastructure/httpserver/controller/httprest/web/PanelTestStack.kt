@@ -27,6 +27,7 @@ import com.kiva.application.usecase.media.usecase.command.UploadMediaUc
 import com.kiva.application.usecase.order.usecase.command.AddOrderNoteUc
 import com.kiva.application.usecase.order.usecase.command.ApproveSilentPhotosUc
 import com.kiva.application.usecase.order.usecase.command.ChangeOrderStatusUc
+import com.kiva.application.usecase.order.usecase.command.ResolveChangeRequestUc
 import com.kiva.application.usecase.order.usecase.command.SendPreShipmentMediaUc
 import com.kiva.application.usecase.order.usecase.command.SetPreShipmentMediaUc
 import com.kiva.application.usecase.order.usecase.command.ShipOrderUc
@@ -85,6 +86,7 @@ import com.kiva.infrastructure.persistence.exposed.InventoryRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.MaterialIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.MaterialRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.MediaRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.OfferQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.OrderNoteRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.OrderQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ProductIdGeneratorImpl
@@ -236,6 +238,11 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         ship = ShipOrderUc(
             transactions, purchase.orderByCode, purchase.orderQm, purchase.orders, purchase.groups, purchase.stock, purchase.inventories, purchase.settings,
             users, auditTrail, purchase.orderNotices, clock,
+        ),
+        resolveChange = ResolveChangeRequestUc(
+            transactions, purchase.orderByCode, purchase.orderCancellation, purchase.orderQm, purchase.orders, purchase.payments, OfferQmRepositoryImpl(),
+            purchase.stock, purchase.inventories, purchase.refunds, RefundIdGeneratorImpl(), RefundDomainService(RefundIdGeneratorImpl()), users, auditTrail,
+            purchase.orderNotices, clock,
         ),
     )
     val adminRefunds = AdminRefundUseCases(

@@ -50,4 +50,8 @@ class LogSmsSender : SmsSender {
     override suspend fun sendOrderDelivered(to: IranianMobileNumber, orderCode: OrderCode) {
         logger.warn("SMS to ${to.masked()}: order ${orderCode.value} was delivered")
     }
+
+    override suspend fun sendChangeResolved(to: IranianMobileNumber, orderCode: OrderCode) {
+        logger.warn("SMS to ${to.masked()}: the change request of order ${orderCode.value} was resolved")
+    }
 }

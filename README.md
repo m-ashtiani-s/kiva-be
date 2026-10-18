@@ -72,6 +72,7 @@ whose pattern isn't set is not sent, and a `WARN` says so.
 | `KIVA_FARAZ_ORDER_CANCELLED_PATTERN` | Optional: «لغو شد», when an order is cancelled (always by the customer; by staff with `notifyCustomer`). Its variable is `order`. |
 | `KIVA_FARAZ_ORDER_SHIPPED_PATTERN` | Optional: «ارسال شد», when an order (or a whole reservation group, once) leaves with the courier; not for a corrected tracking code. Its variables are `order`, `carrier` (the carrier's name) and `tracking` (the tracking code). |
 | `KIVA_FARAZ_ORDER_DELIVERED_PATTERN` | Optional: «تحویل شد», when staff record an order as delivered with `notifyCustomer`. Its variable is `order`. |
+| `KIVA_FARAZ_CHANGE_RESOLVED_PATTERN` | Optional: «درخواستت بررسی شد», when staff resolve a change request with `notifyCustomer`; the details are on the order's page, never in the SMS. Its variable is `order`. |
 | `KIVA_FARAZ_BASE_URL` | The web service's address, default `https://api.iranpayamak.com`. |
 
 A code that can't be sent makes `POST /auth/otp/send` answer 500, and the log says why (the provider's own words, with
