@@ -6,10 +6,16 @@ import com.kiva.domain.aggregate.inventory.entity.event.ReservationReleased
 import com.kiva.domain.aggregate.inventory.entity.event.StockAdjusted
 import com.kiva.domain.aggregate.inventory.entity.event.StockReserved
 import com.kiva.domain.aggregate.inventory.entity.event.StockShipped
+import com.kiva.domain.aggregate.order.entity.event.OrderBalancePaid
 import com.kiva.domain.aggregate.order.entity.event.OrderCancelled
+import com.kiva.domain.aggregate.order.entity.event.OrderChangeApplied
+import com.kiva.domain.aggregate.order.entity.event.OrderChangeRejected
+import com.kiva.domain.aggregate.order.entity.event.OrderChangeRequested
 import com.kiva.domain.aggregate.order.entity.event.OrderDelivered
 import com.kiva.domain.aggregate.order.entity.event.OrderDomainEvent
 import com.kiva.domain.aggregate.order.entity.event.OrderExpired
+import com.kiva.domain.aggregate.order.entity.event.OrderLineRemoved
+import com.kiva.domain.aggregate.order.entity.event.OrderLineReplaced
 import com.kiva.domain.aggregate.order.entity.event.OrderPaid
 import com.kiva.domain.aggregate.order.entity.event.OrderPaymentFailed
 import com.kiva.domain.aggregate.order.entity.event.OrderPhotosApproved
@@ -39,9 +45,15 @@ import com.kiva.infrastructure.persistence.event.serializer.payload.inventory.Re
 import com.kiva.infrastructure.persistence.event.serializer.payload.inventory.StockAdjustedPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.inventory.StockReservedPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.inventory.StockShippedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderBalancePaidPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderCancelledPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderChangeAppliedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderChangeRejectedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderChangeRequestedPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderDeliveredPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderExpiredPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderLineRemovedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderLineReplacedPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderPaidPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderPaymentFailedPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderPhotosApprovedPayload
@@ -163,6 +175,12 @@ object DomainEventSerializer {
         is OrderDelivered -> json.encodeToString(OrderDeliveredPayload(event))
         is OrderCancelled -> json.encodeToString(OrderCancelledPayload(event))
         is OrderRefunded -> json.encodeToString(OrderRefundedPayload(event))
+        is OrderChangeRequested -> json.encodeToString(OrderChangeRequestedPayload(event))
+        is OrderChangeRejected -> json.encodeToString(OrderChangeRejectedPayload(event))
+        is OrderLineReplaced -> json.encodeToString(OrderLineReplacedPayload(event))
+        is OrderLineRemoved -> json.encodeToString(OrderLineRemovedPayload(event))
+        is OrderChangeApplied -> json.encodeToString(OrderChangeAppliedPayload(event))
+        is OrderBalancePaid -> json.encodeToString(OrderBalancePaidPayload(event))
     }
 
     fun deserializeOrder(payload: String, payloadVersion: Int, eventType: String): OrderDomainEvent {
@@ -182,6 +200,12 @@ object DomainEventSerializer {
             OrderDelivered.TYPE.value -> json.decodeFromString<OrderDeliveredPayload>(payload)
             OrderCancelled.TYPE.value -> json.decodeFromString<OrderCancelledPayload>(payload)
             OrderRefunded.TYPE.value -> json.decodeFromString<OrderRefundedPayload>(payload)
+            OrderChangeRequested.TYPE.value -> json.decodeFromString<OrderChangeRequestedPayload>(payload)
+            OrderChangeRejected.TYPE.value -> json.decodeFromString<OrderChangeRejectedPayload>(payload)
+            OrderLineReplaced.TYPE.value -> json.decodeFromString<OrderLineReplacedPayload>(payload)
+            OrderLineRemoved.TYPE.value -> json.decodeFromString<OrderLineRemovedPayload>(payload)
+            OrderChangeApplied.TYPE.value -> json.decodeFromString<OrderChangeAppliedPayload>(payload)
+            OrderBalancePaid.TYPE.value -> json.decodeFromString<OrderBalancePaidPayload>(payload)
             else -> error("Unknown order event type '$eventType'")
         }
         return eventPayload.toDomainEvent()

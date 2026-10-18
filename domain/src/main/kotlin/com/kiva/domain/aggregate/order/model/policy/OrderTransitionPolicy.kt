@@ -1,6 +1,7 @@
 package com.kiva.domain.aggregate.order.model.policy
 
 import com.kiva.domain.aggregate.order.model.valueobject.OrderStatus
+import com.kiva.domain.aggregate.order.model.valueobject.PhotoStatus
 
 /**
  * One place for «from this status, where to» (roadmap section 7.3): what `POST /admin/orders/{code}/status` takes
@@ -34,4 +35,12 @@ object OrderTransitionPolicy {
      */
     fun customerMayCancel(status: OrderStatus, photoEverSent: Boolean): Boolean =
         (status == OrderStatus.RESERVED || status == OrderStatus.PROCESSING) && !photoEverSent
+
+    /**
+     * The customer asks for a change only after seeing photos of their bag and before it ships (roadmap section 8.2,
+     * row 1): PHOTO_SENT with the photos SENT or APPROVED, so after approving them too. An open request makes the order
+     * CHANGE_REQUESTED, so there is never a second one at once.
+     */
+    fun customerMayRequestChange(status: OrderStatus, photoStatus: PhotoStatus): Boolean =
+        status == OrderStatus.PHOTO_SENT && (photoStatus == PhotoStatus.SENT || photoStatus == PhotoStatus.APPROVED)
 }

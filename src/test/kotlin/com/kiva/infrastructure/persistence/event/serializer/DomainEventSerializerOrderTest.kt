@@ -9,6 +9,9 @@ import com.kiva.infrastructure.persistence.event.InventoryEventSamples
 import com.kiva.infrastructure.persistence.event.OrderEventSamples
 import com.kiva.infrastructure.persistence.event.ProductEventSamples
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderCancelledPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderChangeAppliedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderChangeRejectedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderChangeRequestedPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderDeliveredPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderPhotosSentPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderPlacedPayload
@@ -63,6 +66,17 @@ class DomainEventSerializerOrderTest {
             ).joinToString(" ")
 
             listOf("ارزون", "این کیف", "پیک").forEach { assertFalse(it in printed, "$it in $printed") }
+        }
+
+        @Test
+        fun `printing a change request, its rejection or its application shows none of the notes`() {
+            val printed = listOf(
+                OrderEventSamples.orderChangeRequested, OrderChangeRequestedPayload(OrderEventSamples.orderChangeRequested),
+                OrderEventSamples.orderChangeRejected, OrderChangeRejectedPayload(OrderEventSamples.orderChangeRejected),
+                OrderEventSamples.orderChangeApplied, OrderChangeAppliedPayload(OrderEventSamples.orderChangeApplied),
+            ).joinToString(" ")
+
+            listOf("مشکی‌اش", "تموم شده", "گذاشتیم").forEach { assertFalse(it in printed, "$it in $printed") }
         }
     }
 
@@ -268,6 +282,90 @@ class DomainEventSerializerOrderTest {
             }
         """.trimIndent()
 
+        private val orderChangeRequestedJson = """
+            {
+              "id": "5d0f3a2c-8b1e-4c7d-9a6f-000000000021",
+              "orderId": 42,
+              "sequence": 8,
+              "occurredOn": "2026-10-12T08:00:00.123456789Z",
+              "occurredByUserId": 7,
+              "changeType": "COLOR",
+              "lineId": 1,
+              "desiredVariantId": 302,
+              "note": "می‌شه رنگ مشکی‌اش رو بفرستید؟"
+            }
+        """.trimIndent()
+
+        private val orderChangeRejectedJson = """
+            {
+              "id": "5d0f3a2c-8b1e-4c7d-9a6f-000000000022",
+              "orderId": 42,
+              "sequence": 9,
+              "occurredOn": "2026-10-12T08:00:00.123456789Z",
+              "occurredByUserId": 900,
+              "note": "مشکی تموم شده"
+            }
+        """.trimIndent()
+
+        private val orderLineReplacedJson = """
+            {
+              "id": "5d0f3a2c-8b1e-4c7d-9a6f-000000000023",
+              "orderId": 42,
+              "sequence": 9,
+              "occurredOn": "2026-10-12T08:00:00.123456789Z",
+              "occurredByUserId": 900,
+              "lineId": 1,
+              "line": {
+                "lineId": 1, "productId": 3, "variantId": 302,
+                "name": "کیف دستی آیدا", "slug": "aida-handbag", "sku": "KV-1003-BLACK",
+                "colorKey": "black", "colorName": "مشکی", "colorHex": "#1B1B1B",
+                "imageUrl": "2026/10/med_0000000000000000000009/480.webp",
+                "quantity": 1,
+                "priceTag": { "price": 2990000, "compareAtPrice": 3290000 },
+                "reservable": true, "returnable": true
+              },
+              "priceDifference": 200000
+            }
+        """.trimIndent()
+
+        private val orderLineRemovedJson = """
+            {
+              "id": "5d0f3a2c-8b1e-4c7d-9a6f-000000000024",
+              "orderId": 42,
+              "sequence": 9,
+              "occurredOn": "2026-10-12T08:00:00.123456789Z",
+              "occurredByUserId": 900,
+              "lineId": 2,
+              "paidShare": 621000
+            }
+        """.trimIndent()
+
+        private val orderChangeAppliedJson = """
+            {
+              "id": "5d0f3a2c-8b1e-4c7d-9a6f-000000000025",
+              "orderId": 42,
+              "sequence": 10,
+              "occurredOn": "2026-10-12T08:00:00.123456789Z",
+              "occurredByUserId": 900,
+              "changeType": "COLOR",
+              "variantId": 302,
+              "note": "مشکیش رو گذاشتیم",
+              "balanceDueAfter": 200000
+            }
+        """.trimIndent()
+
+        private val orderBalancePaidJson = """
+            {
+              "id": "5d0f3a2c-8b1e-4c7d-9a6f-000000000026",
+              "orderId": 42,
+              "sequence": 11,
+              "occurredOn": "2026-10-12T08:00:00.123456789Z",
+              "occurredByUserId": 7,
+              "paymentId": "pay_0000000000C3",
+              "amount": 200000
+            }
+        """.trimIndent()
+
         private val stored = listOf(
             OrderEventSamples.orderPlaced to orderPlacedJson,
             OrderEventSamples.orderPaymentFailed to orderPaymentFailedJson,
@@ -282,6 +380,12 @@ class DomainEventSerializerOrderTest {
             OrderEventSamples.orderDelivered to orderDeliveredJson,
             OrderEventSamples.orderCancelled to orderCancelledJson,
             OrderEventSamples.orderRefunded to orderRefundedJson,
+            OrderEventSamples.orderChangeRequested to orderChangeRequestedJson,
+            OrderEventSamples.orderChangeRejected to orderChangeRejectedJson,
+            OrderEventSamples.orderLineReplaced to orderLineReplacedJson,
+            OrderEventSamples.orderLineRemoved to orderLineRemovedJson,
+            OrderEventSamples.orderChangeApplied to orderChangeAppliedJson,
+            OrderEventSamples.orderBalancePaid to orderBalancePaidJson,
         )
 
         @Test

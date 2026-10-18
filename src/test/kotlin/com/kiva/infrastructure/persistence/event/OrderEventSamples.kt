@@ -16,10 +16,16 @@ import com.kiva.domain.aggregate.address.model.valueobject.UnitNumber
 import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
 import com.kiva.domain.aggregate.media.model.valueobject.MediaId
 import com.kiva.domain.aggregate.order.entity.OrderLine
+import com.kiva.domain.aggregate.order.entity.event.OrderBalancePaid
 import com.kiva.domain.aggregate.order.entity.event.OrderCancelled
+import com.kiva.domain.aggregate.order.entity.event.OrderChangeApplied
+import com.kiva.domain.aggregate.order.entity.event.OrderChangeRejected
+import com.kiva.domain.aggregate.order.entity.event.OrderChangeRequested
 import com.kiva.domain.aggregate.order.entity.event.OrderDelivered
 import com.kiva.domain.aggregate.order.entity.event.OrderDomainEvent
 import com.kiva.domain.aggregate.order.entity.event.OrderExpired
+import com.kiva.domain.aggregate.order.entity.event.OrderLineRemoved
+import com.kiva.domain.aggregate.order.entity.event.OrderLineReplaced
 import com.kiva.domain.aggregate.order.entity.event.OrderPaid
 import com.kiva.domain.aggregate.order.entity.event.OrderPaymentFailed
 import com.kiva.domain.aggregate.order.entity.event.OrderPhotosApproved
@@ -33,6 +39,7 @@ import com.kiva.domain.aggregate.order.entity.event.OrderShipped
 import com.kiva.domain.aggregate.order.model.valueobject.AddressSnapshot
 import com.kiva.domain.aggregate.order.model.valueobject.CancelReason
 import com.kiva.domain.aggregate.order.model.valueobject.CancelledBy
+import com.kiva.domain.aggregate.order.model.valueobject.ChangeType
 import com.kiva.domain.aggregate.order.model.valueobject.CustomerNote
 import com.kiva.domain.aggregate.order.model.valueobject.GiftNote
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
@@ -192,9 +199,38 @@ object OrderEventSamples {
 
     val orderRefunded = OrderRefunded(order, sequence(6), at, operator, RefundId.constructFromPersisted(31), toman(3_480_000), id = eventId(16))
 
+    /** Sara asks for her caramel Aida in black. */
+    val orderChangeRequested = OrderChangeRequested(
+        order, sequence(8), at, sara, ChangeType.COLOR, lineId = 1, desiredVariantId = VariantId.constructFromPersisted(302),
+        note = StatusNote.constructFromPersisted("می‌شه رنگ مشکی‌اش رو بفرستید؟"), id = eventId(21),
+    )
+
+    val orderChangeRejected = OrderChangeRejected(order, sequence(9), at, operator, StatusNote.constructFromPersisted("مشکی تموم شده"), id = eventId(22))
+
+    /** The caramel Aida (2,790,000) swapped for the black one at 2,990,000 today. */
+    val orderLineReplaced = OrderLineReplaced(
+        order, sequence(9), at, operator, lineId = 1,
+        line = line(
+            1, 3, 302, "کیف دستی آیدا", "aida-handbag", "KV-1003-BLACK",
+            OrderItemSnapshot.Color(ColorKey.constructFromPersisted("black"), "مشکی", "#1B1B1B"), "2026/10/med_0000000000000000000009/480.webp",
+            PriceTag.constructFromPersisted(toman(2_990_000), toman(3_290_000)), reservable = true, returnable = true,
+        ),
+        priceDifference = 200_000, id = eventId(23),
+    )
+
+    val orderLineRemoved = OrderLineRemoved(order, sequence(9), at, operator, lineId = 2, paidShare = toman(621_000), id = eventId(24))
+
+    val orderChangeApplied = OrderChangeApplied(
+        order, sequence(10), at, operator, ChangeType.COLOR, variantId = VariantId.constructFromPersisted(302),
+        note = StatusNote.constructFromPersisted("مشکیش رو گذاشتیم"), balanceDueAfter = toman(200_000), id = eventId(25),
+    )
+
+    val orderBalancePaid = OrderBalancePaid(order, sequence(11), at, sara, PaymentPublicId.constructFromPersisted("pay_0000000000C3"), toman(200_000), id = eventId(26))
+
     val onePerKind: List<OrderDomainEvent> = listOf(
         orderPlaced, orderPaymentFailed, orderPaid, orderExpired, orderReleasedFromReservation, orderPhotosAttached, orderPhotosSent, orderPhotosApproved,
-        orderShipped, orderShipmentCorrected, orderDelivered, orderCancelled, orderRefunded,
+        orderShipped, orderShipmentCorrected, orderDelivered, orderCancelled, orderRefunded, orderChangeRequested, orderChangeRejected, orderLineReplaced,
+        orderLineRemoved, orderChangeApplied, orderBalancePaid,
     )
 
     /** A new address that wasn't saved, without plaque or unit; no messenger handle or note; no customer note or gift; nothing to pay. */
@@ -250,5 +286,9 @@ object OrderEventSamples {
         OrderShipped(order, sequence(8), at, operator, ShippingMethodCode.TIPAX, TrackingCode.constructFromPersisted("TPX4821760"), at, false, null, eventId(18)),
         OrderDelivered(order, sequence(10), at, operator, returnableUntil = null, id = eventId(19)),
         OrderCancelled(order, sequence(5), at, operator, CancelledBy.STAFF, reason = null, note = null, id = eventId(20)),
+        // Something else asked without a line or a color; a line taken out with nothing applied as money; OTHER applied with nothing owed.
+        OrderChangeRequested(order, sequence(8), at, sara, ChangeType.OTHER, lineId = null, desiredVariantId = null, note = StatusNote.constructFromPersisted("بند بلندتر"), id = eventId(27)),
+        OrderChangeRequested(order, sequence(8), at, sara, ChangeType.CANCEL_ITEM, lineId = 2, desiredVariantId = null, note = null, id = eventId(28)),
+        OrderChangeApplied(order, sequence(10), at, operator, ChangeType.CANCEL_ITEM, variantId = null, note = null, balanceDueAfter = Money.ZERO, id = eventId(29)),
     )
 }

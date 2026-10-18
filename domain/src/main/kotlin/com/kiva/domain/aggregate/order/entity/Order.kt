@@ -8,10 +8,16 @@ import com.kiva.common.railway.ResultFailure
 import com.kiva.common.valueobject.Money
 import com.kiva.common.valueobject.UserId
 import com.kiva.common.valueobject.sum
+import com.kiva.domain.aggregate.order.entity.event.OrderBalancePaid
 import com.kiva.domain.aggregate.order.entity.event.OrderCancelled
+import com.kiva.domain.aggregate.order.entity.event.OrderChangeApplied
+import com.kiva.domain.aggregate.order.entity.event.OrderChangeRejected
+import com.kiva.domain.aggregate.order.entity.event.OrderChangeRequested
 import com.kiva.domain.aggregate.order.entity.event.OrderDelivered
 import com.kiva.domain.aggregate.order.entity.event.OrderDomainEvent
 import com.kiva.domain.aggregate.order.entity.event.OrderExpired
+import com.kiva.domain.aggregate.order.entity.event.OrderLineRemoved
+import com.kiva.domain.aggregate.order.entity.event.OrderLineReplaced
 import com.kiva.domain.aggregate.order.entity.event.OrderPaid
 import com.kiva.domain.aggregate.order.entity.event.OrderPaymentFailed
 import com.kiva.domain.aggregate.order.entity.event.OrderPhotosApproved
@@ -22,12 +28,16 @@ import com.kiva.domain.aggregate.order.entity.event.OrderRefunded
 import com.kiva.domain.aggregate.order.entity.event.OrderReleasedFromReservation
 import com.kiva.domain.aggregate.order.entity.event.OrderShipmentCorrected
 import com.kiva.domain.aggregate.order.entity.event.OrderShipped
+import com.kiva.domain.aggregate.order.model.policy.ChangeRequestPolicy
 import com.kiva.domain.aggregate.order.model.policy.OrderTransitionPolicy
 import com.kiva.domain.aggregate.order.model.policy.PaymentPolicy
 import com.kiva.domain.aggregate.order.model.policy.PreShipmentPolicy
 import com.kiva.domain.aggregate.order.model.valueobject.AddressSnapshot
 import com.kiva.domain.aggregate.order.model.valueobject.CancelReason
 import com.kiva.domain.aggregate.order.model.valueobject.CancelledBy
+import com.kiva.domain.aggregate.order.model.valueobject.ChangeRequest
+import com.kiva.domain.aggregate.order.model.valueobject.ChangeTarget
+import com.kiva.domain.aggregate.order.model.valueobject.ChangeType
 import com.kiva.domain.aggregate.order.model.valueobject.CustomerNote
 import com.kiva.domain.aggregate.order.model.valueobject.GiftNote
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCancellationInfo
@@ -42,6 +52,7 @@ import com.kiva.domain.aggregate.order.model.valueobject.OrderStatus.PENDING_PAY
 import com.kiva.domain.aggregate.order.model.valueobject.OrderStatus.PROCESSING
 import com.kiva.domain.aggregate.order.model.valueobject.OrderStatus.RESERVED
 import com.kiva.domain.aggregate.order.model.valueobject.OrderTotals
+import com.kiva.domain.aggregate.order.model.valueobject.OrderTotalsView
 import com.kiva.domain.aggregate.order.model.valueobject.PhotoMessage
 import com.kiva.domain.aggregate.order.model.valueobject.PhotoStatus
 import com.kiva.domain.aggregate.order.model.valueobject.PreShipmentMessenger
@@ -51,6 +62,7 @@ import com.kiva.domain.aggregate.payment.model.valueobject.PaymentFailureReason
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentPublicId
 import com.kiva.domain.aggregate.product.model.valueobject.MaxPerOrder
 import com.kiva.domain.aggregate.product.model.valueobject.ProductId
+import com.kiva.domain.aggregate.product.model.valueobject.VariantId
 import com.kiva.domain.aggregate.refund.model.valueobject.RefundId
 import com.kiva.domain.aggregate.reservation.model.valueobject.ReservationGroupId
 import com.kiva.domain.aggregate.settings.model.valueobject.ShippingMethodCode
@@ -76,10 +88,17 @@ import kotlin.properties.Delegates
  *   paid for, once its photos are approved or their deadline passed; it is delivered only when SHIPPED; the customer
  *   cancels it only while its status hasn't moved (OrderTransitionPolicy.customerMayCancel), staff until it ships, once;
  *   and the money given back never adds up to more than it was paid.
+ * - a change request (phase 3, roadmap section 8.3): the customer asks one only while PHOTO_SENT with its photos SENT or
+ *   APPROVED, so never two at once; a line is swapped for another color of the same product (COLOR) or of another
+ *   (MODEL), keeping its number and quantity, within the new product's limit per order, or taken out (CANCEL_ITEM, never
+ *   the only line); the money of a change is settled once, owed first, refunded only beyond what is owed
+ *   (ChangeRequestPolicy.settle); what is owed is paid only exactly, once per attempt; it never ships while something is
+ *   owed; and a cancelled order owes nothing.
  *
  * What it can't know: its stock (the Inventory of each color holds it for the order, by its [code]), its payments and
- * refunds (rows of their own: RefundDomainService counts what is refundable), its reservation group's state, and whether
- * a photo it is given exists (the use case checks the media).
+ * refunds (rows of their own: RefundDomainService counts what is refundable), its reservation group's state, whether
+ * a photo it is given exists (the use case checks the media), and the catalog: the color a change asks for and its price
+ * today come from the use case ([ChangeTarget], a line made with OrderLine.replacedBy).
  */
 class Order private constructor() : EventSourceEntity<OrderDomainEvent>() {
 
@@ -169,8 +188,39 @@ class Order private constructor() : EventSourceEntity<OrderDomainEvent>() {
         private set
     private val refundIds = mutableSetOf<RefundId>()
 
-    /** Its lines, by line id. */
+    // ---- a change request after the photos (phase 3) ----
+
+    /** The customer's change request staff haven't resolved yet: there while CHANGE_REQUESTED, null otherwise. */
+    var openChange: ChangeRequest? = null
+        private set
+
+    /** What the order still owes after a change to a dearer color; it doesn't ship until this is 0. */
+    var balanceDue: Money = Money.ZERO
+        private set
+
+    /** What was paid for changes on top of the placed payable. */
+    var balancePaid: Money = Money.ZERO
+        private set
+
+    /** What the changes gave back, as refunds of their own rows (the identity of OrderTotalsView). */
+    var differenceRefunded: Money = Money.ZERO
+        private set
+
+    /** The discount code's share of the lines taken out (OrderTotalsView.codeDiscount). */
+    var codeDiscountRemoved: Money = Money.ZERO
+        private set
+    private val balancePayments = mutableSetOf<PaymentPublicId>()
+
+    /** What carrying out the open change did to the lines, until it is applied: its money, and the color put in. */
+    private var changeWork: ChangeWork? = null
+
+    private data class ChangeWork(val difference: Long, val variantId: VariantId?)
+
+    /** Its lines now, by line id: a swapped line in its place, a line taken out gone. */
     val lines: List<OrderLine> get() = lineList.toList()
+
+    /** Its totals as they stand now (the contract's OrderTotals); [totals] are the placed ones, which never change. */
+    val totalsView: OrderTotalsView get() = OrderTotalsView.of(totals, lineList, codeDiscountRemoved, balancePaid, balanceDue, refunded)
 
     /** Placed and not paid yet: it may still be paid. */
     val isAwaitingPayment: Boolean get() = status.isAwaitingPayment
@@ -383,8 +433,8 @@ class Order private constructor() : EventSourceEntity<OrderDomainEvent>() {
     /**
      * The order left with the courier: SHIPPED. Only from PHOTO_SENT, with the carrier it was paid for ([shippingMethod]),
      * handed over at [shippedOn] (not after [now], not more than [MAX_SHIPPED_AGO] before, not before its photos were sent),
-     * and only once its photos are approved or the customer's time to answer is over. [reservationGroupId] is the group
-     * it ships with under the same code, if any.
+     * only once its photos are approved or the customer's time to answer is over, and only when nothing is owed after a
+     * change ([balanceDue], phase 3). [reservationGroupId] is the group it ships with under the same code, if any.
      */
     fun ship(
         carrier: ShippingMethodCode,
@@ -400,6 +450,7 @@ class Order private constructor() : EventSourceEntity<OrderDomainEvent>() {
         if (!shippedOnFits(shippedOn, now)) return Result.failure(ShipFailure.ShippedOnInvalid)
         val deadline = checkNotNull(feedbackDeadline) { "Order ${code.value}: photos sent without a deadline" }
         if (photoStatus != PhotoStatus.APPROVED && now.isBefore(deadline)) return Result.failure(ShipFailure.AwaitingFeedback(deadline))
+        if (balanceDue > Money.ZERO) return Result.failure(ShipFailure.BalanceDue(balanceDue))
 
         raiseEvent(OrderShipped(id, nextSequence(), now, by, carrier, trackingCode, shippedOn, showInDailyList, reservationGroupId))
         return Result.success(this)
@@ -465,10 +516,130 @@ class Order private constructor() : EventSourceEntity<OrderDomainEvent>() {
     fun recordRefund(refundId: RefundId, amount: Money, by: UserId, now: Instant): Result<Order, Nothing> {
         if (refundId in refundIds) return Result.success(this)
         check(status.isPaid) { "Order ${code.value} is $status: nothing was paid to give back" }
-        check(refunded + amount <= totals.payable) { "Order ${code.value}: refunding $amount on top of $refunded is more than its ${totals.payable}" }
+        val paid = totals.payable + balancePaid
+        check(refunded + amount <= paid) { "Order ${code.value}: refunding $amount on top of $refunded is more than its $paid" }
 
         raiseEvent(OrderRefunded(id, nextSequence(), now, by, refundId, amount))
         return Result.success(this)
+    }
+
+    // ============ a change request after the photos (phase 3) ============
+
+    /**
+     * The customer asks for a change after seeing the photos: CHANGE_REQUESTED, its photos too. Only while PHOTO_SENT with
+     * its photos SENT or APPROVED (OrderTransitionPolicy.customerMayRequestChange), so one at a time and never after it
+     * ships. The line it names must be one of the order's lines now. A COLOR change asks for another color of the line's
+     * product, a MODEL change for a color of another product: [target] is that color as the catalog has it (the use
+     * case found it), for those two only.
+     */
+    fun requestChange(request: ChangeRequest, target: ChangeTarget?, by: UserId, now: Instant): Result<Order, RequestChangeFailure> {
+        require(request.type.swapsColor == (target != null)) { "A ${request.type} change ${if (request.type.swapsColor) "needs" else "has no"} target" }
+        require(target == null || target.variantId == request.desiredVariantId) { "The target is not the color asked for" }
+        if (!OrderTransitionPolicy.customerMayRequestChange(status, photoStatus)) return Result.failure(RequestChangeFailure.NotAllowed(status))
+        val line = request.lineId?.let { lineId -> lineList.firstOrNull { it.lineId == lineId } ?: return Result.failure(RequestChangeFailure.UnknownLine(lineId)) }
+        if (target != null && !fitsChange(request.type, checkNotNull(line), target.productId, target.variantId)) {
+            return Result.failure(RequestChangeFailure.DesiredVariantInvalid)
+        }
+
+        raiseEvent(OrderChangeRequested(id, nextSequence(), now, by, request.type, request.lineId, request.desiredVariantId, request.note))
+        return Result.success(this)
+    }
+
+    /**
+     * Staff turn the open change request down, saying why in [note] (the customer reads it): the same bag ships. Back to
+     * PROCESSING, the photos WAITING for a new batch. Only while CHANGE_REQUESTED.
+     */
+    fun rejectChange(note: StatusNote?, by: UserId, now: Instant): Result<Order, ResolveChangeFailure> {
+        if (status != OrderStatus.CHANGE_REQUESTED) return Result.failure(ResolveChangeFailure.InvalidTransition(transitionRefused(status, PROCESSING)))
+        if (note == null) return Result.failure(ResolveChangeFailure.NoteRequired)
+
+        raiseEvent(OrderChangeRejected(id, nextSequence(), now, by, note))
+        return Result.success(this)
+    }
+
+    /**
+     * Carrying out an open COLOR or MODEL change: its line becomes [newLine], made with OrderLine.replacedBy from the color
+     * put in (the one asked for, or another staff chose) at its price today. That color must still fit the change (another
+     * color of the same product, or one of another product), and the new product's colors in the order together stay
+     * within [newProductLimit]. What it costs more or less is worked out now and settled by [applyChange], which follows.
+     * Only while CHANGE_REQUESTED, once per change.
+     */
+    fun replaceLine(newLine: OrderLine, newProductLimit: MaxPerOrder, by: UserId, now: Instant): Result<Order, ReplaceLineFailure> {
+        if (status != OrderStatus.CHANGE_REQUESTED) return Result.failure(ReplaceLineFailure.InvalidTransition(transitionRefused(status, PROCESSING)))
+        val change = checkNotNull(openChange) { "Order ${code.value} is CHANGE_REQUESTED without a change" }
+        require(change.type.swapsColor && changeWork == null) { "Order ${code.value}: a ${change.type} change doesn't swap a line now" }
+        val old = lineList.first { it.lineId == change.lineId }
+        require(newLine.lineId == old.lineId && newLine.quantity == old.quantity) { "A swapped line keeps its number and quantity" }
+        if (!fitsChange(change.type, old, newLine.productId, newLine.variantId)) return Result.failure(ReplaceLineFailure.VariantInvalid)
+        val ofNewProduct = lineList.filter { it.lineId != old.lineId && it.productId == newLine.productId }.sumOf { it.quantity.value } + newLine.quantity.value
+        if (ofNewProduct > newProductLimit.value) return Result.failure(ReplaceLineFailure.LimitExceeded(newLine.productId))
+
+        raiseEvent(OrderLineReplaced(id, nextSequence(), now, by, old.lineId, newLine, ChangeRequestPolicy.priceDifference(old, newLine.priceTag)))
+        return Result.success(this)
+    }
+
+    /**
+     * Carrying out an open CANCEL_ITEM change on an order of several lines: its line is taken out, and what the customer
+     * paid for it (ChangeRequestPolicy.paidShareOf) is settled by [applyChange], which follows. The only line of an order
+     * is never taken out: that is the whole order cancelled (OrderCancellation). Only while CHANGE_REQUESTED, once per
+     * change.
+     */
+    fun removeLine(by: UserId, now: Instant): Result<Order, ResolveChangeFailure> {
+        if (status != OrderStatus.CHANGE_REQUESTED) return Result.failure(ResolveChangeFailure.InvalidTransition(transitionRefused(status, PROCESSING)))
+        val change = checkNotNull(openChange) { "Order ${code.value} is CHANGE_REQUESTED without a change" }
+        require(change.type == ChangeType.CANCEL_ITEM && changeWork == null) { "Order ${code.value}: a ${change.type} change doesn't take a line out now" }
+        require(lineList.size > 1) { "Order ${code.value}: its only line is the whole order cancelled, not taken out" }
+        val line = lineList.first { it.lineId == change.lineId }
+
+        raiseEvent(OrderLineRemoved(id, nextSequence(), now, by, line.lineId, ChangeRequestPolicy.paidShareOf(line, totals)))
+        return Result.success(this)
+    }
+
+    /**
+     * The open change is carried out: back to PROCESSING, the photos WAITING for a new batch. A COLOR or MODEL change
+     * after [replaceLine], a CANCEL_ITEM after [removeLine], an OTHER alone with a [note] of what was done. Its money is
+     * settled now (ChangeRequestPolicy.settle): what costs more is owed; what costs less is first taken off what is owed,
+     * and the rest is to go back. Returns that settlement: the use case opens the refund. Only while CHANGE_REQUESTED.
+     */
+    fun applyChange(note: StatusNote?, by: UserId, now: Instant): Result<ChangeRequestPolicy.Settlement, ResolveChangeFailure> {
+        if (status != OrderStatus.CHANGE_REQUESTED) return Result.failure(ResolveChangeFailure.InvalidTransition(transitionRefused(status, PROCESSING)))
+        val change = checkNotNull(openChange) { "Order ${code.value} is CHANGE_REQUESTED without a change" }
+        if (change.type == ChangeType.OTHER && note == null) return Result.failure(ResolveChangeFailure.NoteRequired)
+        val work = changeWork
+        require((work != null) == (change.type != ChangeType.OTHER)) { "Order ${code.value}: a ${change.type} change applied ${if (work == null) "before" else "after"} its work" }
+
+        val settlement = ChangeRequestPolicy.settle(balanceDue, work?.difference ?: 0)
+        raiseEvent(OrderChangeApplied(id, nextSequence(), now, by, change.type, work?.variantId, note, settlement.balanceDueAfter))
+        return Result.success(settlement)
+    }
+
+    /**
+     * What the order owes after a change was paid by the attempt [paymentId] (purpose BALANCE): exactly [balanceDue], or
+     * the gateway confirmed another amount (a bug, never a payment). Nothing owed is ORDER_ALREADY_PAID. The same attempt
+     * again changes nothing.
+     */
+    fun payBalance(paymentId: PaymentPublicId, amount: Money, by: UserId, now: Instant): Result<Order, PayBalanceFailure> {
+        if (paymentId in balancePayments) return Result.success(this)
+        if (balanceDue == Money.ZERO) return Result.failure(PayBalanceFailure.NoBalanceDue)
+        if (amount != balanceDue) return Result.failure(PayBalanceFailure.AmountMismatch(expected = balanceDue, paid = amount))
+
+        raiseEvent(OrderBalancePaid(id, nextSequence(), now, by, paymentId, amount))
+        return Result.success(this)
+    }
+
+    /** [variantId] of [productId] fits a [type] change of [line]: another color of its product (COLOR), or of another product (MODEL). */
+    private fun fitsChange(type: ChangeType, line: OrderLine, productId: ProductId, variantId: VariantId): Boolean = when (type) {
+        ChangeType.COLOR -> productId == line.productId && variantId != line.variantId
+        ChangeType.MODEL -> productId != line.productId
+        ChangeType.CANCEL_ITEM, ChangeType.OTHER -> error("A $type change puts no color in")
+    }
+
+    /** The open change is over, whichever way: being prepared again, new photos to take. */
+    private fun closeChange() {
+        openChange = null
+        changeWork = null
+        status = PROCESSING
+        photoStatus = PhotoStatus.WAITING
     }
 
     /** [from] doesn't go to [to] through `POST …/status`, or by this operation: what it may go to instead. */
@@ -533,10 +704,49 @@ class Order private constructor() : EventSourceEntity<OrderDomainEvent>() {
             is OrderCancelled -> {
                 cancellation = OrderCancellationInfo(event.by, event.reason, event.note, event.occurredOn)
                 status = OrderStatus.CANCELLED
+                // A cancelled order owes nothing, and its open change is answered by the cancellation.
+                openChange = null
+                changeWork = null
+                balanceDue = Money.ZERO
             }
             is OrderRefunded -> {
                 refundIds += event.refundId
                 refunded += event.amount
+            }
+            is OrderChangeRequested -> {
+                openChange = ChangeRequest(event.changeType, event.lineId, event.desiredVariantId, event.note)
+                status = OrderStatus.CHANGE_REQUESTED
+                photoStatus = PhotoStatus.CHANGE_REQUESTED
+            }
+            is OrderChangeRejected -> closeChange()
+            is OrderLineReplaced -> {
+                val index = lineList.indexOfFirst { it.lineId == event.lineId }
+                check(index >= 0) { "Broken stream of order ${event.orderId.value}: line ${event.lineId} swapped but not there" }
+                lineList[index] = event.line
+                changeWork = ChangeWork(event.priceDifference, event.line.variantId)
+            }
+            is OrderLineRemoved -> {
+                val line = checkNotNull(lineList.firstOrNull { it.lineId == event.lineId }) {
+                    "Broken stream of order ${event.orderId.value}: line ${event.lineId} taken out but not there"
+                }
+                codeDiscountRemoved += line.totals.total - event.paidShare
+                lineList.remove(line)
+                changeWork = ChangeWork(-event.paidShare.toman, null)
+            }
+            is OrderChangeApplied -> {
+                val settlement = ChangeRequestPolicy.settle(balanceDue, changeWork?.difference ?: 0)
+                // Second wall: the event keeps what the settlement gave then; a stream that disagrees is broken.
+                check(settlement.balanceDueAfter == event.balanceDueAfter) {
+                    "Broken stream of order ${event.orderId.value}: a change settled to ${event.balanceDueAfter}, not ${settlement.balanceDueAfter}"
+                }
+                balanceDue = event.balanceDueAfter
+                differenceRefunded += settlement.refund
+                closeChange()
+            }
+            is OrderBalancePaid -> {
+                balancePayments += event.paymentId
+                balancePaid += event.amount
+                balanceDue = Money.ZERO
             }
         }
     }
@@ -636,6 +846,10 @@ class Order private constructor() : EventSourceEntity<OrderDomainEvent>() {
         /** The customer may still answer the photos until [feedbackDeadline] (422). */
         data class AwaitingFeedback(val feedbackDeadline: Instant) :
             ShipFailure("AWAITING_CUSTOMER_FEEDBACK", FailureKind.BUSINESS_RULE, meta = mapOf("feedbackDeadline" to feedbackDeadline.toString()))
+
+        /** [balanceDue] is still owed after a change to a dearer color (422). */
+        data class BalanceDue(val balanceDue: Money) :
+            ShipFailure("BALANCE_DUE", FailureKind.BUSINESS_RULE, meta = mapOf("balanceDue" to balanceDue.toman))
     }
 
     sealed class CorrectShipmentFailure(code: String, kind: FailureKind, field: String? = null, meta: Map<String, Any> = emptyMap()) :
@@ -653,5 +867,52 @@ class Order private constructor() : EventSourceEntity<OrderDomainEvent>() {
 
         /** Staff's: shipped already, or not paid (422 INVALID_STATUS_TRANSITION). */
         data class InvalidTransition(val transition: Order.InvalidTransition) : CancelFailure(transition.code, transition.kind, transition.meta)
+    }
+
+    sealed class RequestChangeFailure(code: String, kind: FailureKind, field: String? = null, meta: Map<String, Any> = emptyMap()) :
+        ResultFailure(code, kind, field, meta = meta) {
+        /** Not after photos the customer saw, a change is open already, or it shipped (422). */
+        data class NotAllowed(val status: OrderStatus) :
+            RequestChangeFailure("CHANGE_REQUEST_NOT_ALLOWED", FailureKind.BUSINESS_RULE, meta = mapOf("status" to status.name))
+
+        /** The line named isn't one of the order's lines now (400 on `orderItemId`). */
+        data class UnknownLine(val lineId: Int) :
+            RequestChangeFailure("ORDER_ITEM_NOT_FOUND", FailureKind.INVALID, "orderItemId", mapOf("orderItemId" to lineId))
+
+        /** COLOR with a color of another product or the line's own, MODEL with a color of the same product (400). */
+        data object DesiredVariantInvalid : RequestChangeFailure("DESIRED_VARIANT_INVALID", FailureKind.INVALID, "desiredVariantId")
+    }
+
+    /** Resolving a change request: rejecting it, taking a line out, applying it. */
+    sealed class ResolveChangeFailure(code: String, kind: FailureKind, field: String? = null, meta: Map<String, Any> = emptyMap()) :
+        ResultFailure(code, kind, field, meta = meta) {
+        /** No change request is open (422). */
+        data class InvalidTransition(val transition: Order.InvalidTransition) :
+            ResolveChangeFailure(transition.code, transition.kind, meta = transition.meta)
+
+        /** A rejection says why, and an OTHER change what was done (400 on `note`). */
+        data object NoteRequired : ResolveChangeFailure("NOTE_REQUIRED", FailureKind.INVALID, "note")
+    }
+
+    sealed class ReplaceLineFailure(code: String, kind: FailureKind, field: String? = null, meta: Map<String, Any> = emptyMap()) :
+        ResultFailure(code, kind, field, meta = meta) {
+        data class InvalidTransition(val transition: Order.InvalidTransition) :
+            ReplaceLineFailure(transition.code, transition.kind, meta = transition.meta)
+
+        /** The color put in doesn't fit the change: COLOR needs another color of the product, MODEL another product (400 on `variantId`). */
+        data object VariantInvalid : ReplaceLineFailure("DESIRED_VARIANT_INVALID", FailureKind.INVALID, "variantId")
+
+        /** The new product's colors in the order would be more than its limit per order (422). */
+        data class LimitExceeded(val productId: ProductId) :
+            ReplaceLineFailure("QUANTITY_EXCEEDS_LIMIT", FailureKind.BUSINESS_RULE, meta = mapOf("productIds" to listOf(productId.value)))
+    }
+
+    sealed class PayBalanceFailure(code: String, kind: FailureKind, meta: Map<String, Any> = emptyMap()) : ResultFailure(code, kind, meta = meta) {
+        /** Nothing is owed (paid already, or never was) (422). */
+        data object NoBalanceDue : PayBalanceFailure("ORDER_ALREADY_PAID", FailureKind.BUSINESS_RULE)
+
+        /** The gateway confirmed another amount than what is owed: a bug, never a payment. */
+        data class AmountMismatch(val expected: Money, val paid: Money) :
+            PayBalanceFailure("PAYMENT_AMOUNT_MISMATCH", FailureKind.CONFLICT, mapOf("expected" to expected.toman, "paid" to paid.toman))
     }
 }

@@ -2306,7 +2306,7 @@ Route: 200 با AdminOrder ِ همون سفارش
 | گام | عنوان | اندازه | وضعیت |
 |---|---|---|---|
 | ۳.۰ | کانترکت 1.10.0 | S | ✅ |
-| ۳.۱ | دامنه: درخواست تغییر، ردیف عوض‌شده، مانده و جمع‌های بعد از تغییر | L | ⬜ |
+| ۳.۱ | دامنه: درخواست تغییر، ردیف عوض‌شده، مانده و جمع‌های بعد از تغییر | L | ✅ |
 | ۳.۲ | پرداخت مانده | L | ⬜ |
 | ۳.۳ | درخواست تغییر مشتری | M | ⬜ |
 | ۳.۴ | رسیدگی اپراتور | L | ⬜ |
@@ -2470,7 +2470,7 @@ Route: 200 با AdminOrder
 
 ---
 
-#### گام ۳.۱: دامنه · L ⬜
+#### گام ۳.۱: دامنه · L ✅
 
 **می‌سازی:** رویدادها، وضعیت و متدهای ۸.۳ با payload و JSON ِ طلایی؛ `ChangeRequestPolicy`، `OrderTotalsView`؛ `OrderLine` یه factory ِ `replacedBy(...)` می‌گیره (سازنده هنوز `internal`)؛ `InventoryDomainService.rebalanceForOrder`؛ Projector برای رویدادهای تازه (`lines`، `totals` ِ نمایشی، `balanceDue`، `feedback.resolution`، تایم‌لاین: «درخواست تغییر ثبت شد»، «درخواستت رد شد: …»، «رنگ عوض شد»، «یه قلم حذف شد»، «مانده پرداخت شد»).
 
@@ -2481,13 +2481,21 @@ Route: 200 با AdminOrder
 - چرا تفاوت قیمت علامت‌دار تو رویداد ذخیره می‌شه؟ تا replay هیچ‌وقت دوباره با قیمت امروز حساب نکنه.
 
 **تموم شده یعنی:**
-- [ ] طلایی‌ها: آیدا کاراملی ۲٬۷۹۰٬۰۰۰ ← آیدا مشکی با قیمت ۲٬۹۹۰٬۰۰۰ ← `balanceDue = 200٬000`؛ همون با ۲٬۵۹۰٬۰۰۰ ← استرداد ۲۰۰٬۰۰۰؛ اول +۳۰۰٬۰۰۰ بعد −۵۰۰٬۰۰۰ ← مانده صفر و استرداد ۲۰۰٬۰۰۰.
-- [ ] سهم پرداخت‌شده: سفارش ۳٬۴۸۰٬۰۰۰ با کد ۳۴۸٬۰۰۰، حذف ردیف ۶۹۰٬۰۰۰ ← `690000 − floor(690000 × 348000 / 3480000) = 621٬000`.
-- [ ] هویت تصمیم ۷ بعد از هر ترکیب (تست جدولی).
-- [ ] `requestChange` در `PROCESSING` یا `SHIPPED` ← `CHANGE_REQUEST_NOT_ALLOWED`؛ دومی ← همون.
-- [ ] `ship` با مانده ← `BALANCE_DUE` با مبلغ.
-- [ ] `rebalanceForOrder`: عوض کردن ردیف ۱ (رنگ A) به رنگ B که ردیف ۲ هم هست ← رزرو B با جمع تعدادها، رزرو A آزاد.
-- [ ] رویدادهای سفارش‌های قبل از این فاز بدون تغییر خونده می‌شن.
+- [x] طلایی‌ها: آیدا کاراملی ۲٬۷۹۰٬۰۰۰ ← آیدا مشکی با قیمت ۲٬۹۹۰٬۰۰۰ ← `balanceDue = 200٬000`؛ همون با ۲٬۵۹۰٬۰۰۰ ← استرداد ۲۰۰٬۰۰۰؛ اول +۳۰۰٬۰۰۰ بعد −۵۰۰٬۰۰۰ ← مانده صفر و استرداد ۲۰۰٬۰۰۰.
+- [x] سهم پرداخت‌شده: سفارش ۳٬۴۸۰٬۰۰۰ با کد ۳۴۸٬۰۰۰، حذف ردیف ۶۹۰٬۰۰۰ ← `690000 − floor(690000 × 348000 / 3480000) = 621٬000`.
+- [x] هویت تصمیم ۷ بعد از هر ترکیب (تست جدولی).
+- [x] `requestChange` در `PROCESSING` یا `SHIPPED` ← `CHANGE_REQUEST_NOT_ALLOWED`؛ دومی ← همون.
+- [x] `ship` با مانده ← `BALANCE_DUE` با مبلغ.
+- [x] `rebalanceForOrder`: عوض کردن ردیف ۱ (رنگ A) به رنگ B که ردیف ۲ هم هست ← رزرو B با جمع تعدادها، رزرو A آزاد.
+- [x] رویدادهای سفارش‌های قبل از این فاز بدون تغییر خونده می‌شن.
+
+**یادداشت پیاده‌سازی:**
+- `V29` کامل همین‌جا نوشته شد (قانون بخش ۲۱: migration ِ چندگامی در اولین گامی که لازمش داره)، چون Projector ِ این گام `balanceDue` می‌نویسه. یه ستون بیشتر از ۸.۴: `"codeDiscountRemoved"` (تصمیم ۱۲). ستون `payable` ِ `orderqm_tbl` همون مبلغ ثبت می‌مونه؛ `totalSpent` حالا `payable + balancePaid − refunded` ـه.
+- امضاها کمی با ۸.۳ فرق دارن، چون Aggregate خودش همه‌چیز رو می‌دونه: `replaceLine(newLine, newProductLimit, by, now)` (`lineId` از درخواست باز؛ سقف محصول تازه از UseCase)، `removeLine(by, now)` (سهم پرداخت‌شده رو خودش با `ChangeRequestPolicy.paidShareOf` حساب می‌کنه)، و `applyChange` به‌جای `Order` یه `Settlement` برمی‌گردونه تا UseCase استرداد رو بسازه. `OrderChangeApplied` یه فیلد بیشتر داره: `variantId` (رنگی که واقعاً گذاشته شد، برای `feedback.resolution.variantId`).
+- تفاوت تسویه‌نشده‌ی تغییر باز تو Aggregate نگه داشته می‌شه و `apply(OrderChangeApplied)` دوباره `settle` می‌کنه و با `balanceDueAfter` ِ رویداد مقایسه می‌کنه (دیوار دوم در برابر stream ِ خراب)؛ `differenceRefunded` هم همین‌جا جمع می‌شه.
+- تایم‌لاین: یه ردیف برای هر رسیدگی، نه برای هر رویداد. `OrderLineReplaced`/`OrderLineRemoved` ردیف نمی‌سازن؛ `OrderChangeApplied` بسته به نوع: «رنگ عوض شد» (`COLOR`)، «مدل عوض شد» (`MODEL`)، «یه قلم حذف شد» (`CANCEL_ITEM`)، «درخواستت انجام شد» (`OTHER`)، با `note` ِ اپراتور. «درخواستت رد شد» دلیل رو تو `note` ِ همون ردیف داره.
+- `soldCount` با تغییر جابه‌جا می‌شه (رنگ قبلی −، رنگ تازه +؛ قلم حذف‌شده −)، تا لغو بعدی دقیقاً همون چیزی رو کم کنه که الان شمرده شده. `lockFor` محصول‌های ردیف‌های قبلی (از read model) و تازه رو صعودی قفل می‌کنه.
+- پاسخ‌ها از همین گام جمع‌های نمایشی رو نشون می‌دن (`OrderDetailDto.totals` حالا `OrderTotalsView` ـه، `balanceDue` ِ کارت و صف پنل واقعیه).
 
 ---
 
@@ -6084,4 +6092,5 @@ kiva {
 | ۲۶ مهر ۱۴۰۵ | ۲.۹ | Phase 2 step 2.9 | `LookupGuestTrackingUc` (۴۰۴ ِ یکسان، ۱۰ در ۱۰ دقیقه)، `ListDailyShipmentDaysUc`، `ListDailyShipmentsUc` (یه ردیف برای هر کد، `q`)، `ListMyTrackingUc`، `DailyShipmentMask`، `webV1Tracking.kt`، `GET /me/tracking`، `meta.retryAfterSeconds` برای ۴۲۹ ِ plugin. ۲۳۸۱ تست سبز |
 | ۲۶ مهر ۱۴۰۵ | ۲.۱۰ | Phase 2 step 2.10 | `progress.steps[].at` و `items[].returnableUntil` ِ واقعی، تست کل مسیر با مقایسه‌ی فیلدها با کانترکت (`ContractSchemas`)، `totalSpent` بعد از لغو و استرداد کامل. ۲۳۸۳ تست سبز |
 | ۲۶ مهر ۱۴۰۵ | ۲.۱۱ | Phase 2 step 2.11 | `PANEL_ORDERS_REVIEW.md` (۷ ردیف، ۱۲ خرابکاری)، `PanelOrdersLogScanOnDatabaseTest`، دو تست مالکیت تقویت شد، تست‌های لغو/ارسال همزمان و مرز ساعت تهران، `docs/FRONTEND_PANEL_ORDERS.md`، بخش ۶ ِ `docs/FRONTEND_PURCHASE.md`. ۲۳۸۷ تست سبز. merge منتظر تأیید |
-| ۲۷ مهر ۱۴۰۵ | ۳.۰ | Phase 3 step 3.0 | کانترکت 1.10.0 با هر ۷ ردیف ِ ۸.۶ و سه ردیف تازه (۸ تا ۱۰)؛ شش تصمیم تازه (۱۲ تا ۱۷ ِ ۸.۲: `codeDiscount` بعد از حذف قلم، ورینت ناموجود ۴۰۰، `VARIANT_NOT_ALLOWED`، `CANCEL_ITEM` ِ تنها قلم = لغو پنل، مانده‌ی لغوشده صفر، `StatusNote`). YAML با snakeyaml معتبره و هر ۱۳۲۱ `$ref` پیدا می‌شن. متن هفت کد فیلدی تازه. برنچ `change-requests` از نوک فاز ۲. پایه: ۲۳۸۷ تست سبز روی Postgres ِ موقت |
+| ۲۶ مهر ۱۴۰۵ | ۳.۰ | Phase 3 step 3.0 | کانترکت 1.10.0 با هر ۷ ردیف ِ ۸.۶ و سه ردیف تازه (۸ تا ۱۰)؛ شش تصمیم تازه (۱۲ تا ۱۷ ِ ۸.۲: `codeDiscount` بعد از حذف قلم، ورینت ناموجود ۴۰۰، `VARIANT_NOT_ALLOWED`، `CANCEL_ITEM` ِ تنها قلم = لغو پنل، مانده‌ی لغوشده صفر، `StatusNote`). YAML با snakeyaml معتبره و هر ۱۳۲۱ `$ref` پیدا می‌شن. متن هفت کد فیلدی تازه. برنچ `change-requests` از نوک فاز ۲. پایه: ۲۳۸۷ تست سبز روی Postgres ِ موقت |
+| ۲۶ مهر ۱۴۰۵ | ۳.۱ | Phase 3 step 3.1 | شش رویداد تازه‌ی سفارش با payload و JSON ِ طلایی، `ChangeRequest`/`ChangeTarget`، متدهای ۸.۳ در `Order` (و `BALANCE_DUE` در `ship`)، `ChangeRequestPolicy` (`BigInteger` برای سهم کد)، `OrderTotalsView`، `OrderLine.replacedBy`، `rebalanceForOrder`، `V29` ِ کامل (با `codeDiscountRemoved`)، Projector (خطوط، `soldCount` ِ جابه‌جا، `feedback.resolution`، هفت `kind` ِ تازه‌ی تایم‌لاین)، جمع‌های نمایشی در پاسخ‌ها. ۲۴۶۳ تست سبز |

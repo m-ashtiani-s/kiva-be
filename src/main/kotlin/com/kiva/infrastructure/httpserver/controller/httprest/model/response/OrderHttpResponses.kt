@@ -12,8 +12,9 @@ import kotlinx.serialization.Serializable
 data class PlaceOrderHttpResponse(val order: OrderSummaryHttpResponse, val payment: PaymentInitHttpResponse?)
 
 /**
- * Contract schema `OrderSummary`: an order's card. [reservation] only for an order held with «رزرو ۴ روزه». In this phase
- * [balanceDue] is 0 (no change requests yet); the shipment waits until the order is shipped.
+ * Contract schema `OrderSummary`: an order's card. [reservation] only for an order held with «رزرو ۴ روزه». [payable] is
+ * everything paid so far and [balanceDue] what a change to a dearer color left owed (usually 0); the shipment waits until
+ * the order is shipped.
  */
 @Serializable
 data class OrderSummaryHttpResponse(
@@ -45,7 +46,7 @@ data class OrderSummaryHttpResponse(
                 statusLabel = OrderTexts.statusLabel(order.status),
                 statusTone = OrderTexts.statusTone(order.status),
                 payable = order.payable.toman,
-                balanceDue = 0,
+                balanceDue = order.balanceDue.toman,
                 shippingMethod = OrderShippingMethodHttpResponse(order.shippingMethod.name, order.shippingMethodName),
                 itemsPreview = order.items.map { OrderItemPreviewHttpResponse(it.productId, it.name, it.colorKey, it.imageUrl?.let(urls::of), it.quantity) },
                 itemsCount = order.itemsCount,

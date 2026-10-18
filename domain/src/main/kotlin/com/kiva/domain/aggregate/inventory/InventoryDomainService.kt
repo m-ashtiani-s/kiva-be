@@ -5,6 +5,7 @@ import com.kiva.common.railway.FailureKind
 import com.kiva.common.railway.Result
 import com.kiva.common.railway.ResultFailure
 import com.kiva.common.railway.mapOnFailure
+import com.kiva.common.valueobject.Quantity
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.inventory.entity.Inventory
 import com.kiva.domain.aggregate.inventory.model.valueobject.AdjustmentNote
@@ -121,6 +122,40 @@ class InventoryDomainService(
         }
     }
 
+    /**
+     * An order's lines changed by a change request ([before] to [after]: a color swapped, a line taken out): what the order
+     * holds of each color follows, all or nothing. For each color whose total quantity in the order changed, what the
+     * order held is given back and the new total is held again, so a color that is now on two lines is held once, with
+     * both quantities (an Inventory holds one quantity per order). In lock order like [reserveForOrder]: the stocks come
+     * back sorted by (product, color) and must be saved in that order.
+     *
+     * A color with too few left for its new total is refused with what it has left after the order's own hold went back
+     * ([RebalanceFailure.OutOfStock]); nothing is to be saved then.
+     */
+    fun rebalanceForOrder(orderCode: OrderCode, before: List<OrderLine>, after: List<OrderLine>, by: UserId, now: Instant): Result<List<Inventory>, RebalanceFailure> {
+        logger.info("rebalanceForOrder orderCode=${orderCode.value} before=${before.map { "${it.variantId.value}x${it.quantity.value}" }} after=${after.map { "${it.variantId.value}x${it.quantity.value}" }}")
+        fun totals(lines: List<OrderLine>) = lines.groupBy({ it.productId.value to it.variantId }, { it.quantity.value }).mapValues { it.value.sum() }
+        val held = totals(before)
+        val wanted = totals(after)
+
+        val changed = (held.keys + wanted.keys).filter { held[it] != wanted[it] }.sortedWith(compareBy({ it.first }, { it.second.value }))
+        val touched = changed.map { key ->
+            val variantId = key.second
+            val inventory = inventoryRepository.get(variantId) ?: Inventory.empty(variantId)
+            inventory.releaseReservation(orderCode, by, now)
+            wanted[key]?.let { quantity ->
+                when (val failure = inventory.reserve(orderCode, Quantity.constructFromPersisted(quantity), by, now).failureOrNull()) {
+                    null -> {}
+                    is Inventory.ReserveFailure.MoreThanAvailable -> return Result.failure(RebalanceFailure.OutOfStock(variantId, failure.availableQuantity))
+                    // Its hold for the order went back just above, and an order changes only before it ships: anything else is a bug.
+                    else -> error("Order ${orderCode.value} could not hold variant ${variantId.value} again: ${failure.code}")
+                }
+            }
+            inventory
+        }
+        return Result.success(touched.filter { it.getRecordedEvents().isNotEmpty() })
+    }
+
     // ============ failures ============
 
     sealed class AdjustStockFailure(code: String, kind: FailureKind, meta: Map<String, Any>) :
@@ -130,6 +165,12 @@ class InventoryDomainService(
 
         data class MoreThanAvailable(val availableQuantity: Int) :
             AdjustStockFailure("QUANTITY_EXCEEDS_STOCK", FailureKind.BUSINESS_RULE, mapOf("availableQuantity" to availableQuantity))
+    }
+
+    sealed class RebalanceFailure(code: String, kind: FailureKind, meta: Map<String, Any>) : ResultFailure(code, kind, meta = meta) {
+        /** [variantId] has only [availableQuantity] left for the order's new total of it (422). */
+        data class OutOfStock(val variantId: VariantId, val availableQuantity: Int) :
+            RebalanceFailure("QUANTITY_EXCEEDS_STOCK", FailureKind.BUSINESS_RULE, mapOf("availableQuantity" to availableQuantity))
     }
 
     sealed class ReserveForOrderFailure(code: String, kind: FailureKind, meta: Map<String, Any>) : ResultFailure(code, kind, meta = meta) {

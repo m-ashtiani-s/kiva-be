@@ -11,8 +11,9 @@ import com.kiva.domain.aggregate.product.model.valueobject.VariantId
 
 /**
  * One color of a placed [Order], copied when the order was placed: what was bought, how many, and at what price
- * (the contract's OrderItem). Nothing changes a line in this phase. Its identity is [lineId], 1 to n within its order
- * (the contract's `OrderItem.id`): unique only inside the order.
+ * (the contract's OrderItem). Only a change request swaps it for another color ([replacedBy]) or takes it out. Its
+ * identity is [lineId], 1 to n within its order (the contract's `OrderItem.id`): unique only inside the order, and never
+ * given to another line.
  *
  * @property priceTag what one cost then: the price paid and the crossed-out price shown.
  * @property reservable it could be held by «رزرو ۴ روزه» then (round 2).
@@ -37,6 +38,20 @@ data class OrderLine internal constructor(
     val totals: LineTotals get() = OrderPricing.lineTotalsOf(PricedLine(priceTag, quantity, purchasable = true))
 
     override fun toString(): String = "OrderLine(lineId=$lineId, variantId=${variantId.value}, quantity=${quantity.value})"
+
+    /**
+     * This line as a change request swaps it (roadmap section 8.2, row 4): the same number and quantity, another color
+     * copied from the catalog now: what it is called and looks like, its price today, and whether it can be held or
+     * returned.
+     */
+    fun replacedBy(
+        productId: ProductId,
+        variantId: VariantId,
+        item: OrderItemSnapshot,
+        priceTag: PriceTag,
+        reservable: Boolean,
+        returnable: Boolean,
+    ): OrderLine = OrderLine(lineId, productId, variantId, item, quantity, priceTag, reservable, returnable)
 
     companion object {
         fun constructFromPersisted(

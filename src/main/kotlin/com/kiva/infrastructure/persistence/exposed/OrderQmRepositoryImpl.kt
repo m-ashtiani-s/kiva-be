@@ -7,6 +7,7 @@ import com.kiva.application.repository.FeedbackDecision
 import com.kiva.application.repository.OrderQm
 import com.kiva.application.repository.OrderQmRepository
 import com.kiva.application.repository.OrderTimelineKind
+import com.kiva.application.repository.ResolutionDecision
 import com.kiva.application.usecase.order.usecase.query.AdminOrderSorts
 import com.kiva.common.pagination.Page
 import com.kiva.common.pagination.Pageable
@@ -14,6 +15,7 @@ import com.kiva.common.valueobject.Money
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.order.model.valueobject.CancelReason
 import com.kiva.domain.aggregate.order.model.valueobject.CancelledBy
+import com.kiva.domain.aggregate.order.model.valueobject.ChangeType
 import com.kiva.domain.aggregate.order.model.valueobject.CustomerNote
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
 import com.kiva.domain.aggregate.order.model.valueobject.OrderId
@@ -52,6 +54,7 @@ import org.jetbrains.exposed.v1.core.minus
 import org.jetbrains.exposed.v1.core.neq
 import org.jetbrains.exposed.v1.core.not
 import org.jetbrains.exposed.v1.core.or
+import org.jetbrains.exposed.v1.core.plus
 import org.jetbrains.exposed.v1.core.sum
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -119,7 +122,8 @@ class OrderQmRepositoryImpl : OrderQmRepository {
     override fun purchasesOf(userIds: Collection<UserId>): Map<UserId, OrderQmRepository.Purchases> {
         if (userIds.isEmpty()) return emptyMap()
         val count = OrderQmTbl.orderId.count()
-        val spent = (OrderQmTbl.payable - OrderQmTbl.refunded).sum()
+        // What was paid (placed, and for changes since) minus what went back.
+        val spent = (OrderQmTbl.payable + OrderQmTbl.balancePaid - OrderQmTbl.refunded).sum()
         val latest = OrderQmTbl.placedOn.max()
         return OrderQmTbl.select(OrderQmTbl.userId, count, spent, latest)
             .where { (OrderQmTbl.userId inList userIds.map { it.value }) and (OrderQmTbl.status inList OrderStatus.entries.filter { it.isPaid }) }
@@ -263,7 +267,17 @@ class OrderQmRepositoryImpl : OrderQmRepository {
         photoBatch = this[OrderQmTbl.photos].batch,
         photosSentOn = this[OrderQmTbl.photosSentOn]?.toInstant(),
         feedbackDeadline = this[OrderQmTbl.feedbackDeadline]?.toInstant(),
-        feedback = this[OrderQmTbl.feedback]?.let { OrderQm.Feedback(FeedbackDecision.valueOf(it.decision), Instant.parse(it.at)) },
+        feedback = this[OrderQmTbl.feedback]?.let { answer ->
+            OrderQm.Feedback(
+                decision = FeedbackDecision.valueOf(answer.decision),
+                at = Instant.parse(answer.at),
+                changeType = answer.changeType?.let(ChangeType::valueOf),
+                lineId = answer.orderItemId,
+                desiredVariantId = answer.desiredVariantId,
+                note = answer.note,
+                resolution = answer.resolution?.let { OrderQm.Resolution(ResolutionDecision.valueOf(it.decision), it.variantId, it.note, Instant.parse(it.at)) },
+            )
+        },
         shipment = this[OrderQmTbl.trackingCode]?.let { code ->
             OrderQm.Shipment(TrackingCode.constructFromPersisted(code), checkNotNull(this[OrderQmTbl.shippedOn]).toInstant(), this[OrderQmTbl.showInDailyList])
         },
@@ -275,6 +289,9 @@ class OrderQmRepositoryImpl : OrderQmRepository {
             )
         },
         refunded = Money.constructFromPersisted(this[OrderQmTbl.refunded]),
+        balanceDue = Money.constructFromPersisted(this[OrderQmTbl.balanceDue]),
+        balancePaid = Money.constructFromPersisted(this[OrderQmTbl.balancePaid]),
+        codeDiscountRemoved = Money.constructFromPersisted(this[OrderQmTbl.codeDiscountRemoved]),
     )
 
     private companion object {

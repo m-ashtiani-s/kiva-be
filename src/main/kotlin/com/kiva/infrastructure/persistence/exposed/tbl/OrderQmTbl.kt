@@ -18,8 +18,9 @@ import org.jetbrains.exposed.v1.json.jsonb
 
 /**
  * One row per order, ready for the customer's lists and pages, the panel's queue and the jobs. Written only by
- * OrderQmProjector. Created by V15__orders.sql and grown by V26__order_admin_read_model.sql (Exposed never creates
- * tables); keep them in step.
+ * OrderQmProjector. Created by V15__orders.sql and grown by V26__order_admin_read_model.sql and V29__balance_payments.sql
+ * (Exposed never creates tables); keep them in step. [lines] are the lines now (after a change request); [totals] the
+ * placed ones.
  */
 object OrderQmTbl : LongIdTable(name = "orderqm_tbl", columnName = "pId") {
     val orderId = long("orderId").uniqueIndex()
@@ -61,6 +62,11 @@ object OrderQmTbl : LongIdTable(name = "orderqm_tbl", columnName = "pId") {
     val cancelledOn = timestampWithTimeZone("cancelledOn").nullable()
     val cancellation = jsonb<OrderCancellationQm>("cancellation", Json).nullable()
     val refunded = long("refunded")
+
+    // ---- V29: the money after a change request ----
+    val balanceDue = long("balanceDue")
+    val balancePaid = long("balancePaid")
+    val codeDiscountRemoved = long("codeDiscountRemoved")
 }
 
 /**
@@ -91,8 +97,9 @@ data class OrderPhotosQm(val draft: List<OrderPhotoPayload>, val sent: List<Orde
 }
 
 /**
- * The customer's last answer to the photos (`PreShipmentMedia.feedback`). In this phase only «همونه!» (APPROVE); the
- * change request's fields and its resolution come with phase 3, and stay null until then.
+ * The customer's last answer to the photos (`PreShipmentMedia.feedback`): «همونه!» (APPROVE), or a change request with
+ * what was asked and, once staff resolved it, how ([resolution]). Rows written before phase 3 have a null resolution,
+ * which reads back the same. [note] is personal: never logged.
  */
 @Serializable
 data class OrderFeedbackQm(
@@ -102,9 +109,15 @@ data class OrderFeedbackQm(
     val desiredVariantId: Long?,
     val note: String?,
     val at: String,
-    val resolution: String?,
+    val resolution: OrderResolutionQm?,
 ) {
-    override fun toString(): String = "OrderFeedbackQm(decision=$decision, at=$at)"
+    override fun toString(): String = "OrderFeedbackQm(decision=$decision, changeType=$changeType, at=$at)"
+}
+
+/** How staff resolved a change request: APPLY (with the color put in, for COLOR and MODEL) or REJECT; [note] is personal. */
+@Serializable
+data class OrderResolutionQm(val decision: String, val variantId: Long?, val note: String?, val at: String) {
+    override fun toString(): String = "OrderResolutionQm(decision=$decision, variantId=$variantId, at=$at)"
 }
 
 /** How the order was cancelled; the note is personal. */

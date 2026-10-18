@@ -3,7 +3,7 @@ package com.kiva.application.dto
 import com.kiva.application.repository.OrderTimelineKind
 import com.kiva.common.valueobject.Money
 import com.kiva.domain.aggregate.order.model.valueobject.OrderStatus
-import com.kiva.domain.aggregate.order.model.valueobject.OrderTotals
+import com.kiva.domain.aggregate.order.model.valueobject.OrderTotalsView
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentFailureReason
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentOutcome
 import com.kiva.domain.aggregate.settings.model.valueobject.PaymentGatewayCode
@@ -14,7 +14,8 @@ import java.time.Instant
  * One order's page (the contract's OrderDetail): its card, and everything it was placed with, as it was then. Without
  * the Persian words: the labels of the timeline, the address's full text and the waiting messages are the HTTP layer's.
  *
- * @property refunded what went back to the customer: its completed refunds (`totals.refunded`).
+ * @property totals as they stand now, after any change request (OrderTotalsView): what was paid, what is owed, and what
+ *   went back (its completed refunds).
  * @property payment its latest attempt to pay; null for an order that had nothing to pay.
  * @property photos the photos before shipping: the batch sent, and the operator's draft (the panel's only).
  * @property timeline one entry per event the customer sees, oldest first.
@@ -24,8 +25,7 @@ data class OrderDetailDto(
     val summary: OrderSummaryDto,
     val items: List<Item>,
     val address: Address,
-    val totals: OrderTotals,
-    val refunded: Money,
+    val totals: OrderTotalsView,
     val payment: Payment?,
     val messenger: Messenger,
     val photos: PreShipmentMediaDto,

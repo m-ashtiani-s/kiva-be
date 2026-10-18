@@ -80,6 +80,14 @@ object OrderTexts {
         OrderTimelineKind.DELIVERED -> "تحویل شد"
         OrderTimelineKind.CANCELLED -> "لغو شد"
         OrderTimelineKind.REFUNDED -> amount?.let { "${it.toman.toPersianNumber()} تومان برگشت داده شد" } ?: "مبلغ برگشت داده شد"
+        // A change request; the entry's note is the customer's reason of a rejection, or what staff did.
+        OrderTimelineKind.CHANGE_REQUESTED -> "درخواست تغییر ثبت شد"
+        OrderTimelineKind.CHANGE_REJECTED -> "درخواستت رد شد"
+        OrderTimelineKind.COLOR_CHANGED -> "رنگ عوض شد"
+        OrderTimelineKind.MODEL_CHANGED -> "مدل عوض شد"
+        OrderTimelineKind.ITEM_REMOVED -> "یه قلم حذف شد"
+        OrderTimelineKind.CHANGE_APPLIED -> "درخواستت انجام شد"
+        OrderTimelineKind.BALANCE_PAID -> amount?.let { "مانده‌ی ${it.toman.toPersianNumber()} تومانی پرداخت شد" } ?: "مانده پرداخت شد"
     }
 
     /** The photos before shipping, before there are any (contract example). */

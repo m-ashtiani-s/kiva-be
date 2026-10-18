@@ -67,8 +67,7 @@ class OrderDetails(
                     it.recipientPhone.value,
                 )
             },
-            totals = order.totals,
-            refunded = order.refunded,
+            totals = order.totalsView,
             payment = latest?.let { paymentOf(it, settings) },
             messenger = order.messenger.let { OrderDetailDto.Messenger(it.channel, it.phone.value, it.username, it.note) },
             photos = PreShipmentMediaDto.of(order, media),

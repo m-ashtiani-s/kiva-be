@@ -4,8 +4,7 @@ import com.kiva.application.dto.OrderDetailDto
 import com.kiva.application.dto.OrderListDto
 import com.kiva.application.dto.PreShipmentMediaDto
 import com.kiva.application.usecase.order.usecase.command.ReorderUc
-import com.kiva.common.valueobject.Money
-import com.kiva.domain.aggregate.order.model.valueobject.OrderTotals
+import com.kiva.domain.aggregate.order.model.valueobject.OrderTotalsView
 import com.kiva.infrastructure.common.http.PageMetaHttpResponse
 import com.kiva.infrastructure.media.MediaUrls
 import kotlinx.serialization.Serializable
@@ -88,7 +87,7 @@ data class OrderDetailHttpResponse(
                 actions = card.actions,
                 items = order.items.map { OrderItemHttpResponse.from(it, urls) },
                 address = OrderAddressHttpResponse.from(order.address),
-                totals = OrderTotalsHttpResponse.from(order.totals, order.refunded),
+                totals = OrderTotalsHttpResponse.from(order.totals),
                 payment = order.payment?.let(OrderPaymentInfoHttpResponse::from),
                 preShipmentMediaDetail = PreShipmentMediaHttpResponse.from(order.photos, order.messenger, urls),
                 timeline = order.timeline.map { entry ->
@@ -177,7 +176,10 @@ data class OrderAddressHttpResponse(
     }
 }
 
-/** Contract schema `OrderTotals`. [refunded] is what the completed refunds gave back; no change requests yet (balanceDue 0). */
+/**
+ * Contract schema `OrderTotals`, as they stand now (OrderTotalsView): after a change request the current lines' amounts,
+ * [payable] everything paid, [balanceDue] what is owed; [refunded] is what the completed refunds gave back.
+ */
 @Serializable
 data class OrderTotalsHttpResponse(
     val itemsCompareAtTotal: Long,
@@ -194,7 +196,7 @@ data class OrderTotalsHttpResponse(
     val currency: String,
 ) {
     companion object {
-        fun from(totals: OrderTotals, refunded: Money) = OrderTotalsHttpResponse(
+        fun from(totals: OrderTotalsView) = OrderTotalsHttpResponse(
             itemsCompareAtTotal = totals.itemsCompareAtTotal.toman,
             productDiscount = totals.productDiscount.toman,
             subtotal = totals.subtotal.toman,
@@ -204,8 +206,8 @@ data class OrderTotalsHttpResponse(
             shippingFreeReason = totals.shippingFreeReason?.name,
             giftWrapCost = 0,
             payable = totals.payable.toman,
-            refunded = refunded.toman,
-            balanceDue = 0,
+            refunded = totals.refunded.toman,
+            balanceDue = totals.balanceDue.toman,
             currency = PriceInfoHttpResponse.TOMAN,
         )
     }

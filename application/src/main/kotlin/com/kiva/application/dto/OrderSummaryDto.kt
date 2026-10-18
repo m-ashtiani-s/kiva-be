@@ -22,6 +22,8 @@ import java.time.Instant
  * @property shippingMethodName the method's name as the shop's settings call it now.
  * @property paidOn when it was paid; the progress's first step is done from then.
  * @property firstPhotosSentOn when the photos were sent the first time: the progress's second step.
+ * @property payable everything paid so far (the placed payable and the balances paid; for an unpaid order, what is to pay).
+ * @property balanceDue what it still owes after a change to a dearer color; usually 0.
  * @property messengerChannel where the photo before shipping goes.
  * @property photos what the card says of the photos before shipping (the last batch sent).
  * @property shipment the parcel it left in, once shipped; null before.
@@ -34,6 +36,7 @@ data class OrderSummaryDto(
     val paidOn: Instant?,
     val firstPhotosSentOn: Instant?,
     val payable: Money,
+    val balanceDue: Money,
     val shippingMethod: ShippingMethodCode,
     val shippingMethodName: String,
     val items: List<ItemPreview>,
@@ -77,13 +80,14 @@ data class OrderSummaryDto(
             placedOn = order.placedOn,
             paidOn = order.paidOn,
             firstPhotosSentOn = order.timeline.firstOrNull { it.kind == OrderTimelineKind.PHOTOS_SENT }?.at,
-            payable = order.totals.payable,
+            payable = order.totalsView.payable,
+            balanceDue = order.balanceDue,
             shippingMethod = order.shippingMethod,
             shippingMethodName = settings.shippingMethods.firstOrNull { it.code == order.shippingMethod }?.name ?: order.shippingMethod.name,
             items = order.lines.map {
                 ItemPreview(it.productId.value, it.item.name.value, it.item.color.key.value, it.item.imageUrl, it.quantity.value)
             },
-            itemsCount = order.totals.itemsCount,
+            itemsCount = order.totalsView.itemsCount,
             messengerChannel = order.messenger.channel,
             photos = PhotosSummary(
                 status = order.photoStatus,
