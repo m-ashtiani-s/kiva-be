@@ -1532,7 +1532,7 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 | ۲.۱ | دامنه‌ی سفارش بعد از پرداخت، و Aggregate ِ استرداد | L | ✅ |
 | ۲.۲ | read model ِ سفارش برای پنل و تایم‌لاین تازه | L | ✅ |
 | ۲.۳ | صف و جزئیات سفارش در پنل | M | ✅ |
-| ۲.۴ | یادداشت داخلی | S | ⬜ |
+| ۲.۴ | یادداشت داخلی | S | ✅ |
 | ۲.۵ | عکس قبل از ارسال، تأیید مشتری و تأیید خودکار | L | ⬜ |
 | ۲.۶ | استرداد دستی | M | ⬜ |
 | ۲.۷ | تغییر وضعیت از پنل و لغو (پنل و مشتری) | L | ⬜ |
@@ -2090,18 +2090,24 @@ Route: 200 با AdminOrder ِ همون سفارش
 
 ---
 
-#### گام ۲.۴: یادداشت داخلی · S ⬜
+#### گام ۲.۴: یادداشت داخلی · S ✅
 
 **می‌سازی:** `V27__order_notes.sql`؛ `OrderNote` (domain، ساده)، `OrderNoteRepository`؛ `AddOrderNoteUc`؛ route؛ یادداشت‌ها در `GetAdminOrderUc`.
 
 وابسته به: ۲.۳
 
 **تموم شده یعنی:**
-- [ ] یادداشت ← `201` با `author` = اسم اپراتور؛ تو جزئیات به ترتیب زمان.
-- [ ] متن خالی یا ۱۰۰۱ نویسه ← ۴۰۰.
-- [ ] دیتابیس `UPDATE` و `DELETE` رو رد می‌کنه.
-- [ ] یادداشت تو پاسخ مشتری نیست.
-- [ ] لاگ تغییرات بدون متن یادداشت.
+- [x] یادداشت ← `201` با `author` = اسم اپراتور؛ تو جزئیات به ترتیب زمان.
+- [x] متن خالی یا ۱۰۰۱ نویسه ← ۴۰۰.
+- [x] دیتابیس `UPDATE` و `DELETE` رو رد می‌کنه.
+- [x] یادداشت تو پاسخ مشتری نیست.
+- [x] لاگ تغییرات بدون متن یادداشت.
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- `OrderNote` و `OrderNoteText` در aggregate ِ کوچیک `ordernote` (جدول ساده، فقط اضافه). متن trim می‌شه، حرف‌ها نرمال، و خط‌های تازه همون‌طور می‌مونن.
+- `AddOrderNoteUc` خود `AdminNoteDto` رو برمی‌گردونه (مثل `InventoryAdjustmentDto`، استثنای ۴.۵.۶): یادداشت صفحه‌ی جدایی برای خوندن دوباره نداره.
+- `AuditAction.ORDER_NOTE_ADDED` با جمله‌ی «یادداشت داخلی روی سفارش «…» نوشته شد»؛ `changes = null`.
+- اسکریپت مرتب‌سازی importها در این گام فاصله‌های دوتایی ِ چند فایل از گام‌های قبلی رو هم یکی کرد (بدون تغییر رفتار).
 
 ---
 
@@ -6001,3 +6007,4 @@ kiva {
 | ۲۶ مهر ۱۴۰۵ | ۲.۱ | Phase 2 step 2.1 | هشت رویداد تازه‌ی سفارش با payload و JSON ِ طلایی، وضعیت و متدهای عکس، ارسال، تحویل، لغو و استرداد در `Order`، `OrderTransitionPolicy`، `PreShipmentPolicy`، `OrderActionFacts`، `countsAsPurchase`، `shipForOrder`، `giveBack` با `storedStatus`، Aggregate ِ `Refund` و `RefundDomainService`. `OrderDelivered` یادداشت پنل رو هم داره. ۲۳۱۶ تست سبز |
 | ۲۶ مهر ۱۴۰۵ | ۲.۲ | Phase 2 step 2.2 | `V26` با backfill ِ `searchText` و `kind` ِ تایم‌لاین، ستون‌ها و `CHECK`های بعد از پرداخت، `trackingUrlTemplate`؛ Projector برای همه‌ی رویدادهای تازه (کم شدن `soldCount` با لغو زیر قفل ۷)، `OrderQm` و `OrderTimelineKind`، `findByCode`، `lockOrder`، `hasPurchase`. ۲۳۲۹ تست سبز |
 | ۲۶ مهر ۱۴۰۵ | ۲.۳ | Phase 2 step 2.3 | `FindAdminOrdersUc` (فیلترها، `q` به شکل کد/موبایل/واژه، روز تهران، `sort`، `statusCounts` ِ ۱۳ تایی)، `GetAdminOrderUc` (مشتری، گروه ارسال، همه‌ی تلاش‌ها، `allowedTransitions`)، `OrderByCode`، `OrderDetails`، `webV1AdminOrders.kt`، `PaidOrders`. ۲۳۴۰ تست سبز |
+| ۲۶ مهر ۱۴۰۵ | ۲.۴ | Phase 2 step 2.4 | `V27` (فقط اضافه، با trigger)، `OrderNote`، `AddOrderNoteUc` با لاگ `ORDER_NOTE_ADDED` بدون متن، یادداشت‌ها با اسم نویسنده در `GetAdminOrderUc`، `POST …/notes`. ۲۳۴۵ تست سبز |

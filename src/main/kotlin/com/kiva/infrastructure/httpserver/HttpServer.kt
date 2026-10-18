@@ -117,7 +117,6 @@ import org.slf4j.event.Level
 import java.util.UUID
 import kotlin.time.toKotlinDuration
 
-
 /** Every public API route lives under this prefix (from the API contract). `/health` stays outside it. */
 const val API_V1 = "/api/v1"
 
@@ -256,7 +255,7 @@ fun Application.configureRouting() {
         changeStatus = get(), archiveProduct = get(), addVariant = get(), updateVariant = get(), deactivateVariant = get(),
     )
     val adminInventoryUseCases = AdminInventoryUseCases(checkPanelAccess = checkPanelAccessUc, adjustInventory = get(), listAdjustments = get())
-    val adminOrderUseCases = AdminOrderUseCases(checkPanelAccess = checkPanelAccessUc, findOrders = get(), getOrder = get())
+    val adminOrderUseCases = AdminOrderUseCases(checkPanelAccess = checkPanelAccessUc, findOrders = get(), getOrder = get(), addNote = get())
     val config by inject<AppConfig>()
 
     routing {

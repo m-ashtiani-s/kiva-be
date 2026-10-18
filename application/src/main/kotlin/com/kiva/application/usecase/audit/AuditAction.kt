@@ -34,6 +34,9 @@ enum class AuditAction {
     VARIANT_DEACTIVATED,
 
     INVENTORY_ADJUSTED,
+
+    // ---- orders (phase 2) ----
+    ORDER_NOTE_ADDED,
 }
 
 /** The kind of thing a panel write changed: the contract's AuditEntityType, value for value. */

@@ -47,6 +47,7 @@ data class AdminOrderListDto(val page: Page<Item>, val statusCounts: Map<OrderSt
  * One order in the panel (the contract's AdminOrder): the customer's page ([detail]) and what only the panel sees.
  *
  * @property payments every attempt to pay, oldest first.
+ * @property notes the panel's internal notes, oldest first.
  * @property allowedTransitions what `POST …/status` takes now (OrderTransitionPolicy).
  */
 data class AdminOrderDto(
@@ -54,6 +55,7 @@ data class AdminOrderDto(
     val customer: Customer,
     val shipmentGroup: ShipmentGroup?,
     val payments: List<OrderDetailDto.Payment>,
+    val notes: List<AdminNoteDto>,
     val allowedTransitions: Set<OrderStatus>,
 ) {
     /**

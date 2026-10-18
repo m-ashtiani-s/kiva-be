@@ -1,5 +1,6 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.model.response
 
+import com.kiva.application.dto.AdminNoteDto
 import com.kiva.application.dto.AdminOrderDto
 import com.kiva.application.dto.AdminOrderListDto
 import com.kiva.infrastructure.common.http.PageMetaHttpResponse
@@ -67,7 +68,7 @@ data class AdminOrderListItemHttpResponse(
 
 /**
  * Contract schema `AdminOrder`: every field of the customer's page (OrderDetail, [OrderDetailHttpResponse]) and the
- * panel's own. Refunds, internal notes and the draft of photos come with their steps (2.6, 2.4, 2.5).
+ * panel's own. Refunds and the draft of photos come with their steps (2.6, 2.5).
  */
 @Serializable
 data class AdminOrderHttpResponse(
@@ -103,7 +104,7 @@ data class AdminOrderHttpResponse(
     val shipmentGroup: AdminShipmentGroupHttpResponse?,
     val payments: List<OrderPaymentInfoHttpResponse>,
     val refunds: List<JsonObject>,
-    val notes: List<JsonObject>,
+    val notes: List<AdminNoteHttpResponse>,
     val allowedTransitions: List<String>,
     val draftItems: List<JsonObject>,
 ) {
@@ -142,7 +143,7 @@ data class AdminOrderHttpResponse(
                 shipmentGroup = order.shipmentGroup?.let { AdminShipmentGroupHttpResponse(it.code, it.orderCodes, it.releaseAt.toString()) },
                 payments = order.payments.map(OrderPaymentInfoHttpResponse::from),
                 refunds = emptyList(),
-                notes = emptyList(),
+                notes = order.notes.map(AdminNoteHttpResponse::from),
                 allowedTransitions = order.allowedTransitions.map { it.name }.sorted(),
                 draftItems = emptyList(),
             )
@@ -159,3 +160,13 @@ data class AdminOrderCustomerHttpResponse(val id: Long, val fullName: String?, v
 /** `AdminOrder.shipmentGroup`: the reservation group it ships with, under one tracking code. */
 @Serializable
 data class AdminShipmentGroupHttpResponse(val code: String, val orderCodes: List<String>, val releaseAt: String)
+
+/** Contract schema `AdminNote`: a panel note, its author by the name their account has now. Personal: [toString] shows the id only. */
+@Serializable
+data class AdminNoteHttpResponse(val id: Long, val text: String, val author: String, val createdAt: String) {
+    override fun toString(): String = "AdminNoteHttpResponse(id=$id)"
+
+    companion object {
+        fun from(note: AdminNoteDto) = AdminNoteHttpResponse(note.id, note.text, PanelTexts.actorName(note.author), note.createdOn.toString())
+    }
+}

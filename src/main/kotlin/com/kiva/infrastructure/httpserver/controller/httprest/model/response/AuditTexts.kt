@@ -41,6 +41,7 @@ object AuditTexts {
             AuditAction.VARIANT_UPDATED -> "رنگ $name ویرایش شد"
             AuditAction.VARIANT_DEACTIVATED -> "رنگ $name غیرفعال شد"
             AuditAction.INVENTORY_ADJUSTED -> stockAdjusted(name, changes)
+            AuditAction.ORDER_NOTE_ADDED -> "یادداشت داخلی روی سفارش $name نوشته شد"
         }
     }
 

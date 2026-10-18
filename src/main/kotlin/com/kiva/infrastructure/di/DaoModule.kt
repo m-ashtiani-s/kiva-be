@@ -26,6 +26,7 @@ import com.kiva.domain.aggregate.media.repository.MediaIdGenerator
 import com.kiva.domain.aggregate.media.repository.MediaRepository
 import com.kiva.domain.aggregate.order.repository.OrderIdGenerator
 import com.kiva.domain.aggregate.order.repository.OrderRepository
+import com.kiva.domain.aggregate.ordernote.repository.OrderNoteRepository
 import com.kiva.domain.aggregate.otp.repository.OtpChallengeRepository
 import com.kiva.domain.aggregate.payment.repository.PaymentIdGenerator
 import com.kiva.domain.aggregate.payment.repository.PaymentRepository
@@ -60,6 +61,7 @@ import com.kiva.infrastructure.persistence.exposed.MaterialRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.MediaRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.OfferQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.OrderIdGeneratorImpl
+import com.kiva.infrastructure.persistence.exposed.OrderNoteRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.OrderQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.OrderRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.OtpChallengeRepositoryImpl
@@ -102,6 +104,7 @@ val daoModule = module(createdAtStart = true) {
     single<CartIdGenerator> { RandomCartIds() }
     single<OfferQmRepository> { OfferQmRepositoryImpl() }
     single<OrderRepository> { OrderRepositoryImpl() }
+    single<OrderNoteRepository> { OrderNoteRepositoryImpl() }
     single<OrderIdGenerator> { OrderIdGeneratorImpl() }
     single<OrderQmRepository> { OrderQmRepositoryImpl() }
     single<PaymentRepository> { PaymentRepositoryImpl() }

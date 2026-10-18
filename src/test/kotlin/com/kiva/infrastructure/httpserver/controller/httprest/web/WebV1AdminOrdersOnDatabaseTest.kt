@@ -44,7 +44,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-
 /**
  * The panel's order queue and one order (`GET /admin/orders`, `GET /admin/orders/{orderCode}`; ADMIN, OPERATOR) over the
  * real stack on kiva_test, with orders placed and paid the way the shop does it. Monday 2026-10-12, 11:30 in Tehran.

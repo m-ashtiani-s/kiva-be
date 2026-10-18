@@ -73,6 +73,7 @@ import com.kiva.application.usecase.media.usecase.command.UploadMediaUc
 import com.kiva.application.usecase.media.usecase.query.FindUnattachedMediaUc
 import com.kiva.application.usecase.order.OrderByCode
 import com.kiva.application.usecase.order.OrderDetails
+import com.kiva.application.usecase.order.usecase.command.AddOrderNoteUc
 import com.kiva.application.usecase.order.usecase.command.ExpireUnpaidOrderUc
 import com.kiva.application.usecase.order.usecase.command.ReorderUc
 import com.kiva.application.usecase.order.usecase.query.FindAdminOrdersUc
@@ -463,10 +464,12 @@ val useCaseModule = module(createdAtStart = true) {
 
     // --- admin: orders (phase 2) ---
     single { FindAdminOrdersUc(transactionManager = get(), orderQmRepository = get(), adminCustomerRepository = get()) }
+    single { AddOrderNoteUc(transactionManager = get(), orderByCode = get(), orderNoteRepository = get(), userRepository = get(), auditTrail = get(), clock = get()) }
     single {
         GetAdminOrderUc(
             transactionManager = get(), orderByCode = get(), orderDetails = get(), orderQmRepository = get(), paymentRepository = get(),
-            reservationGroupRepository = get(), adminCustomerRepository = get(), shopSettingsRepository = get(), clock = get(),
+            reservationGroupRepository = get(), adminCustomerRepository = get(), orderNoteRepository = get(), userRepository = get(),
+            shopSettingsRepository = get(), clock = get(),
         )
     }
 

@@ -24,6 +24,7 @@ import com.kiva.application.usecase.inventory.usecase.command.AdjustInventoryUc
 import com.kiva.application.usecase.inventory.usecase.query.ListInventoryAdjustmentsUc
 import com.kiva.application.usecase.media.MediaAttachments
 import com.kiva.application.usecase.media.usecase.command.UploadMediaUc
+import com.kiva.application.usecase.order.usecase.command.AddOrderNoteUc
 import com.kiva.application.usecase.order.usecase.query.FindAdminOrdersUc
 import com.kiva.application.usecase.order.usecase.query.GetAdminOrderUc
 import com.kiva.application.usecase.product.ProductInput
@@ -74,6 +75,7 @@ import com.kiva.infrastructure.persistence.exposed.InventoryRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.MaterialIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.MaterialRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.MediaRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.OrderNoteRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.OrderQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ProductIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.ProductQmRepositoryImpl
@@ -100,7 +102,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.time.ZoneOffset
 import java.util.concurrent.ConcurrentHashMap
-
 
 /**
  * The panel's routes over kiva_test, wired by hand as the app wires them (with a test clock and fixed secrets), and a
@@ -208,8 +209,9 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         findOrders = FindAdminOrdersUc(transactions, purchase.orderQm, AdminCustomerRepositoryImpl()),
         getOrder = GetAdminOrderUc(
             transactions, purchase.orderByCode, purchase.orderDetails, purchase.orderQm, purchase.payments, purchase.groups, AdminCustomerRepositoryImpl(),
-            purchase.settings, clock,
+            OrderNoteRepositoryImpl(), users, purchase.settings, clock,
         ),
+        addNote = AddOrderNoteUc(transactions, purchase.orderByCode, OrderNoteRepositoryImpl(), users, auditTrail, clock),
     )
 
     /** A logged-in user of the panel: who they are and the access token of their session. */

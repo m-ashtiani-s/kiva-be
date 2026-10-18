@@ -1,5 +1,6 @@
 package com.kiva.application.usecase.order.usecase.query
 
+import com.kiva.application.dto.AdminNoteDto
 import com.kiva.application.dto.AdminOrderDto
 import com.kiva.application.repository.AdminCustomerRepository
 import com.kiva.application.repository.OrderQm
@@ -13,14 +14,17 @@ import com.kiva.common.railway.ResultFailure
 import com.kiva.common.transaction.TransactionManager
 import com.kiva.common.usecase.QueryUseCase
 import com.kiva.domain.aggregate.order.model.policy.OrderTransitionPolicy
+import com.kiva.domain.aggregate.ordernote.repository.OrderNoteRepository
 import com.kiva.domain.aggregate.payment.repository.PaymentRepository
 import com.kiva.domain.aggregate.reservation.repository.ReservationGroupRepository
 import com.kiva.domain.aggregate.settings.repository.ShopSettingsRepository
+import com.kiva.domain.aggregate.user.repository.UserRepository
 import java.time.Clock
 
 /**
  * One order in the panel (`GET /admin/orders/{orderCode}`; ADMIN, OPERATOR), and the answer of every panel write on an
- * order: the customer's page (OrderDetails) and the customer, the shipment group, every attempt to pay, and where
+ * order: the customer's page (OrderDetails) and the customer, the shipment group, every attempt to pay, the internal
+ * notes (oldest first, by their authors' names), and where
  * `POST …/status` may take it now. Any customer's order; a code that can't be one or nobody has is ORDER_NOT_FOUND.
  */
 class GetAdminOrderUc(
@@ -31,6 +35,8 @@ class GetAdminOrderUc(
     private val paymentRepository: PaymentRepository,
     private val reservationGroupRepository: ReservationGroupRepository,
     private val adminCustomerRepository: AdminCustomerRepository,
+    private val orderNoteRepository: OrderNoteRepository,
+    private val userRepository: UserRepository,
     private val shopSettingsRepository: ShopSettingsRepository,
     private val clock: Clock,
 ) : QueryUseCase<GetAdminOrderUc.Qry, AdminOrderDto, GetAdminOrderUc.Failure> {
@@ -72,6 +78,10 @@ class GetAdminOrderUc(
                 )
             },
             payments = attempts.map { orderDetails.paymentOf(it, settings) },
+            notes = orderNoteRepository.findAllOf(order.orderId).let { notes ->
+                val authors = notes.map { it.authorId }.distinct().associateWith(userRepository::findById)
+                notes.map { AdminNoteDto.from(it, authors[it.authorId]) }
+            },
             allowedTransitions = OrderTransitionPolicy.allowedFrom(order.status),
         )
     }

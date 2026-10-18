@@ -19,7 +19,6 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import java.time.Duration
 import java.util.UUID
 
-
 /**
  * Orders placed and paid the way the shop does it, through [purchase]'s real use cases (the cart, checkout, the
  * pretend gateway's callback), for the panel's order tests. Each bag goes into the cart a second after the one before,
