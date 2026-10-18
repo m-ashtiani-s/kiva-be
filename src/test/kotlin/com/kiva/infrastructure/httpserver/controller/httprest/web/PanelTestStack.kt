@@ -24,6 +24,8 @@ import com.kiva.application.usecase.inventory.usecase.command.AdjustInventoryUc
 import com.kiva.application.usecase.inventory.usecase.query.ListInventoryAdjustmentsUc
 import com.kiva.application.usecase.media.MediaAttachments
 import com.kiva.application.usecase.media.usecase.command.UploadMediaUc
+import com.kiva.application.usecase.order.usecase.query.FindAdminOrdersUc
+import com.kiva.application.usecase.order.usecase.query.GetAdminOrderUc
 import com.kiva.application.usecase.product.ProductInput
 import com.kiva.application.usecase.product.usecase.command.AddVariantUc
 import com.kiva.application.usecase.product.usecase.command.ArchiveProductUc
@@ -98,6 +100,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.time.ZoneOffset
 import java.util.concurrent.ConcurrentHashMap
+
 
 /**
  * The panel's routes over kiva_test, wired by hand as the app wires them (with a test clock and fixed secrets), and a
@@ -197,6 +200,18 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
     val findDueScheduled = FindDueScheduledProductsUc(transactions, productQm, clock)
     val publishScheduled = PublishScheduledProductUc(transactions, products, clock)
 
+    // --- orders (phase 2): paid the way the shop pays them, through the purchase's own stack ---
+    val purchase = PurchaseTestStack(clock)
+    val paidOrders = PaidOrders(purchase, clock)
+    val adminOrders = AdminOrderUseCases(
+        checkPanelAccess = checkPanelAccess,
+        findOrders = FindAdminOrdersUc(transactions, purchase.orderQm, AdminCustomerRepositoryImpl()),
+        getOrder = GetAdminOrderUc(
+            transactions, purchase.orderByCode, purchase.orderDetails, purchase.orderQm, purchase.payments, purchase.groups, AdminCustomerRepositoryImpl(),
+            purchase.settings, clock,
+        ),
+    )
+
     /** A logged-in user of the panel: who they are and the access token of their session. */
     class Caller(val user: User, val token: String) {
         val userId: Long get() = user.id.value
@@ -244,6 +259,9 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
                     webV1AdminCatalog(adminCatalog, mediaUrls, SITE_URL)
                     webV1AdminProducts(adminProducts, SITE_URL, mediaUrls)
                     webV1AdminInventory(adminInventory)
+                    webV1AdminOrders(adminOrders, mediaUrls)
+                    // The customer's side of an order, for the tests that follow it from the panel to «سفارش‌های من».
+                    webV1MyOrders(purchase.myOrderUseCases, mediaUrls)
                 }
             }
         }
@@ -253,6 +271,12 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
     /** Every test user (phones 09900…) with their sessions and codes. Security events stay: that table is append-only. */
     fun deleteWhatWasStored() {
         callers.clear()
+        // First the uploads and orders of the test users, found by their phones before the users go.
+        transaction(db) {
+            val userIds = UserTbl.select(UserTbl.id).where { UserTbl.phone like TEST_PHONES }.map { it[UserTbl.id].value }
+            MediaTbl.deleteWhere { MediaTbl.uploadedBy inList userIds }
+        }
+        purchase.deleteWhatWasStored()
         transaction(db) {
             val userIds = UserTbl.select(UserTbl.id).where { UserTbl.phone like TEST_PHONES }.map { it[UserTbl.id].value }
             val sessionIds = AuthSessionTbl.select(AuthSessionTbl.id).where { AuthSessionTbl.userId inList userIds }.map { it[AuthSessionTbl.id].value }

@@ -1531,7 +1531,7 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 | ۲.۰ | کانترکت 1.9.0 | M | ✅ |
 | ۲.۱ | دامنه‌ی سفارش بعد از پرداخت، و Aggregate ِ استرداد | L | ✅ |
 | ۲.۲ | read model ِ سفارش برای پنل و تایم‌لاین تازه | L | ✅ |
-| ۲.۳ | صف و جزئیات سفارش در پنل | M | ⬜ |
+| ۲.۳ | صف و جزئیات سفارش در پنل | M | ✅ |
 | ۲.۴ | یادداشت داخلی | S | ⬜ |
 | ۲.۵ | عکس قبل از ارسال، تأیید مشتری و تأیید خودکار | L | ⬜ |
 | ۲.۶ | استرداد دستی | M | ⬜ |
@@ -2065,20 +2065,28 @@ Route: 200 با AdminOrder ِ همون سفارش
 
 ---
 
-#### گام ۲.۳: صف و جزئیات سفارش در پنل · M ⬜
+#### گام ۲.۳: صف و جزئیات سفارش در پنل · M ✅
 
 **می‌سازی:** `FindAdminOrdersUc`، `GetAdminOrderUc`، `AdminOrderSorts`، `OrderByCode`؛ `webV1AdminOrders.kt` (دو GET)؛ `AdminOrderListItemHttpResponse`، `AdminOrderHttpResponse`؛ `PanelTestStack` با سفارش‌های پرداخت‌شده (از `PurchaseTestStack` یا `StoredOrders`).
 
 وابسته به: ۲.۲
 
 **تموم شده یعنی:**
-- [ ] هر فیلتر یه تست؛ `q` با کد، با فقط رقم، با موبایل حساب، با موبایل گیرنده، با اسم.
-- [ ] پیش‌فرض سفارش پرداخت‌نشده نداره؛ `status=PENDING_PAYMENT` داره.
-- [ ] `statusCounts` با `status=PROCESSING` همون عددهای بدون اون فیلتره و هر ۱۳ کلید رو داره.
-- [ ] `from`/`to` به وقت تهران (سفارش ساعت ۲۲:۰۰ ِ UTC ِ پنجشنبه تو جمعه‌ست).
-- [ ] جزئیات: همه‌ی تلاش‌های پرداخت، گروه رزرو با کدهای اعضا، `allowedTransitions` ِ درست برای هر وضعیت.
-- [ ] `OPERATOR` می‌بینه، `CATALOG_MANAGER` ← 403.
-- [ ] صفحه‌ی ۲۰ تایی سه کوئری.
+- [x] هر فیلتر یه تست؛ `q` با کد، با فقط رقم، با موبایل حساب، با موبایل گیرنده، با اسم.
+- [x] پیش‌فرض سفارش پرداخت‌نشده نداره؛ `status=PENDING_PAYMENT` داره.
+- [x] `statusCounts` با `status=PROCESSING` همون عددهای بدون اون فیلتره و هر ۱۳ کلید رو داره.
+- [x] `from`/`to` به وقت تهران (سفارش ساعت ۲۲:۰۰ ِ UTC ِ پنجشنبه تو جمعه‌ست).
+- [x] جزئیات: همه‌ی تلاش‌های پرداخت، گروه رزرو با کدهای اعضا، `allowedTransitions` ِ درست برای هر وضعیت.
+- [x] `OPERATOR` می‌بینه، `CATALOG_MANAGER` ← 403.
+- [x] صفحه‌ی ۲۰ تایی سه کوئری.
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- فیلتر `refundStatus` با جدول استرداد در گام ۲.۶ میاد (جدولش تا اون موقع نیست). `draftItems`، `notes` و `refunds` ِ `AdminOrder` تا گام‌های ۲.۵، ۲.۴ و ۲.۶ لیست خالی‌ان.
+- `q` با واژه‌ها: هر واژه باید تو `searchText` (کد، اسم و موبایل گیرنده، شهر) یا اسم و فامیل حساب باشه (`inSubQuery` روی `user_tbl`). موبایل: حساب دقیق، یا گیرنده به‌صورت یه کلمه‌ی کامل از `searchText`.
+- `statusCounts` هیچ شرط وضعیتی نداره (حتی پیش‌فرض صف)، پس تب «در انتظار پرداخت» هم عدد واقعی داره.
+- `OrderDetails` (سرویس مشترک) صفحه‌ی سفارش رو برای مشتری و پنل یکسان می‌سازه؛ `GetMyOrderUc` از اون و `OrderByCode` استفاده می‌کنه. `AdminCustomerRepository.findAll(ids)` حساب‌های کل صفحه رو یه‌جا می‌خونه.
+- «سه کوئری»: با شمارش دستورهای SQL از لاگ `SqlWithoutValuesLogger` تست شد: صفحه‌ی ۲ تایی و ۲۰ تایی هر دو ۴ `SELECT` (شمارش صفحه، ردیف‌ها با join ِ گروه رزرو، شمارنده‌ها، حساب‌ها).
+- `PanelTestStack` حالا یه `PurchaseTestStack` و `PaidOrders` (سفارش واقعی با سبد، تسویه و callback ِ درگاه آزمایشی) داره و routeهای «سفارش‌های من» رو هم سوار می‌کنه.
 
 ---
 
@@ -5992,3 +6000,4 @@ kiva {
 | ۲۶ مهر ۱۴۰۵ | ۲.۰ | Phase 2 step 2.0 | کانترکت 1.9.0 با هر ۱۶ ردیف ِ ۷.۱۰ و دو ردیف تازه (۱۷: قانون `media` و `media-feedback`؛ ۱۸: `customer.fullName` nullable). `STORE_CREDIT` از هر چهار enum رفت. YAML با snakeyaml معتبره و همه‌ی `$ref`ها پیدا می‌شن. متن همه‌ی کدهای تازه. برنچ `panel-orders` از نوک فاز ۱ |
 | ۲۶ مهر ۱۴۰۵ | ۲.۱ | Phase 2 step 2.1 | هشت رویداد تازه‌ی سفارش با payload و JSON ِ طلایی، وضعیت و متدهای عکس، ارسال، تحویل، لغو و استرداد در `Order`، `OrderTransitionPolicy`، `PreShipmentPolicy`، `OrderActionFacts`، `countsAsPurchase`، `shipForOrder`، `giveBack` با `storedStatus`، Aggregate ِ `Refund` و `RefundDomainService`. `OrderDelivered` یادداشت پنل رو هم داره. ۲۳۱۶ تست سبز |
 | ۲۶ مهر ۱۴۰۵ | ۲.۲ | Phase 2 step 2.2 | `V26` با backfill ِ `searchText` و `kind` ِ تایم‌لاین، ستون‌ها و `CHECK`های بعد از پرداخت، `trackingUrlTemplate`؛ Projector برای همه‌ی رویدادهای تازه (کم شدن `soldCount` با لغو زیر قفل ۷)، `OrderQm` و `OrderTimelineKind`، `findByCode`، `lockOrder`، `hasPurchase`. ۲۳۲۹ تست سبز |
+| ۲۶ مهر ۱۴۰۵ | ۲.۳ | Phase 2 step 2.3 | `FindAdminOrdersUc` (فیلترها، `q` به شکل کد/موبایل/واژه، روز تهران، `sort`، `statusCounts` ِ ۱۳ تایی)، `GetAdminOrderUc` (مشتری، گروه ارسال، همه‌ی تلاش‌ها، `allowedTransitions`)، `OrderByCode`، `OrderDetails`، `webV1AdminOrders.kt`، `PaidOrders`. ۲۳۴۰ تست سبز |

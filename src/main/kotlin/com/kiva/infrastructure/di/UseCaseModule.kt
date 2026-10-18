@@ -71,9 +71,13 @@ import com.kiva.application.usecase.media.MediaAttachments
 import com.kiva.application.usecase.media.usecase.command.DeleteUnattachedMediaUc
 import com.kiva.application.usecase.media.usecase.command.UploadMediaUc
 import com.kiva.application.usecase.media.usecase.query.FindUnattachedMediaUc
+import com.kiva.application.usecase.order.OrderByCode
+import com.kiva.application.usecase.order.OrderDetails
 import com.kiva.application.usecase.order.usecase.command.ExpireUnpaidOrderUc
 import com.kiva.application.usecase.order.usecase.command.ReorderUc
+import com.kiva.application.usecase.order.usecase.query.FindAdminOrdersUc
 import com.kiva.application.usecase.order.usecase.query.FindExpirableOrdersUc
+import com.kiva.application.usecase.order.usecase.query.GetAdminOrderUc
 import com.kiva.application.usecase.order.usecase.query.GetMyOrderUc
 import com.kiva.application.usecase.order.usecase.query.GetOrderSummaryUc
 import com.kiva.application.usecase.order.usecase.query.ListMyOrdersUc
@@ -262,12 +266,9 @@ val useCaseModule = module(createdAtStart = true) {
 
     // --- orders ---
     single { ListMyOrdersUc(transactionManager = get(), orderQmRepository = get(), shopSettingsRepository = get(), reservations = get(), clock = get()) }
-    single {
-        GetMyOrderUc(
-            transactionManager = get(), orderQmRepository = get(), paymentRepository = get(), shopSettingsRepository = get(), colorRepository = get(),
-            reservations = get(), clock = get(),
-        )
-    }
+    single { OrderByCode(orderQmRepository = get(), orderRepository = get()) }
+    single { OrderDetails(paymentRepository = get(), colorRepository = get(), reservations = get()) }
+    single { GetMyOrderUc(transactionManager = get(), orderByCode = get(), orderDetails = get(), shopSettingsRepository = get(), clock = get()) }
     single { ReorderUc(transactionManager = get(), orderQmRepository = get(), cartCommands = get(), cartDomainService = get()) }
     single { GetOrderSummaryUc(transactionManager = get(), orderQmRepository = get(), shopSettingsRepository = get(), reservations = get(), clock = get()) }
 
@@ -458,6 +459,15 @@ val useCaseModule = module(createdAtStart = true) {
     }
     single {
         BootstrapAdminUc(transactionManager = get(), userRepository = get(), authSessionRepository = get(), securityEventLog = get(), clock = get())
+    }
+
+    // --- admin: orders (phase 2) ---
+    single { FindAdminOrdersUc(transactionManager = get(), orderQmRepository = get(), adminCustomerRepository = get()) }
+    single {
+        GetAdminOrderUc(
+            transactionManager = get(), orderByCode = get(), orderDetails = get(), orderQmRepository = get(), paymentRepository = get(),
+            reservationGroupRepository = get(), adminCustomerRepository = get(), shopSettingsRepository = get(), clock = get(),
+        )
     }
 
     // --- admin: the change log ---

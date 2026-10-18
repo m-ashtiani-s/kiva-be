@@ -15,7 +15,6 @@ import com.kiva.application.usecase.admin.usecase.command.SetUserRolesUc
 import com.kiva.application.usecase.admin.usecase.query.FindCustomersUc
 import com.kiva.application.usecase.admin.usecase.query.GetCustomerUc
 import com.kiva.application.usecase.audit.usecase.query.ListAuditLogUc
-import com.kiva.application.usecase.media.usecase.command.UploadMediaUc
 import com.kiva.application.usecase.auth.usecase.command.LogoutUc
 import com.kiva.application.usecase.auth.usecase.command.RefreshSessionUc
 import com.kiva.application.usecase.auth.usecase.command.SendLoginCodeUc
@@ -44,6 +43,7 @@ import com.kiva.application.usecase.checkout.usecase.query.GetPaymentInitUc
 import com.kiva.application.usecase.checkout.usecase.query.GetPaymentResultUc
 import com.kiva.application.usecase.geo.usecase.query.ListCitiesOfProvinceUc
 import com.kiva.application.usecase.geo.usecase.query.ListProvincesUc
+import com.kiva.application.usecase.media.usecase.command.UploadMediaUc
 import com.kiva.application.usecase.order.usecase.command.ReorderUc
 import com.kiva.application.usecase.order.usecase.query.GetMyOrderUc
 import com.kiva.application.usecase.order.usecase.query.GetOrderSummaryUc
@@ -60,10 +60,11 @@ import com.kiva.infrastructure.config.AppConfig
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AddressUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminAuditUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminCatalogUseCases
-import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminInventoryUseCases
-import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminProductUseCases
-import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminMediaUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminCustomerUseCases
+import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminInventoryUseCases
+import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminMediaUseCases
+import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminOrderUseCases
+import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminProductUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AuthUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.CartUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.CheckoutUseCases
@@ -75,13 +76,11 @@ import com.kiva.infrastructure.httpserver.controller.httprest.web.devFakeGateway
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Addresses
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminAudit
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminCatalog
-import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminInventory
-import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminProducts
-import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminMedia
-import com.kiva.infrastructure.media.DiskMediaStorage
-import com.kiva.infrastructure.media.MediaUrls
-import io.ktor.server.http.content.staticFiles
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminCustomers
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminInventory
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminMedia
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminOrders
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminProducts
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Auth
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Cart
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Catalog
@@ -92,6 +91,8 @@ import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1MyOrders
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Payments
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Products
 import com.kiva.infrastructure.httpserver.route.healthRoutes
+import com.kiva.infrastructure.media.DiskMediaStorage
+import com.kiva.infrastructure.media.MediaUrls
 import com.kiva.infrastructure.payment.FakePaymentGateway
 import com.kiva.infrastructure.payment.PaymentProvider
 import io.ktor.http.HttpHeaders
@@ -99,6 +100,7 @@ import io.ktor.http.HttpMethod
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
+import io.ktor.server.http.content.staticFiles
 import io.ktor.server.plugins.callid.CallId
 import io.ktor.server.plugins.callid.callIdMdc
 import io.ktor.server.plugins.calllogging.CallLogging
@@ -114,6 +116,7 @@ import org.koin.ktor.ext.inject
 import org.slf4j.event.Level
 import java.util.UUID
 import kotlin.time.toKotlinDuration
+
 
 /** Every public API route lives under this prefix (from the API contract). `/health` stays outside it. */
 const val API_V1 = "/api/v1"
@@ -253,6 +256,7 @@ fun Application.configureRouting() {
         changeStatus = get(), archiveProduct = get(), addVariant = get(), updateVariant = get(), deactivateVariant = get(),
     )
     val adminInventoryUseCases = AdminInventoryUseCases(checkPanelAccess = checkPanelAccessUc, adjustInventory = get(), listAdjustments = get())
+    val adminOrderUseCases = AdminOrderUseCases(checkPanelAccess = checkPanelAccessUc, findOrders = get(), getOrder = get())
     val config by inject<AppConfig>()
 
     routing {
@@ -274,6 +278,7 @@ fun Application.configureRouting() {
             webV1AdminCatalog(adminCatalogUseCases, mediaUrls, config.shop.siteUrl)
             webV1AdminProducts(adminProductUseCases, config.shop.siteUrl, mediaUrls)
             webV1AdminInventory(adminInventoryUseCases)
+            webV1AdminOrders(adminOrderUseCases, mediaUrls)
             webV1Catalog(listColorsUc, listMaterialsUc, listCategoriesUc, getCategoryUc, mediaUrls, config.shop.siteUrl)
             webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, config.shop.siteUrl, mediaUrls)
             webV1Geo(listProvincesUc, listCitiesOfProvinceUc)

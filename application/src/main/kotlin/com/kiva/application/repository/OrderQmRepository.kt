@@ -62,6 +62,18 @@ interface OrderQmRepository {
     /** The customer has a purchase that stands (OrderStatus.countsAsPurchase): no longer their first, for «خرید اول». */
     fun hasPurchase(userId: UserId): Boolean
 
+    /**
+     * The panel's queue: the orders [filter] lets through, newest placed first or oldest (the pageable's sort, AdminOrderSorts), each with
+     * its reservation group's end while the group still holds.
+     */
+    fun findForAdmin(filter: AdminOrderFilter, pageable: Pageable): Page<AdminOrderQm>
+
+    /** How many orders [filter] lets through in each status, every status there (zero too); the filter's statuses are ignored. */
+    fun statusCounts(filter: AdminOrderFilter): Map<OrderStatus, Long>
+
+    /** Every order of [groupId], in the order they were paid (unpaid ones last). */
+    fun findOfGroup(groupId: ReservationGroupId): List<OrderQm>
+
     /** The orders held in [groupId] (RESERVED): what letting the group go releases. */
     fun findHeldIn(groupId: ReservationGroupId): List<OrderId>
 
@@ -73,4 +85,13 @@ interface OrderQmRepository {
 
     /** @property totalSpent what was paid minus what went back. @property lastOrderOn when the latest of these orders was placed. */
     data class Purchases(val ordersCount: Int, val totalSpent: Money, val lastOrderOn: Instant)
+}
+
+/**
+ * One order of the panel's queue, with what its row shows of its reservation group.
+ *
+ * @property groupHoldsUntil the group's end while it still holds its orders (HOLDING); null otherwise.
+ */
+data class AdminOrderQm(val order: OrderQm, val groupHoldsUntil: Instant?) {
+    override fun toString(): String = "AdminOrderQm(${order.code.value})"
 }

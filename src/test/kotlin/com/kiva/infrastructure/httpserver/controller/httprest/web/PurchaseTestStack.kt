@@ -31,6 +31,8 @@ import com.kiva.application.usecase.checkout.usecase.query.GetPaymentResultUc
 import com.kiva.application.usecase.discount.Discounts
 import com.kiva.application.usecase.idempotency.IdempotencyGuard
 import com.kiva.application.usecase.idempotency.usecase.command.DeleteOldIdempotencyKeysUc
+import com.kiva.application.usecase.order.OrderByCode
+import com.kiva.application.usecase.order.OrderDetails
 import com.kiva.application.usecase.order.usecase.command.ExpireUnpaidOrderUc
 import com.kiva.application.usecase.order.usecase.command.ReorderUc
 import com.kiva.application.usecase.order.usecase.query.FindExpirableOrdersUc
@@ -110,6 +112,7 @@ import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
+
 /**
  * Everything a purchase walks through, over the real stack on kiva_test: logins, the cart, the address book, checkout,
  * placing orders and coming back from the gateway, with the pretend gateway as Zarinpal and the SMS recorded. Built as the app builds it, minus Koin.
@@ -185,9 +188,13 @@ class PurchaseTestStack(val clock: MutableClock) {
 
     val getCart = GetCartUc(transactions, carts, offers, settings, reservations, discounts, clock)
 
+    // One order named by its code, and its page: the customer's and the panel's (phase 2).
+    val orderByCode = OrderByCode(orderQm, orders)
+    val orderDetails = OrderDetails(payments, ColorRepositoryImpl(), reservations)
+
     val myOrderUseCases = MyOrderUseCases(
         ListMyOrdersUc(transactions, orderQm, settings, reservations, clock),
-        GetMyOrderUc(transactions, orderQm, payments, settings, ColorRepositoryImpl(), reservations, clock),
+        GetMyOrderUc(transactions, orderByCode, orderDetails, settings, clock),
         ReorderUc(transactions, orderQm, cartCommands, cartDomain),
         getCart,
         GetMyReservationUc(transactions, reservations, clock),

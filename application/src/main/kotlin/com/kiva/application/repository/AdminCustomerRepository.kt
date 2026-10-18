@@ -17,6 +17,9 @@ interface AdminCustomerRepository {
 
     fun findById(id: UserId): User?
 
+    /** The accounts of [ids] there are, in one read (the panel's order queue names a whole page at once). */
+    fun findAll(ids: Collection<UserId>): Map<UserId, User>
+
     /**
      * What to look for. Every one of [words] must be in the phone, the first name or the last name; [phone], when the
      * whole search was one mobile number, must be the phone exactly.

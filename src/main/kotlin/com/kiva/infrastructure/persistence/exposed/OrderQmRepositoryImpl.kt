@@ -1,9 +1,13 @@
 package com.kiva.infrastructure.persistence.exposed
 
+import com.kiva.application.repository.AdminOrderFilter
+import com.kiva.application.repository.AdminOrderQm
+import com.kiva.application.repository.AdminOrderSearch
 import com.kiva.application.repository.FeedbackDecision
 import com.kiva.application.repository.OrderQm
 import com.kiva.application.repository.OrderQmRepository
 import com.kiva.application.repository.OrderTimelineKind
+import com.kiva.application.usecase.order.usecase.query.AdminOrderSorts
 import com.kiva.common.pagination.Page
 import com.kiva.common.pagination.Pageable
 import com.kiva.common.valueobject.Money
@@ -14,14 +18,18 @@ import com.kiva.domain.aggregate.order.model.valueobject.CustomerNote
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
 import com.kiva.domain.aggregate.order.model.valueobject.OrderId
 import com.kiva.domain.aggregate.order.model.valueobject.OrderStatus
+import com.kiva.domain.aggregate.order.model.valueobject.PhotoStatus
 import com.kiva.domain.aggregate.order.model.valueobject.TrackingCode
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentFailureReason
 import com.kiva.domain.aggregate.reservation.model.valueobject.ReservationGroupId
+import com.kiva.domain.aggregate.reservation.model.valueobject.ReservationGroupStatus
 import com.kiva.infrastructure.common.persistence.SortOrders
 import com.kiva.infrastructure.common.persistence.paginate
 import com.kiva.infrastructure.persistence.exposed.tbl.OrderQmTbl
-import java.time.Instant
-import java.time.ZoneOffset
+import com.kiva.infrastructure.persistence.exposed.tbl.ReservationGroupTbl
+import com.kiva.infrastructure.persistence.exposed.tbl.UserTbl
+import org.jetbrains.exposed.v1.core.JoinType
+import org.jetbrains.exposed.v1.core.LikePattern
 import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
@@ -29,13 +37,24 @@ import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.count
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greater
+import org.jetbrains.exposed.v1.core.greaterEq
 import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.inSubQuery
+import org.jetbrains.exposed.v1.core.isNotNull
+import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.core.less
 import org.jetbrains.exposed.v1.core.lessEq
+import org.jetbrains.exposed.v1.core.like
+import org.jetbrains.exposed.v1.core.lowerCase
 import org.jetbrains.exposed.v1.core.max
 import org.jetbrains.exposed.v1.core.minus
+import org.jetbrains.exposed.v1.core.not
+import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.core.sum
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
+import java.time.Instant
+import java.time.ZoneOffset
 
 /** Reads orderqm_tbl. Runs inside the use case's transaction; it never opens one itself. */
 class OrderQmRepositoryImpl : OrderQmRepository {
@@ -111,6 +130,63 @@ class OrderQmRepositoryImpl : OrderQmRepository {
             .limit(1)
             .any()
 
+    override fun findForAdmin(filter: AdminOrderFilter, pageable: Pageable): Page<AdminOrderQm> =
+        OrderQmTbl.join(ReservationGroupTbl, JoinType.LEFT, OrderQmTbl.reservationGroupId, ReservationGroupTbl.groupId)
+            .select(OrderQmTbl.columns + ReservationGroupTbl.status + ReservationGroupTbl.expiresOn)
+            .where { conditionOf(filter, statuses = filter.statuses ?: AdminOrderFilter.QUEUE_DEFAULT) }
+            .paginate(pageable, ADMIN_SORTS, tiebreaker = OrderQmTbl.id) { row ->
+                val holding = row.getOrNull(ReservationGroupTbl.status) == ReservationGroupStatus.HOLDING
+                AdminOrderQm(row.toOrderQm(), row.getOrNull(ReservationGroupTbl.expiresOn)?.toInstant()?.takeIf { holding })
+            }
+
+    override fun statusCounts(filter: AdminOrderFilter): Map<OrderStatus, Long> {
+        val count = OrderQmTbl.orderId.count()
+        return OrderQmTbl.select(OrderQmTbl.status, count)
+            .where { conditionOf(filter, statuses = null) }
+            .groupBy(OrderQmTbl.status)
+            .associate { it[OrderQmTbl.status] to it[count] }
+    }
+
+    override fun findOfGroup(groupId: ReservationGroupId): List<OrderQm> =
+        OrderQmTbl.selectAll()
+            .where { OrderQmTbl.reservationGroupId eq groupId.value }
+            .orderBy(OrderQmTbl.paidOn to SortOrder.ASC_NULLS_LAST, OrderQmTbl.orderId to SortOrder.ASC)
+            .map { it.toOrderQm() }
+
+    /**
+     * Everything [filter] asks for, the statuses only when [statuses] is given (the tabs' counts take none). A `%` or `_`
+     * typed is taken as itself. Words are looked for in searchText and in the account's names, lower-cased.
+     */
+    private fun conditionOf(filter: AdminOrderFilter, statuses: Set<OrderStatus>?): Op<Boolean> {
+        val conditions = buildList<Op<Boolean>> {
+            statuses?.let { add(OrderQmTbl.status inList it) }
+            when (val search = filter.search) {
+                null -> {}
+                is AdminOrderSearch.Code -> add(OrderQmTbl.code eq search.code.value)
+                is AdminOrderSearch.Phone -> add(
+                    (OrderQmTbl.userId inSubQuery UserTbl.select(UserTbl.id).where { UserTbl.phone eq search.phone.value }) or
+                        (OrderQmTbl.searchText like containing(" ${search.phone.value} ")),
+                )
+                is AdminOrderSearch.Words -> search.words.forEach { word ->
+                    val pattern = containing(word)
+                    val accounts = UserTbl.select(UserTbl.id).where { (UserTbl.firstName.lowerCase() like pattern) or (UserTbl.lastName.lowerCase() like pattern) }
+                    add((OrderQmTbl.searchText.lowerCase() like pattern) or (OrderQmTbl.userId inSubQuery accounts))
+                }
+            }
+            filter.shippingMethod?.let { add(OrderQmTbl.shippingMethod eq it) }
+            filter.reserved?.let { add(if (it) OrderQmTbl.reservationGroupId.isNotNull() else OrderQmTbl.reservationGroupId.isNull()) }
+            filter.awaitingPhotos?.let {
+                val awaiting = (OrderQmTbl.status eq OrderStatus.PROCESSING) and (OrderQmTbl.photoStatus eq PhotoStatus.WAITING)
+                add(if (it) awaiting else not(awaiting))
+            }
+            filter.placedFrom?.let { add(OrderQmTbl.placedOn greaterEq it.atOffset(ZoneOffset.UTC)) }
+            filter.placedBefore?.let { add(OrderQmTbl.placedOn less it.atOffset(ZoneOffset.UTC)) }
+        }
+        return conditions.reduceOrNull { all, next -> all and next } ?: Op.TRUE
+    }
+
+    private fun containing(text: String): LikePattern = LikePattern("%", ESCAPE) + LikePattern.ofLiteral(text, ESCAPE) + "%"
+
     override fun findHeldIn(groupId: ReservationGroupId): List<OrderId> =
         OrderQmTbl.select(OrderQmTbl.orderId)
             .where { (OrderQmTbl.reservationGroupId eq groupId.value) and (OrderQmTbl.status eq OrderStatus.RESERVED) }
@@ -172,4 +248,14 @@ class OrderQmRepositoryImpl : OrderQmRepository {
         },
         refunded = Money.constructFromPersisted(this[OrderQmTbl.refunded]),
     )
+
+    private companion object {
+        const val ESCAPE = '\\'
+
+        // The id breaks ties of orders placed in the same instant, the same way.
+        val ADMIN_SORTS: SortOrders = mapOf(
+            AdminOrderSorts.NEWEST to listOf(OrderQmTbl.placedOn to SortOrder.DESC, OrderQmTbl.orderId to SortOrder.DESC),
+            AdminOrderSorts.OLDEST to listOf(OrderQmTbl.placedOn to SortOrder.ASC, OrderQmTbl.orderId to SortOrder.ASC),
+        )
+    }
 }

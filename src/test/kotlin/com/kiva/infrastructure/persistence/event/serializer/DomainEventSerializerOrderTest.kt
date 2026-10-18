@@ -12,13 +12,13 @@ import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderC
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderDeliveredPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderPhotosSentPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderPlacedPayload
+import kotlinx.serialization.json.Json
+import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
-import kotlinx.serialization.json.Json
-import org.junit.jupiter.api.Nested
-import org.junit.jupiter.api.Test
 
 /** The order events' part of DomainEventSerializer; the products' and the stock's have their own tests. */
 class DomainEventSerializerOrderTest {

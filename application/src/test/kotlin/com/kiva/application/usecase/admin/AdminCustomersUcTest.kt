@@ -43,6 +43,8 @@ class AdminCustomersUcTest {
         }
 
         override fun findById(id: UserId): User? = null
+
+        override fun findAll(ids: Collection<UserId>): Map<UserId, User> = emptyMap()
     }
 
     // Nobody is found, so the purchases of nobody are asked for.

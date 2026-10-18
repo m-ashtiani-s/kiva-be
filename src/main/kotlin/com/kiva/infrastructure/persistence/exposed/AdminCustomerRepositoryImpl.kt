@@ -14,6 +14,7 @@ import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.like
 import org.jetbrains.exposed.v1.core.lowerCase
 import org.jetbrains.exposed.v1.core.or
@@ -29,6 +30,11 @@ class AdminCustomerRepositoryImpl : AdminCustomerRepository {
 
     override fun findById(id: UserId): User? =
         UserTbl.selectAll().where { UserTbl.id eq id.value }.singleOrNull()?.toUser()
+
+    override fun findAll(ids: Collection<UserId>): Map<UserId, User> {
+        if (ids.isEmpty()) return emptyMap()
+        return UserTbl.selectAll().where { UserTbl.id inList ids.map { it.value } }.map { it.toUser() }.associateBy { it.id }
+    }
 
     /**
      * The phone exactly, or every word somewhere in the phone or a name. A `%` or `_` typed is taken as itself. Names are

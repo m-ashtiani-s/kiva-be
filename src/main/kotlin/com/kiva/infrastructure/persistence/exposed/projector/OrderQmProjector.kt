@@ -34,8 +34,6 @@ import com.kiva.infrastructure.persistence.exposed.tbl.OrderQmTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.OrderTimelineEntry
 import com.kiva.infrastructure.persistence.exposed.tbl.ProductQmTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.ProductVariantQmTbl
-import java.time.Instant
-import java.time.ZoneOffset
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.minus
 import org.jetbrains.exposed.v1.core.plus
@@ -43,6 +41,8 @@ import org.jetbrains.exposed.v1.core.statements.UpdateStatement
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.update
+import java.time.Instant
+import java.time.ZoneOffset
 
 /**
  * Keeps orderqm_tbl in step with the orders' events: OrderRepositoryImpl calls [project] for each event right after
