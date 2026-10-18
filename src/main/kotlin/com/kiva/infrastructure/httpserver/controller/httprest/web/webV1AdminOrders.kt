@@ -8,6 +8,7 @@ import com.kiva.application.usecase.order.usecase.command.SetPreShipmentMediaUc
 import com.kiva.application.usecase.order.usecase.query.AdminOrderSorts
 import com.kiva.application.usecase.order.usecase.query.FindAdminOrdersUc
 import com.kiva.application.usecase.order.usecase.query.GetAdminOrderUc
+import com.kiva.application.usecase.refund.usecase.command.CreateRefundUc
 import com.kiva.common.railway.unwrapOr
 import com.kiva.domain.aggregate.user.model.valueobject.Role
 import com.kiva.infrastructure.common.http.pageable
@@ -17,11 +18,13 @@ import com.kiva.infrastructure.httpserver.auth.panelActor
 import com.kiva.infrastructure.httpserver.auth.requireRoles
 import com.kiva.infrastructure.httpserver.controller.httprest.model.request.AdminNoteHttpRequest
 import com.kiva.infrastructure.httpserver.controller.httprest.model.request.AdminPreShipmentMediaHttpRequest
+import com.kiva.infrastructure.httpserver.controller.httprest.model.request.AdminRefundHttpRequest
 import com.kiva.infrastructure.httpserver.controller.httprest.model.request.AdminSendPhotosHttpRequest
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.AdminNoteHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.AdminOrderHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.AdminOrderListHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.PreShipmentMediaHttpResponse
+import com.kiva.infrastructure.httpserver.controller.httprest.model.response.RefundHttpResponse
 import com.kiva.infrastructure.media.MediaUrls
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
@@ -39,6 +42,7 @@ class AdminOrderUseCases(
     val addNote: AddOrderNoteUc,
     val setPhotos: SetPreShipmentMediaUc,
     val sendPhotos: SendPreShipmentMediaUc,
+    val createRefund: CreateRefundUc,
 )
 
 /** The path parameter every panel order route names its order by. */
@@ -60,6 +64,7 @@ fun Route.webV1AdminOrders(useCases: AdminOrderUseCases, mediaUrls: MediaUrls) {
                 shippingMethod = params["shippingMethod"],
                 reserved = params["reserved"],
                 awaitingPhotos = params["awaitingPhotos"],
+                refundStatus = params["refundStatus"],
                 from = params["from"],
                 to = params["to"],
             )
@@ -96,6 +101,15 @@ fun Route.webV1AdminOrders(useCases: AdminOrderUseCases, mediaUrls: MediaUrls) {
             val command = SendPreShipmentMediaUc.Cmd(code, request.manual, request.channelOverride, request.message, call.panelActor())
             useCases.sendPhotos.execute(command).unwrapOr { return@post call.respondFailure(it) }
             call.respondResult(useCases.getOrder.execute(GetAdminOrderUc.Qry(code))) { AdminOrderHttpResponse.from(it, mediaUrls) }
+        }
+    }
+
+    // Money goes back: ADMIN only (contract x-roles).
+    requireRoles(useCases.checkPanelAccess, Role.ADMIN) {
+        post("/admin/orders/{$ORDER_CODE}/refunds") {
+            val request = call.receive<AdminRefundHttpRequest>()
+            val command = CreateRefundUc.Cmd(call.parameters[ORDER_CODE].orEmpty(), request.amount, request.reason, request.method, request.returnId, call.panelActor())
+            call.respondResult(useCases.createRefund.execute(command), HttpStatusCode.Created) { RefundHttpResponse.from(it) }
         }
     }
 }

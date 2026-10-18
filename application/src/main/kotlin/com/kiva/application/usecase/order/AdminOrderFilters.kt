@@ -14,6 +14,7 @@ import com.kiva.common.valueobject.IranianMobileNumber
 import com.kiva.domain.aggregate.order.model.policy.ShopCalendar
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
 import com.kiva.domain.aggregate.order.model.valueobject.OrderStatus
+import com.kiva.domain.aggregate.refund.model.valueobject.RefundStatus
 import com.kiva.domain.aggregate.settings.model.valueobject.ShippingMethodCode
 import java.time.LocalDate
 import java.time.format.DateTimeParseException
@@ -28,6 +29,7 @@ data class AdminOrderFilterQuery(
     val shippingMethod: String? = null,
     val reserved: String? = null,
     val awaitingPhotos: String? = null,
+    val refundStatus: String? = null,
     val from: String? = null,
     val to: String? = null,
 )
@@ -51,12 +53,12 @@ object AdminOrderFilters {
         Result.zip(statusesOf(query.statuses), searchOf(query.q), shippingMethodOf(query.shippingMethod), ::InputProblems) { statuses, search, method ->
             Triple(statuses, search, method)
         },
-        Result.zip(booleanOf(query.reserved, "reserved"), booleanOf(query.awaitingPhotos, "awaitingPhotos"), ::InputProblems) { reserved, awaiting ->
-            reserved to awaiting
-        },
+        Result.zip(
+            booleanOf(query.reserved, "reserved"), booleanOf(query.awaitingPhotos, "awaitingPhotos"), refundStatusOf(query.refundStatus), ::InputProblems,
+        ) { reserved, awaiting, refund -> Triple(reserved, awaiting, refund) },
         Result.zip(dayOf(query.from, "from"), dayOf(query.to, "to"), ::InputProblems) { from, to -> from to to },
         { problems -> Invalid(problems.flattenGroups()) },
-    ) { (statuses, search, method), (reserved, awaiting), (from, to) ->
+    ) { (statuses, search, method), (reserved, awaiting, refund), (from, to) ->
         if (from != null && to != null && from.isAfter(to)) return Result.failure(Invalid(listOf(Problem.DateRangeInvalid)))
         AdminOrderFilter(
             statuses = statuses,
@@ -64,6 +66,7 @@ object AdminOrderFilters {
             shippingMethod = method,
             reserved = reserved,
             awaitingPhotos = awaiting,
+            refundStatus = refund,
             placedFrom = from?.atStartOfDay(ShopCalendar.ZONE)?.toInstant(),
             placedBefore = to?.plusDays(1)?.atStartOfDay(ShopCalendar.ZONE)?.toInstant(),
         )
@@ -102,6 +105,13 @@ object AdminOrderFilters {
         else -> Result.failure(Problem.BooleanInvalid(parameter))
     }
 
+    private fun refundStatusOf(raw: String?): Result<RefundStatus?, ResultFailure> = when (raw?.trim()?.ifEmpty { null }) {
+        null -> Result.success(null)
+        RefundStatus.PENDING.name -> Result.success(RefundStatus.PENDING)
+        RefundStatus.PROCESSING.name -> Result.success(RefundStatus.PROCESSING)
+        else -> Result.failure(Problem.RefundStatusInvalid)
+    }
+
     private fun dayOf(raw: String?, parameter: String): Result<LocalDate?, ResultFailure> {
         val text = raw?.normalizeDigits()?.trim()?.ifEmpty { null } ?: return Result.success(null)
         return try {
@@ -126,5 +136,7 @@ object AdminOrderFilters {
         data class DateInvalid(val parameter: String) : Problem("DATE_INVALID", parameter)
 
         data object DateRangeInvalid : Problem("DATE_RANGE_INVALID", "to")
+
+        data object RefundStatusInvalid : Problem("REFUND_STATUS_FILTER_INVALID", "refundStatus")
     }
 }

@@ -38,6 +38,7 @@ import kotlin.coroutines.cancellation.CancellationException
  * | «your account moved» to the old phone | [FarazSmsConfig.phoneChangedPattern], optional | `ending` (the new number's last 4 digits) |
  * | «پرداخت موفق» | [FarazSmsConfig.orderPaidPattern], optional | `order` (the order's code, `KV-218340`) |
  * | «عکس کیفت فرستاده شد» | [FarazSmsConfig.photosSentPattern], optional | `order` |
+ * | «پولت برگشت» | [FarazSmsConfig.refundCompletedPattern], optional | `order` |
  *
  * A message without its pattern is not sent, and a WARN says so: the panel approves each pattern before it can be used,
  * and the code that sends the message goes on all the same (the phone still changes, the order is still paid).
@@ -64,6 +65,7 @@ class FarazSmsSender(private val config: FarazSmsConfig, engine: HttpClientEngin
         if (config.phoneChangedPattern == null) logger.warn("Faraz SMS: no pattern for the «your account moved» notice (KIVA_FARAZ_PHONE_CHANGED_PATTERN); it won't be sent")
         if (config.orderPaidPattern == null) logger.warn("Faraz SMS: no pattern for «پرداخت موفق» (KIVA_FARAZ_ORDER_PAID_PATTERN); it won't be sent")
         if (config.photosSentPattern == null) logger.warn("Faraz SMS: no pattern for «عکس کیفت فرستاده شد» (KIVA_FARAZ_PHOTOS_SENT_PATTERN); it won't be sent")
+        if (config.refundCompletedPattern == null) logger.warn("Faraz SMS: no pattern for «پولت برگشت» (KIVA_FARAZ_REFUND_COMPLETED_PATTERN); it won't be sent")
     }
 
     /** How long to wait for the provider: to connect, and for the whole call. */
@@ -92,9 +94,14 @@ class FarazSmsSender(private val config: FarazSmsConfig, engine: HttpClientEngin
         send("«عکس کیفت فرستاده شد» of order ${orderCode.value}", pattern, to, mapOf("order" to orderCode.value))
     }
 
+    override suspend fun sendRefundCompleted(to: IranianMobileNumber, orderCode: OrderCode) {
+        val pattern = config.refundCompletedPattern ?: return notSent("«پولت برگشت» of order ${orderCode.value}", to)
+        send("«پولت برگشت» of order ${orderCode.value}", pattern, to, mapOf("order" to orderCode.value))
+    }
+
     override fun toString(): String =
         "FarazSmsSender(baseUrl=${config.baseUrl}, line=${config.lineNumber}, codePattern=${config.codePattern}, " +
-            "phoneChangedPattern=${config.phoneChangedPattern}, orderPaidPattern=${config.orderPaidPattern}, photosSentPattern=${config.photosSentPattern})"
+            "phoneChangedPattern=${config.phoneChangedPattern}, orderPaidPattern=${config.orderPaidPattern}, photosSentPattern=${config.photosSentPattern}, refundCompletedPattern=${config.refundCompletedPattern})"
 
     // ============ inside ============
 
@@ -158,6 +165,7 @@ class FarazSmsSender(private val config: FarazSmsConfig, engine: HttpClientEngin
  * @property phoneChangedPattern optional; its variable is `ending`.
  * @property orderPaidPattern optional; its variable is `order`.
  * @property photosSentPattern optional; its variable is `order`.
+ * @property refundCompletedPattern optional; its variable is `order`.
  */
 class FarazSmsConfig(
     val baseUrl: String,
@@ -167,6 +175,7 @@ class FarazSmsConfig(
     val phoneChangedPattern: String? = null,
     val orderPaidPattern: String? = null,
     val photosSentPattern: String? = null,
+    val refundCompletedPattern: String? = null,
 ) {
     init {
         require(baseUrl.matches(Regex("https?://[^/\\s]+(/[^\\s]*)?")) && !baseUrl.endsWith("/")) {
@@ -174,14 +183,14 @@ class FarazSmsConfig(
         }
         require(apiKey.isNotBlank() && apiKey.none(Char::isWhitespace)) { "KIVA_FARAZ_API_KEY is empty or has spaces in it" }
         require(lineNumber.matches(Regex("\\+?[0-9]{4,20}"))) { "kiva.sms.faraz.lineNumber must be a line number, was '$lineNumber'" }
-        listOfNotNull(codePattern, phoneChangedPattern, orderPaidPattern, photosSentPattern).forEach { pattern ->
+        listOfNotNull(codePattern, phoneChangedPattern, orderPaidPattern, photosSentPattern, refundCompletedPattern).forEach { pattern ->
             require(pattern.matches(Regex("[A-Za-z0-9_-]{2,64}"))) { "A Faraz SMS pattern code must be letters and digits, was '$pattern'" }
         }
     }
 
     override fun toString(): String =
         "FarazSmsConfig(baseUrl=$baseUrl, apiKey=<hidden>, lineNumber=$lineNumber, codePattern=$codePattern, " +
-            "phoneChangedPattern=$phoneChangedPattern, orderPaidPattern=$orderPaidPattern, photosSentPattern=$photosSentPattern)"
+            "phoneChangedPattern=$phoneChangedPattern, orderPaidPattern=$orderPaidPattern, photosSentPattern=$photosSentPattern, refundCompletedPattern=$refundCompletedPattern)"
 }
 
 /** The provider didn't take the SMS. Its message has no key, code or whole number in it. */

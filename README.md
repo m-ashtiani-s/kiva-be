@@ -68,6 +68,7 @@ whose pattern isn't set is not sent, and a `WARN` says so.
 | `KIVA_FARAZ_PHONE_CHANGED_PATTERN` | Optional: «your account moved to the number ending in …», to the old phone after a phone change. Its variable is `ending`. |
 | `KIVA_FARAZ_ORDER_PAID_PATTERN` | Optional: «پرداخت موفق». Its variable is `order` (the order's code, `KV-218340`); the link to follow it goes in the pattern's own text, `https://kiva.ir/track?order=%order%`. |
 | `KIVA_FARAZ_PHOTOS_SENT_PATTERN` | Optional: «عکس کیفت فرستاده شد», after the operator records the photos as sent. Its variable is `order`; the link to the order's page goes in the pattern's own text. |
+| `KIVA_FARAZ_REFUND_COMPLETED_PATTERN` | Optional: «پولت برگشت», when a refund is recorded as completed. Its variable is `order`. |
 | `KIVA_FARAZ_BASE_URL` | The web service's address, default `https://api.iranpayamak.com`. |
 
 A code that can't be sent makes `POST /auth/otp/send` answer 500, and the log says why (the provider's own words, with

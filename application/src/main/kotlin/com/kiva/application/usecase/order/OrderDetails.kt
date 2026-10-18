@@ -3,6 +3,7 @@ package com.kiva.application.usecase.order
 import com.kiva.application.dto.OrderDetailDto
 import com.kiva.application.dto.OrderSummaryDto
 import com.kiva.application.dto.PreShipmentMediaDto
+import com.kiva.application.dto.RefundDto
 import com.kiva.application.repository.OrderQm
 import com.kiva.application.usecase.reservation.Reservations
 import com.kiva.domain.aggregate.color.repository.ColorRepository
@@ -12,6 +13,7 @@ import com.kiva.domain.aggregate.media.repository.MediaRepository
 import com.kiva.domain.aggregate.payment.entity.Payment
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentStatus
 import com.kiva.domain.aggregate.payment.repository.PaymentRepository
+import com.kiva.domain.aggregate.refund.repository.RefundRepository
 import com.kiva.domain.aggregate.settings.entity.ShopSettings
 import java.time.Instant
 
@@ -25,6 +27,7 @@ class OrderDetails(
     private val colorRepository: ColorRepository,
     private val reservations: Reservations,
     private val mediaRepository: MediaRepository,
+    private val refundRepository: RefundRepository,
 ) {
 
     /** [order]'s page at [now], with the shop's [settings] of now (the names of its shipping method and gateway). */
@@ -63,12 +66,14 @@ class OrderDetails(
                 )
             },
             totals = order.totals,
+            refunded = order.refunded,
             payment = latest?.let { paymentOf(it, settings) },
             messenger = order.messenger.let { OrderDetailDto.Messenger(it.channel, it.phone.value, it.username, it.note) },
             photos = PreShipmentMediaDto.of(order, media),
             timeline = order.timeline.map { OrderDetailDto.TimelineEntry(it.kind, it.status, it.at, it.failureReason, it.note, it.amount) },
             customerNote = order.customerNote?.value,
             gift = order.gift?.let { OrderDetailDto.Gift(it.message, it.hidePrices) },
+            refunds = refundRepository.findAllOf(order.orderId).map(RefundDto::from),
         )
     }
 

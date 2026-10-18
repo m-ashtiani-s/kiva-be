@@ -38,4 +38,10 @@ interface SmsSender {
      * Throws like [sendCode].
      */
     suspend fun sendPhotosSent(to: IranianMobileNumber, orderCode: OrderCode)
+
+    /**
+     * «پولت برگشت»: a refund of the order [orderCode] was completed, the money sent back to the customer. Sent after the
+     * refund is recorded as completed; when it fails, only the log knows. Throws like [sendCode].
+     */
+    suspend fun sendRefundCompleted(to: IranianMobileNumber, orderCode: OrderCode)
 }

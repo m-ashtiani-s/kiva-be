@@ -68,7 +68,7 @@ data class AdminOrderListItemHttpResponse(
 
 /**
  * Contract schema `AdminOrder`: every field of the customer's page (OrderDetail, [OrderDetailHttpResponse]) and the
- * panel's own: the draft of photos only the panel sees, every attempt to pay, the notes. Refunds come with step 2.6.
+ * panel's own: the draft of photos only the panel sees, every attempt to pay, the notes.
  */
 @Serializable
 data class AdminOrderHttpResponse(
@@ -99,11 +99,11 @@ data class AdminOrderHttpResponse(
     val gift: OrderGiftHttpResponse?,
     val returns: List<JsonObject>,
     val invoiceUrl: String?,
+    val refunds: List<RefundHttpResponse>,
     // ---- AdminOrder ----
     val customer: AdminOrderCustomerHttpResponse,
     val shipmentGroup: AdminShipmentGroupHttpResponse?,
     val payments: List<OrderPaymentInfoHttpResponse>,
-    val refunds: List<JsonObject>,
     val notes: List<AdminNoteHttpResponse>,
     val allowedTransitions: List<String>,
     val draftItems: List<OrderMediaItemHttpResponse>,
@@ -139,10 +139,10 @@ data class AdminOrderHttpResponse(
                 gift = page.gift,
                 returns = page.returns,
                 invoiceUrl = page.invoiceUrl,
+                refunds = page.refunds,
                 customer = order.customer.let { AdminOrderCustomerHttpResponse(it.id, it.fullName, it.phone, it.ordersCount) },
                 shipmentGroup = order.shipmentGroup?.let { AdminShipmentGroupHttpResponse(it.code, it.orderCodes, it.releaseAt.toString()) },
                 payments = order.payments.map(OrderPaymentInfoHttpResponse::from),
-                refunds = emptyList(),
                 notes = order.notes.map(AdminNoteHttpResponse::from),
                 allowedTransitions = order.allowedTransitions.map { it.name }.sorted(),
                 draftItems = order.detail.photos.draft.map { OrderMediaItemHttpResponse.from(it, urls) },

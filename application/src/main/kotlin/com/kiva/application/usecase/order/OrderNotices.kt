@@ -20,6 +20,9 @@ class OrderNotices(private val smsSender: SmsSender) {
     /** «عکس کیفت فرستاده شد». */
     suspend fun photosSent(to: IranianMobileNumber?, orderCode: OrderCode) = send("«عکس کیفت فرستاده شد»", to, orderCode) { smsSender.sendPhotosSent(it, orderCode) }
 
+    /** «پولت برگشت». */
+    suspend fun refundCompleted(to: IranianMobileNumber?, orderCode: OrderCode) = send("«پولت برگشت»", to, orderCode) { smsSender.sendRefundCompleted(it, orderCode) }
+
     private suspend fun send(what: String, to: IranianMobileNumber?, orderCode: OrderCode, sending: suspend (IranianMobileNumber) -> Unit) {
         if (to == null) {
             logger.warn("OrderNotices: $what of order ${orderCode.value} not sent, its account is gone")

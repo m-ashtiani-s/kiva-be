@@ -14,21 +14,25 @@ import java.time.Instant
  * One order's page (the contract's OrderDetail): its card, and everything it was placed with, as it was then. Without
  * the Persian words: the labels of the timeline, the address's full text and the waiting messages are the HTTP layer's.
  *
+ * @property refunded what went back to the customer: its completed refunds (`totals.refunded`).
  * @property payment its latest attempt to pay; null for an order that had nothing to pay.
  * @property photos the photos before shipping: the batch sent, and the operator's draft (the panel's only).
  * @property timeline one entry per event the customer sees, oldest first.
+ * @property refunds every refund of the order, oldest first, with its status and the note the customer sees.
  */
 data class OrderDetailDto(
     val summary: OrderSummaryDto,
     val items: List<Item>,
     val address: Address,
     val totals: OrderTotals,
+    val refunded: Money,
     val payment: Payment?,
     val messenger: Messenger,
     val photos: PreShipmentMediaDto,
     val timeline: List<TimelineEntry>,
     val customerNote: String?,
     val gift: Gift?,
+    val refunds: List<RefundDto>,
 ) {
     /**
      * One line, as bought. The color's [Color.isLight] and [Color.sortOrder] are the palette's now; its name and hex

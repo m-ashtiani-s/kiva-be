@@ -26,6 +26,7 @@ import com.kiva.domain.aggregate.reservation.model.valueobject.ReservationGroupS
 import com.kiva.infrastructure.common.persistence.SortOrders
 import com.kiva.infrastructure.common.persistence.paginate
 import com.kiva.infrastructure.persistence.exposed.tbl.OrderQmTbl
+import com.kiva.infrastructure.persistence.exposed.tbl.RefundTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.ReservationGroupTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.UserTbl
 import org.jetbrains.exposed.v1.core.JoinType
@@ -185,6 +186,9 @@ class OrderQmRepositoryImpl : OrderQmRepository {
             filter.awaitingPhotos?.let {
                 val awaiting = (OrderQmTbl.status eq OrderStatus.PROCESSING) and (OrderQmTbl.photoStatus eq PhotoStatus.WAITING)
                 add(if (it) awaiting else not(awaiting))
+            }
+            filter.refundStatus?.let { status ->
+                add(OrderQmTbl.orderId inSubQuery RefundTbl.select(RefundTbl.orderId).where { RefundTbl.status eq status })
             }
             filter.placedFrom?.let { add(OrderQmTbl.placedOn greaterEq it.atOffset(ZoneOffset.UTC)) }
             filter.placedBefore?.let { add(OrderQmTbl.placedOn less it.atOffset(ZoneOffset.UTC)) }

@@ -14,6 +14,9 @@ interface RefundRepository {
     /** Stores a new refund. */
     fun add(refund: Refund)
 
+    /** The order [id] refunds, read without a lock (to lock the order's row first); null when there is no such refund. */
+    fun findOrderOf(id: RefundId): OrderId?
+
     /** Locks the refund's row and reads it; null when there is none. */
     fun lock(id: RefundId): Refund?
 

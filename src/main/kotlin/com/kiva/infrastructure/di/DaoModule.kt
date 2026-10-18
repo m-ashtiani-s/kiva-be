@@ -32,6 +32,8 @@ import com.kiva.domain.aggregate.payment.repository.PaymentIdGenerator
 import com.kiva.domain.aggregate.payment.repository.PaymentRepository
 import com.kiva.domain.aggregate.product.repository.ProductIdGenerator
 import com.kiva.domain.aggregate.product.repository.ProductRepository
+import com.kiva.domain.aggregate.refund.repository.RefundIdGenerator
+import com.kiva.domain.aggregate.refund.repository.RefundRepository
 import com.kiva.domain.aggregate.reservation.repository.ReservationGroupIdGenerator
 import com.kiva.domain.aggregate.reservation.repository.ReservationGroupRepository
 import com.kiva.domain.aggregate.session.repository.AuthSessionRepository
@@ -69,6 +71,8 @@ import com.kiva.infrastructure.persistence.exposed.PaymentRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ProductIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.ProductQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ProductRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.RefundIdGeneratorImpl
+import com.kiva.infrastructure.persistence.exposed.RefundRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ReservationGroupIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.ReservationGroupRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.SecurityEventLogImpl
@@ -105,6 +109,8 @@ val daoModule = module(createdAtStart = true) {
     single<OfferQmRepository> { OfferQmRepositoryImpl() }
     single<OrderRepository> { OrderRepositoryImpl() }
     single<OrderNoteRepository> { OrderNoteRepositoryImpl() }
+    single<RefundRepository> { RefundRepositoryImpl() }
+    single<RefundIdGenerator> { RefundIdGeneratorImpl() }
     single<OrderIdGenerator> { OrderIdGeneratorImpl() }
     single<OrderQmRepository> { OrderQmRepositoryImpl() }
     single<PaymentRepository> { PaymentRepositoryImpl() }

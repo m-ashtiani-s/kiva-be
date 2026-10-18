@@ -175,6 +175,9 @@ class RecordingSmsSender : SmsSender {
     /** «عکس کیفت فرستاده شد» messages, as (phone, order). */
     val photosSent: MutableList<Pair<IranianMobileNumber, OrderCode>> = Collections.synchronizedList(mutableListOf())
 
+    /** «پولت برگشت» messages, as (phone, order). */
+    val refundsCompleted: MutableList<Pair<IranianMobileNumber, OrderCode>> = Collections.synchronizedList(mutableListOf())
+
     @Volatile
     var down = false
 
@@ -196,5 +199,10 @@ class RecordingSmsSender : SmsSender {
     override suspend fun sendPhotosSent(to: IranianMobileNumber, orderCode: OrderCode) {
         check(!down) { "the SMS provider is down" }
         photosSent += to to orderCode
+    }
+
+    override suspend fun sendRefundCompleted(to: IranianMobileNumber, orderCode: OrderCode) {
+        check(!down) { "the SMS provider is down" }
+        refundsCompleted += to to orderCode
     }
 }

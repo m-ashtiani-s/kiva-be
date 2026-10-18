@@ -85,6 +85,7 @@ import com.kiva.infrastructure.persistence.exposed.OrderIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.OrderQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.OrderRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.PaymentRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.RefundRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ReservationGroupIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.ReservationGroupRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ShopSettingsRepositoryImpl
@@ -193,7 +194,8 @@ class PurchaseTestStack(val clock: MutableClock) {
 
     // One order named by its code, and its page: the customer's and the panel's (phase 2).
     val orderByCode = OrderByCode(orderQm, orders)
-    val orderDetails = OrderDetails(payments, ColorRepositoryImpl(), reservations, MediaRepositoryImpl())
+    val refunds = RefundRepositoryImpl()
+    val orderDetails = OrderDetails(payments, ColorRepositoryImpl(), reservations, MediaRepositoryImpl(), refunds)
     val orderNotices = OrderNotices(auth.sms)
 
     val myOrderUseCases = MyOrderUseCases(

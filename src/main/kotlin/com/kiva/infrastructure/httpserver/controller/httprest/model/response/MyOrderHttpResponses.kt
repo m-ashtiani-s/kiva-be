@@ -4,6 +4,7 @@ import com.kiva.application.dto.OrderDetailDto
 import com.kiva.application.dto.OrderListDto
 import com.kiva.application.dto.PreShipmentMediaDto
 import com.kiva.application.usecase.order.usecase.command.ReorderUc
+import com.kiva.common.valueobject.Money
 import com.kiva.domain.aggregate.order.model.valueobject.OrderTotals
 import com.kiva.infrastructure.common.http.PageMetaHttpResponse
 import com.kiva.infrastructure.media.MediaUrls
@@ -64,6 +65,7 @@ data class OrderDetailHttpResponse(
     // ReturnRequest objects, from the returns phase on.
     val returns: List<JsonObject>,
     val invoiceUrl: String?,
+    val refunds: List<RefundHttpResponse>,
 ) {
     companion object {
         fun from(order: OrderDetailDto, urls: MediaUrls): OrderDetailHttpResponse {
@@ -86,7 +88,7 @@ data class OrderDetailHttpResponse(
                 actions = card.actions,
                 items = order.items.map { OrderItemHttpResponse.from(it, urls) },
                 address = OrderAddressHttpResponse.from(order.address),
-                totals = OrderTotalsHttpResponse.from(order.totals),
+                totals = OrderTotalsHttpResponse.from(order.totals, order.refunded),
                 payment = order.payment?.let(OrderPaymentInfoHttpResponse::from),
                 preShipmentMediaDetail = PreShipmentMediaHttpResponse.from(order.photos, order.messenger, urls),
                 timeline = order.timeline.map { entry ->
@@ -101,6 +103,7 @@ data class OrderDetailHttpResponse(
                 gift = order.gift?.let { OrderGiftHttpResponse(wrap = false, message = it.message) },
                 returns = emptyList(),
                 invoiceUrl = null,
+                refunds = order.refunds.map(RefundHttpResponse::from),
             )
         }
     }
@@ -174,7 +177,7 @@ data class OrderAddressHttpResponse(
     }
 }
 
-/** Contract schema `OrderTotals`. No refunds or change requests yet. */
+/** Contract schema `OrderTotals`. [refunded] is what the completed refunds gave back; no change requests yet (balanceDue 0). */
 @Serializable
 data class OrderTotalsHttpResponse(
     val itemsCompareAtTotal: Long,
@@ -191,7 +194,7 @@ data class OrderTotalsHttpResponse(
     val currency: String,
 ) {
     companion object {
-        fun from(totals: OrderTotals) = OrderTotalsHttpResponse(
+        fun from(totals: OrderTotals, refunded: Money) = OrderTotalsHttpResponse(
             itemsCompareAtTotal = totals.itemsCompareAtTotal.toman,
             productDiscount = totals.productDiscount.toman,
             subtotal = totals.subtotal.toman,
@@ -201,7 +204,7 @@ data class OrderTotalsHttpResponse(
             shippingFreeReason = totals.shippingFreeReason?.name,
             giftWrapCost = 0,
             payable = totals.payable.toman,
-            refunded = 0,
+            refunded = refunded.toman,
             balanceDue = 0,
             currency = PriceInfoHttpResponse.TOMAN,
         )

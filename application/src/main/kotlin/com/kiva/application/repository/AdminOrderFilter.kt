@@ -3,6 +3,7 @@ package com.kiva.application.repository
 import com.kiva.common.valueobject.IranianMobileNumber
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
 import com.kiva.domain.aggregate.order.model.valueobject.OrderStatus
+import com.kiva.domain.aggregate.refund.model.valueobject.RefundStatus
 import com.kiva.domain.aggregate.settings.model.valueobject.ShippingMethodCode
 import java.time.Instant
 
@@ -13,6 +14,7 @@ import java.time.Instant
  *   expired ones ([QUEUE_DEFAULT]).
  * @property reserved true: in a reservation group (held still, or let go); false: in none.
  * @property awaitingPhotos true: being prepared with its photos waiting to be sent (PROCESSING and WAITING); false: not that.
+ * @property refundStatus orders with a refund in this status (PENDING or PROCESSING): the queue of refunds to do.
  * @property placedFrom placed at or after; @property placedBefore placed before (both from Tehran days).
  */
 data class AdminOrderFilter(
@@ -21,6 +23,7 @@ data class AdminOrderFilter(
     val shippingMethod: ShippingMethodCode? = null,
     val reserved: Boolean? = null,
     val awaitingPhotos: Boolean? = null,
+    val refundStatus: RefundStatus? = null,
     val placedFrom: Instant? = null,
     val placedBefore: Instant? = null,
 ) {

@@ -1534,7 +1534,7 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 | ۲.۳ | صف و جزئیات سفارش در پنل | M | ✅ |
 | ۲.۴ | یادداشت داخلی | S | ✅ |
 | ۲.۵ | عکس قبل از ارسال، تأیید مشتری و تأیید خودکار | L | ✅ |
-| ۲.۶ | استرداد دستی | M | ⬜ |
+| ۲.۶ | استرداد دستی | M | ✅ |
 | ۲.۷ | تغییر وضعیت از پنل و لغو (پنل و مشتری) | L | ⬜ |
 | ۲.۸ | ارسال (تکی و گروهی) و «تحویل شد» | L | ⬜ |
 | ۲.۹ | رهگیری: مهمان، روزانه و «رهگیری‌های من» | M | ⬜ |
@@ -2141,7 +2141,7 @@ Route: 200 با AdminOrder ِ همون سفارش
 
 ---
 
-#### گام ۲.۶: استرداد دستی · M ⬜
+#### گام ۲.۶: استرداد دستی · M ✅
 
 **می‌سازی:** `V28__refunds.sql`؛ `RefundRepositoryImpl`، `RefundIdGeneratorImpl`؛ `CreateRefundUc`، `UpdateRefundUc`؛ `webV1AdminRefunds.kt` و route ِ ایجاد در `webV1AdminOrders.kt`؛ `SmsSender.sendRefundCompleted`؛ `RefundHttpResponse`، `RefundTexts`.
 
@@ -2151,12 +2151,19 @@ Route: 200 با AdminOrder ِ همون سفارش
 - چرا قفل ردیف سفارش (۹) و نه فقط قفل استردادها؟ دو استرداد همزمان برای سفارشی که هنوز هیچ استردادی نداره، هیچ ردیفی برای قفل کردن ندارن؛ ردیف سفارش همیشه هست.
 
 **تموم شده یعنی:**
-- [ ] ثبت ← `201 PENDING` با `expectedBy`؛ بیشتر از قابل استرداد ← `400 REFUND_EXCEEDS_PAID` با `refundable`.
-- [ ] دو استرداد همزمان که هر کدوم به‌تنهایی جا می‌شه ولی با هم نه، ۲۰ بار ← یکی `201` و یکی `400`، جمع هیچ‌وقت بیشتر از پرداخت نیست.
-- [ ] `PATCH`: هر انتقال مجاز، و `COMPLETED` بدون `referenceId` ← ۴۰۰؛ `COMPLETED` ← `refunded` ِ سفارش بالا می‌ره، ردیف تایم‌لاین، پیامک؛ دوباره `COMPLETED` ← `422`.
-- [ ] `OPERATOR` ← 403 روی هر دو.
-- [ ] لاگ تغییرات بدون شماره‌ی پیگیری؛ اسکن لاگ برنامه هم شماره‌ی پیگیری رو پیدا نمی‌کنه.
-- [ ] خرابکاری: حذف قفل ۹ ← تست همزمانی قرمز؛ حذف چک «غیر FAILED» ← تست جمع قرمز.
+- [x] ثبت ← `201 PENDING` با `expectedBy`؛ بیشتر از قابل استرداد ← `400 REFUND_EXCEEDS_PAID` با `refundable`.
+- [x] دو استرداد همزمان که هر کدوم به‌تنهایی جا می‌شه ولی با هم نه، ۲۰ بار ← یکی `201` و یکی `400`، جمع هیچ‌وقت بیشتر از پرداخت نیست.
+- [x] `PATCH`: هر انتقال مجاز، و `COMPLETED` بدون `referenceId` ← ۴۰۰؛ `COMPLETED` ← `refunded` ِ سفارش بالا می‌ره، ردیف تایم‌لاین، پیامک؛ دوباره `COMPLETED` ← `422`.
+- [x] `OPERATOR` ← 403 روی هر دو.
+- [x] لاگ تغییرات بدون شماره‌ی پیگیری؛ اسکن لاگ برنامه هم شماره‌ی پیگیری رو پیدا نمی‌کنه.
+- [x] خرابکاری: حذف قفل ۹ ← تست همزمانی قرمز؛ حذف چک «غیر FAILED» ← تست جمع قرمز.
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- **ترتیب قفل در `UpdateRefundUc` عوض شد:** اول `orderId` ِ استرداد بی‌قفل خونده می‌شه (`RefundRepository.findOrderOf`)، بعد ردیف سفارش (قفل ۹)، بعد ردیف استرداد. ترتیب «استرداد، بعد سفارش» ِ ۷.۷ با `CreateRefundUc` (سفارش، بعد استردادها) می‌تونست بن‌بست بسازه.
+- `CreateRefundUc` و `UpdateRefundUc` خود `RefundDto` رو برمی‌گردونن (مثل `AdminNoteDto`). `PROCESSING` ِ دوباره بی‌اثره و لاگ نمی‌ذاره؛ `COMPLETED`/`FAILED` ِ دوباره ۴۲۲.
+- `OrderDetail.refunds` و `totals.refunded` (از read model) همین گام واقعی شدن، هم برای مشتری هم پنل. فیلتر `refundStatus` ِ صف (`REFUND_STATUS_FILTER_INVALID`) هم اینجا اضافه شد.
+- ستون `source` در Exposed `refundSource` اسم گرفته (`source` اسم یه عضو `Table` ـه).
+- خرابکاری: حذف قفل ۹ ← `two refunds that fit alone but not together, opened at once 20 times …` قرمز؛ شمردن استرداد `FAILED` ← `RefundDomainServiceTest … 1,500,000 is still refundable` و `a failed refund gives its amount back …` قرمز.
 
 ---
 
@@ -6017,3 +6024,4 @@ kiva {
 | ۲۶ مهر ۱۴۰۵ | ۲.۳ | Phase 2 step 2.3 | `FindAdminOrdersUc` (فیلترها، `q` به شکل کد/موبایل/واژه، روز تهران، `sort`، `statusCounts` ِ ۱۳ تایی)، `GetAdminOrderUc` (مشتری، گروه ارسال، همه‌ی تلاش‌ها، `allowedTransitions`)، `OrderByCode`، `OrderDetails`، `webV1AdminOrders.kt`، `PaidOrders`. ۲۳۴۰ تست سبز |
 | ۲۶ مهر ۱۴۰۵ | ۲.۴ | Phase 2 step 2.4 | `V27` (فقط اضافه، با trigger)، `OrderNote`، `AddOrderNoteUc` با لاگ `ORDER_NOTE_ADDED` بدون متن، یادداشت‌ها با اسم نویسنده در `GetAdminOrderUc`، `POST …/notes`. ۲۳۴۵ تست سبز |
 | ۲۶ مهر ۱۴۰۵ | ۲.۵ | Phase 2 step 2.5 | پیش‌نویس عکس (`PUT`)، ثبت ارسال دستی (`send`، `MANUAL_ONLY`، `PHOTOS_INCOMPLETE`)، عکس‌ها و «همونه!» ِ مشتری، job ِ تأیید خودکار، پیامک «عکس کیفت فرستاده شد» (مسیر کامل پیامک)، `PreShipmentMedia` و کارت واقعی، تایم‌لاین از `kind`. ۲۳۵۳ تست سبز |
+| ۲۶ مهر ۱۴۰۵ | ۲.۶ | Phase 2 step 2.6 | `V28`، `RefundRepositoryImpl`، `CreateRefundUc` (قفل ۹، `REFUND_EXCEEDS_PAID`) و `UpdateRefundUc` (`REFERENCE_ID_REQUIRED`، `OrderRefunded`)، `webV1AdminRefunds.kt`، پیامک «پولت برگشت»، `refunds` و `totals.refunded` ِ واقعی، فیلتر `refundStatus`. دو خرابکاری قرمز. ۲۳۵۹ تست سبز |

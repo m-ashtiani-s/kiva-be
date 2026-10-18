@@ -39,6 +39,8 @@ enum class AuditAction {
     ORDER_NOTE_ADDED,
     ORDER_MEDIA_SET,
     ORDER_PHOTO_SENT,
+    REFUND_CREATED,
+    REFUND_UPDATED,
 }
 
 /** The kind of thing a panel write changed: the contract's AuditEntityType, value for value. */
