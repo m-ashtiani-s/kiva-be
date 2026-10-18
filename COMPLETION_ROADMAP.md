@@ -1536,7 +1536,7 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 | ۲.۵ | عکس قبل از ارسال، تأیید مشتری و تأیید خودکار | L | ✅ |
 | ۲.۶ | استرداد دستی | M | ✅ |
 | ۲.۷ | تغییر وضعیت از پنل و لغو (پنل و مشتری) | L | ✅ |
-| ۲.۸ | ارسال (تکی و گروهی) و «تحویل شد» | L | ⬜ |
+| ۲.۸ | ارسال (تکی و گروهی) و «تحویل شد» | L | ✅ |
 | ۲.۹ | رهگیری: مهمان، روزانه و «رهگیری‌های من» | M | ⬜ |
 | ۲.۱۰ | «سفارش‌های من» کامل و آمار مشتری | M | ⬜ |
 | ۲.۱۱ | ریویو، حمله‌ی آزمایشی و دور با پنل | M | ⬜ |
@@ -2197,22 +2197,31 @@ Route: 200 با AdminOrder ِ همون سفارش
 
 ---
 
-#### گام ۲.۸: ارسال (تکی و گروهی) و «تحویل شد» · L ⬜
+#### گام ۲.۸: ارسال (تکی و گروهی) و «تحویل شد» · L ✅
 
 **می‌سازی:** `ShipOrderUc` (تکی، گروهی، اصلاح)؛ `DELIVERED` در `ChangeOrderStatusUc`؛ `SmsSender.sendOrderShipped`، `sendOrderDelivered`؛ route؛ `trackingUrl` از تنظیمات؛ `ShipmentHttpResponse` ِ واقعی.
 
 وابسته به: ۲.۵ و ۲.۷
 
 **تموم شده یعنی:**
-- [ ] ارسال سفارش تأییدشده ← `SHIPPED`، `onHand` و `reserved` با هم کم شدن، پیامک با کد، تو رهگیری روزانه.
-- [ ] `carrier` ِ دیگه ← ۴۰۰؛ `shippedAt` فردا یا ۸ روز پیش ← ۴۰۰؛ کد ۵ نویسه ← ۴۰۰.
-- [ ] گروه سه‌تایی که یکیش عکسش تأیید نشده ← `422 GROUP_NOT_READY` با همون یه کد، و هیچ‌کدوم ارسال نمی‌شن؛ بعد از تأیید ← هر سه با یه کد، یه پیامک.
-- [ ] عضو لغوشده‌ی گروه ارسال نمی‌شه و مانع هم نیست.
-- [ ] گروه هنوز `HOLDING` ← `422 INVALID_STATUS_TRANSITION`.
-- [ ] اصلاح کد روی `SHIPPED` ← کد عوض می‌شه، موجودی دست نمی‌خوره، پیامک نه؛ روی `DELIVERED` ← `422`.
-- [ ] `DELIVERED` ← `deliveredAt` و `returnableUntil` = تحویل + ۷ روز برای ردیف‌های `returnable`؛ تغییر بعدی `returnWindowDays` اون رو عوض نمی‌کنه.
-- [ ] دو ارسال همزمان یه سفارش ← یکی موفق، یکی `409 CHANGED_BY_SOMEONE_ELSE` یا `422`؛ موجودی یه بار کسر.
-- [ ] ارسال سفارش A (رنگ ۱، رنگ ۲) و B (رنگ ۲، رنگ ۱) همزمان، ۵۰ بار ← هیچ بن‌بست.
+- [x] ارسال سفارش تأییدشده ← `SHIPPED`، `onHand` و `reserved` با هم کم شدن، پیامک با کد، تو رهگیری روزانه.
+- [x] `carrier` ِ دیگه ← ۴۰۰؛ `shippedAt` فردا یا ۸ روز پیش ← ۴۰۰؛ کد ۵ نویسه ← ۴۰۰.
+- [x] گروه سه‌تایی که یکیش عکسش تأیید نشده ← `422 GROUP_NOT_READY` با همون یه کد، و هیچ‌کدوم ارسال نمی‌شن؛ بعد از تأیید ← هر سه با یه کد، یه پیامک.
+- [x] عضو لغوشده‌ی گروه ارسال نمی‌شه و مانع هم نیست.
+- [x] گروه هنوز `HOLDING` ← `422 INVALID_STATUS_TRANSITION`.
+- [x] اصلاح کد روی `SHIPPED` ← کد عوض می‌شه، موجودی دست نمی‌خوره، پیامک نه؛ روی `DELIVERED` ← `422`.
+- [x] `DELIVERED` ← `deliveredAt` و `returnableUntil` = تحویل + ۷ روز برای ردیف‌های `returnable`؛ تغییر بعدی `returnWindowDays` اون رو عوض نمی‌کنه.
+- [x] دو ارسال همزمان یه سفارش ← یکی موفق، یکی `409 CHANGED_BY_SOMEONE_ELSE` یا `422`؛ موجودی یه بار کسر.
+- [x] ارسال سفارش A (رنگ ۱، رنگ ۲) و B (رنگ ۲، رنگ ۱) همزمان، ۵۰ بار ← هیچ بن‌بست.
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- **`InventoryDomainService.shipForOrders` ِ تازه:** همه‌ی رنگ‌های همه‌ی اعضای گروه با یه ترتیب کلی `(productId, variantId)`، هر رنگ یه بار خونده می‌شه و برای هر سفارشِ روش ارسال می‌شه (دو سفارش گروه که رنگ مشترک دارن یه Aggregate ِ موجودی رو دو بار ذخیره نمی‌کنن). `shipForOrder` همون رو با یه سفارش صدا می‌زنه. خرابکاری: حذف مرتب‌سازی ← تست ۵۰ باره با `deadlock detected` ِ Postgres قرمز.
+- خطاهای فیلدی ِ یه عضو (`CARRIER_MISMATCH`، `SHIPPED_AT_INVALID`) همون ۴۰۰ می‌مونن؛ فقط خطاهای ۴۲۲ ِ اعضا (`AWAITING_CUSTOMER_FEEDBACK`، وضعیت نامجاز) در گروه بیش از یکی به `GROUP_NOT_READY` تبدیل می‌شن.
+- `shippedAt` ِ بدشکل ← `400 SHIPPED_AT_INVALID`؛ `carrier` ِ ناشناخته یا خالی ← `400 CARRIER_INVALID`.
+- اصلاح هم لاگ `ORDER_SHIPPED` می‌ذاره (با `trackingCode` ِ قبل و بعد)؛ متن پنل «کد رهگیری سفارش … اصلاح شد». اصلاح با حامل دیگه ← `400 CARRIER_MISMATCH`.
+- `ShippingMethod.trackingUrlTemplate` (از `V26`) به دامنه اومد؛ `trackingUrl` موقع خوندن ساخته می‌شه (`OrderSummaryDto.ShipmentInfo`)، پس عوض شدن الگو لینک سفارش‌های قبلی رو هم درست می‌کنه.
+- «پنل `SHIPPED` رو لغو کنه ← `allowed = [DELIVERED]`» ِ گام ۲.۷ اینجا تست شد.
+- پیامک «تحویل شد» فقط با `notifyCustomer` (پیش‌فرض `true`).
 
 ---
 
@@ -6034,3 +6043,4 @@ kiva {
 | ۲۶ مهر ۱۴۰۵ | ۲.۵ | Phase 2 step 2.5 | پیش‌نویس عکس (`PUT`)، ثبت ارسال دستی (`send`، `MANUAL_ONLY`، `PHOTOS_INCOMPLETE`)، عکس‌ها و «همونه!» ِ مشتری، job ِ تأیید خودکار، پیامک «عکس کیفت فرستاده شد» (مسیر کامل پیامک)، `PreShipmentMedia` و کارت واقعی، تایم‌لاین از `kind`. ۲۳۵۳ تست سبز |
 | ۲۶ مهر ۱۴۰۵ | ۲.۶ | Phase 2 step 2.6 | `V28`، `RefundRepositoryImpl`، `CreateRefundUc` (قفل ۹، `REFUND_EXCEEDS_PAID`) و `UpdateRefundUc` (`REFERENCE_ID_REQUIRED`، `OrderRefunded`)، `webV1AdminRefunds.kt`، پیامک «پولت برگشت»، `refunds` و `totals.refunded` ِ واقعی، فیلتر `refundStatus`. دو خرابکاری قرمز. ۲۳۵۹ تست سبز |
 | ۲۶ مهر ۱۴۰۵ | ۲.۷ | Phase 2 step 2.7 | `OrderCancellation` (قفل‌های ۵، ۶، ۹، ۷، ۸؛ `PAYMENT_IN_PROGRESS`)، `ChangeOrderStatusUc` (فقط `CANCELLED`)، `CancelMyOrderUc`، دو route، پیامک «لغو شد» (مسیر کامل)، `canCancel` روشن، استرداد `PENDING` ِ خودکار. ۲۳۶۷ تست سبز |
+| ۲۶ مهر ۱۴۰۵ | ۲.۸ | Phase 2 step 2.8 | `ShipOrderUc` (تکی، گروه رزرو با یه کد و `GROUP_NOT_READY`، اصلاح کد)، `shipForOrders` با ترتیب قفل کلی، `DELIVERED` با `returnableUntil` ِ ثابت، پیامک‌های «ارسال شد» و «تحویل شد»، `trackingUrl` از `trackingUrlTemplate`، `Shipment` ِ واقعی. خرابکاری ترتیب قفل ← بن‌بست. ۲۳۷۵ تست سبز |

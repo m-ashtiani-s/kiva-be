@@ -143,7 +143,7 @@ class PurchaseTestStack(val clock: MutableClock) {
     val orders = OrderRepositoryImpl()
     val orderQm = OrderQmRepositoryImpl()
     val payments = PaymentRepositoryImpl()
-    private val inventories = InventoryRepositoryImpl()
+    val inventories = InventoryRepositoryImpl()
     val gateways = PaymentGateways(listOf(gateway))
     private val cartDomain = CartDomainService(RandomCartIds())
     val groups = ReservationGroupRepositoryImpl()

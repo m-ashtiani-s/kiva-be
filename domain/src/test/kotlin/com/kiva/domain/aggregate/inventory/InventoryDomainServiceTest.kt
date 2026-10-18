@@ -197,6 +197,27 @@ class InventoryDomainServiceTest {
         }
 
         @Test
+        fun `a group's orders ship together - one lock order across them, each color read once and shipped for each order on it`() {
+            stock(201, 5)
+            stock(202, 5)
+            stock(301, 5)
+            val other = InventoryTestData.order(2)
+            val first = listOf(line(1, 30, 301, 1), line(2, 20, 201, 1))
+            val second = listOf(line(1, 20, 201, 2), line(2, 20, 202, 1))
+            service.reserveForOrder(order, first, staff, now).getOrNull()!!.forEach(inventories::save)
+            service.reserveForOrder(other, second, staff, now).getOrNull()!!.forEach(inventories::save)
+
+            val shipped = service.shipForOrders(mapOf(order to first, other to second), staff, now)
+            shipped.forEach(inventories::save)
+
+            assertEquals(listOf(201L, 202L, 301L), shipped.map { it.variantId.value })
+            assertEquals(2, shipped.first().getRecordedEvents().size, "color 201 ships for both orders, read once")
+            val after = listOf(201L, 202L, 301L).map { service.getInventory(VariantId.constructFromPersisted(it)).getOrNull()!! }
+            assertEquals(listOf(2, 4, 4), after.map { it.onHand })
+            assertEquals(listOf(0, 0, 0), after.map { it.reserved })
+        }
+
+        @Test
         fun `shipping a line that holds nothing for the order is a bug and stops loudly`() {
             stock(201, 5)
 

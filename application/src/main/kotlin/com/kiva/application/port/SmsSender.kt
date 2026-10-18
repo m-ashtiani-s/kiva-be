@@ -50,4 +50,16 @@ interface SmsSender {
      * the cancellation is committed; when it fails, only the log knows. Throws like [sendCode].
      */
     suspend fun sendOrderCancelled(to: IranianMobileNumber, orderCode: OrderCode)
+
+    /**
+     * «ارسال شد»: the order [orderCode] left with [carrierName] under [trackingCode]. Sent after the shipment is committed
+     * (one for a whole reservation group), never for a correction; when it fails, only the log knows. Throws like [sendCode].
+     */
+    suspend fun sendOrderShipped(to: IranianMobileNumber, orderCode: OrderCode, carrierName: String, trackingCode: String)
+
+    /**
+     * «تحویل شد»: staff recorded the order [orderCode] as delivered and chose to tell the customer. Sent after the commit;
+     * when it fails, only the log knows. Throws like [sendCode].
+     */
+    suspend fun sendOrderDelivered(to: IranianMobileNumber, orderCode: OrderCode)
 }

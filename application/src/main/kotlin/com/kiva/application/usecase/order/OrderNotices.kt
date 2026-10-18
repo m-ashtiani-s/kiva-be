@@ -26,6 +26,13 @@ class OrderNotices(private val smsSender: SmsSender) {
     /** «لغو شد». */
     suspend fun cancelled(to: IranianMobileNumber?, orderCode: OrderCode) = send("«لغو شد»", to, orderCode) { smsSender.sendOrderCancelled(it, orderCode) }
 
+    /** «ارسال شد», with the carrier's name and the tracking code. */
+    suspend fun shipped(to: IranianMobileNumber?, orderCode: OrderCode, carrierName: String, trackingCode: String) =
+        send("«ارسال شد»", to, orderCode) { smsSender.sendOrderShipped(it, orderCode, carrierName, trackingCode) }
+
+    /** «تحویل شد». */
+    suspend fun delivered(to: IranianMobileNumber?, orderCode: OrderCode) = send("«تحویل شد»", to, orderCode) { smsSender.sendOrderDelivered(it, orderCode) }
+
     private suspend fun send(what: String, to: IranianMobileNumber?, orderCode: OrderCode, sending: suspend (IranianMobileNumber) -> Unit) {
         if (to == null) {
             logger.warn("OrderNotices: $what of order ${orderCode.value} not sent, its account is gone")

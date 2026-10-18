@@ -3,6 +3,7 @@ package com.kiva.application.usecase.order.usecase.command
 import com.kiva.application.port.AuditEntry
 import com.kiva.application.port.AuditTrail
 import com.kiva.application.port.PanelActor
+import com.kiva.application.repository.OrderQmRepository
 import com.kiva.application.usecase.audit.AuditAction
 import com.kiva.application.usecase.audit.AuditDiff
 import com.kiva.application.usecase.audit.AuditEntityType
@@ -23,13 +24,16 @@ import com.kiva.domain.aggregate.order.model.valueobject.CancelledBy
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
 import com.kiva.domain.aggregate.order.model.valueobject.OrderStatus
 import com.kiva.domain.aggregate.order.model.valueobject.StatusNote
+import com.kiva.domain.aggregate.order.repository.OrderRepository
+import com.kiva.domain.aggregate.settings.repository.ShopSettingsRepository
 import com.kiva.domain.aggregate.user.repository.UserRepository
 import java.time.Clock
 
 /**
  * Staff move an order to another status (`POST /admin/orders/{orderCode}/status`; ADMIN, OPERATOR), only where
  * OrderTransitionPolicy lets them (422 INVALID_STATUS_TRANSITION with `from`, `to` and `allowed`): CANCELLED before it
- * ships (OrderCancellation, with everything that goes with it). The other statuses have endpoints of their own.
+ * ships (OrderCancellation, with everything that goes with it), and DELIVERED once it shipped: delivered now, its time
+ * to return fixed from the shop's `returnWindowDays` of this moment. The other statuses have endpoints of their own.
  *
  * `note` is shown on the customer's timeline; with `notifyCustomer` (by default) they get an SMS after the commit. One
  * ORDER_STATUS_CHANGED row in the change log, the status from and to. A change of the order at the same moment (the
@@ -39,6 +43,9 @@ class ChangeOrderStatusUc(
     private val transactionManager: TransactionManager,
     private val orderByCode: OrderByCode,
     private val orderCancellation: OrderCancellation,
+    private val orderQmRepository: OrderQmRepository,
+    private val orderRepository: OrderRepository,
+    private val shopSettingsRepository: ShopSettingsRepository,
     private val userRepository: UserRepository,
     private val auditTrail: AuditTrail,
     private val orderNotices: OrderNotices,
@@ -86,6 +93,15 @@ class ChangeOrderStatusUc(
                         is Result.Success -> {}
                         is Result.Failure -> return@inTransaction Result.failure(Failure.Refused(cancelled.failure.code, cancelled.failure.meta))
                     }
+                OrderStatus.DELIVERED -> {
+                    orderQmRepository.lockOrder(read.orderId) ?: error("Order ${read.orderId.value} is not in the read model")
+                    val order = orderRepository.get(read.orderId) ?: error("Order ${read.orderId.value} of the read model has no events")
+                    val returnWindowDays = shopSettingsRepository.get().returnWindowDays
+                    when (val delivered = order.markDelivered(returnWindowDays, input.note, command.actor.userId, now)) {
+                        is Result.Success -> orderRepository.save(order)
+                        is Result.Failure -> return@inTransaction Result.failure(Failure.Refused(delivered.failure.code, delivered.failure.meta))
+                    }
+                }
                 else -> error("${input.status} is allowed from ${read.status} but has no way here")
             }
             auditTrail.record(
@@ -98,7 +114,13 @@ class ChangeOrderStatusUc(
         }
         return when (changed) {
             is Result.Success -> {
-                if (input.notify && changed.value.status == OrderStatus.CANCELLED) orderNotices.cancelled(changed.value.to, changed.value.code)
+                if (input.notify) {
+                    when (changed.value.status) {
+                        OrderStatus.CANCELLED -> orderNotices.cancelled(changed.value.to, changed.value.code)
+                        OrderStatus.DELIVERED -> orderNotices.delivered(changed.value.to, changed.value.code)
+                        else -> {}
+                    }
+                }
                 Result.success(Unit)
             }
             is Result.Failure -> changed

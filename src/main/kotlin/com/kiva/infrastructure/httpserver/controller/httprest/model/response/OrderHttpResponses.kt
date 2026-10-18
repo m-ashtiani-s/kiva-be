@@ -13,7 +13,7 @@ data class PlaceOrderHttpResponse(val order: OrderSummaryHttpResponse, val payme
 
 /**
  * Contract schema `OrderSummary`: an order's card. [reservation] only for an order held with «رزرو ۴ روزه». In this phase
- * the shipment only waits, the photos before shipping are still to come, and [balanceDue] is 0 (no change requests yet).
+ * [balanceDue] is 0 (no change requests yet); the shipment waits until the order is shipped.
  */
 @Serializable
 data class OrderSummaryHttpResponse(
@@ -63,11 +63,11 @@ data class OrderSummaryHttpResponse(
                 shipment = ShipmentHttpResponse(
                     carrier = order.shippingMethod.name,
                     carrierName = order.shippingMethodName,
-                    trackingCode = null,
-                    trackingUrl = null,
-                    shippedAt = null,
-                    deliveredAt = null,
-                    waitingMessage = OrderTexts.shipmentWaiting(order.shippingMethodName),
+                    trackingCode = order.shipment?.trackingCode,
+                    trackingUrl = order.shipment?.trackingUrl,
+                    shippedAt = order.shipment?.shippedOn?.toString(),
+                    deliveredAt = order.shipment?.deliveredOn?.toString(),
+                    waitingMessage = if (order.shipment == null) OrderTexts.shipmentWaiting(order.shippingMethodName) else null,
                 ),
                 preShipmentMedia = PreShipmentMediaSummaryHttpResponse(
                     status = order.photos.status.name,

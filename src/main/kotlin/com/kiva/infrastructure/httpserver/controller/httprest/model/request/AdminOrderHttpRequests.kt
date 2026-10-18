@@ -38,3 +38,12 @@ data class AdminRefundUpdateHttpRequest(val status: String? = null, val referenc
 data class AdminOrderStatusHttpRequest(val status: String? = null, val note: String? = null, val notifyCustomer: Boolean? = null) {
     override fun toString(): String = "AdminOrderStatusHttpRequest(status=$status, notifyCustomer=$notifyCustomer)"
 }
+
+/** The body of `PUT /admin/orders/{orderCode}/shipment` (contract AdminShipmentRequest). Every field nullable. */
+@Serializable
+data class AdminShipmentHttpRequest(
+    val carrier: String? = null,
+    val trackingCode: String? = null,
+    val shippedAt: String? = null,
+    val showInDailyList: Boolean? = null,
+)

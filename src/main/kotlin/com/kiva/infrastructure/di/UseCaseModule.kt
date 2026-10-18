@@ -83,6 +83,7 @@ import com.kiva.application.usecase.order.usecase.command.ExpireUnpaidOrderUc
 import com.kiva.application.usecase.order.usecase.command.ReorderUc
 import com.kiva.application.usecase.order.usecase.command.SendPreShipmentMediaUc
 import com.kiva.application.usecase.order.usecase.command.SetPreShipmentMediaUc
+import com.kiva.application.usecase.order.usecase.command.ShipOrderUc
 import com.kiva.application.usecase.order.usecase.command.SubmitMediaFeedbackUc
 import com.kiva.application.usecase.order.usecase.query.FindAdminOrdersUc
 import com.kiva.application.usecase.order.usecase.query.FindExpirableOrdersUc
@@ -518,8 +519,15 @@ val useCaseModule = module(createdAtStart = true) {
 
     single {
         ChangeOrderStatusUc(
-            transactionManager = get(), orderByCode = get(), orderCancellation = get(), userRepository = get(), auditTrail = get(), orderNotices = get(),
-            clock = get(),
+            transactionManager = get(), orderByCode = get(), orderCancellation = get(), orderQmRepository = get(), orderRepository = get(),
+            shopSettingsRepository = get(), userRepository = get(), auditTrail = get(), orderNotices = get(), clock = get(),
+        )
+    }
+    single {
+        ShipOrderUc(
+            transactionManager = get(), orderByCode = get(), orderQmRepository = get(), orderRepository = get(), reservationGroupRepository = get(),
+            inventoryDomainService = get(), inventoryRepository = get(), shopSettingsRepository = get(), userRepository = get(), auditTrail = get(),
+            orderNotices = get(), clock = get(),
         )
     }
 

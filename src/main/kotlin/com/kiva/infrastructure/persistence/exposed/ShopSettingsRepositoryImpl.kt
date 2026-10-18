@@ -48,6 +48,7 @@ class ShopSettingsRepositoryImpl : ShopSettingsRepository {
             icon = this[ShippingMethodTbl.icon],
             isActive = this[ShippingMethodTbl.isActive],
             sortOrder = this[ShippingMethodTbl.sortOrder],
+            trackingUrlTemplate = this[ShippingMethodTbl.trackingUrlTemplate],
         )
 
     private fun ResultRow.toPaymentGateway(): PaymentGatewayOption =

@@ -6,6 +6,7 @@ import com.kiva.application.usecase.order.usecase.command.AddOrderNoteUc
 import com.kiva.application.usecase.order.usecase.command.ChangeOrderStatusUc
 import com.kiva.application.usecase.order.usecase.command.SendPreShipmentMediaUc
 import com.kiva.application.usecase.order.usecase.command.SetPreShipmentMediaUc
+import com.kiva.application.usecase.order.usecase.command.ShipOrderUc
 import com.kiva.application.usecase.order.usecase.query.AdminOrderSorts
 import com.kiva.application.usecase.order.usecase.query.FindAdminOrdersUc
 import com.kiva.application.usecase.order.usecase.query.GetAdminOrderUc
@@ -22,6 +23,7 @@ import com.kiva.infrastructure.httpserver.controller.httprest.model.request.Admi
 import com.kiva.infrastructure.httpserver.controller.httprest.model.request.AdminPreShipmentMediaHttpRequest
 import com.kiva.infrastructure.httpserver.controller.httprest.model.request.AdminRefundHttpRequest
 import com.kiva.infrastructure.httpserver.controller.httprest.model.request.AdminSendPhotosHttpRequest
+import com.kiva.infrastructure.httpserver.controller.httprest.model.request.AdminShipmentHttpRequest
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.AdminNoteHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.AdminOrderHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.AdminOrderListHttpResponse
@@ -46,6 +48,7 @@ class AdminOrderUseCases(
     val sendPhotos: SendPreShipmentMediaUc,
     val createRefund: CreateRefundUc,
     val changeStatus: ChangeOrderStatusUc,
+    val ship: ShipOrderUc,
 )
 
 /** The path parameter every panel order route names its order by. */
@@ -91,6 +94,15 @@ fun Route.webV1AdminOrders(useCases: AdminOrderUseCases, mediaUrls: MediaUrls) {
             val request = call.receive<AdminOrderStatusHttpRequest>()
             val command = ChangeOrderStatusUc.Cmd(code, request.status, request.note, request.notifyCustomer, call.panelActor())
             useCases.changeStatus.execute(command).unwrapOr { return@post call.respondFailure(it) }
+            call.respondResult(useCases.getOrder.execute(GetAdminOrderUc.Qry(code))) { AdminOrderHttpResponse.from(it, mediaUrls) }
+        }
+
+        // Shipped (a reservation group as one parcel), or the parcel of a SHIPPED order corrected; the answer is this order.
+        put("/admin/orders/{$ORDER_CODE}/shipment") {
+            val code = call.parameters[ORDER_CODE].orEmpty()
+            val request = call.receive<AdminShipmentHttpRequest>()
+            val command = ShipOrderUc.Cmd(code, request.carrier, request.trackingCode, request.shippedAt, request.showInDailyList, call.panelActor())
+            useCases.ship.execute(command).unwrapOr { return@put call.respondFailure(it) }
             call.respondResult(useCases.getOrder.execute(GetAdminOrderUc.Qry(code))) { AdminOrderHttpResponse.from(it, mediaUrls) }
         }
 

@@ -29,6 +29,7 @@ object ShippingMethodTbl : LongIdTable(name = "shippingmethod_tbl", columnName =
     val icon = varchar("icon", 30)
     val isActive = bool("isActive")
     val sortOrder = integer("sortOrder")
+    val trackingUrlTemplate = varchar("trackingUrlTemplate", 300).nullable()
 }
 
 /** The payment gateways of the settings. Created and filled by V12__shop_settings.sql; keep both in step. */

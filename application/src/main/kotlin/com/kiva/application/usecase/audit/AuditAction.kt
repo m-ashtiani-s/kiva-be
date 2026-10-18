@@ -40,6 +40,7 @@ enum class AuditAction {
     ORDER_NOTE_ADDED,
     ORDER_MEDIA_SET,
     ORDER_PHOTO_SENT,
+    ORDER_SHIPPED,
     REFUND_CREATED,
     REFUND_UPDATED,
 }

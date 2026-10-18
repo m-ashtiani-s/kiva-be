@@ -22,6 +22,7 @@ import java.time.Instant
  * @property paidOn when it was paid; the progress's first step is done from then.
  * @property messengerChannel where the photo before shipping goes.
  * @property photos what the card says of the photos before shipping (the last batch sent).
+ * @property shipment the parcel it left in, once shipped; null before.
  * @property reservation the reservation it is held in, for a RESERVED order; null otherwise.
  */
 data class OrderSummaryDto(
@@ -36,6 +37,7 @@ data class OrderSummaryDto(
     val itemsCount: Int,
     val messengerChannel: MessengerChannel,
     val photos: PhotosSummary,
+    val shipment: ShipmentInfo?,
     val actions: OrderActions,
     val reservation: ReservationInfoDto? = null,
 ) {
@@ -47,6 +49,12 @@ data class OrderSummaryDto(
      * whether one is a video, and when it was sent. A draft is never counted: the customer doesn't see it.
      */
     data class PhotosSummary(val status: PhotoStatus, val count: Int, val hasVideo: Boolean, val sentOn: Instant?)
+
+    /**
+     * The parcel (the contract's Shipment once shipped): its code, the carrier's page that follows it (from the method's
+     * `trackingUrlTemplate` now; null when it has none), when it was handed over, and when it was delivered.
+     */
+    data class ShipmentInfo(val trackingCode: String, val trackingUrl: String?, val shippedOn: Instant, val deliveredOn: Instant?)
 
     companion object {
         /**
@@ -79,6 +87,10 @@ data class OrderSummaryDto(
                 hasVideo = order.photosSent.any { media[it.mediaId]?.type == MediaType.VIDEO },
                 sentOn = order.photosSentOn,
             ),
+            shipment = order.shipment?.let { parcel ->
+                val code = parcel.trackingCode.value
+                ShipmentInfo(code, settings.shippingMethods.firstOrNull { it.code == order.shippingMethod }?.trackingUrlOf(code), parcel.shippedOn, order.deliveredOn)
+            },
             actions = OrderActionsPolicy.actionsOf(order.actionFactsAt(now)),
             reservation = reservation,
         )

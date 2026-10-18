@@ -42,4 +42,12 @@ class LogSmsSender : SmsSender {
     override suspend fun sendOrderCancelled(to: IranianMobileNumber, orderCode: OrderCode) {
         logger.warn("SMS to ${to.masked()}: order ${orderCode.value} was cancelled")
     }
+
+    override suspend fun sendOrderShipped(to: IranianMobileNumber, orderCode: OrderCode, carrierName: String, trackingCode: String) {
+        logger.warn("SMS to ${to.masked()}: order ${orderCode.value} was shipped by $carrierName")
+    }
+
+    override suspend fun sendOrderDelivered(to: IranianMobileNumber, orderCode: OrderCode) {
+        logger.warn("SMS to ${to.masked()}: order ${orderCode.value} was delivered")
+    }
 }

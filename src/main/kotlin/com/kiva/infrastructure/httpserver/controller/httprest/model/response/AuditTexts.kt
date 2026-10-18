@@ -45,6 +45,8 @@ object AuditTexts {
             AuditAction.ORDER_NOTE_ADDED -> "یادداشت داخلی روی سفارش $name نوشته شد"
             AuditAction.ORDER_MEDIA_SET -> "عکس‌های قبل از ارسال سفارش $name انتخاب شد"
             AuditAction.ORDER_PHOTO_SENT -> "ارسال عکس‌های سفارش $name برای مشتری ثبت شد"
+            AuditAction.ORDER_SHIPPED ->
+                if (changes.any { it.field == "trackingCode" && it.from != null }) "کد رهگیری سفارش $name اصلاح شد" else "سفارش $name ارسال شد"
             AuditAction.REFUND_CREATED -> refundCreated(name, changes)
             AuditAction.REFUND_UPDATED -> refundUpdated(name, changes)
         }

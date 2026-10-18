@@ -29,6 +29,7 @@ import com.kiva.application.usecase.order.usecase.command.ApproveSilentPhotosUc
 import com.kiva.application.usecase.order.usecase.command.ChangeOrderStatusUc
 import com.kiva.application.usecase.order.usecase.command.SendPreShipmentMediaUc
 import com.kiva.application.usecase.order.usecase.command.SetPreShipmentMediaUc
+import com.kiva.application.usecase.order.usecase.command.ShipOrderUc
 import com.kiva.application.usecase.order.usecase.query.FindAdminOrdersUc
 import com.kiva.application.usecase.order.usecase.query.FindSilentPhotoOrdersUc
 import com.kiva.application.usecase.order.usecase.query.GetAdminOrderUc
@@ -227,7 +228,14 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
             transactions, purchase.orderByCode, purchase.orderQm, purchase.orders, purchase.payments, purchase.refunds, RefundDomainService(RefundIdGeneratorImpl()),
             auditTrail, clock,
         ),
-        changeStatus = ChangeOrderStatusUc(transactions, purchase.orderByCode, purchase.orderCancellation, users, auditTrail, purchase.orderNotices, clock),
+        changeStatus = ChangeOrderStatusUc(
+            transactions, purchase.orderByCode, purchase.orderCancellation, purchase.orderQm, purchase.orders, purchase.settings, users, auditTrail,
+            purchase.orderNotices, clock,
+        ),
+        ship = ShipOrderUc(
+            transactions, purchase.orderByCode, purchase.orderQm, purchase.orders, purchase.groups, purchase.stock, purchase.inventories, purchase.settings,
+            users, auditTrail, purchase.orderNotices, clock,
+        ),
     )
     val adminRefunds = AdminRefundUseCases(
         checkPanelAccess,

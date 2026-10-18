@@ -221,6 +221,8 @@ class AppConfigTest {
         assertEquals("pH0t05ent1", read(*faraz, "kiva.sms.faraz.photosSentPattern" to "pH0t05ent1").sms.faraz?.photosSentPattern)
         assertEquals("r3fund0ne1", read(*faraz, "kiva.sms.faraz.refundCompletedPattern" to "r3fund0ne1").sms.faraz?.refundCompletedPattern)
         assertEquals("c4ncel1ed1", read(*faraz, "kiva.sms.faraz.orderCancelledPattern" to "c4ncel1ed1").sms.faraz?.orderCancelledPattern)
+        assertEquals("sh1pped001", read(*faraz, "kiva.sms.faraz.orderShippedPattern" to "sh1pped001").sms.faraz?.orderShippedPattern)
+        assertEquals("de1ivered1", read(*faraz, "kiva.sms.faraz.orderDeliveredPattern" to "de1ivered1").sms.faraz?.orderDeliveredPattern)
         assertEquals(null, read().sms.faraz, "the log provider has no Faraz settings")
     }
 
