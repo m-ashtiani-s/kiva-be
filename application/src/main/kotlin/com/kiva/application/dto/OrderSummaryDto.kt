@@ -1,6 +1,7 @@
 package com.kiva.application.dto
 
 import com.kiva.application.repository.OrderQm
+import com.kiva.application.repository.OrderTimelineKind
 import com.kiva.common.valueobject.Money
 import com.kiva.domain.aggregate.media.entity.MediaAsset
 import com.kiva.domain.aggregate.media.model.valueobject.MediaId
@@ -20,6 +21,7 @@ import java.time.Instant
  *
  * @property shippingMethodName the method's name as the shop's settings call it now.
  * @property paidOn when it was paid; the progress's first step is done from then.
+ * @property firstPhotosSentOn when the photos were sent the first time: the progress's second step.
  * @property messengerChannel where the photo before shipping goes.
  * @property photos what the card says of the photos before shipping (the last batch sent).
  * @property shipment the parcel it left in, once shipped; null before.
@@ -30,6 +32,7 @@ data class OrderSummaryDto(
     val status: OrderStatus,
     val placedOn: Instant,
     val paidOn: Instant?,
+    val firstPhotosSentOn: Instant?,
     val payable: Money,
     val shippingMethod: ShippingMethodCode,
     val shippingMethodName: String,
@@ -73,6 +76,7 @@ data class OrderSummaryDto(
             status = order.status,
             placedOn = order.placedOn,
             paidOn = order.paidOn,
+            firstPhotosSentOn = order.timeline.firstOrNull { it.kind == OrderTimelineKind.PHOTOS_SENT }?.at,
             payable = order.totals.payable,
             shippingMethod = order.shippingMethod,
             shippingMethodName = settings.shippingMethods.firstOrNull { it.code == order.shippingMethod }?.name ?: order.shippingMethod.name,

@@ -6,8 +6,8 @@ import kotlinx.serialization.Serializable
 /**
  * The contract's AdminCustomer.
  *
- * @property totalSpent in toman.
- * @property ordersCount, totalSpent, lastOrderAt 0, 0 and null until the orders phase.
+ * @property ordersCount the paid orders, cancelled ones too.
+ * @property totalSpent in toman: what the paid orders cost, less what went back (the completed refunds).
  */
 @Serializable
 data class AdminCustomerHttpResponse(

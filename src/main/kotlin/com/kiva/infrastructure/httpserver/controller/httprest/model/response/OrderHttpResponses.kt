@@ -36,6 +36,8 @@ data class OrderSummaryHttpResponse(
     companion object {
         fun from(order: OrderSummaryDto, urls: MediaUrls): OrderSummaryHttpResponse {
             val current = OrderTexts.currentStepOf(order.status)
+            // When each of the four steps was reached: paid, photos first sent, shipped, delivered.
+            val reachedOn = listOf(order.paidOn, order.firstPhotosSentOn, order.shipment?.shippedOn, order.shipment?.deliveredOn)
             return OrderSummaryHttpResponse(
                 code = order.code,
                 placedAt = order.placedOn.toString(),
@@ -55,8 +57,7 @@ data class OrderSummaryHttpResponse(
                             index == current -> "CURRENT"
                             else -> "DONE"
                         }
-                        // Only the first step's moment is known in this phase: the payment.
-                        OrderProgressStepHttpResponse(key, label, icon, state, if (index == 0 && current != null) order.paidOn?.toString() else null)
+                        OrderProgressStepHttpResponse(key, label, icon, state, reachedOn[index]?.takeIf { current != null && index <= current }?.toString())
                     },
                 ),
                 reservation = order.reservation?.let(ReservationInfoHttpResponse::from),

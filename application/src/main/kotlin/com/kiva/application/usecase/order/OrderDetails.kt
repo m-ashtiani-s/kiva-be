@@ -57,6 +57,8 @@ class OrderDetails(
                     unitPrice = line.priceTag.price,
                     unitCompareAtPrice = line.priceTag.compareAtPrice,
                     lineTotal = line.totals.total,
+                    // Fixed when it was delivered, for the lines that could be returned then.
+                    returnableUntil = order.returnableUntil?.takeIf { line.returnable },
                 )
             },
             address = order.address.let {

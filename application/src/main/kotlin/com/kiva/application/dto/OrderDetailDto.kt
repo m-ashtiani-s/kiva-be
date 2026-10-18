@@ -51,6 +51,7 @@ data class OrderDetailDto(
         val unitPrice: Money,
         val unitCompareAtPrice: Money?,
         val lineTotal: Money,
+        val returnableUntil: Instant?,
     )
 
     data class Color(val key: String, val name: String, val hex: String, val isLight: Boolean, val sortOrder: Int)

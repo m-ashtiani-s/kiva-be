@@ -109,7 +109,7 @@ data class OrderDetailHttpResponse(
     }
 }
 
-/** Contract schema `OrderItem`: a line as bought. No photos yet; reviews and returns come in later phases. */
+/** Contract schema `OrderItem`: a line as bought. [returnableUntil] once delivered, for a returnable line; reviews come with phase 8. */
 @Serializable
 data class OrderItemHttpResponse(
     val id: Int,
@@ -142,7 +142,7 @@ data class OrderItemHttpResponse(
             unitCompareAtPrice = item.unitCompareAtPrice?.toman,
             lineTotal = item.lineTotal.toman,
             reviewed = false,
-            returnableUntil = null,
+            returnableUntil = item.returnableUntil?.toString(),
         )
     }
 }

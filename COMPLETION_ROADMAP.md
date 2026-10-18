@@ -1538,7 +1538,7 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 | ۲.۷ | تغییر وضعیت از پنل و لغو (پنل و مشتری) | L | ✅ |
 | ۲.۸ | ارسال (تکی و گروهی) و «تحویل شد» | L | ✅ |
 | ۲.۹ | رهگیری: مهمان، روزانه و «رهگیری‌های من» | M | ✅ |
-| ۲.۱۰ | «سفارش‌های من» کامل و آمار مشتری | M | ⬜ |
+| ۲.۱۰ | «سفارش‌های من» کامل و آمار مشتری | M | ✅ |
 | ۲.۱۱ | ریویو، حمله‌ی آزمایشی و دور با پنل | M | ⬜ |
 
 ### ۷.۲ تصمیم‌های این فاز
@@ -2251,16 +2251,23 @@ Route: 200 با AdminOrder ِ همون سفارش
 
 ---
 
-#### گام ۲.۱۰: «سفارش‌های من» کامل و آمار مشتری · M ⬜
+#### گام ۲.۱۰: «سفارش‌های من» کامل و آمار مشتری · M ✅
 
 **می‌سازی:** جدول ۷.۸: `OrderSummaryDto`، `OrderDetailDto`، `OrderSummaryHttpResponse`، `OrderDetailHttpResponse` (حذف هر مقدار ثابت باقی‌مونده‌ی این فاز)، `refunds` ِ جزئیات، `purchasesOf` و `AdminCustomerDto`، `Discounts` («خرید اول» با `countsAsPurchase`)، `Reservations` (`groupOrderCodes`).
 
 وابسته به: ۲.۵ تا ۲.۹
 
 **تموم شده یعنی:**
-- [ ] یه سفارش رو کل مسیر می‌بریم (پرداخت، عکس، تأیید، ارسال، تحویل) و بعد از هر قدم `GET /me/orders/{code}` با کانترکت مقایسه می‌شه (همه‌ی فیلدها، تایم‌لاین، `progress`، `actions`).
-- [ ] تو کد پاسخ‌های سفارش هیچ `= 0` یا `= emptyList()` ِ ثابتی جز فیلدهای فاز ۳، ۷، ۸ و ۱۴ (`balanceDue`، `returns`، `reviewed`، `invoiceUrl`) نمونده (grep).
-- [ ] `totalSpent` ِ مشتری با یه لغو و استرداد کامل ← بدون اون سفارش.
+- [x] یه سفارش رو کل مسیر می‌بریم (پرداخت، عکس، تأیید، ارسال، تحویل) و بعد از هر قدم `GET /me/orders/{code}` با کانترکت مقایسه می‌شه (همه‌ی فیلدها، تایم‌لاین، `progress`، `actions`).
+- [x] تو کد پاسخ‌های سفارش هیچ `= 0` یا `= emptyList()` ِ ثابتی جز فیلدهای فاز ۳، ۷، ۸ و ۱۴ (`balanceDue`، `returns`، `reviewed`، `invoiceUrl`) نمونده (grep).
+- [x] `totalSpent` ِ مشتری با یه لغو و استرداد کامل ← بدون اون سفارش.
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- `progress.steps[].at` همه واقعی: `PLACED` = `paidOn`، `PHOTO_SENT` = اولین ردیف `PHOTOS_SENT` ِ تایم‌لاین (`OrderSummaryDto.firstPhotosSentOn`)، `SHIPPED` و `DELIVERED` از بسته؛ فقط برای مرحله‌های رسیده.
+- `items[].returnableUntil` = `returnableUntil` ِ سفارش برای ردیف‌های `returnable`.
+- «مقایسه با کانترکت» با `ContractSchemas` ِ تازه‌ی تست: اسم فیلدهای هر شِما (با `allOf`) مستقیم از `api/kiva-openapi.yml` خونده می‌شه و کلیدهای هر شیء پاسخ باید دقیقاً همون‌ها باشن (`OrderDetail`، `Shipment`، `PreShipmentMedia`، `PreShipmentMediaSummary`، `OrderTotals`، `OrderProgressStep`، `OrderItem`، `OrderEvent`).
+- grep ِ مقدارهای ثابت: جز چهار فیلد مجاز، `giftWrapCost = 0` و `gift.wrap = false` موندن، که مال فاز نیستن: بسته‌بندی کادو تا `giftWrap.available = false` ـه وجود نداره (نقشه‌ی خرید). `canRequestChange`، `canReturn`، `canReview` با فازهای ۳، ۷ و ۸.
+- «خرید اول» و `groupOrderCodes` از گام ۲.۲ با `countsAsPurchase` بودن و با ۲.۷ تست شدن؛ `totalSpent` (پرداخت − برگشت) هم از ۲.۲. اینجا فقط تست کامل و توضیح `AdminCustomerHttpResponse` درست شد.
 
 ---
 
@@ -6055,3 +6062,4 @@ kiva {
 | ۲۶ مهر ۱۴۰۵ | ۲.۷ | Phase 2 step 2.7 | `OrderCancellation` (قفل‌های ۵، ۶، ۹، ۷، ۸؛ `PAYMENT_IN_PROGRESS`)، `ChangeOrderStatusUc` (فقط `CANCELLED`)، `CancelMyOrderUc`، دو route، پیامک «لغو شد» (مسیر کامل)، `canCancel` روشن، استرداد `PENDING` ِ خودکار. ۲۳۶۷ تست سبز |
 | ۲۶ مهر ۱۴۰۵ | ۲.۸ | Phase 2 step 2.8 | `ShipOrderUc` (تکی، گروه رزرو با یه کد و `GROUP_NOT_READY`، اصلاح کد)، `shipForOrders` با ترتیب قفل کلی، `DELIVERED` با `returnableUntil` ِ ثابت، پیامک‌های «ارسال شد» و «تحویل شد»، `trackingUrl` از `trackingUrlTemplate`، `Shipment` ِ واقعی. خرابکاری ترتیب قفل ← بن‌بست. ۲۳۷۵ تست سبز |
 | ۲۶ مهر ۱۴۰۵ | ۲.۹ | Phase 2 step 2.9 | `LookupGuestTrackingUc` (۴۰۴ ِ یکسان، ۱۰ در ۱۰ دقیقه)، `ListDailyShipmentDaysUc`، `ListDailyShipmentsUc` (یه ردیف برای هر کد، `q`)، `ListMyTrackingUc`، `DailyShipmentMask`، `webV1Tracking.kt`، `GET /me/tracking`، `meta.retryAfterSeconds` برای ۴۲۹ ِ plugin. ۲۳۸۱ تست سبز |
+| ۲۶ مهر ۱۴۰۵ | ۲.۱۰ | Phase 2 step 2.10 | `progress.steps[].at` و `items[].returnableUntil` ِ واقعی، تست کل مسیر با مقایسه‌ی فیلدها با کانترکت (`ContractSchemas`)، `totalSpent` بعد از لغو و استرداد کامل. ۲۳۸۳ تست سبز |
