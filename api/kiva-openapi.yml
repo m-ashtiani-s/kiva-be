@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: KIVA Store API — کیوا
-  version: 1.8.0
+  version: 1.9.0
   contact:
     name: KIVA Engineering
     email: support@kiva.ir
@@ -130,9 +130,15 @@ info:
         و وگرنه `PROCESSING` می‌شود.
       * **کالای غیرقابل‌رزرو:** اگر حتی یک کالای سبد `reservable = false` باشد، رزرو در دسترس نیست (`ITEM_NOT_RESERVABLE`).
       * **پایان مهلت:** همه‌ی سفارش‌های گروه **خودکار** از `RESERVED` به `PROCESSING` می‌روند (عکس قبل از ارسال، سپس ارسال گروهی با **یک کد رهگیری**).
-      * **لغو:** هر سفارش گروه تا قبل از `SHIPPED` قابل لغو است (بازگشت کامل وجه). لغو سفارش اصلی گروه یا مهلتش را از بین نمی‌برد و
+      * **لغو:** مشتری سفارش گروه را تا وقتی وضعیتش عوض نشده (`RESERVED` یا `PROCESSING` و هیچ عکسی برایش فرستاده نشده) لغو می‌کند؛
+        پنل هر سفارش گروه را تا قبل از `SHIPPED`. لغو سفارش اصلی گروه یا مهلتش را از بین نمی‌برد و
         ارسال رایگان سفارش‌های پیوسته حفظ می‌شود. هزینه‌ی ارسال سفارش اصلی بعد از پیوستن سفارش‌های دیگر دوباره محاسبه نمی‌شود.
-    * **عکس قبل از ارسال (امضای کیوا):** انتخاب پیام‌رسان (روبیکا/تلگرام/بله) و شماره‌ی آن در تسویه **اجباری** است. اپراتور قبل از بسته‌بندی عکس/ویدیو را آپلود و ارسال می‌کند؛ یک نسخه برای همیشه در جزئیات سفارش می‌ماند. تا قبل از `SHIPPED` مشتری می‌تواند تأیید کند، تغییر رنگ/مدل بخواهد یا لغو کند (بازگشت کامل وجه).
+    * **عکس قبل از ارسال (امضای کیوا):** انتخاب پیام‌رسان (روبیکا/تلگرام/بله) و شماره‌ی آن در تسویه **اجباری** است. اپراتور قبل از بسته‌بندی عکس/ویدیو را آپلود می‌کند،
+      خودش در پیام‌رسان مشتری می‌فرستد و ارسال را ثبت می‌کند؛ یک نسخه برای همیشه در جزئیات سفارش می‌ماند. مشتری عکس را تأیید می‌کند یا تغییر رنگ/مدل می‌خواهد.
+    * **لغو سفارش:** مشتری تا وقتی وضعیت سفارش عوض نشده (`RESERVED` یا `PROCESSING` و هیچ عکسی فرستاده نشده) لغو می‌کند؛
+      بعد از آن لغو با درخواست تغییر یا پشتیبانی است. پنل تا قبل از `SHIPPED` لغو می‌کند. سفارش پرداخت‌نشده لغو نمی‌شود (خودش منقضی می‌شود).
+      **بازگشت وجه دستی است:** با هر لغو یک استرداد `PENDING` به اندازه‌ی کل مبلغ پرداخت‌شده (منهای استردادهای قبلی) ثبت می‌شود
+      و همکاران برای گرفتن شماره شبا با مشتری تماس می‌گیرند؛ شماره شبا در سیستم ذخیره نمی‌شود. موجودی آزاد و استفاده‌ی کد تخفیف برگردانده می‌شود.
     * **بازگشت کالا:** تا ۷ روز بعد از تحویل. اگر مشکل از کیوا باشد (`NOT_AS_PICTURED`، `MANUFACTURING_DEFECT`، ...) هزینه‌ی برگشت با کیواست؛ در `CHANGED_MIND` با مشتری.
     * **جمعه‌ها** ارسال نداریم (`nonShippingWeekdays`). سفارشی که جمعه (به وقت تهران) ثبت می‌شود شنبه ارسال می‌شود، و `estimatedDelivery`
       از روز ارسال شمرده می‌شود: `minDays` تا `maxDays` روز کاری بعد از آن، بدون جمعه‌ها. پس سفارش جمعه یک روز دیرتر از سفارش پنجشنبه می‌رسد.
@@ -154,6 +160,24 @@ info:
 
     مسیر اصلی: `PENDING_PAYMENT → (RESERVED) → PROCESSING → PHOTO_SENT → SHIPPED → DELIVERED`.
     `RESERVED → PROCESSING` فقط خودکار و در پایان مهلت رزرو انجام می‌شود؛ `RESERVED → CANCELLED` با لغو مشتری یا ادمین.
+
+    **`allowedTransitions`** (آنچه `POST /admin/orders/{orderCode}/status` می‌پذیرد):
+
+    | وضعیت فعلی | `allowedTransitions` |
+    |---|---|
+    | `RESERVED`، `PROCESSING`، `PHOTO_SENT`، `CHANGE_REQUESTED` | `[CANCELLED]` |
+    | `SHIPPED` | `[DELIVERED]` |
+    | بقیه | `[]` |
+
+    `PHOTO_SENT` (با `…/pre-shipment-media/send`)، `SHIPPED` (با `…/shipment`)، خروج از `CHANGE_REQUESTED` به‌جز لغو و وضعیت‌های مرجوعی هیچ‌وقت از `…/status` نمی‌آیند.
+
+    **عکس قبل از ارسال** (`preShipmentMedia.status`): `WAITING` (پیش‌نویس دارد یا نه؛ مشتری پیش‌نویس را نمی‌بیند) ← ثبت ارسال ← `SENT` ← تأیید مشتری،
+    یا پایان مهلت پاسخ (`feedbackDeadline` = زمان ارسال عکس + ۲۴ ساعت) ← `APPROVED`؛ `SENT` یا `APPROVED` ← درخواست تغییر ← `CHANGE_REQUESTED` ← رسیدگی ← `WAITING` (عکس تازه).
+    تأیید عکس وضعیت سفارش را عوض نمی‌کند (`PHOTO_SENT` تا ارسال می‌ماند).
+
+    **ارسال** فقط از `PHOTO_SENT` است، و فقط بعد از تأیید مشتری یا پایان مهلت پاسخ (`422 AWAITING_CUSTOMER_FEEDBACK`)، و بدون مانده‌ی پرداخت.
+    **گروه رزرو با یک درخواست و یک کد رهگیری ارسال می‌شود** و همه‌ی سفارش‌های لغونشده‌ی گروه باید آماده باشند (`422 GROUP_NOT_READY`)؛ سفارش لغوشده‌ی گروه ارسال نمی‌شود و مانع هم نیست.
+    «تحویل شد» دستی است (`…/status` با `DELIVERED`) و مهلت مرجوعی (`returnableUntil`) همان لحظه با `returnWindowDays` ِ آن لحظه ثابت می‌شود.
     سرور برای هر سفارش آبجکت آماده‌ی `progress` (۴ مرحله با تاریخ هر مرحله) و `statusLabel`/`statusTone` را برمی‌گرداند تا کلاینت منطق نگاشت نداشته باشد.
 
     **درخواست تغییر:** مشتری با `POST /me/orders/{orderCode}/media-feedback` (`REQUEST_CHANGE`) سفارش را `CHANGE_REQUESTED` می‌کند.
@@ -185,10 +209,12 @@ info:
     |---|---|---|
     | درخواست OTP | SMS | کد ۵ رقمی |
     | پرداخت موفق | SMS | کد سفارش + لینک `track?order=KV-...` |
-    | ارسال عکس قبل از ارسال | پیام‌رسان انتخابی + SMS | عکس‌ها/ویدیو + لینک جزئیات سفارش |
+    | ارسال عکس قبل از ارسال | پیام‌رسان انتخابی (اپراتور، دستی) + SMS (سرور) | عکس‌ها/ویدیو در پیام‌رسان؛ پیامک: کد سفارش + لینک جزئیات سفارش |
     | ۱۲ ساعت مانده به پایان رزرو | SMS | یادآوری افزودن خرید [پیشنهادی] |
-    | تحویل به پست/تیپاکس | SMS | کد رهگیری + لینک رهگیری حامل |
-    | تحویل شد | SMS | درخواست ثبت نظر |
+    | تحویل به پست/تیپاکس | SMS | کد رهگیری + اسم حامل (اصلاح کد رهگیری پیامک ندارد) |
+    | تحویل شد | SMS | درخواست ثبت نظر (با `notifyCustomer`) |
+    | لغو شد | SMS | کد سفارش؛ لغو مشتری همیشه، لغو پنل با `notifyCustomer` |
+    | پول برگشت | SMS | کد سفارش؛ وقتی استرداد `COMPLETED` می‌شود |
     | موجود شد | SMS | لینک محصول (اشتراک «موجود شد خبرم کن») |
     | افت قیمت علاقه‌مندی | SMS | فقط با رضایت بازاریابی [پیشنهادی] |
 
@@ -1587,6 +1613,9 @@ paths:
         به‌خاطر حریم خصوصی، شماره موبایل در بدنه‌ی POST ارسال می‌شود نه در URL.
         خروجی نسخه‌ی محدود سفارش است (بدون آدرس و قیمت‌ها؛ حداکثر ۴ عکس پیش‌نمایش).
         موبایل باید موبایل خریدار یا گیرنده باشد. در صورت عدم تطابق، برای جلوگیری از حدس زدن، همان `404 TRACKING_NOT_FOUND` برمی‌گردد.
+        **فقط سفارش پرداخت‌شده** (هر وضعیتی جز `PENDING_PAYMENT`، `PAYMENT_FAILED` و `EXPIRED`). کد بدشکل، سفارش ناموجود یا پرداخت‌نشده و موبایل دیگر
+        همه همان `404 TRACKING_NOT_FOUND` با بدنه‌ی یکسان‌اند؛ فقط موبایل بدشکل `400` روی `phone` است. `orderCode` با ارقام فارسی هم پذیرفته است.
+        سقف: ۱۰ درخواست در ۱۰ دقیقه برای هر IP (`429`).
       requestBody:
         required: true
         content:
@@ -1606,6 +1635,8 @@ paths:
       tags: [Tracking]
       operationId: listDailyShipmentDays
       summary: "تب‌های روزهای اخیر (امروز، دیروز، ...) با تعداد مرسوله‌ی هر روز"
+      description: |
+        روزها از امروز (به وقت تهران) به عقب. `shipmentCount` تعداد **کدهای رهگیری** یکتای آن روز است (سفارش‌های یک گروه رزرو یک کد).
       parameters:
         - name: days
           in: query
@@ -1627,6 +1658,9 @@ paths:
       description: |
         جستجو با ۴ رقم آخر موبایل، حرف اول نام یا نام شهر. نام‌ها و موبایل‌ها **همیشه ماسک‌شده** از سرور می‌آیند
         (`س*** م***`، `09** *** 4821`) و داده‌ی کامل هرگز به این endpoint عمومی نمی‌رسد.
+        **یک ردیف برای هر کد رهگیری** (سفارش‌های یک گروه یک ردیف)، فقط مرسوله‌هایی که `showInDailyList` دارند، و **فقط ۳۰ روز اخیر**
+        (`date` ِ قدیمی‌تر یا آینده یک لیست خالی است). `q`: چهار رقم ← چهار رقم آخر موبایل گیرنده؛ یک حرف ← حرف اول نام گیرنده؛ وگرنه شهر شامل متن.
+        ترتیب: زمان ارسال، تازه‌ترین اول.
       parameters:
         - name: date
           in: query
@@ -2214,6 +2248,9 @@ paths:
       tags: [Orders]
       operationId: listMyOrderMedia
       summary: "عکس‌ها و ویدیوهای قبل از ارسال (برای lightbox)"
+      description: |
+        فقط سفارش خود کاربر (وگرنه `404 ORDER_NOT_FOUND`). `items` آخرین دسته‌ی **فرستاده‌شده** است (پیش‌نویس اپراتور هیچ‌وقت نه)؛
+        قبل از اولین ارسال خالی است و `waitingMessage` دارد. `capturedAt` زمان آپلود همان فایل است.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/OrderCode'
@@ -2232,7 +2269,9 @@ paths:
       summary: "پاسخ مشتری به عکس قبل از ارسال — «همونه!» یا درخواست تغییر رنگ/مدل [پیشنهادی مبتنی بر FAQ]"
       description: |
         مطابق FAQ: «تا قبل از ارسال، می‌تونی رنگ یا مدل رو عوض کنی یا سفارش رو لغو کنی».
-        `APPROVE` سفارش را برای ارسال آزاد می‌کند (بدون منتظر ماندن برای پایان مهلت پاسخ).
+        `APPROVE` سفارش را برای ارسال آزاد می‌کند (بدون منتظر ماندن برای پایان مهلت پاسخ). فقط وقتی عکس فرستاده شده و هنوز جواب نگرفته
+        (`preShipmentMedia.status = SENT`)؛ وگرنه `422 INVALID_STATUS_TRANSITION`. تأیید دوباره‌ی عکسی که تأیید شده `200` و بی‌اثر است.
+        `REQUEST_CHANGE` تا ساخته شدن درخواست تغییر `422 CHANGE_REQUEST_NOT_ALLOWED` می‌گیرد.
         `REQUEST_CHANGE` وضعیت را `CHANGE_REQUESTED` می‌کند و اپراتور با مشتری هماهنگ می‌کند و درخواست را اجرا یا رد می‌کند
         (`POST /admin/orders/{orderCode}/change-request/resolution`)؛ اختلاف قیمت با استرداد یا `totals.balanceDue` تسویه می‌شود (بخش ۴).
       security: [{ bearerAuth: [] }]
@@ -2250,7 +2289,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/OrderDetail' }
         '422':
-          description: "`CHANGE_REQUEST_NOT_ALLOWED` — سفارش ارسال شده است"
+          description: "`INVALID_STATUS_TRANSITION` — عکسی منتظر جواب نیست؛ `CHANGE_REQUEST_NOT_ALLOWED` — درخواست تغییر ممکن نیست"
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -2261,7 +2300,14 @@ paths:
     post:
       tags: [Orders]
       operationId: cancelMyOrder
-      summary: "لغو سفارش قبل از ارسال با بازگشت کامل وجه"
+      summary: "لغو سفارش تا وقتی وضعیتش عوض نشده، با ثبت استرداد کامل"
+      description: |
+        مشتری فقط وقتی لغو می‌کند که **وضعیت سفارش هنوز عوض نشده**: `RESERVED` یا `PROCESSING`، و هیچ عکسی برایش فرستاده نشده
+        (حتی اگر بعد از درخواست تغییر دوباره `PROCESSING` شده باشد). وگرنه `422 ORDER_NOT_CANCELLABLE` («وضعیت عوض شده»)؛
+        بعد از عکس، لغو با درخواست تغییر یا پشتیبانی است. سفارش پرداخت‌نشده لغو نمی‌شود (خودش منقضی می‌شود). لغو دوباره هم `422 ORDER_NOT_CANCELLABLE` است.
+        لغو یک استرداد `PENDING` به اندازه‌ی کل پرداخت‌شده می‌سازد (`refund`؛ برای سفارشی که چیزی پرداخت نشده `null`)،
+        موجودی را آزاد و استفاده‌ی کد تخفیف را برمی‌گرداند، و پیامک «لغو شد» می‌فرستد. `note` برای `reason = OTHER` لازم است (`400 NOTE_REQUIRED`).
+        اگر پرداختی همین حالا در حال تأیید است ← `422 PAYMENT_IN_PROGRESS`.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/OrderCode'
@@ -2277,7 +2323,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/CancelOrderResponse' }
         '422':
-          description: "`ORDER_NOT_CANCELLABLE`"
+          description: "`ORDER_NOT_CANCELLABLE` — وضعیت سفارش عوض شده (یا لغو شده)؛ `PAYMENT_IN_PROGRESS` — پرداختی در حال تأیید است"
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -2382,6 +2428,8 @@ paths:
       tags: [Orders]
       operationId: listMyTrackingCodes
       summary: "کدهای رهگیری من، گروه‌بندی‌شده بر اساس روز ارسال"
+      description: |
+        سفارش‌های ارسال‌شده‌ی خود کاربر (لغوشده نه)، گروه‌بندی‌شده بر اساس روز ارسال به وقت تهران، تازه‌ترین روز اول؛ حداکثر ۵۰ کد.
       security: [{ bearerAuth: [] }]
       responses:
         '200':
@@ -3422,6 +3470,16 @@ paths:
       x-roles: [ADMIN, OPERATOR]
       operationId: adminListOrders
       summary: "صف سفارش‌ها (فیلتر وضعیت، رزرو، روش ارسال، بازه‌ی تاریخ، جستجو با کد/موبایل/نام)"
+      description: |
+        * بدون `status`، سفارش‌های پرداخت‌نشده و منقضی (`PENDING_PAYMENT`، `PAYMENT_FAILED`، `EXPIRED`) نمی‌آیند؛ با `status` همان وضعیت‌ها (مقدار ناشناخته ← `400`).
+        * **`q`** (حداکثر ۱۰۰ نویسه، ارقام فارسی هم): به شکل کد سفارش (`KV-…` یا فقط ۴ تا ۸ رقم) ← همان کد؛ به شکل موبایل ← موبایل حساب یا گیرنده (دقیق)؛
+          وگرنه اسم حساب، اسم یا موبایل گیرنده، کد یا شهر شامل متن.
+        * **`reserved = true`**: سفارش عضو یک گروه رزرو است (هنوز `RESERVED` یا آزادشده). **`awaitingPhotos = true`**: `PROCESSING` و عکس در وضعیت `WAITING`
+          (پیش‌نویس داشته باشد یا نه؛ سفارشی که بعد از درخواست تغییر دوباره عکس لازم دارد هم).
+        * **`refundStatus`**: سفارش‌هایی که استردادی در این وضعیت دارند (صف استرداد دستی).
+        * **`from`/`to`**: روز تهران، شامل هر دو، روی زمان ثبت.
+        * **`statusCounts`**: هر ۱۳ وضعیت (صفر هم)، با همه‌ی فیلترها **جز** `status`، تا شمارنده‌ی تب‌ها با انتخاب یک تب عوض نشود.
+        * `customerName` اسم حساب، وگرنه اسم گیرنده؛ `customerPhone` موبایل حساب؛ `mediaCount` تعداد دسته‌ی آخر فرستاده‌شده، وگرنه پیش‌نویس.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: status
@@ -3433,7 +3491,7 @@ paths:
             items: { $ref: '#/components/schemas/OrderStatus' }
         - name: q
           in: query
-          schema: { type: string }
+          schema: { type: string, maxLength: 100 }
         - name: shippingMethod
           in: query
           schema: { $ref: '#/components/schemas/ShippingMethodCode' }
@@ -3442,14 +3500,22 @@ paths:
           schema: { type: boolean }
         - name: awaitingPhotos
           in: query
-          description: سفارش‌هایی که باید عکاسی شوند (PROCESSING بدون مدیا)
+          description: سفارش‌هایی که باید عکاسی شوند (`PROCESSING` با عکس در وضعیت `WAITING`)
           schema: { type: boolean }
+        - name: refundStatus
+          in: query
+          description: سفارش‌هایی که استردادی در این وضعیت دارند
+          schema: { type: string, enum: [PENDING, PROCESSING] }
         - name: from
           in: query
           schema: { type: string, format: date }
         - name: to
           in: query
           schema: { type: string, format: date }
+        - name: sort
+          in: query
+          description: '`newest` (پیش‌فرض) یا `oldest` (برای کار کردن صف به ترتیب ثبت)'
+          schema: { type: string, enum: [newest, oldest], default: newest }
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/Size'
       responses:
@@ -3467,6 +3533,10 @@ paths:
       x-roles: [ADMIN, OPERATOR]
       operationId: adminGetOrder
       summary: "جزئیات سفارش در پنل (+ مشتری، پرداخت‌ها، گروه ارسال رزرو، یادداشت‌های داخلی)"
+      description: |
+        همه‌ی `OrderDetail` به‌علاوه‌ی مشتری، گروه ارسال (کد سفارش‌های لغونشده‌ی گروه به ترتیب پرداخت)، **همه‌ی** تلاش‌های پرداخت (قدیمی‌ترین اول)،
+        استردادها، یادداشت‌های داخلی (قدیمی‌ترین اول) و `allowedTransitions`. پیش‌نویس عکس‌ها فقط این‌جا (`draftItems`) دیده می‌شود.
+        کد ناموجود یا بدشکل ← `404 ORDER_NOT_FOUND`.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/OrderCode'
@@ -3488,7 +3558,12 @@ paths:
       description: |
         فقط به وضعیت‌های `allowedTransitions` همان سفارش. وضعیت‌هایی که endpoint خودشان را دارند این‌جا پذیرفته نمی‌شوند:
         `PHOTO_SENT` (`…/pre-shipment-media/send`)، `SHIPPED` (`…/shipment`)، خروج از `CHANGE_REQUESTED` به‌جز لغو (`…/change-request/resolution`)،
-        و وضعیت‌های مرجوعی (`/admin/returns/*`).
+        و وضعیت‌های مرجوعی (`/admin/returns/*`). انتقال نامجاز ← `422 INVALID_STATUS_TRANSITION` با `meta.from`، `meta.to` و `meta.allowed`.
+
+        * **`CANCELLED`** (از `RESERVED`، `PROCESSING`، `PHOTO_SENT`، `CHANGE_REQUESTED`): موجودی آزاد، استفاده‌ی کد تخفیف برگشت، و **یک استرداد `PENDING`
+          به اندازه‌ی کل مبلغ پرداخت‌شده منهای استردادهای قبلی** (روش `BANK_TRANSFER`) ساخته می‌شود. پرداختی در حال تأیید ← `422 PAYMENT_IN_PROGRESS`.
+        * **`DELIVERED`** (از `SHIPPED`): لحظه‌ی تحویل همین لحظه است و `returnableUntil` ِ ردیف‌های قابل مرجوعی همین حالا ثابت می‌شود.
+        * `note` در تایم‌لاین مشتری به‌عنوان `note` ِ همان ردیف **دیده می‌شود**. با `notifyCustomer` پیامک «لغو شد» یا «تحویل شد» می‌رود.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/OrderCode'
@@ -3518,6 +3593,12 @@ paths:
       x-roles: [ADMIN, OPERATOR]
       operationId: adminSetPreShipmentMedia
       summary: "اتصال عکس‌ها/ویدیوهای آپلودشده به سفارش (به ازای هر قلم کالا)"
+      description: |
+        **پیش‌نویس** را کامل جایگزین می‌کند؛ مشتری پیش‌نویس را نمی‌بیند تا ارسال ثبت شود. فقط در `PROCESSING` با عکس `WAITING`
+        (وگرنه `422 INVALID_STATUS_TRANSITION`). ۱ تا ۲۰ مورد، فقط مدیای آپلودشده با `purpose = PRE_SHIPMENT`
+        (`400 MEDIA_NOT_FOUND` / `MEDIA_PURPOSE_MISMATCH` روی `items.i.mediaId`؛ تکراری `MEDIA_DUPLICATE`)؛ `orderItemId` باید ردیفی از همین سفارش باشد
+        (`400 ORDER_ITEM_NOT_FOUND` روی `items.i.orderItemId`). `sortOrder` ِ نیامده = ترتیب آرایه.
+        پاسخ نمای پنل است: `items` همین پیش‌نویس است.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/OrderCode'
@@ -3532,6 +3613,11 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PreShipmentMedia' }
+        '422':
+          description: "`INVALID_STATUS_TRANSITION` — سفارش در مرحله‌ی عکس (`PROCESSING` با عکس `WAITING`) نیست"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
@@ -3543,8 +3629,12 @@ paths:
       operationId: adminSendPreShipmentMedia
       summary: "ارسال عکس‌ها به پیام‌رسان مشتری و تغییر وضعیت به PHOTO_SENT"
       description: |
-        اگر بات/API پیام‌رسان در دسترس باشد ارسال خودکار است؛ در غیر این صورت اپراتور دستی می‌فرستد و `manual=true` ثبت می‌کند.
-        بعد از ارسال، پیامک «عکس کیفت فرستاده شد» هم ارسال می‌شود.
+        **ارسال همیشه دستی است:** اپراتور عکس‌ها را خودش در پیام‌رسان مشتری می‌فرستد و این‌جا ثبت می‌کند؛ بات پیام‌رسان نداریم.
+        `manual` پیش‌فرض `true` است و `false` ← `400 MANUAL_ONLY`. `channelOverride` کانالی است که واقعاً استفاده شده (پیش‌فرض: کانال سفارش).
+        `message` فقط ثبت می‌شود و سرور آن را به کسی تحویل نمی‌دهد.
+        پیش‌نویس «فرستاده» می‌شود: سفارش `PHOTO_SENT`، عکس `SENT`، و `feedbackDeadline` = همین لحظه + ۲۴ ساعت. فقط در `PROCESSING` با عکس `WAITING` و پیش‌نویس ناخالی
+        (`422 INVALID_STATUS_TRANSITION`)؛ سفارش چندردیفه برای هر ردیف حداقل یک عکس با `orderItemId` ِ همان ردیف لازم دارد (`422 PHOTOS_INCOMPLETE` با `meta.missingItemIds`).
+        بعد از ثبت، پیامک «عکس کیفت فرستاده شد» به موبایل حساب خریدار می‌رود.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/OrderCode'
@@ -3554,15 +3644,20 @@ paths:
             schema:
               type: object
               properties:
-                manual: { type: boolean, default: false }
+                manual: { type: boolean, default: true, description: 'همیشه `true`؛ `false` ← `400 MANUAL_ONLY`' }
                 channelOverride: { $ref: '#/components/schemas/PhotoMessengerChannel' }
-                message: { type: string, maxLength: 500, example: 'این کیف خودته؛ همین الان برات کنار گذاشتیمش.' }
+                message: { type: string, maxLength: 500, description: فقط ثبت می‌شود, example: 'این کیف خودته؛ همین الان برات کنار گذاشتیمش.' }
       responses:
         '200':
           description: OK
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AdminOrder' }
+        '422':
+          description: "`INVALID_STATUS_TRANSITION` یا `PHOTOS_INCOMPLETE` (`meta.missingItemIds`)"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
@@ -3619,8 +3714,18 @@ paths:
       operationId: adminSetShipment
       summary: "ثبت تحویل به حامل و کد رهگیری (وضعیت SHIPPED + پیامک)"
       description: |
-        برای سفارش‌های یک گروه رزرو، همین کد روی همه‌ی سفارش‌های گروه ثبت می‌شود.
+        فقط از `PHOTO_SENT`، و فقط وقتی مشتری عکس را تأیید کرده یا مهلت پاسخش (`feedbackDeadline`) گذشته
+        (`422 AWAITING_CUSTOMER_FEEDBACK` با `meta.feedbackDeadline`). `carrier` باید همان روش ارسال سفارش باشد (`400 CARRIER_MISMATCH`).
+        `trackingCode`: ۶ تا ۴۰ نویسه از `[0-9A-Za-z-]` (به حروف بزرگ ذخیره می‌شود؛ وگرنه `400 TRACKING_CODE_INVALID`).
+        `shippedAt` (پیش‌فرض الان) نه در آینده، نه بیشتر از ۷ روز پیش، نه قبل از ارسال عکس (`400 SHIPPED_AT_INVALID`).
+
+        **گروه رزرو:** یک درخواست **همه‌ی** سفارش‌های لغونشده‌ی گروه را با همین کد ارسال می‌کند. اگر حتی یکی آماده نیست (عکس تأییدنشده،
+        مانده‌ی پرداخت، درخواست تغییر باز) ← `422 GROUP_NOT_READY` با `meta.orderCodes` و هیچ‌کدام ارسال نمی‌شوند. گروهی که هنوز در مهلت رزرو است
+        ← `422 INVALID_STATUS_TRANSITION`. سفارش لغوشده‌ی گروه ارسال نمی‌شود و مانع هم نیست.
         سفارشی که مانده‌ی پرداخت دارد (`totals.balanceDue > 0`، بعد از درخواست تغییر به رنگ/مدل گران‌تر) ارسال نمی‌شود.
+
+        **روی سفارش `SHIPPED` = اصلاح:** فقط کد، `shippedAt` و `showInDailyList` عوض می‌شوند (برای گروه روی همه‌ی سفارش‌های ارسال‌شده‌ی آن)،
+        بدون پیامک. روی `DELIVERED` ← `422 INVALID_STATUS_TRANSITION`. بعد از ارسال (نه اصلاح) پیامک «ارسال شد» با کد رهگیری و اسم حامل می‌رود.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/OrderCode'
@@ -3636,7 +3741,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/AdminOrder' }
         '422':
-          description: "`BALANCE_DUE` (`meta.balanceDue`) یا `INVALID_STATUS_TRANSITION`"
+          description: "`AWAITING_CUSTOMER_FEEDBACK` (`meta.feedbackDeadline`)، `GROUP_NOT_READY` (`meta.orderCodes`)، `BALANCE_DUE` (`meta.balanceDue`) یا `INVALID_STATUS_TRANSITION`"
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -3650,6 +3755,9 @@ paths:
       x-roles: [ADMIN, OPERATOR]
       operationId: adminAddOrderNote
       summary: "یادداشت داخلی روی سفارش"
+      description: |
+        فقط پنل می‌بیند؛ ویرایش و حذف ندارد. `text` بعد از حذف فاصله‌های دو طرف ۱ تا ۱۰۰۰ نویسه (`400 NOTE_REQUIRED` / `NOTE_TOO_LONG`).
+        `author` اسم نمایشی اپراتور است. در لاگ تغییرات فقط ثبت یادداشت می‌آید، نه متنش.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/OrderCode'
@@ -3679,9 +3787,13 @@ paths:
       operationId: adminCreateRefund
       summary: "ثبت استرداد وجه (کامل یا جزئی)"
       description: |
-        استرداد با وضعیت `PENDING` ساخته می‌شود و با `PATCH /admin/refunds/{refundId}` پیش می‌رود.
-        جمع استردادهای غیر `FAILED` یک سفارش از مبلغ پرداخت‌شده‌اش بیشتر نمی‌شود (`400`، فیلد `amount`).
+        استرداد **دستی** است: سرور فقط ثبتش می‌کند و هیچ تماس بانکی یا درگاهی برای برگرداندن پول نمی‌گیرد.
+        استرداد با وضعیت `PENDING` ساخته می‌شود (`expectedBy` = زمان ثبت + ۷۲ ساعت) و با `PATCH /admin/refunds/{refundId}` پیش می‌رود.
+        جمع استردادهای غیر `FAILED` یک سفارش از مبلغ پرداخت‌شده‌اش بیشتر نمی‌شود (`400 REFUND_EXCEEDS_PAID` روی `amount` با `meta.refundable`).
+        `reason` اجباری است (`400 REFUND_REASON_REQUIRED`). `method` پیش‌فرض `ORIGINAL_PAYMENT` (برگشت به همان کارت با کارت‌به‌کارت دستی)؛
+        `BANK_TRANSFER` به شبایی که تلفنی گرفته شده.
         با `returnId`، مرجوعی باید `RECEIVED` باشد و مال همین سفارش؛ وقتی این استرداد `COMPLETED` شود مرجوعی `REFUNDED` می‌شود.
+        تا ساخته شدن مرجوعی، هر `returnId` ← `400 RETURN_NOT_FOUND` روی `returnId`.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/OrderCode'
@@ -3714,9 +3826,11 @@ paths:
       description: |
         انتقال‌های مجاز: `PENDING → PROCESSING`، `PENDING|PROCESSING → COMPLETED`، `PENDING|PROCESSING → FAILED`. `COMPLETED` و `FAILED` پایانی‌اند؛
         برای استرداد ناموفق یک استرداد تازه ثبت کنید.
-        `COMPLETED`: `completedAt` همین لحظه است و برای `ORIGINAL_PAYMENT` و `BANK_TRANSFER` فیلد `referenceId` لازم است.
-        مبلغ به `totals.refunded` سفارش اضافه می‌شود، اگر به مرجوعی وصل است آن مرجوعی `REFUNDED` می‌شود، و به مشتری پیامک می‌رود.
-        `note` به‌عنوان `statusNote` برای مشتری هم دیده می‌شود (مثلاً «شماره شبا اشتباه بود؛ با پشتیبانی تماس بگیر»).
+        `COMPLETED`: `completedAt` همین لحظه است و `referenceId` (شماره‌ی پیگیری انتقال بانکی، تا ۶۴ نویسه از `[0-9A-Za-z-]`)
+        **برای `COMPLETED` همیشه لازم است** (`400 REFERENCE_ID_REQUIRED`).
+        مبلغ به `totals.refunded` سفارش اضافه می‌شود (و یک ردیف در تایم‌لاین)، اگر به مرجوعی وصل است آن مرجوعی `REFUNDED` می‌شود، و به مشتری پیامک می‌رود.
+        `note` به‌عنوان `statusNote` برای مشتری هم دیده می‌شود (مثلاً «شماره شبا تأیید نشد؛ دوباره باهات تماس می‌گیریم»).
+        استرداد ناموجود یا شناسه‌ای که عدد مثبت نیست ← `404 REFUND_NOT_FOUND`.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: refundId
@@ -5336,6 +5450,12 @@ components:
         - RESERVATION_NOT_FOUND
         # --- سفارش با مانده‌ی پرداخت بعد از درخواست تغییر (meta.balanceDue) ---
         - BALANCE_DUE
+        # --- کار روی سفارش در پنل ---
+        - AWAITING_CUSTOMER_FEEDBACK
+        - GROUP_NOT_READY
+        - PHOTOS_INCOMPLETE
+        - REFUND_NOT_FOUND
+        - PAYMENT_IN_PROGRESS
       example: DISCOUNT_MIN_SUBTOTAL_NOT_MET
 
     # ============ MEDIA ============
@@ -6673,11 +6793,13 @@ components:
         channel: { $ref: '#/components/schemas/PhotoMessengerChannel' }
         channelName: { type: string, example: بله }
         phone: { $ref: '#/components/schemas/PhoneNumber' }
+        username: { type: string, nullable: true, description: 'شناسه‌ی مشتری در همان پیام‌رسان، اگر در تسویه داده؛ اپراتور به آن می‌فرستد', example: '@sara_m' }
         note: { type: string, nullable: true, example: از داخل کیف هم عکس بگیرید }
         sentAt: { type: string, format: date-time, nullable: true }
         waitingMessage: { type: string, nullable: true, example: قبل از ارسال، از کیفت عکس و ویدیو می‌گیریم و توی بله برات می‌فرستیم؛ یه نسخه هم همین‌جا قرار می‌گیره. }
         items:
           type: array
+          description: 'فقط آخرین دسته‌ی **فرستاده‌شده**؛ پیش‌نویس اپراتور فقط در `AdminOrder.draftItems` (و در پاسخ `PUT …/pre-shipment-media`)'
           items: { $ref: '#/components/schemas/OrderMediaItem' }
         feedback:
           type: object
@@ -6699,7 +6821,7 @@ components:
                 variantId: { type: integer, nullable: true, description: ورینتی که واقعاً جایگزین شد }
                 note: { type: string, nullable: true }
                 at: { type: string, format: date-time }
-        feedbackDeadline: { type: string, format: date-time, nullable: true, description: '[پیشنهادی] بعد از این زمان خودکار تأییدشده تلقی می‌شود' }
+        feedbackDeadline: { type: string, format: date-time, nullable: true, description: 'زمان ارسال عکس + ۲۴ ساعت؛ اگر تا آن موقع جوابی نیاید عکس خودکار تأیید می‌شود و ارسال ممکن است' }
     OrderEvent:
       type: object
       properties:
@@ -6744,6 +6866,10 @@ components:
               type: array
               items: { $ref: '#/components/schemas/ReturnRequest' }
             invoiceUrl: { type: string, nullable: true, example: /api/v1/me/orders/KV-215566/invoice }
+            refunds:
+              type: array
+              description: 'همه‌ی استردادهای سفارش، قدیمی‌ترین اول، با وضعیت و `statusNote`'
+              items: { $ref: '#/components/schemas/Refund' }
     OrderListResponse:
       type: object
       properties:
@@ -6778,22 +6904,22 @@ components:
       type: object
       properties:
         order: { $ref: '#/components/schemas/OrderSummary' }
-        refund: { $ref: '#/components/schemas/Refund' }
-        message: { type: string, example: سفارش لغو شد. مبلغ حداکثر تا ۷۲ ساعت به کارتت برمی‌گرده. }
+        refund: { type: object, allOf: [{ $ref: '#/components/schemas/Refund' }], nullable: true, description: 'استرداد `PENDING` ِ ساخته‌شده؛ `null` وقتی چیزی پرداخت نشده بود' }
+        message: { type: string, example: سفارش لغو شد. برای برگردوندن پولت، همکارهامون تا ۷۲ ساعت کاری باهات تماس می‌گیرن. }
     Refund:
       type: object
       properties:
         id: { type: integer, example: 31 }
         amount: { $ref: '#/components/schemas/Money' }
-        method: { type: string, enum: [ORIGINAL_PAYMENT, BANK_TRANSFER, STORE_CREDIT] }
+        method: { type: string, enum: [ORIGINAL_PAYMENT, BANK_TRANSFER] }
         status: { type: string, enum: [PENDING, PROCESSING, COMPLETED, FAILED] }
         reason: { type: string, nullable: true }
         returnId: { type: integer, nullable: true, description: مرجوعی‌ای که این استرداد برای آن است }
         createdAt: { type: string, format: date-time }
-        expectedBy: { type: string, format: date-time, nullable: true }
+        expectedBy: { type: string, format: date-time, nullable: true, description: 'زمان ثبت + ۷۲ ساعت؛ تخمین تماس همکاران' }
         completedAt: { type: string, format: date-time, nullable: true }
-        referenceId: { type: string, nullable: true, description: شماره‌ی پیگیری بانک یا درگاه }
-        statusNote: { type: string, nullable: true, description: 'توضیح آخرین تغییر وضعیت (`PATCH /admin/refunds/{refundId}`)؛ به مشتری هم نشان داده می‌شود', example: شماره شبا اشتباه بود؛ با پشتیبانی تماس بگیر }
+        referenceId: { type: string, nullable: true, description: شماره‌ی پیگیری انتقال بانکی }
+        statusNote: { type: string, nullable: true, description: 'توضیح آخرین تغییر وضعیت (`PATCH /admin/refunds/{refundId}`)؛ به مشتری هم نشان داده می‌شود', example: شماره شبا تأیید نشد؛ دوباره باهات تماس می‌گیریم }
     ReturnStatus:
       type: string
       enum: [REQUESTED, APPROVED, REJECTED, PICKUP_SCHEDULED, RECEIVED, REFUNDED, CLOSED]
@@ -6821,7 +6947,7 @@ components:
           maxItems: 6
           description: عکس‌های مستندات از `POST /me/uploads`
           items: { type: string }
-        refundMethod: { type: string, enum: [ORIGINAL_PAYMENT, BANK_TRANSFER, STORE_CREDIT], default: ORIGINAL_PAYMENT }
+        refundMethod: { type: string, enum: [ORIGINAL_PAYMENT, BANK_TRANSFER], default: ORIGINAL_PAYMENT }
         iban: { type: string, nullable: true, pattern: '^IR\d{24}$', description: فقط برای BANK_TRANSFER }
     ReturnRequest:
       type: object
@@ -6847,7 +6973,7 @@ components:
           items: { $ref: '#/components/schemas/MediaAsset' }
         shippingPaidBy: { type: string, enum: [KIVA, CUSTOMER] }
         instructions: { type: string, nullable: true, example: بسته رو با تیپاکس به آدرس انبار کیوا بفرست و کد رهگیری رو این‌جا ثبت کن. }
-        refundMethod: { type: string, enum: [ORIGINAL_PAYMENT, BANK_TRANSFER, STORE_CREDIT] }
+        refundMethod: { type: string, enum: [ORIGINAL_PAYMENT, BANK_TRANSFER] }
         rejectionReason: { type: string, nullable: true, description: فقط برای `REJECTED` }
         pickup:
           type: object
@@ -7976,7 +8102,7 @@ components:
       properties:
         id: { type: integer }
         text: { type: string }
-        author: { type: string, example: operator1 }
+        author: { type: string, description: اسم نمایشی نویسنده (اسم کامل، وگرنه موبایل ماسک‌شده), example: مریم رضایی }
         createdAt: { type: string, format: date-time }
     AdminOrderListItem:
       type: object
@@ -8016,9 +8142,9 @@ components:
               type: object
               properties:
                 id: { type: integer }
-                fullName: { type: string }
+                fullName: { type: string, nullable: true, description: 'اسم حساب؛ `null` وقتی مشتری اسمش را نداده' }
                 phone: { $ref: '#/components/schemas/PhoneNumber' }
-                ordersCount: { type: integer, example: 3 }
+                ordersCount: { type: integer, description: 'سفارش‌های پرداخت‌شده‌ی مشتری (لغوشده هم)', example: 3 }
             shipmentGroup:
               type: object
               nullable: true
@@ -8027,9 +8153,15 @@ components:
                 code: { type: string, example: SG-3021 }
                 orderCodes:
                   type: array
+                  description: سفارش‌های لغونشده‌ی گروه به ترتیب پرداخت
                   items: { $ref: '#/components/schemas/OrderCode' }
-                releaseAt: { type: string, format: date-time }
+                releaseAt: { type: string, format: date-time, description: پایان مهلت رزرو گروه }
+            draftItems:
+              type: array
+              description: 'پیش‌نویس عکس‌های قبل از ارسال (`PUT …/pre-shipment-media`) که هنوز فرستاده نشده؛ مشتری آن را نمی‌بیند'
+              items: { $ref: '#/components/schemas/OrderMediaItem' }
             payments:
+              description: همه‌ی تلاش‌های پرداخت سفارش، قدیمی‌ترین اول
               type: array
               items: { $ref: '#/components/schemas/OrderPaymentInfo' }
             refunds:
@@ -8077,7 +8209,7 @@ components:
       properties:
         amount: { $ref: '#/components/schemas/Money' }
         reason: { type: string, maxLength: 300 }
-        method: { type: string, enum: [ORIGINAL_PAYMENT, BANK_TRANSFER, STORE_CREDIT], default: ORIGINAL_PAYMENT }
+        method: { type: string, enum: [ORIGINAL_PAYMENT, BANK_TRANSFER], default: ORIGINAL_PAYMENT }
         returnId: { type: integer, nullable: true }
     AdminReturnDecisionRequest:
       type: object
@@ -8112,7 +8244,7 @@ components:
           type: string
           maxLength: 64
           nullable: true
-          description: 'شماره‌ی پیگیری بانک یا درگاه؛ برای `COMPLETED` با `ORIGINAL_PAYMENT` یا `BANK_TRANSFER` لازم'
+          description: 'شماره‌ی پیگیری انتقال بانکی (`[0-9A-Za-z-]`)؛ برای `COMPLETED` همیشه لازم (`400 REFERENCE_ID_REQUIRED`)'
           example: '140507181234567'
         note: { type: string, maxLength: 300, nullable: true, description: 'می‌شود `Refund.statusNote`؛ مشتری هم می‌بیند' }
     AdminReturnRequest:

@@ -1528,7 +1528,7 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 
 | گام | عنوان | اندازه | وضعیت |
 |---|---|---|---|
-| ۲.۰ | کانترکت 1.9.0 | M | ⬜ |
+| ۲.۰ | کانترکت 1.9.0 | M | ✅ |
 | ۲.۱ | دامنه‌ی سفارش بعد از پرداخت، و Aggregate ِ استرداد | L | ⬜ |
 | ۲.۲ | read model ِ سفارش برای پنل و تایم‌لاین تازه | L | ⬜ |
 | ۲.۳ | صف و جزئیات سفارش در پنل | M | ⬜ |
@@ -1991,20 +1991,24 @@ Route: 200 با AdminOrder ِ همون سفارش
 | 14 | `POST /tracking/lookup`، `GET /tracking/daily*` | «فقط سفارش پرداخت‌شده»؛ «یک ردیف برای هر کد رهگیری»؛ «فقط ۳۰ روز اخیر» | — |
 | 15 | `ErrorCode` | تازه: `AWAITING_CUSTOMER_FEEDBACK`، `GROUP_NOT_READY`، `PHOTOS_INCOMPLETE`، `REFUND_NOT_FOUND`، `PAYMENT_IN_PROGRESS` | کلاینت روی هر کدوم رفتار جدا داره |
 | 16 | بخش ۵ (پیامک‌ها) | «لغو شد» و «پول برگشت» اضافه؛ «ارسال عکس: پیام‌رسان با اپراتور، پیامک با سرور» | — |
+| 17 | `GET /me/orders/{orderCode}/media`، `POST …/media-feedback` (تازه، گام ۲.۰) | «`items` فقط دسته‌ی فرستاده‌شده»؛ `APPROVE` فقط وقتی عکس `SENT` ـه، وگرنه `422 INVALID_STATUS_TRANSITION`، تأیید دوباره `200`؛ `REQUEST_CHANGE` تا فاز ۳ ← `422 CHANGE_REQUEST_NOT_ALLOWED` | کانترکت برای این دو هیچ قانونی نداشت |
+| 18 | `AdminOrder.customer` (تازه، گام ۲.۰) | `fullName` nullable (مشتری بی‌اسم)؛ `ordersCount` = سفارش‌های پرداخت‌شده، لغوشده هم | کانترکت non-null بود ولی حساب بی‌اسم داریم |
 
 **کدهای فیلدی تازه** (فقط متن فارسی): `NOTE_REQUIRED`، `NOTE_TOO_LONG`، `ORDER_ITEM_NOT_FOUND`، `MANUAL_ONLY`، `CARRIER_MISMATCH`، `SHIPPED_AT_INVALID`، `TRACKING_CODE_INVALID`، `REFUND_EXCEEDS_PAID`، `REFERENCE_ID_REQUIRED`، `REFUND_REASON_REQUIRED`، `RETURN_NOT_FOUND`.
 
 ### ۷.۱۱ گام‌ها
 
-#### گام ۲.۰: کانترکت 1.9.0 · M ⬜
+#### گام ۲.۰: کانترکت 1.9.0 · M ✅
 
 **می‌سازی:** برنچ `panel-orders`؛ ردیف‌های ۷.۱۰ و `info.version: 1.9.0`؛ متن کدهای تازه در `ErrorMessages.kt`.
 
 وابسته به: فاز ۱ (merge‌شده)
 
 **تموم شده یعنی:**
-- [ ] همه‌ی ردیف‌ها، YAML معتبر، `ErrorMessagesTest` سبز.
-- [ ] `STORE_CREDIT` در هیچ‌جای کانترکت نیست (grep).
+- [x] همه‌ی ردیف‌ها، YAML معتبر، `ErrorMessagesTest` سبز.
+- [x] `STORE_CREDIT` در هیچ‌جای کانترکت نیست (grep).
+
+**یادداشت پیاده‌سازی:** برنچ `panel-orders` از نوک فاز ۱ ساخته شد (فاز ۱ هنوز منتظر merge به `main` ـه). دو ردیف تازه در جدول ۷.۱۰ (۱۷ و ۱۸). کدهای فیلدی بیشتر از فهرست ۷.۱۰ متن گرفتن (`CARRIER_INVALID`، `TRACKING_CODE_REQUIRED`، `REFUND_AMOUNT_INVALID`، `REFUND_METHOD_INVALID`، `REFUND_STATUS_INVALID`، `REFUND_REASON_TOO_LONG`، `REFUND_NOTE_TOO_LONG`، `REFERENCE_ID_INVALID`، `ORDER_STATUS_INVALID`، `CANCEL_REASON_INVALID`، `CANCEL_NOTE_TOO_LONG`، `STATUS_NOTE_TOO_LONG`، `PHOTO_MESSAGE_TOO_LONG`، `PHOTOS_REQUIRED`، `PHOTOS_TOO_MANY`، `SORT_ORDER_INVALID`، `FEEDBACK_DECISION_INVALID`، `REFUND_STATUS_FILTER_INVALID`، `DAYS_INVALID`، `TRACKING_QUERY_TOO_LONG`)، تا گام‌های بعد فقط استفاده کنن.
 
 ---
 
@@ -5970,3 +5974,4 @@ kiva {
 | ۲۶ مهر ۱۴۰۵ | ۱.۸ | Phase 1 step 1.8 | `V25` با backfill، ردیف تاریخچه در `InventoryQmProjector`، `InventoryAdjustmentQmRepository`، `AdjustInventoryUc` با `actor`، لاگ و `id` از read model، `holdForChange` برای صف کشیدن تغییرهای همزمان، `ListInventoryAdjustmentsUc`، `webV1AdminInventory.kt`. خرابکاری: بدون `holdForChange` ← تست ۲۰ تغییر همزمان قرمز |
 | ۲۶ مهر ۱۴۰۵ | ۱.۹ | Phase 1 step 1.9 | عکس و hover ِ کارت از رنگ نمایش، `imageUrl`/`thumbnailUrl` ِ سواچ‌ها، عکس صفحه‌ی محصول، `CartItem.image`، `OrderItemSnapshot.imageUrl` (مسیر ۴۸۰، سفارش‌های قبلی null)، کانترکت `OrderItem.image` رشته (ردیف ۲۱). بدون کوئری اضافه. خرابکاری: `imageUrl = null` در ثبت سفارش ← تست قرمز |
 | ۲۶ مهر ۱۴۰۵ | ۱.۱۰ | Phase 1 step 1.10 | `PANEL_CATALOG_REVIEW.md` (ردیف‌های ۱، ۳، ۴، ۵، ۱۵، ۱۶، ۱۸، ۲۰ با تست‌هاشون و ۱۳ خرابکاری)، `PanelCatalogLogScanOnDatabaseTest`، `ProductLockOrderOnDatabaseTest`، تست «در استفاده» با `productCount 2`، `docs/FRONTEND_PANEL_CATALOG.md`، README. ۲۲۶۳ تست سبز. مونده: دور با پنل و تست‌های `vips` (ابزار و پنل اینجا نیست) و merge به `main` |
+| ۲۶ مهر ۱۴۰۵ | ۲.۰ | Phase 2 step 2.0 | کانترکت 1.9.0 با هر ۱۶ ردیف ِ ۷.۱۰ و دو ردیف تازه (۱۷: قانون `media` و `media-feedback`؛ ۱۸: `customer.fullName` nullable). `STORE_CREDIT` از هر چهار enum رفت. YAML با snakeyaml معتبره و همه‌ی `$ref`ها پیدا می‌شن. متن همه‌ی کدهای تازه. برنچ `panel-orders` از نوک فاز ۱ |
