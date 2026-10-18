@@ -213,9 +213,11 @@ data class OrderTotalsHttpResponse(
     }
 }
 
-/** Contract schema `OrderPaymentInfo`: the order's latest attempt to pay. */
+/** Contract schema `OrderPaymentInfo`: an attempt to pay the order, or ([purpose] BALANCE) what a change left owed. */
 @Serializable
 data class OrderPaymentInfoHttpResponse(
+    val purpose: String,
+    val amount: Long,
     val gateway: String,
     val gatewayName: String,
     val status: String,
@@ -225,6 +227,8 @@ data class OrderPaymentInfoHttpResponse(
 ) {
     companion object {
         fun from(payment: OrderDetailDto.Payment) = OrderPaymentInfoHttpResponse(
+            purpose = payment.purpose.name,
+            amount = payment.amount.toman,
             gateway = payment.gateway.name,
             gatewayName = payment.gatewayName,
             status = payment.outcome.name,

@@ -10,8 +10,12 @@ import com.kiva.common.transaction.TransactionManager
 import com.kiva.common.usecase.QueryUseCase
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.order.model.policy.OrderCodePolicy
+import com.kiva.domain.aggregate.order.model.policy.PaymentPolicy
+import com.kiva.domain.aggregate.payment.entity.Payment
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentPublicId
+import com.kiva.domain.aggregate.payment.model.valueobject.PaymentPurpose
 import com.kiva.domain.aggregate.payment.repository.PaymentRepository
+import java.time.Instant
 
 /**
  * Where the shopper goes to pay an attempt whose session is open (the contract's PaymentInit): the `payment` of placing
@@ -37,8 +41,17 @@ class GetPaymentInitUc(
             val order = orderQmRepository.findOfCustomer(query.userId, OrderCodePolicy.codeOf(payment.orderId))
                 ?: error("Payment ${payment.publicId.value} is of order ${payment.orderId.value}, which the read model doesn't have")
             val redirect = payment.redirect ?: error("Payment ${payment.publicId.value} has no session yet (${payment.status})")
-            Result.success(PaymentInitDto(payment.publicId.value, payment.gateway, payment.amount, redirect, order.holdUntil))
+            Result.success(PaymentInitDto(payment.publicId.value, payment.gateway, payment.amount, redirect, expiresAtOf(payment, order.holdUntil)))
         }
+    }
+
+    /**
+     * The order's time to pay, never moved; a balance after a change has none (its stock was held when the order was
+     * placed), so its attempt's own window on the gateway's page (PaymentPolicy.GATEWAY_WINDOW).
+     */
+    private fun expiresAtOf(payment: Payment, holdUntil: Instant): Instant = when (payment.purpose) {
+        PaymentPurpose.ORDER -> holdUntil
+        PaymentPurpose.BALANCE -> payment.createdOn.plus(PaymentPolicy.GATEWAY_WINDOW)
     }
 
     sealed class Failure(code: String, kind: FailureKind) : ResultFailure(code, kind) {

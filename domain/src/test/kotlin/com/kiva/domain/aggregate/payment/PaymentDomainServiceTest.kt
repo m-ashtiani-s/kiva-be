@@ -1,6 +1,8 @@
 package com.kiva.domain.aggregate.payment
 
 import com.kiva.common.valueobject.Money
+import com.kiva.common.valueobject.UserId
+import com.kiva.domain.aggregate.media.model.valueobject.MediaId
 import com.kiva.domain.aggregate.order.OrderFixtures.at
 import com.kiva.domain.aggregate.order.OrderFixtures.now
 import com.kiva.domain.aggregate.order.OrderFixtures.placedOrder
@@ -9,7 +11,12 @@ import com.kiva.domain.aggregate.order.entity.Order
 import com.kiva.domain.aggregate.order.entity.event.OrderPaid
 import com.kiva.domain.aggregate.order.entity.event.OrderPaymentFailed
 import com.kiva.domain.aggregate.order.model.policy.PaymentPolicy
+import com.kiva.domain.aggregate.order.model.valueobject.CancelledBy
+import com.kiva.domain.aggregate.order.model.valueobject.ChangeRequest
+import com.kiva.domain.aggregate.order.model.valueobject.ChangeTarget
+import com.kiva.domain.aggregate.order.model.valueobject.ChangeType
 import com.kiva.domain.aggregate.order.model.valueobject.OrderId
+import com.kiva.domain.aggregate.order.model.valueobject.OrderPhoto
 import com.kiva.domain.aggregate.order.model.valueobject.OrderStatus
 import com.kiva.domain.aggregate.payment.PaymentDomainService.Confirmed
 import com.kiva.domain.aggregate.payment.PaymentDomainService.ExpireRefusal
@@ -21,10 +28,17 @@ import com.kiva.domain.aggregate.payment.model.valueobject.GatewayAuthority
 import com.kiva.domain.aggregate.payment.model.valueobject.GatewayRefId
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentFailureReason
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentPublicId
+import com.kiva.domain.aggregate.payment.model.valueobject.PaymentPurpose
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentRedirect
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentStatus
 import com.kiva.domain.aggregate.payment.repository.PaymentIdGenerator
+import com.kiva.domain.aggregate.product.model.valueobject.MaxPerOrder
+import com.kiva.domain.aggregate.product.model.valueobject.PriceTag
+import com.kiva.domain.aggregate.product.model.valueobject.ProductId
+import com.kiva.domain.aggregate.product.model.valueobject.VariantId
 import com.kiva.domain.aggregate.settings.model.valueobject.PaymentGatewayCode
+import com.kiva.domain.aggregate.user.model.valueobject.MessengerChannel
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import java.time.Duration
 import kotlin.test.assertEquals
@@ -337,5 +351,123 @@ class PaymentDomainServiceTest {
         assertEquals(PaymentStatus.FAILED, payment.status)
         assertEquals(OrderStatus.PAYMENT_FAILED, order.status)
         assertEquals(now.plusSeconds(600), payment.settledOn)
+    }
+
+    // ============ what a change left owed (phase 3) ============
+
+    @Nested
+    inner class TheBalance {
+        private val operator = UserId.constructFromPersisted(900)
+        private val owed = Money.constructFromPersisted(200_000)
+
+        /** Sara's golden order paid, its photos sent, and its caramel Aida swapped for a color 200,000 dearer: it owes 200,000. Nothing recorded since. */
+        private fun owing(): Order {
+            val order = placedOrder()
+            order.markPaid(PaymentPublicId.constructFromPersisted("pay_0000000000A1"), order.totals.payable, false, sara, at(2)).getOrNull()!!
+            order.attachPhotos(order.lines.map { OrderPhoto(MediaId.constructFromPersisted("med_" + it.lineId.toString().padStart(22, '0')), it.lineId, null, it.lineId) }, operator, at(3))
+                .getOrNull()!!
+            order.sendPhotos(MessengerChannel.TELEGRAM, null, 24, operator, at(4)).getOrNull()!!
+            val black = VariantId.constructFromPersisted(302)
+            order.requestChange(ChangeRequest(ChangeType.COLOR, 1, black, null), ChangeTarget(black, ProductId.constructFromPersisted(3)), sara, at(5)).getOrNull()!!
+            val line = order.lines.first { it.lineId == 1 }
+            val dearer = line.replacedBy(line.productId, black, line.item, PriceTag.constructFromPersisted(line.priceTag.price + owed, null), true, true)
+            order.replaceLine(dearer, MaxPerOrder.constructFromPersisted(5), operator, at(6)).getOrNull()!!
+            order.applyChange(null, operator, at(6)).getOrNull()!!
+            return Order(order.getRecordedEvents())
+        }
+
+        /** An attempt of [order]'s balance of [amount] whose session is open. */
+        private fun balanceAttempt(order: Order, n: Int = 7, amount: Money = owed): Payment {
+            val authority = GatewayAuthority.constructFromPersisted("B0000000000000000000000000000000000$n")
+            return Payment.start(PaymentPublicId.constructFromPersisted("pay_00000000000$n"), order.id, sara, PaymentGatewayCode.ZARINPAL, amount, at(10), PaymentPurpose.BALANCE)
+                .also { it.redirected(authority, PaymentRedirect("https://payment.zarinpal.com/pg/StartPay/${authority.value}", PaymentRedirect.Method.GET), at(10)) }
+        }
+
+        @Test
+        fun `a paid order that owes something gets an attempt of exactly its balance, a day after its time to pay ended`() {
+            val order = owing()
+
+            val attempt = service.startAttempt(order, listOf(redirected(order)), PaymentGatewayCode.ZARINPAL, gatewayAvailable = true, sara, at(60 * 24)).getOrNull()!!
+
+            assertEquals(listOf(PaymentPurpose.BALANCE, owed, PaymentStatus.INITIATED), listOf(attempt.purpose, attempt.amount, attempt.status))
+        }
+
+        @Test
+        fun `a paid order that owes nothing is ORDER_ALREADY_PAID, and an unavailable gateway is refused for a balance too`() {
+            val paid = Order(placedOrder().also { it.markPaid(PaymentPublicId.constructFromPersisted("pay_0000000000A1"), it.totals.payable, false, sara, at(2)) }.getRecordedEvents())
+
+            assertEquals(StartAttemptFailure.AlreadyPaid, service.startAttempt(paid, emptyList(), PaymentGatewayCode.ZARINPAL, true, sara, at(3)).failureOrNull())
+            assertEquals(StartAttemptFailure.GatewayUnavailable, service.startAttempt(owing(), emptyList(), PaymentGatewayCode.SAMAN, false, sara, at(3)).failureOrNull())
+        }
+
+        @Test
+        fun `ten attempts of the balance are the limit - the attempts of the order itself don't count`() {
+            val order = owing()
+            val ofTheOrder = List(10) { redirected(order, it) }
+            val ofTheBalance = List(10) { balanceAttempt(order, it) }
+
+            assertEquals(PaymentPurpose.BALANCE, service.startAttempt(order, ofTheOrder, PaymentGatewayCode.ZARINPAL, true, sara, at(20)).getOrNull()?.purpose)
+            val tooMany = service.startAttempt(order, ofTheOrder + ofTheBalance, PaymentGatewayCode.ZARINPAL, true, sara, at(20)).failureOrNull()
+            assertEquals(StartAttemptFailure.TooManyAttempts(PaymentPolicy.Refusal.TooManyAttempts(PaymentPolicy.GATEWAY_WINDOW)), tooMany)
+        }
+
+        @Test
+        fun `paid at the bank while the order still owes exactly that - confirmed, and the order owes nothing`() {
+            val order = owing()
+            val payment = balanceAttempt(order)
+
+            assertEquals(Return.Confirming, service.shopperReturned(payment, paid = true, order, listOf(payment), sara, at(11)))
+            assertEquals(Confirmed.Paid, service.confirmed(payment, order, refId, card, sara, at(12)))
+
+            assertEquals(listOf(Money.ZERO, owed), listOf(order.balanceDue, order.balancePaid))
+            assertTrue(order.isPaidBy(payment.publicId))
+            assertFalse(service.mayReverse(payment, order, at(12)))
+            assertFailsWith<IllegalArgumentException> { service.reversed(payment, order, at(12)) }
+        }
+
+        @Test
+        fun `the balance changed since the attempt started (staff changed it again) - never confirmed, its money never taken`() {
+            val order = owing()
+            val oldAmount = balanceAttempt(order, amount = Money.constructFromPersisted(150_000))
+
+            assertEquals(Return.NotPayable, service.beginConfirming(oldAmount, order, listOf(oldAmount), at(11)))
+            assertEquals(listOf(PaymentStatus.FAILED, PaymentFailureReason.ORDER_NOT_PAYABLE), listOf(oldAmount.status, oldAmount.failureReason))
+            assertEquals(owed, order.balanceDue)
+        }
+
+        @Test
+        fun `two attempts of one balance both paid - the second finds nothing owed and is never confirmed`() {
+            val order = owing()
+            val first = balanceAttempt(order, 7)
+            val second = balanceAttempt(order, 8)
+            service.beginConfirming(first, order, listOf(first, second), at(11))
+            service.confirmed(first, order, refId, card, sara, at(12))
+
+            assertEquals(Return.NotPayable, service.beginConfirming(second, order, listOf(first, second), at(13)))
+            assertEquals(owed, order.balancePaid, "paid once")
+        }
+
+        @Test
+        fun `a cancelled order owes nothing - its balance's attempt is never confirmed`() {
+            val order = owing()
+            order.cancel(CancelledBy.STAFF, null, null, operator, at(10)).getOrNull()!!
+            val payment = balanceAttempt(order)
+
+            assertEquals(Return.NotPayable, service.beginConfirming(payment, order, listOf(payment), at(11)))
+        }
+
+        @Test
+        fun `confirmed by the bank for another amount than owed (a bug) - the money is ours, the order refuses it, and it may be reversed`() {
+            val order = owing()
+            val payment = balanceAttempt(order)
+            service.beginConfirming(payment, order, listOf(payment), at(11))
+            order.payBalance(PaymentPublicId.constructFromPersisted("pay_0000000000Z9"), owed, sara, at(11)).getOrNull()!!
+
+            val confirmed = service.confirmed(payment, order, refId, card, sara, at(12))
+
+            assertEquals(Confirmed.OrderNotPaid(Order.PayBalanceFailure.NoBalanceDue), confirmed)
+            assertEquals(PaymentStatus.SUCCEEDED, payment.status)
+            assertTrue(service.mayReverse(payment, order, at(12)))
+        }
     }
 }

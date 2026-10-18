@@ -2307,7 +2307,7 @@ Route: 200 با AdminOrder ِ همون سفارش
 |---|---|---|---|
 | ۳.۰ | کانترکت 1.10.0 | S | ✅ |
 | ۳.۱ | دامنه: درخواست تغییر، ردیف عوض‌شده، مانده و جمع‌های بعد از تغییر | L | ✅ |
-| ۳.۲ | پرداخت مانده | L | ⬜ |
+| ۳.۲ | پرداخت مانده | L | ✅ |
 | ۳.۳ | درخواست تغییر مشتری | M | ⬜ |
 | ۳.۴ | رسیدگی اپراتور | L | ⬜ |
 | ۳.۵ | ریویو و دور واقعی | M | ⬜ |
@@ -2499,20 +2499,28 @@ Route: 200 با AdminOrder
 
 ---
 
-#### گام ۳.۲: پرداخت مانده · L ⬜
+#### گام ۳.۲: پرداخت مانده · L ✅
 
 **می‌سازی:** `V29__balance_payments.sql`؛ `PaymentPurpose`؛ `PaymentRepository` با `purpose`؛ `PaymentDomainService.startAttempt`/`confirmed`/`beginConfirming` برای `BALANCE`؛ `PaymentConfirmation`؛ `OrderActionsPolicy.canPay`؛ `GetPaymentResultUc` (صفحه‌ی نتیجه برای مانده)؛ `OrderPaymentInfo` با `purpose` و `amount`.
 
 وابسته به: ۳.۱
 
 **تموم شده یعنی:**
-- [ ] سفارش با مانده ← `POST …/payments` ← `201` با `amount = balanceDue` ← درگاه آزمایشی ← `balanceDue = 0`، `payable` بالا رفته، سفارش هنوز `PROCESSING`.
-- [ ] سفارش بدون مانده ← `422 ORDER_ALREADY_PAID` (مثل قبل).
-- [ ] دو تلاش مانده که هر دو پرداخت شدن، در یک لحظه، ۱۰ بار ← فقط یکی تأیید می‌شه؛ دومی `reverse` یا ERROR، و `balancePaid` هیچ‌وقت دو برابر نمی‌شه.
-- [ ] اپراتور بعد از شروع پرداخت مانده دوباره تغییر می‌ده (مانده عوض می‌شه) ← پرداخت قدیمی تأیید نمی‌شه.
-- [ ] دیتابیس رد می‌کنه: دو پرداخت موفق `ORDER` برای یه سفارش؛ ارسال سفارش با مانده.
-- [ ] همه‌ی تست‌های پرداخت فاز خرید بدون تغییر سبزن.
-- [ ] خرابکاری: حذف چک «مانده هنوز همون مبلغه» ← تست قرمز.
+- [x] سفارش با مانده ← `POST …/payments` ← `201` با `amount = balanceDue` ← درگاه آزمایشی ← `balanceDue = 0`، `payable` بالا رفته، سفارش هنوز `PROCESSING`.
+- [x] سفارش بدون مانده ← `422 ORDER_ALREADY_PAID` (مثل قبل).
+- [x] دو تلاش مانده که هر دو پرداخت شدن، در یک لحظه، ۱۰ بار ← فقط یکی تأیید می‌شه؛ دومی `reverse` یا ERROR، و `balancePaid` هیچ‌وقت دو برابر نمی‌شه.
+- [x] اپراتور بعد از شروع پرداخت مانده دوباره تغییر می‌ده (مانده عوض می‌شه) ← پرداخت قدیمی تأیید نمی‌شه.
+- [x] دیتابیس رد می‌کنه: دو پرداخت موفق `ORDER` برای یه سفارش؛ ارسال سفارش با مانده.
+- [x] همه‌ی تست‌های پرداخت فاز خرید بدون تغییر سبزن.
+- [x] خرابکاری: حذف چک «مانده هنوز همون مبلغه» ← تست قرمز.
+
+**یادداشت پیاده‌سازی:**
+- `V29` و تست‌های دیوار دیتابیس (`BalancePaymentsMigrationTest`) از گام ۳.۱ اومدن.
+- `Payment.start` یه پارامتر آخر `purpose` با پیش‌فرض `ORDER` گرفت، تا همه‌ی جاهای قبلی (ثبت سفارش، پرداخت دوباره) همون‌طور بخونن؛ repository همیشه صریح می‌نویسه و می‌خونه. `Confirmed.OrderNotPaid` حالا هر `ResultFailure` رو می‌گیره (`MarkPaidFailure` یا `PayBalanceFailure`)، و «این پول مال سفارشه» با `Order.isPaidBy` (پرداخت سفارش یا هر پرداخت مانده) جای `paidByPaymentId` رو گرفت (در `mayReverse`، `reversed` و پیامک «پرداخت موفق»). کد تخفیف فقط با پرداخت `ORDER` تأیید می‌شه.
+- سقف ۱۰ تلاش مانده با گذشت زمان برداشته نمی‌شه (مثل پرداخت سفارش)؛ چون مانده مهلت نداره، `retryAfterSeconds` همون `GATEWAY_WINDOW` (۲۰ دقیقه) ـه.
+- سفارشی که موقع ثبت چیزی برای پرداخت نداشت هیچ تلاشی نداره؛ اولین پرداخت مانده‌اش درگاه پیش‌فرض تسویه رو می‌گیره (`PaymentGateways.checkoutOptions`).
+- دو تلاش مانده‌ی همزمان: یکی تأیید می‌شه، دومی یا `NotPayable` (`FAILED`) می‌شه یا `Deferred` می‌مونه و job ِ تطبیق `FAILED`ـش می‌کنه؛ هیچ‌وقت هر دو `VERIFYING` (ایندکس `V18`).
+- `PanelTestStack` حالا `webV1Payments` رو هم داره (صفحه‌ی نتیجه برای تست‌های مانده).
 
 ---
 
@@ -6094,3 +6102,4 @@ kiva {
 | ۲۶ مهر ۱۴۰۵ | ۲.۱۱ | Phase 2 step 2.11 | `PANEL_ORDERS_REVIEW.md` (۷ ردیف، ۱۲ خرابکاری)، `PanelOrdersLogScanOnDatabaseTest`، دو تست مالکیت تقویت شد، تست‌های لغو/ارسال همزمان و مرز ساعت تهران، `docs/FRONTEND_PANEL_ORDERS.md`، بخش ۶ ِ `docs/FRONTEND_PURCHASE.md`. ۲۳۸۷ تست سبز. merge منتظر تأیید |
 | ۲۶ مهر ۱۴۰۵ | ۳.۰ | Phase 3 step 3.0 | کانترکت 1.10.0 با هر ۷ ردیف ِ ۸.۶ و سه ردیف تازه (۸ تا ۱۰)؛ شش تصمیم تازه (۱۲ تا ۱۷ ِ ۸.۲: `codeDiscount` بعد از حذف قلم، ورینت ناموجود ۴۰۰، `VARIANT_NOT_ALLOWED`، `CANCEL_ITEM` ِ تنها قلم = لغو پنل، مانده‌ی لغوشده صفر، `StatusNote`). YAML با snakeyaml معتبره و هر ۱۳۲۱ `$ref` پیدا می‌شن. متن هفت کد فیلدی تازه. برنچ `change-requests` از نوک فاز ۲. پایه: ۲۳۸۷ تست سبز روی Postgres ِ موقت |
 | ۲۶ مهر ۱۴۰۵ | ۳.۱ | Phase 3 step 3.1 | شش رویداد تازه‌ی سفارش با payload و JSON ِ طلایی، `ChangeRequest`/`ChangeTarget`، متدهای ۸.۳ در `Order` (و `BALANCE_DUE` در `ship`)، `ChangeRequestPolicy` (`BigInteger` برای سهم کد)، `OrderTotalsView`، `OrderLine.replacedBy`، `rebalanceForOrder`، `V29` ِ کامل (با `codeDiscountRemoved`)، Projector (خطوط، `soldCount` ِ جابه‌جا، `feedback.resolution`، هفت `kind` ِ تازه‌ی تایم‌لاین)، جمع‌های نمایشی در پاسخ‌ها. ۲۴۶۳ تست سبز |
+| ۲۷ مهر ۱۴۰۵ | ۳.۲ | Phase 3 step 3.2 | `PaymentPurpose` و ستونش، تلاش `BALANCE` در `startAttempt` (سقف جدا، بدون مهلت)، تأیید فقط وقتی مانده دقیقاً همون مبلغه، `payBalance` در `confirmed`، `Order.isPaidBy`، `canPay` و «تلاش دوباره» ِ مانده، `expiresAt` ِ مانده = شروع + ۲۰ دقیقه، درگاه پیش‌فرض برای سفارش بی‌تلاش، `OrderPaymentInfo.purpose`/`amount`. خرابکاری: بدون چک «همون مبلغ» ← دو تست قرمز. ۲۴۸۱ تست سبز |

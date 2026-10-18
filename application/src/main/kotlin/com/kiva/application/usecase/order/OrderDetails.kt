@@ -87,6 +87,8 @@ class OrderDetails(
 
     /** One attempt to pay, as the order's page shows it; its gateway named as the shop's [settings] call it now. */
     fun paymentOf(payment: Payment, settings: ShopSettings): OrderDetailDto.Payment = OrderDetailDto.Payment(
+        purpose = payment.purpose,
+        amount = payment.amount,
         gateway = payment.gateway,
         gatewayName = settings.paymentGateways.firstOrNull { it.code == payment.gateway }?.name ?: payment.gateway.name,
         outcome = payment.status.outcome,

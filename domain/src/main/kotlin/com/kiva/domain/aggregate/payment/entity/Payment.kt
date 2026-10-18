@@ -11,6 +11,7 @@ import com.kiva.domain.aggregate.payment.model.valueobject.GatewayAuthority
 import com.kiva.domain.aggregate.payment.model.valueobject.GatewayRefId
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentFailureReason
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentPublicId
+import com.kiva.domain.aggregate.payment.model.valueobject.PaymentPurpose
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentRedirect
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentStatus
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentStatus.CANCELLED
@@ -42,7 +43,9 @@ import java.time.Instant
  * Every other change is refused ([Failure.NotAllowed]). Its identity is [publicId]; [version] is the row's, for the
  * repository's check that nobody saved it in the meantime.
  *
- * @property amount the order's payable when the attempt was made: what the gateway is asked for and confirmed with.
+ * @property amount what the attempt pays: the order's payable when the attempt was made ([PaymentPurpose.ORDER]), or what
+ *   it owed after a change ([PaymentPurpose.BALANCE]). What the gateway is asked for and confirmed with.
+ * @property purpose the order itself, or its balance due after a change request (phase 3).
  */
 class Payment private constructor(
     val publicId: PaymentPublicId,
@@ -50,6 +53,7 @@ class Payment private constructor(
     val userId: UserId,
     val gateway: PaymentGatewayCode,
     val amount: Money,
+    val purpose: PaymentPurpose,
     status: PaymentStatus,
     authority: GatewayAuthority?,
     redirect: PaymentRedirect?,
@@ -204,9 +208,19 @@ class Payment private constructor(
     companion object {
         private val FAILURES = setOf(START_FAILED, CANCELLED, FAILED, EXPIRED)
 
-        /** A new attempt for [amount], the order's payable now; the gateway is asked next, outside the transaction. */
-        fun start(publicId: PaymentPublicId, orderId: OrderId, userId: UserId, gateway: PaymentGatewayCode, amount: Money, now: Instant): Payment =
-            Payment(publicId, orderId, userId, gateway, amount, INITIATED, null, null, null, null, null, now, null, null, null, version = 0)
+        /**
+         * A new attempt for [amount]: the order's payable now, or ([purpose] BALANCE) what it owes after a change. The
+         * gateway is asked next, outside the transaction.
+         */
+        fun start(
+            publicId: PaymentPublicId,
+            orderId: OrderId,
+            userId: UserId,
+            gateway: PaymentGatewayCode,
+            amount: Money,
+            now: Instant,
+            purpose: PaymentPurpose = PaymentPurpose.ORDER,
+        ): Payment = Payment(publicId, orderId, userId, gateway, amount, purpose, INITIATED, null, null, null, null, null, now, null, null, null, version = 0)
 
         fun constructFromPersisted(
             publicId: PaymentPublicId,
@@ -225,8 +239,9 @@ class Payment private constructor(
             verifyingSince: Instant?,
             settledOn: Instant?,
             version: Long,
+            purpose: PaymentPurpose = PaymentPurpose.ORDER,
         ): Payment = Payment(
-            publicId, orderId, userId, gateway, amount, status, authority, redirect, refId, cardMask, failureReason, createdOn, redirectedOn,
+            publicId, orderId, userId, gateway, amount, purpose, status, authority, redirect, refId, cardMask, failureReason, createdOn, redirectedOn,
             verifyingSince, settledOn, version,
         )
     }

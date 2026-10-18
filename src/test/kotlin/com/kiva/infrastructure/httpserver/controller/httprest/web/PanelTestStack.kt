@@ -71,6 +71,7 @@ import com.kiva.infrastructure.httpserver.configureHttp
 import com.kiva.infrastructure.media.DiskMediaStorage
 import com.kiva.infrastructure.media.FakeMediaProcessor
 import com.kiva.infrastructure.media.MediaUrls
+import com.kiva.infrastructure.payment.PaymentConfig
 import com.kiva.infrastructure.media.RandomMediaIds
 import com.kiva.infrastructure.persistence.exposed.AdminCustomerRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.AuditLogQmRepositoryImpl
@@ -297,6 +298,8 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
                     webV1AdminRefunds(adminRefunds)
                     // The customer's side of an order, for the tests that follow it from the panel to «سفارش‌های من».
                     webV1MyOrders(purchase.myOrderUseCases, mediaUrls)
+                    // Back from the gateway and the result page, for paying what a change left owed (phase 3).
+                    webV1Payments(purchase.paymentUseCases, PaymentConfig.DEFAULT.resultUrl)
                     webV1Tracking(purchase.trackingUseCases, mediaUrls)
                 }
             }

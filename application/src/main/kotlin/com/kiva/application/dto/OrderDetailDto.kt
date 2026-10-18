@@ -6,6 +6,7 @@ import com.kiva.domain.aggregate.order.model.valueobject.OrderStatus
 import com.kiva.domain.aggregate.order.model.valueobject.OrderTotalsView
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentFailureReason
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentOutcome
+import com.kiva.domain.aggregate.payment.model.valueobject.PaymentPurpose
 import com.kiva.domain.aggregate.settings.model.valueobject.PaymentGatewayCode
 import com.kiva.domain.aggregate.user.model.valueobject.MessengerChannel
 import java.time.Instant
@@ -70,8 +71,14 @@ data class OrderDetailDto(
         override fun toString(): String = "Address(****)"
     }
 
-    /** @property gatewayName as the shop's settings call it now. */
+    /**
+     * One attempt to pay: of the order itself, or of what a change left owed ([purpose] BALANCE), for [amount].
+     *
+     * @property gatewayName as the shop's settings call it now.
+     */
     data class Payment(
+        val purpose: PaymentPurpose,
+        val amount: Money,
         val gateway: PaymentGatewayCode,
         val gatewayName: String,
         val outcome: PaymentOutcome,

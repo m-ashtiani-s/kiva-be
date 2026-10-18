@@ -19,6 +19,7 @@ import com.kiva.domain.aggregate.payment.PaymentDomainService
 import com.kiva.domain.aggregate.payment.entity.Payment
 import com.kiva.domain.aggregate.payment.model.PaymentLogEntry
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentFailureReason
+import com.kiva.domain.aggregate.payment.model.valueobject.PaymentPurpose
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentStatus
 import com.kiva.domain.aggregate.payment.repository.PaymentRepository
 import com.kiva.domain.aggregate.reservation.ReservationDomainService
@@ -42,9 +43,10 @@ import kotlin.time.toJavaDuration
  *    attempt must still be VERIFYING: whoever settled it first (a callback, or the job) wins, and this answer is
  *    dropped. Then PaymentDomainService settles it: confirmed, it succeeds and the order is paid, held for «رزرو ۴ روزه»
  *    or not as ReservationDomainService decides now (a new group is saved), and its discount code's use is confirmed;
- *    refused, it fails and so does the order's try; no answer, it stays VERIFYING for the job to try again. The
- *    exchange goes into the payment log.
- * 3. After the commit, a paid order is told «پرداخت موفق». A failed SMS is only logged: the order is paid all the same.
+ *    an attempt of a balance (phase 3) pays what the order owes after a change instead. Refused, it fails and so does
+ *    the order's try; no answer, it stays VERIFYING for the job to try again. The exchange goes into the payment log.
+ * 3. After the commit, a paid order (or balance) is told «پرداخت موفق». A failed SMS is only logged: the order is paid
+ *    all the same.
  * 4. The exception of section 10.5: confirmed for an order that couldn't take it (a bug the rules keep from happening).
  *    The money is ours, so the attempt SUCCEEDED and an ERROR says so; then, while the gateway still allows it, the
  *    money is given back at once (reverse, outside any transaction), and the attempt is REFUNDED. Otherwise, and when
@@ -122,7 +124,8 @@ class PaymentConfirmation(
                     ReservationDomainService.OnPaid(held = false, groupId = null, started = null)
                 }
                 when (val confirmed = paymentDomainService.confirmed(payment, order, answer.receipt.refId, answer.receipt.cardMask, by, now, reservation)) {
-                    PaymentDomainService.Confirmed.Paid -> discounts.confirmFor(order.id, now)
+                    // The code's use is the order's, confirmed when the order itself is paid; a balance paid later has none.
+                    PaymentDomainService.Confirmed.Paid -> if (payment.purpose == PaymentPurpose.ORDER) discounts.confirmFor(order.id, now)
                     is PaymentDomainService.Confirmed.OrderNotPaid -> {
                         reverse = paymentDomainService.mayReverse(payment, order, now)
                         logger.error(
@@ -148,7 +151,8 @@ class PaymentConfirmation(
         paymentRepository.appendLog(payment.publicId, entry)
         logger.info("PaymentConfirmation: payment ${payment.publicId.value} of order ${orderCode.value} is ${payment.status}, the order ${order.status}")
 
-        val paidTo = if (payment.status == PaymentStatus.SUCCEEDED && order.paidByPaymentId == payment.publicId) {
+        // «پرداخت موفق» for the order paid, or for its balance paid after a change.
+        val paidTo = if (payment.status == PaymentStatus.SUCCEEDED && order.isPaidBy(payment.publicId)) {
             (userRepository.findById(order.userId) ?: error("Order ${orderCode.value} is of user ${order.userId.value}, who isn't there")).phone
         } else {
             null

@@ -13,6 +13,7 @@ import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.order.model.policy.OrderCodePolicy
 import com.kiva.domain.aggregate.order.model.policy.PaymentPolicy
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentPublicId
+import com.kiva.domain.aggregate.payment.model.valueobject.PaymentPurpose
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentStatus
 import com.kiva.domain.aggregate.payment.repository.PaymentRepository
 import com.kiva.domain.aggregate.reservation.repository.ReservationGroupRepository
@@ -22,7 +23,8 @@ import java.time.Clock
 /**
  * How an attempt to pay went (`GET /payments/{paymentId}`, roadmap section 10.7): the result page the gateway's callback
  * sends the shopper to. PENDING while it is being confirmed, and the page asks again. The customer's own only: someone
- * else's attempt, one that doesn't exist and an id that can't be one are all PAYMENT_NOT_FOUND.
+ * else's attempt, one that doesn't exist and an id that can't be one are all PAYMENT_NOT_FOUND. An attempt of a balance
+ * after a change (phase 3) shows the same page; its «تلاش دوباره» is while the balance is still owed.
  */
 class GetPaymentResultUc(
     private val transactionManager: TransactionManager,
@@ -63,7 +65,11 @@ class GetPaymentResultUc(
                     cardMask = payment.cardMask?.value,
                     paidOn = if (succeeded) payment.settledOn else null,
                     failureReason = payment.failureReason,
-                    canRetry = PaymentPolicy.canRetry(payment.status, order.status, order.holdUntil, clock.instant()),
+                    canRetry = when (payment.purpose) {
+                        PaymentPurpose.ORDER -> PaymentPolicy.canRetry(payment.status, order.status, order.holdUntil, clock.instant())
+                        // A balance after a change: while it is still owed, whatever the order's time to pay was.
+                        PaymentPurpose.BALANCE -> PaymentPolicy.canRetryBalance(payment.status, order.status, order.balanceDue)
+                    },
                     order = PaymentResultDto.Order(order.code.value, order.status, methodName, order.messenger.channel, consolidatedInto = consolidatedInto(order)),
                 ),
             )

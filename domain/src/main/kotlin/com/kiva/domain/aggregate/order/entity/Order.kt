@@ -233,6 +233,12 @@ class Order private constructor() : EventSourceEntity<OrderDomainEvent>() {
     /** A new payment attempt may start now ([PaymentPolicy.canStartPayment]). */
     fun canStartPayment(now: Instant): Boolean = PaymentPolicy.canStartPayment(status, holdUntil, now)
 
+    /** An attempt to pay what a change left owed may start now ([PaymentPolicy.canPayBalance]). */
+    val canPayBalance: Boolean get() = PaymentPolicy.canPayBalance(status, balanceDue)
+
+    /** The attempt [paymentId] paid it, or paid what a change left owed: its money is the order's, not to be given back alone. */
+    fun isPaidBy(paymentId: PaymentPublicId): Boolean = paidByPaymentId == paymentId || paymentId in balancePayments
+
     companion object {
         /** The longest before now the operator may say an order was handed to the courier. */
         val MAX_SHIPPED_AGO: Duration = Duration.ofDays(7)

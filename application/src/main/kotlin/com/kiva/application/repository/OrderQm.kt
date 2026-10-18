@@ -128,7 +128,7 @@ data class OrderQm(
     }
 
     /** What its buttons depend on at [now], from what the read model has. */
-    fun actionFactsAt(now: Instant): OrderActionFacts = OrderActionFacts(status, holdUntil, photoEverSent, photoStatus, now)
+    fun actionFactsAt(now: Instant): OrderActionFacts = OrderActionFacts(status, holdUntil, photoEverSent, photoStatus, balanceDue, now)
 
     override fun toString(): String = "OrderQm(orderId=${orderId.value}, code=${code.value}, status=$status)"
 }

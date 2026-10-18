@@ -22,6 +22,7 @@ import com.kiva.domain.aggregate.order.repository.OrderRepository
 import com.kiva.domain.aggregate.payment.PaymentDomainService
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentPublicId
 import com.kiva.domain.aggregate.payment.repository.PaymentRepository
+import com.kiva.domain.aggregate.settings.entity.ShopSettings
 import com.kiva.domain.aggregate.settings.model.valueobject.PaymentGatewayCode
 import com.kiva.domain.aggregate.settings.repository.ShopSettingsRepository
 import java.time.Clock
@@ -37,7 +38,9 @@ import java.time.Clock
  *    the order locked together (section 11, lock 6), so a callback, the jobs and another retry of the order wait; then
  *    PaymentDomainService's rules, in the contract's order: paid already, time to pay over, gateway not available, too
  *    many attempts. The gateway is the one asked for, or else the one of the attempt named (by order: of its latest
- *    attempt). The new attempt is for the order's payable, and its time to pay is the order's own, never moved.
+ *    attempt, or the shop's default when it never had one). The new attempt is for the order's payable, and its time to
+ *    pay is the order's own, never moved; for a paid order that owes something after a change (phase 3) it is an attempt
+ *    of that balance (PaymentDomainService.startAttempt).
  *
  * Returns the new attempt's id. Opening its session is StartPaymentUc's, which the route calls after this commits, as
  * after placing an order: a gateway is never called inside a transaction, and a repeat never opens another session.
@@ -106,19 +109,30 @@ class StartPaymentAttemptUc(
         val orderId = orderIdOf(command.of, userId).unwrapOr { return Result.failure(it) }
 
         val attempts = paymentRepository.lockAttemptsOf(orderId)
-        val order = orderRepository.get(orderId) ?: error("Order ${orderId.value} has attempts to pay but no events")
+        val order = orderRepository.get(orderId) ?: error("Order ${orderId.value} has no events")
         val before = when (val of = command.of) {
             is Target.Attempt -> attempts.first { it.publicId.value == of.paymentId }
-            is Target.Order -> attempts.lastOrNull() ?: error("Unpaid order ${order.code.value} has never had an attempt to pay")
+            // An order with nothing to pay when placed never had an attempt; its balance after a change may be its first.
+            is Target.Order -> attempts.lastOrNull()
         }
-        val gateway = asked ?: before.gateway
         val settings = shopSettingsRepository.get()
+        val gateway = asked ?: before?.gateway ?: defaultGatewayOf(settings)
 
         val attempt = paymentDomainService.startAttempt(order, attempts, gateway, paymentGateways.isAvailable(gateway, settings), userId, clock.instant())
             .unwrapOr { return Result.failure(Failure.Refused(it)) }
         paymentRepository.add(attempt)
         logger.info("StartPaymentAttemptUc: attempt ${attempt.publicId.value} of order ${order.code.value} (${attempts.size + 1} in all) through $gateway")
         return Result.success(attempt.publicId)
+    }
+
+    /**
+     * The gateway checkout selects first (the shop's default while available, otherwise the first available one), for an
+     * order with no attempt to take one from; the shop's first row when none is available, which the rules then refuse as
+     * PAYMENT_GATEWAY_UNAVAILABLE.
+     */
+    private fun defaultGatewayOf(settings: ShopSettings): PaymentGatewayCode {
+        val options = paymentGateways.checkoutOptions(settings)
+        return (options.firstOrNull { it.isDefault } ?: options.firstOrNull() ?: error("The shop has no payment gateway at all")).gateway.code
     }
 
     /** The customer's own order, by an attempt of it or by its code: anything else is the same 404 as one that isn't there. */
