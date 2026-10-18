@@ -303,7 +303,11 @@ val useCaseModule = module(createdAtStart = true) {
         )
     }
     single { GetMyOrderMediaUc(transactionManager = get(), orderByCode = get(), orderDetails = get()) }
-    single { SubmitMediaFeedbackUc(transactionManager = get(), orderByCode = get(), orderRepository = get(), clock = get()) }
+    single {
+        SubmitMediaFeedbackUc(
+            transactionManager = get(), orderByCode = get(), orderQmRepository = get(), orderRepository = get(), offerQmRepository = get(), clock = get(),
+        )
+    }
     single { ListMyTrackingUc(transactionManager = get(), orderQmRepository = get(), shopSettingsRepository = get()) }
 
     // --- tracking (phase 2) ---

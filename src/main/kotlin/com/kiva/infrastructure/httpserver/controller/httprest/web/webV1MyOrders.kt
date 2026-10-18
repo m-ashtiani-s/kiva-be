@@ -78,12 +78,13 @@ fun Route.webV1MyOrders(useCases: MyOrderUseCases, mediaUrls: MediaUrls) {
             call.respondResult(useCases.getMyOrderMedia.execute(query)) { PreShipmentMediaHttpResponse.from(it.photos, it.messenger, mediaUrls) }
         }
 
-        // «همونه!»; the answer is the order's page as GET /me/orders/{orderCode} builds it.
+        // «همونه!», or a change request; the answer is the order's page as GET /me/orders/{orderCode} builds it.
         post("/me/orders/{$ORDER_CODE}/media-feedback") {
             val userId = call.accessPrincipal().userId
             val code = call.parameters[ORDER_CODE].orEmpty()
             val request = call.receive<PreShipmentFeedbackHttpRequest>()
-            useCases.submitMediaFeedback.execute(SubmitMediaFeedbackUc.Cmd(userId, code, request.decision)).unwrapOr { return@post call.respondFailure(it) }
+            val command = SubmitMediaFeedbackUc.Cmd(userId, code, request.decision, request.changeType, request.orderItemId, request.desiredVariantId, request.note)
+            useCases.submitMediaFeedback.execute(command).unwrapOr { return@post call.respondFailure(it) }
             call.respondResult(useCases.getMyOrder.execute(GetMyOrderUc.Qry(userId, code))) { OrderDetailHttpResponse.from(it, mediaUrls) }
         }
 

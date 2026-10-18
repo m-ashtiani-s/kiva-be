@@ -216,7 +216,7 @@ class PurchaseTestStack(val clock: MutableClock) {
         getCart,
         GetMyReservationUc(transactions, reservations, clock),
         GetMyOrderMediaUc(transactions, orderByCode, orderDetails),
-        SubmitMediaFeedbackUc(transactions, orderByCode, orders, clock),
+        SubmitMediaFeedbackUc(transactions, orderByCode, orderQm, orders, offers, clock),
         CancelMyOrderUc(transactions, orderByCode, orderCancellation, users, orderNotices, clock),
         ListMyTrackingUc(transactions, orderQm, settings),
     )

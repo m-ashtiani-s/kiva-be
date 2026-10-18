@@ -279,7 +279,7 @@ data class PreShipmentMediaHttpResponse(
                 sentAt = photos.sentOn?.toString(),
                 waitingMessage = OrderTexts.photosWaiting(messengerName).takeIf { photos.sent.isEmpty() },
                 items = items.map { OrderMediaItemHttpResponse.from(it, urls) },
-                feedback = photos.feedback?.let { PreShipmentFeedbackHttpResponse(it.decision.name, null, null, null, null, it.at.toString(), null) },
+                feedback = photos.feedback?.let(PreShipmentFeedbackHttpResponse::from),
                 feedbackDeadline = photos.feedbackDeadline?.toString(),
             )
         }
@@ -318,8 +318,8 @@ data class OrderMediaItemHttpResponse(
 }
 
 /**
- * `PreShipmentMedia.feedback`: the customer's last answer. In this phase only APPROVE; the change request's fields and its
- * resolution are phase 3's and null until then.
+ * `PreShipmentMedia.feedback`: the customer's last answer. For a change request what they asked, and once staff resolved
+ * it, how ([resolution]); its fields stay null for «همونه!». Personal data: [toString] shows the decision only.
  */
 @Serializable
 data class PreShipmentFeedbackHttpResponse(
@@ -329,8 +329,28 @@ data class PreShipmentFeedbackHttpResponse(
     val desiredVariantId: Long?,
     val note: String?,
     val at: String,
-    val resolution: JsonObject?,
-)
+    val resolution: ChangeResolutionHttpResponse?,
+) {
+    override fun toString(): String = "PreShipmentFeedbackHttpResponse(decision=$decision, changeType=$changeType)"
+
+    companion object {
+        fun from(feedback: PreShipmentMediaDto.Feedback) = PreShipmentFeedbackHttpResponse(
+            decision = feedback.decision.name,
+            changeType = feedback.changeType?.name,
+            orderItemId = feedback.lineId,
+            desiredVariantId = feedback.desiredVariantId,
+            note = feedback.note,
+            at = feedback.at.toString(),
+            resolution = feedback.resolution?.let { ChangeResolutionHttpResponse(it.decision.name, it.variantId, it.note, it.at.toString()) },
+        )
+    }
+}
+
+/** `PreShipmentMedia.feedback.resolution`: APPLY or REJECT, the color put in (COLOR, MODEL), staff's note for the customer. */
+@Serializable
+data class ChangeResolutionHttpResponse(val decision: String, val variantId: Long?, val note: String?, val at: String) {
+    override fun toString(): String = "ChangeResolutionHttpResponse(decision=$decision, variantId=$variantId)"
+}
 
 /** Contract schema `OrderEvent`: one line of the timeline. [note] says why an attempt to pay failed, or is staff's or the customer's note. */
 @Serializable

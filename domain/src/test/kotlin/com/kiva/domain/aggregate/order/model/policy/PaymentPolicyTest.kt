@@ -130,17 +130,22 @@ class PaymentPolicyTest {
         assertEquals(none, actions(OrderStatus.PENDING_PAYMENT, at(15)))
         assertEquals(none.copy(canAddToReservation = true, canCancel = true), actions(OrderStatus.RESERVED))
         assertEquals(none.copy(canCancel = true), actions(OrderStatus.PROCESSING))
+        // PHOTO_SENT with photos WAITING never happens; the photos' own cases are below.
         OrderStatus.entries.filter { !it.isAwaitingPayment && it != OrderStatus.RESERVED && it != OrderStatus.PROCESSING }.forEach {
             assertEquals(none, actions(it), "$it")
         }
     }
 
     @Test
-    fun `«لغو» is gone once a photo was ever sent, even back in PROCESSING - «همونه!» shows only while photos sent wait for an answer`() {
+    fun `«لغو» is gone once a photo was ever sent, even back in PROCESSING - «همونه!» while photos sent wait for an answer, «درخواست تغییر» after them, approved or not`() {
         val none = OrderActions(false, false, false, false, false, false, false)
 
         assertEquals(none, actions(OrderStatus.PROCESSING, photoEverSent = true))
-        assertEquals(none.copy(canApproveMedia = true), actions(OrderStatus.PHOTO_SENT, photoEverSent = true, photoStatus = PhotoStatus.SENT))
-        assertEquals(none, actions(OrderStatus.PHOTO_SENT, photoEverSent = true, photoStatus = PhotoStatus.APPROVED))
+        assertEquals(
+            none.copy(canApproveMedia = true, canRequestChange = true),
+            actions(OrderStatus.PHOTO_SENT, photoEverSent = true, photoStatus = PhotoStatus.SENT),
+        )
+        assertEquals(none.copy(canRequestChange = true), actions(OrderStatus.PHOTO_SENT, photoEverSent = true, photoStatus = PhotoStatus.APPROVED))
+        assertEquals(none, actions(OrderStatus.CHANGE_REQUESTED, photoEverSent = true, photoStatus = PhotoStatus.CHANGE_REQUESTED), "one at a time")
     }
 }

@@ -110,7 +110,8 @@ class WebV1MyOrderJourneyOnDatabaseTest {
         val photographed = page(code, again)
         assertEquals("PHOTO_SENT", photographed.text("status"))
         assertEquals(listOf("DONE" to paidAt, "CURRENT" to photoAt, "UPCOMING" to null, "UPCOMING" to null), photographed.progress())
-        assertEquals(listOf("canApproveMedia"), photographed.actionsOn())
+        // A change request after the photos (phase 3), approved or not.
+        assertEquals(listOf("canRequestChange", "canApproveMedia"), photographed.actionsOn())
         assertEquals(listOf("SENT", "1", photoAt), listOf("status", "count", "sentAt").map { photographed.obj("preShipmentMedia").text(it) })
         assertEquals(1, photographed.obj("preShipmentMediaDetail").objects("items").size)
         assertEquals(clock.now.plus(Duration.ofHours(24)).toString(), photographed.obj("preShipmentMediaDetail").text("feedbackDeadline"))
@@ -118,7 +119,7 @@ class WebV1MyOrderJourneyOnDatabaseTest {
         with(shippedOrders) { approved(code, again) }
         val approved = page(code, again)
         assertEquals("APPROVED", approved.obj("preShipmentMedia").text("status"))
-        assertEquals(emptyList(), approved.actionsOn())
+        assertEquals(listOf("canRequestChange"), approved.actionsOn())
         assertEquals("عکس رو تأیید کردی", approved.objects("timeline").last().text("label"))
 
         clock.advance(Duration.ofHours(3))

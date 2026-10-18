@@ -33,14 +33,16 @@ data class OrderActionFacts(
  *
  * «پرداخت» shows for an unpaid order before its time to pay ends, and for a paid one that owes something after a change
  * (PaymentPolicy.canPayBalance); «افزودن محصول» for an order held with «رزرو ۴ روزه», «لغو سفارش» while the customer may
- * still cancel it (OrderTransitionPolicy.customerMayCancel), and «همونه!» while photos sent to them wait for an answer.
- * Returns (phase 7) and reviews (phase 8) are later, so their buttons stay off: no button without an endpoint behind it.
+ * still cancel it (OrderTransitionPolicy.customerMayCancel), «همونه!» while photos sent to them wait for an answer, and
+ * «درخواست تغییر» after they saw the photos, approved or not, until it ships, one at a time
+ * (OrderTransitionPolicy.customerMayRequestChange). Returns (phase 7) and reviews (phase 8) are later, so their buttons
+ * stay off: no button without an endpoint behind it.
  */
 object OrderActionsPolicy {
 
     fun actionsOf(facts: OrderActionFacts): OrderActions = OrderActions(
         canCancel = OrderTransitionPolicy.customerMayCancel(facts.status, facts.photoEverSent),
-        canRequestChange = false,
+        canRequestChange = OrderTransitionPolicy.customerMayRequestChange(facts.status, facts.photoStatus),
         canApproveMedia = facts.status == OrderStatus.PHOTO_SENT && facts.photoStatus == PhotoStatus.SENT,
         canReturn = false,
         canPay = PaymentPolicy.canStartPayment(facts.status, facts.holdUntil, facts.now) || PaymentPolicy.canPayBalance(facts.status, facts.balanceDue),

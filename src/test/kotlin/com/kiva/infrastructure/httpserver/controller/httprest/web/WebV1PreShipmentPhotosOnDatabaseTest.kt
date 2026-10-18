@@ -221,7 +221,7 @@ class WebV1PreShipmentPhotosOnDatabaseTest {
     }
 
     @Test
-    fun `the customer approves - APPROVED, the button gone - approving again is 200, someone else is 404, a change request 422`() = panel.app {
+    fun `the customer approves - APPROVED, the button gone - approving again is 200, someone else is 404, a change request without its type 400`() = panel.app {
         val sara = customer(5)
         val code = panel.paidOrders.paid(sara.user.id, nila[0])
         photographed(code)
@@ -240,9 +240,10 @@ class WebV1PreShipmentPhotosOnDatabaseTest {
         val other = panel.paidOrders.paid(sara.user.id, nila[1]).also { photographed(it) }
         assertEquals(HttpStatusCode.NotFound, answer(other, customer(6)).status)
         assertEquals("SENT", get("/me/orders/${other.value}/media", sara).text("status"), "someone else's answer changes nothing")
+        // Phase 3: a change request is taken now, but only with its type (WebV1ChangeRequestsOnDatabaseTest has the rest).
         val change = answer(code, sara, "REQUEST_CHANGE")
-        assertEquals(HttpStatusCode.UnprocessableEntity, change.status)
-        assertEquals("CHANGE_REQUEST_NOT_ALLOWED", change.json().text("code"))
+        assertEquals(HttpStatusCode.BadRequest, change.status)
+        assertEquals("CHANGE_TYPE_REQUIRED", change.json()["errors"]!!.jsonArray.single().jsonObject.text("code"))
         assertEquals(HttpStatusCode.NotFound, client.get("$API_V1/me/orders/${code.value}/media") { header(HttpHeaders.Authorization, customer(7).bearer) }.status)
     }
 

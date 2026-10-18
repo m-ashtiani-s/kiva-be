@@ -2308,7 +2308,7 @@ Route: 200 با AdminOrder ِ همون سفارش
 | ۳.۰ | کانترکت 1.10.0 | S | ✅ |
 | ۳.۱ | دامنه: درخواست تغییر، ردیف عوض‌شده، مانده و جمع‌های بعد از تغییر | L | ✅ |
 | ۳.۲ | پرداخت مانده | L | ✅ |
-| ۳.۳ | درخواست تغییر مشتری | M | ⬜ |
+| ۳.۳ | درخواست تغییر مشتری | M | ✅ |
 | ۳.۴ | رسیدگی اپراتور | L | ⬜ |
 | ۳.۵ | ریویو و دور واقعی | M | ⬜ |
 
@@ -2524,17 +2524,19 @@ Route: 200 با AdminOrder
 
 ---
 
-#### گام ۳.۳: درخواست تغییر مشتری · M ⬜
+#### گام ۳.۳: درخواست تغییر مشتری · M ✅
 
 **می‌سازی:** `REQUEST_CHANGE` در `SubmitMediaFeedbackUc`؛ `canRequestChange`؛ `feedback` ِ کامل در پاسخ.
 
 وابسته به: ۳.۱
 
 **تموم شده یعنی:**
-- [ ] هر شرط تصمیم ۲ یه تست ۴۰۰؛ `COLOR` با رنگ محصول دیگه ← `400 DESIRED_VARIANT_INVALID`؛ رنگ غیرفعال ← `422 PRODUCT_UNAVAILABLE`.
-- [ ] درخواست ← `CHANGE_REQUESTED`، عکس `CHANGE_REQUESTED`، `canCancel = false`، `canRequestChange = false`.
-- [ ] بعد از تأیید هم درخواست پذیرفته می‌شه.
-- [ ] مشتری دیگه ← `404`.
+- [x] هر شرط تصمیم ۲ یه تست ۴۰۰؛ `COLOR` با رنگ محصول دیگه ← `400 DESIRED_VARIANT_INVALID`؛ رنگ غیرفعال ← `422 PRODUCT_UNAVAILABLE`.
+- [x] درخواست ← `CHANGE_REQUESTED`، عکس `CHANGE_REQUESTED`، `canCancel = false`، `canRequestChange = false`.
+- [x] بعد از تأیید هم درخواست پذیرفته می‌شه.
+- [x] مشتری دیگه ← `404`.
+
+**یادداشت پیاده‌سازی:** درخواست قفل ردیف سفارش (قفل ۹) رو می‌گیره، تا با رسیدگی یا لغو همزمان پنل یکی‌یکی بره؛ «همونه!» مثل قبل بدون قفل ۹ و با تلاش دوباره. فیلدی که برای اون `changeType` معنی نداره نادیده گرفته می‌شه (نه ۴۰۰). `orderItemId` ِ صفر یا منفی `400 ORDER_ITEM_NOT_FOUND` و `desiredVariantId` ِ صفر یا منفی `400 DESIRED_VARIANT_INVALID` ـه (قبل از تراکنش). `feedback` ِ پاسخ حالا همه‌ی فیلدهای درخواست و `resolution` ِ شیء (`decision`، `variantId`، `note`، `at`) رو داره. دو تست فاز ۲ با قرارداد تازه به‌روز شدن: `REQUEST_CHANGE` ِ بی‌نوع حالا `400 CHANGE_TYPE_REQUIRED` ـه (نه `422`)، و کارت سفارشِ عکس‌گرفته (تأییدشده یا نه) `canRequestChange` داره.
 
 ---
 
@@ -6103,3 +6105,4 @@ kiva {
 | ۲۶ مهر ۱۴۰۵ | ۳.۰ | Phase 3 step 3.0 | کانترکت 1.10.0 با هر ۷ ردیف ِ ۸.۶ و سه ردیف تازه (۸ تا ۱۰)؛ شش تصمیم تازه (۱۲ تا ۱۷ ِ ۸.۲: `codeDiscount` بعد از حذف قلم، ورینت ناموجود ۴۰۰، `VARIANT_NOT_ALLOWED`، `CANCEL_ITEM` ِ تنها قلم = لغو پنل، مانده‌ی لغوشده صفر، `StatusNote`). YAML با snakeyaml معتبره و هر ۱۳۲۱ `$ref` پیدا می‌شن. متن هفت کد فیلدی تازه. برنچ `change-requests` از نوک فاز ۲. پایه: ۲۳۸۷ تست سبز روی Postgres ِ موقت |
 | ۲۶ مهر ۱۴۰۵ | ۳.۱ | Phase 3 step 3.1 | شش رویداد تازه‌ی سفارش با payload و JSON ِ طلایی، `ChangeRequest`/`ChangeTarget`، متدهای ۸.۳ در `Order` (و `BALANCE_DUE` در `ship`)، `ChangeRequestPolicy` (`BigInteger` برای سهم کد)، `OrderTotalsView`، `OrderLine.replacedBy`، `rebalanceForOrder`، `V29` ِ کامل (با `codeDiscountRemoved`)، Projector (خطوط، `soldCount` ِ جابه‌جا، `feedback.resolution`، هفت `kind` ِ تازه‌ی تایم‌لاین)، جمع‌های نمایشی در پاسخ‌ها. ۲۴۶۳ تست سبز |
 | ۲۷ مهر ۱۴۰۵ | ۳.۲ | Phase 3 step 3.2 | `PaymentPurpose` و ستونش، تلاش `BALANCE` در `startAttempt` (سقف جدا، بدون مهلت)، تأیید فقط وقتی مانده دقیقاً همون مبلغه، `payBalance` در `confirmed`، `Order.isPaidBy`، `canPay` و «تلاش دوباره» ِ مانده، `expiresAt` ِ مانده = شروع + ۲۰ دقیقه، درگاه پیش‌فرض برای سفارش بی‌تلاش، `OrderPaymentInfo.purpose`/`amount`. خرابکاری: بدون چک «همون مبلغ» ← دو تست قرمز. ۲۴۸۱ تست سبز |
+| ۲۷ مهر ۱۴۰۵ | ۳.۳ | Phase 3 step 3.3 | `REQUEST_CHANGE` در `SubmitMediaFeedbackUc` (شکل با همه‌ی خطاها با هم، قفل ۹، رنگ از read model: ناموجود ۴۰۰، غیرفعال ۴۲۲)، `canRequestChange`، `feedback` ِ کامل با `resolution` در پاسخ. دو تست فاز ۲ با قرارداد تازه به‌روز شدن. ۲۴۸۸ تست سبز |
