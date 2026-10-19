@@ -1,10 +1,16 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
+import com.kiva.application.port.PanelActor
+import com.kiva.application.usecase.product.ProductInput
+import com.kiva.application.usecase.product.usecase.command.UpdateVariantUc
+import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
 import com.kiva.domain.aggregate.user.model.valueobject.Role
 import com.kiva.infrastructure.MutableClock
+import com.kiva.infrastructure.TestDatabase
 import com.kiva.infrastructure.httpserver.API_V1
 import com.kiva.infrastructure.httpserver.ContractSchemas
+import com.kiva.infrastructure.persistence.exposed.tbl.ProductVariantQmTbl
 import com.kiva.infrastructure.seed.SeededCatalog
 import io.ktor.client.request.get
 import io.ktor.client.request.header
@@ -22,14 +28,20 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.long
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.select
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Duration
 import java.time.Instant
+import java.util.UUID
 import kotlin.test.assertEquals
 
 /**
@@ -155,6 +167,112 @@ class WebV1MyOrderJourneyOnDatabaseTest {
         val card = client.get("$API_V1/me/orders") { header(HttpHeaders.Authorization, customer(1).bearer) }.json().objects("items").single()
         assertEquals(done.obj("progress"), card.obj("progress"))
         assertEquals(done.obj("shipment"), card.obj("shipment"))
+    }
+
+    /** Nila's olive gets a price of its own, as the panel's color form sets it. */
+    private fun oliveAt(price: Long) {
+        val staff = PanelActor(UserId.constructFromPersisted(panel.callerWith(Role.ADMIN).userId), null)
+        val productId = transaction(TestDatabase.database) {
+            ProductVariantQmTbl.select(ProductVariantQmTbl.productId).where { ProductVariantQmTbl.variantId eq nila[1] }.single()[ProductVariantQmTbl.productId]
+        }
+        runBlocking { panel.adminProducts.updateVariant.execute(UpdateVariantUc.Cmd(productId.toString(), nila[1].toString(), ProductInput.Variant(colorKey = "olive", priceOverride = price), staff)) }
+            .getOrNull() ?: error("not priced")
+    }
+
+    /** What the page's totals say, each by its name. */
+    private fun JsonObject.totals(): Map<String, Long> =
+        obj("totals").filterValues { it is JsonPrimitive && it !is JsonNull && !it.isString }.mapValues { it.value.jsonPrimitive.long }
+
+    /** Section 8.2, row 7: the totals always add up - subtotal − codeDiscount + shippingCost = payable + balanceDue − change refunds. */
+    private fun assertAddsUp(totals: Map<String, Long>, changeRefunds: Long, step: String) =
+        assertEquals(
+            totals.getValue("subtotal") - totals.getValue("codeDiscount") + totals.getValue("shippingCost"),
+            totals.getValue("payable") + totals.getValue("balanceDue") - changeRefunds,
+            "$step: $totals",
+        )
+
+    @Test
+    fun `a dearer color after the photos - asked, applied, the balance paid at the gateway, new photos, approved, shipped - each step what the contract says`() = panel.app {
+        oliveAt(1_650_000)
+        val sara = customer(3)
+        val code = panel.paidOrders.paid(sara.user.id, nila[0])
+        val placed = page(code, customer(3)).totals()
+        assertAddsUp(placed, 0, "paid")
+        with(shippedOrders) { photographed(code) }
+
+        // The customer asks for the olive one.
+        val asked = client.post("$API_V1/me/orders/${code.value}/media-feedback") {
+            header(HttpHeaders.Authorization, customer(3).bearer)
+            contentType(ContentType.Application.Json)
+            setBody("""{"decision":"REQUEST_CHANGE","changeType":"COLOR","orderItemId":1,"desiredVariantId":${nila[1]},"note":"زیتونی قشنگ‌تره"}""")
+        }
+        assertEquals(HttpStatusCode.OK, asked.status, asked.bodyAsText())
+        val requested = page(code, customer(3))
+        assertEquals(listOf("CHANGE_REQUESTED", "CHANGE_REQUESTED"), listOf(requested.text("status"), requested.obj("preShipmentMedia").text("status")))
+        assertEquals(emptyList(), requested.actionsOn())
+        val feedback = requested.obj("preShipmentMediaDetail").obj("feedback")
+        assertEquals(listOf("REQUEST_CHANGE", "COLOR", "1", nila[1].toString(), null), listOf("decision", "changeType", "orderItemId", "desiredVariantId", "resolution").map { feedback.text(it) })
+        assertEquals("درخواست تغییر ثبت شد", requested.objects("timeline").last().text("label"))
+
+        // The operator carries it out: 200,000 more is owed, and the photos wait for a new batch.
+        clock.advance(Duration.ofHours(1))
+        val applied = client.post("$API_V1/admin/orders/${code.value}/change-request/resolution") {
+            header(HttpHeaders.Authorization, shippedOrders.operator().bearer)
+            contentType(ContentType.Application.Json)
+            setBody("""{"decision":"APPLY","note":"زیتونی گذاشتیم"}""")
+        }
+        assertEquals(HttpStatusCode.OK, applied.status, applied.bodyAsText())
+        assertEquals(listOf(sara.user.phone to code), panel.purchase.auth.sms.changeResolved.toList())
+        val owing = page(code, customer(3))
+        assertEquals("PROCESSING", owing.text("status"))
+        assertEquals(listOf("canPay"), owing.actionsOn())
+        assertEquals(listOf(nila[1].toString(), "1650000"), owing.objects("items").single().let { listOf(it.text("variantId"), it.text("unitPrice")) })
+        val owed = owing.totals()
+        assertEquals(listOf(200_000L, placed.getValue("payable"), 1_650_000L), listOf(owed.getValue("balanceDue"), owed.getValue("payable"), owed.getValue("subtotal")))
+        assertAddsUp(owed, 0, "applied")
+        assertEquals(listOf("WAITING", "1"), listOf(owing.obj("preShipmentMedia").text("status"), owing.obj("preShipmentMedia").text("count")), "the old batch stays until a new one")
+        val resolution = owing.obj("preShipmentMediaDetail").obj("feedback").obj("resolution")
+        assertEquals(listOf("APPLY", nila[1].toString(), "زیتونی گذاشتیم"), listOf(resolution.text("decision"), resolution.text("variantId"), resolution.text("note")))
+        assertEquals(listOf("رنگ عوض شد", "زیتونی گذاشتیم"), owing.objects("timeline").last().let { listOf(it.text("label"), it.text("note")) })
+
+        // The customer pays the balance at the pretend gateway.
+        val started = client.post("$API_V1/me/orders/${code.value}/payments") {
+            header(HttpHeaders.Authorization, customer(3).bearer)
+            header("Idempotency-Key", UUID.randomUUID().toString())
+            contentType(ContentType.Application.Json)
+            setBody("{}")
+        }
+        assertEquals(HttpStatusCode.Created, started.status, started.bodyAsText())
+        val attempt = started.json()
+        assertEquals(listOf("200000", clock.now.plus(Duration.ofMinutes(20)).toString()), listOf(attempt.text("amount"), attempt.text("expiresAt")))
+        panel.paidOrders.back(attempt.text("paymentId")!!)
+        val result = client.get("$API_V1/payments/${attempt.text("paymentId")}") { header(HttpHeaders.Authorization, customer(3).bearer) }.json()
+        assertEquals("SUCCEEDED", result.text("status"))
+        val settled = page(code, customer(3))
+        assertEquals("PROCESSING", settled.text("status"))
+        assertEquals(emptyList(), settled.actionsOn())
+        val paidUp = settled.totals()
+        assertEquals(listOf(0L, placed.getValue("payable") + 200_000L), listOf(paidUp.getValue("balanceDue"), paidUp.getValue("payable")))
+        assertAddsUp(paidUp, 0, "balance paid")
+        assertEquals("مانده‌ی ۲۰۰٬۰۰۰ تومانی پرداخت شد", settled.objects("timeline").last().text("label"))
+
+        // New photos, «همونه!», and it ships.
+        clock.advance(Duration.ofHours(1))
+        with(shippedOrders) { photographed(code) }
+        with(shippedOrders) { approved(code, customer(3)) }
+        clock.advance(Duration.ofHours(1))
+        val ship = with(shippedOrders) { ship(code, """{"carrier":"POST","trackingCode":"PT-5000002"}""") }
+        assertEquals(HttpStatusCode.OK, ship.status, ship.bodyAsText())
+        val shipped = page(code, customer(3))
+        assertEquals("SHIPPED", shipped.text("status"))
+        assertAddsUp(shipped.totals(), 0, "shipped")
+        assertEquals(
+            listOf(
+                "سفارش ثبت شد", "پرداخت شد", "عکس کیفت فرستاده شد", "درخواست تغییر ثبت شد", "رنگ عوض شد", "مانده‌ی ۲۰۰٬۰۰۰ تومانی پرداخت شد",
+                "عکس کیفت فرستاده شد", "عکس رو تأیید کردی", "تحویل ${shipped.obj("shipment").text("carrierName")} شد",
+            ),
+            shipped.objects("timeline").map { it.text("label") },
+        )
     }
 
     @Test

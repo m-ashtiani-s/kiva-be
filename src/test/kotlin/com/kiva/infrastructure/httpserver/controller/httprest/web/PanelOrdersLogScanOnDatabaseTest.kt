@@ -32,6 +32,7 @@ import org.junit.jupiter.api.Test
 import org.slf4j.LoggerFactory
 import java.time.Duration
 import java.time.Instant
+import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -140,6 +141,55 @@ class PanelOrdersLogScanOnDatabaseTest {
         assertTrue(leaks.isEmpty(), leaks.joinToString("\n") { (what, line) -> "$what in: $line" })
     }
 
+    /**
+     * Step 3.5: the change request's notes are the customer's and staff's words to each other, shown on the order's page
+     * and never in the log - a change asked with a reason, turned down with one, asked again for another model and
+     * carried out with one, and what that left owed paid at the gateway.
+     */
+    @Test
+    fun `a change asked, turned down, asked again, carried out and its balance paid leave nothing personal in the log`() {
+        val sara = panel.caller(PanelTestStack.phone(953))
+        val operator = panel.caller(PanelTestStack.phone(954), Role.OPERATOR)
+        val nila = listOf("black", "olive").map { panel.purchase.variantOf("nila-crossbody-bag", it) }
+        val mahak = panel.purchase.variantOf("mahak-shoulder-bag", "black")
+
+        val log = logOf {
+            panel.app(trustedProxyHops = 1) {
+                suspend fun post(path: String, who: PanelTestStack.Caller, body: String, key: String? = null): HttpResponse = client.post("$API_V1$path") {
+                    header(HttpHeaders.Authorization, who.bearer)
+                    header(HttpHeaders.XForwardedFor, IP)
+                    key?.let { header("Idempotency-Key", it) }
+                    contentType(ContentType.Application.Json)
+                    setBody(body)
+                }
+
+                val code = panel.paidOrders.paid(sara.user.id, nila[0])
+                with(shippedOrders) { photographed(code) }
+                val asked = post("/me/orders/${code.value}/media-feedback", sara, """{"decision":"REQUEST_CHANGE","changeType":"COLOR","orderItemId":1,"desiredVariantId":${nila[1]},"note":"$ASK_NOTE"}""")
+                assertEquals(HttpStatusCode.OK, asked.status, asked.bodyAsText())
+                val rejected = post("/admin/orders/${code.value}/change-request/resolution", operator, """{"decision":"REJECT","note":"$REJECT_NOTE"}""")
+                assertEquals(HttpStatusCode.OK, rejected.status, rejected.bodyAsText())
+
+                with(shippedOrders) { photographed(code) }
+                val again = panel.caller(PanelTestStack.phone(953))
+                val askedAgain = post("/me/orders/${code.value}/media-feedback", again, """{"decision":"REQUEST_CHANGE","changeType":"MODEL","orderItemId":1,"desiredVariantId":$mahak,"note":"$ASK_NOTE"}""")
+                assertEquals(HttpStatusCode.OK, askedAgain.status, askedAgain.bodyAsText())
+                val applied = post("/admin/orders/${code.value}/change-request/resolution", panel.caller(PanelTestStack.phone(954), Role.OPERATOR), """{"decision":"APPLY","note":"$APPLY_NOTE"}""")
+                assertEquals(HttpStatusCode.OK, applied.status, applied.bodyAsText())
+                if (applied.json().getValue("balanceDue").jsonPrimitive.content != "0") {
+                    val started = post("/me/orders/${code.value}/payments", again, "{}", key = UUID.randomUUID().toString())
+                    assertEquals(HttpStatusCode.Created, started.status, started.bodyAsText())
+                    panel.paidOrders.back(started.json().getValue("paymentId").jsonPrimitive.content)
+                }
+                assertEquals(HttpStatusCode.OK, client.get("$API_V1/me/orders/${code.value}") { header(HttpHeaders.Authorization, again.bearer) }.status)
+            }
+        }
+
+        assertTrue(log.any { "ResolveChangeRequestUc" in it.loggerName }, "the use cases' own lines were caught")
+        val leaks = leaksIn(log, listOf(sara.user.phone.value, MESSENGER_PHONE), texts = listOf(IP, PaidOrders.Destination.TEHRAN.recipientName, ASK_NOTE, REJECT_NOTE, APPLY_NOTE))
+        assertTrue(leaks.isEmpty(), leaks.joinToString("\n") { (what, line) -> "$what in: $line" })
+    }
+
     @Test
     fun `the scan finds a whole number, a name and a reference, so a pass means something`() {
         val log = logOf {
@@ -195,6 +245,9 @@ class PanelOrdersLogScanOnDatabaseTest {
         const val REFUND_NOTE = "واریز به کارت ملت"
         const val BANK_REFERENCE = "73519086"
         const val STRANGER = "09351112244"
+        const val ASK_NOTE = "بندش برای قد من کوتاهه"
+        const val REJECT_NOTE = "زیتونی فعلاً نداریم"
+        const val APPLY_NOTE = "مهک مشکی رو گذاشتیم"
 
         // PaidOrders' messenger number.
         const val MESSENGER_PHONE = "09121112233"

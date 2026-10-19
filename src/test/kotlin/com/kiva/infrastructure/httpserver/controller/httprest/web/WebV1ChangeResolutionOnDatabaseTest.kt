@@ -1,6 +1,13 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
 import com.kiva.application.port.PanelActor
+import com.kiva.application.port.RequestHash
+import com.kiva.application.usecase.address.AddressFields
+import com.kiva.application.usecase.cart.CartCaller
+import com.kiva.application.usecase.cart.usecase.command.AddCartItemUc
+import com.kiva.application.usecase.checkout.usecase.command.PlaceOrderUc
+import com.kiva.application.usecase.inventory.usecase.command.AdjustInventoryUc
+import com.kiva.application.usecase.order.usecase.command.ResolveChangeRequestUc
 import com.kiva.application.usecase.product.ProductInput
 import com.kiva.application.usecase.product.usecase.command.UpdateVariantUc
 import com.kiva.application.usecase.reservation.usecase.command.ReleaseReservationGroupUc
@@ -256,7 +263,7 @@ class WebV1ChangeResolutionOnDatabaseTest {
         assertEquals(HttpStatusCode.OK, feedback(code, sara, """{"decision":"APPROVE"}""").status)
         val owing = ship(code)
         assertEquals("BALANCE_DUE", owing.refusal())
-        assertEquals(200_000L, owing.json()["meta"]?.jsonObject?.get("balanceDue")?.jsonPrimitive?.long ?: 200_000L)
+        assertEquals(200_000L, owing.json()["meta"]!!.jsonObject["balanceDue"]!!.jsonPrimitive.long)
         val paymentId = pay(code, sara).json().text("paymentId")!!
         panel.paidOrders.back(paymentId)
         val shipped = ship(code)
@@ -460,5 +467,109 @@ class WebV1ChangeResolutionOnDatabaseTest {
         assertEquals("GROUP_NOT_READY", notReady.refusal())
         assertEquals(listOf(second.value), notReady.json()["meta"]!!.jsonObject["orderCodes"]!!.jsonArray.map { it.jsonPrimitive.content })
         assertEquals("PHOTO_SENT", page(first, again).text("status"))
+    }
+
+    /** Sets what is left of [variantId] to exactly [left], as a stocktake would. */
+    private fun leave(variantId: Long, left: Int) {
+        val delta = left - available(variantId)
+        if (delta == 0) return
+        val staff = PanelActor(UserId.constructFromPersisted(panel.callerWith(Role.ADMIN).userId), null)
+        val counted = runBlocking { panel.adminInventory.adjustInventory.execute(AdjustInventoryUc.Cmd(variantId, delta, "STOCKTAKE", null, staff)) }
+        assertTrue(counted.isSuccess, counted.toString())
+    }
+
+    private fun onHandAndReserved(variantId: Long): Pair<Int, Int> = transaction(db) {
+        ProductVariantQmTbl.select(ProductVariantQmTbl.onHand, ProductVariantQmTbl.reserved).where { ProductVariantQmTbl.variantId eq variantId }.single()
+            .let { it[ProductVariantQmTbl.onHand] to it[ProductVariantQmTbl.reserved] }
+    }
+
+    /** [who] places an order of what is in their cart (one bag of [variantId], put there before). */
+    private fun placeOrderOf(who: UserId): kotlin.Result<Unit> = runCatching {
+        val key = UUID.randomUUID().toString()
+        val command = PlaceOrderUc.Cmd(
+            userId = who, idempotencyKey = key, requestHash = RequestHash.of(key), addressId = null,
+            newAddress = AddressFields(null, 8, 394, "خیابان ولیعصر، کوچه نسترن", "12", "4", "1965843117", "رضا کریمی", "09134567890", false, null, null),
+            newAddressAsDefault = null, saveNewAddress = false,
+            messenger = PlaceOrderUc.MessengerFields("BALE", "09121112233", null, null, saveAsDefault = false),
+            shippingMethod = "POST", reserve = null, paymentGateway = "ZARINPAL", customerNote = null, gift = null, expectedPayable = null, acceptTerms = true,
+        )
+        val placed = runBlocking { panel.purchase.placeOrder.execute(command) }
+        check(placed.isSuccess) { placed.failureOrNull()?.code ?: "not placed" }
+    }
+
+    @Test
+    fun `the last bag of a color - a change to it and a purchase of it at once, 20 times - exactly one of them gets it, never sold twice`() = panel.app {
+        val sara = customer(14)
+        val staff = PanelActor(operator().user.id, null)
+        leave(nila[0], 40)
+        val pool = Executors.newFixedThreadPool(2)
+        try {
+            repeat(20) { round ->
+                val code = asked(sara, toColor = 3)
+                leave(nila[3], 1)
+                val buyer = customer(100 + round)
+                runBlocking { panel.purchase.addCartItem.execute(AddCartItemUc.Cmd(CartCaller.Customer(buyer.user.id), nila[3], 1)) }.getOrNull() ?: error("not added")
+
+                val start = CountDownLatch(1)
+                val resolving = pool.submit<Boolean> {
+                    start.await()
+                    val resolved = runBlocking { panel.adminOrders.resolveChange.execute(ResolveChangeRequestUc.Cmd(code.value, "APPLY", null, null, false, staff)) }
+                    resolved.failureOrNull()?.let { assertEquals("QUANTITY_EXCEEDS_STOCK", it.code, "round $round") }
+                    resolved.isSuccess
+                }
+                val buying = pool.submit<Boolean> { start.await(); placeOrderOf(buyer.user.id).isSuccess }
+                start.countDown()
+                val (changed, bought) = resolving.get(30, TimeUnit.SECONDS) to buying.get(30, TimeUnit.SECONDS)
+
+                assertTrue(changed != bought, "round $round: changed=$changed bought=$bought - exactly one gets the last bag")
+                val (onHand, reserved) = onHandAndReserved(nila[3])
+                assertTrue(reserved <= onHand, "round $round: $reserved held of $onHand")
+                assertEquals(0, available(nila[3]), "round $round")
+                assertEquals(if (changed) "PROCESSING" else "CHANGE_REQUESTED", page(code, sara).text("status"), "round $round")
+            }
+        } finally {
+            pool.shutdownNow()
+        }
+    }
+
+    @Test
+    fun `A swaps Nila for Mahak while B swaps Mahak for Nila, at once, 20 times - never a deadlock, each holds its new bag`() = panel.app {
+        val staff = PanelActor(operator().user.id, null)
+        listOf(nila[0], mahak[0]).forEach { variant ->
+            val restocked = runBlocking { panel.adminInventory.adjustInventory.execute(AdjustInventoryUc.Cmd(variant, 60, "RESTOCK", null, staff)) }
+            assertTrue(restocked.isSuccess, restocked.toString())
+        }
+        val pool = Executors.newFixedThreadPool(2)
+        try {
+            repeat(20) { round ->
+                val sara = customer(200 + round)
+                val a = panel.paidOrders.paid(sara.user.id, nila[0])
+                val b = panel.paidOrders.paid(sara.user.id, mahak[0])
+                listOf(a, b).forEach { photographed(it) }
+                ask(a, sara, "MODEL", desired = mahak[0])
+                ask(b, sara, "MODEL", desired = nila[0])
+                val before = available(nila[0]) to available(mahak[0])
+
+                val start = CountDownLatch(1)
+                val outcomes = listOf(a, b).map { code ->
+                    pool.submit<String> {
+                        start.await()
+                        val resolved = runBlocking { panel.adminOrders.resolveChange.execute(ResolveChangeRequestUc.Cmd(code.value, "APPLY", null, null, false, staff)) }
+                        resolved.failureOrNull()?.code ?: "OK"
+                    }
+                }
+                start.countDown()
+
+                assertEquals(listOf("OK", "OK"), outcomes.map { it.get(30, TimeUnit.SECONDS) }, "round $round")
+                assertEquals(before, available(nila[0]) to available(mahak[0]), "round $round: one of each given back, one of each held")
+                assertEquals(
+                    listOf(mahak[0].toString(), nila[0].toString()),
+                    listOf(a, b).map { page(it, sara)["items"]!!.jsonArray.single().jsonObject.text("variantId") },
+                    "round $round",
+                )
+            }
+        } finally {
+            pool.shutdownNow()
+        }
     }
 }

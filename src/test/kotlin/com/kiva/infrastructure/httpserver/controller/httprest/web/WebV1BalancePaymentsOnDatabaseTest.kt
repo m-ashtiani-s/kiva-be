@@ -216,6 +216,24 @@ class WebV1BalancePaymentsOnDatabaseTest {
     }
 
     @Test
+    fun `«پرداخت» of a balance sent twice with one Idempotency-Key - the same attempt both times, one BALANCE attempt stored`() = panel.app {
+        val sara = customer(6)
+        val code = owing(sara)
+        val key = UUID.randomUUID().toString()
+
+        val first = pay(code, sara, key)
+        val again = pay(code, sara, key)
+
+        assertEquals(HttpStatusCode.Created, first.status, first.bodyAsText())
+        assertEquals(first.status to first.json().text("paymentId"), again.status to again.json().text("paymentId"))
+        val balanceAttempts = transaction(db) {
+            val orderId = panel.purchase.orderQm.findByCode(code)!!.orderId
+            panel.purchase.payments.lockAttemptsOf(orderId).count { it.purpose == PaymentPurpose.BALANCE }
+        }
+        assertEquals(1, balanceAttempts)
+    }
+
+    @Test
     fun `a paid order owing nothing is 422 ORDER_ALREADY_PAID, as before`() = panel.app {
         val sara = customer(2)
         val code = panel.paidOrders.paid(sara.user.id, nila[0])

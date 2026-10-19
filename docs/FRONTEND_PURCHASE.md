@@ -193,11 +193,44 @@ Idempotency-Key: …                           // its own key, as for placing an
 ### بعد از پرداخت (فاز ۲ ِ `COMPLETION_ROADMAP.md`، کانترکت 1.9.0)
 
 - **همه‌ی بخش‌های صفحه‌ی سفارش واقعی‌ان:** `progress.steps[].at` (پرداخت، اولین ارسال عکس، ارسال، تحویل)، `shipment` (کد، `trackingUrl`، `shippedAt`، `deliveredAt`؛ تا ارسال فقط `waitingMessage`)، `preShipmentMedia` و `preShipmentMediaDetail`، `refunds` و `totals.refunded`، `items[].returnableUntil` بعد از تحویل. برچسب‌های تایم‌لاین از سرور میان («عکس کیفت فرستاده شد»، «تحویل پست شد»، «لغو شد»، «… تومان برگشت داده شد»)؛ `note` ِ هر ردیف رو زیرش نشون بده.
-- **عکس قبل از ارسال:** `GET /me/orders/{code}/media` (فقط دسته‌ی فرستاده‌شده؛ پیش‌نویس اپراتور هیچ‌وقت). «همونه!» با `POST /me/orders/{code}/media-feedback { "decision": "APPROVE" }` و فقط وقتی `actions.canApproveMedia`. تکرار بی‌اثره (`200`). `REQUEST_CHANGE` فعلاً `422 CHANGE_REQUEST_NOT_ALLOWED` (فاز ۳). مشتری ۲۴ ساعت وقت داره (`feedbackDeadline`)؛ بعدش خودکار تأیید می‌شه.
+- **عکس قبل از ارسال:** `GET /me/orders/{code}/media` (فقط دسته‌ی فرستاده‌شده؛ پیش‌نویس اپراتور هیچ‌وقت). «همونه!» با `POST /me/orders/{code}/media-feedback { "decision": "APPROVE" }` و فقط وقتی `actions.canApproveMedia`. تکرار بی‌اثره (`200`). `REQUEST_CHANGE` پایین‌تر (فاز ۳). مشتری ۲۴ ساعت وقت داره (`feedbackDeadline`)؛ بعدش خودکار تأیید می‌شه.
 - **لغو:** دکمه فقط با `actions.canCancel` (رزرو یا آماده‌سازی، و هنوز هیچ عکسی فرستاده نشده). `POST /me/orders/{code}/cancel { "reason": "CHANGED_MIND", "note": null }`؛ `reason = OTHER` بدون `note` ← `400 NOTE_REQUIRED`. جواب `{ order, refund, message }`: `refund` وقتی چیزی پرداخت شده بود (`PENDING`، همکارها برای گرفتن شبا زنگ می‌زنن)، `message` رو همون‌طور نشون بده. بعد از عکس ← `422 ORDER_NOT_CANCELLABLE` (مشتری باید با پشتیبانی تماس بگیره).
 - **رهگیری مهمان (بدون ورود):** `POST /tracking/lookup { "orderCode": "218340", "phone": "0912…" }`. کد با یا بدون `KV-` و با ارقام فارسی. موبایل خریدار یا گیرنده. هر «پیدا نشد» (کد اشتباه، موبایل دیگه، سفارش پرداخت‌نشده) همون `404 TRACKING_NOT_FOUND` ـه: یه پیام کلی نشون بده. موبایل بدشکل ← `400` روی `phone`. سقف ۱۰ بار در ۱۰ دقیقه (`429` با `meta.retryAfterSeconds`). جواب آدرس، قیمت و اسم نداره؛ حداکثر ۴ عکس (`preview`) و `loginHint`.
 - **رهگیری روزانه (عمومی):** `GET /tracking/daily/days?days=10` (تب‌ها: «امروز»، «دیروز»، اسم روز؛ `isNonShippingDay`) و `GET /tracking/daily?date=2026-10-18&q=4821`. `q`: چهار رقم آخر موبایل، یه حرف اول اسم، یا اسم شهر. اسم و موبایل همیشه ماسک‌شده از سرور میان؛ جمعه `emptyMessage` داره. فقط ۳۰ روز اخیر.
 - **رهگیری‌های من:** `GET /me/tracking`: کدهای خود کاربر، گروه‌بندی‌شده بر اساس روز ارسال، تازه‌ترین اول (حداکثر ۵۰).
+
+### درخواست تغییر و پرداخت مانده (فاز ۳ ِ `COMPLETION_ROADMAP.md`، کانترکت 1.10.0)
+
+- **دکمه فقط با `actions.canRequestChange`:** عکس فرستاده شده (تأییدشده یا نه)، سفارش هنوز ارسال نشده، و درخواست بازی نیست. وگرنه `422 CHANGE_REQUEST_NOT_ALLOWED`.
+
+```js
+POST /me/orders/KV-218340/media-feedback
+{ "decision": "REQUEST_CHANGE", "changeType": "COLOR", "orderItemId": 1, "desiredVariantId": 412, "note": "زیتونی قشنگ‌تره" }
+200 OrderDetail   // CHANGE_REQUESTED
+```
+
+| `changeType` | اجباری | یعنی |
+|---|---|---|
+| `COLOR` | `orderItemId`، `desiredVariantId` | رنگ دیگه‌ی **همون** کیف |
+| `MODEL` | `orderItemId`، `desiredVariantId` | یه کیف (رنگی از محصول) **دیگه** |
+| `CANCEL_ITEM` | `orderItemId` | این قلم رو نمی‌خوام. اگه تنها قلم سفارشه، یعنی لغو کل سفارش |
+| `OTHER` | `note` | هر چیز دیگه |
+
+- خطاهای شکل همه با هم (`400`، روی فیلد): `CHANGE_TYPE_REQUIRED`، `CHANGE_TYPE_INVALID`، `ORDER_ITEM_REQUIRED`، `ORDER_ITEM_NOT_FOUND`، `DESIRED_VARIANT_REQUIRED`، `DESIRED_VARIANT_INVALID` (رنگ ناموجود، یا رنگی که با نوع جور نیست)، `NOTE_REQUIRED`، `STATUS_NOTE_TOO_LONG` (بیشتر از ۵۰۰). رنگی که الان فروشی نیست ← `422 PRODUCT_UNAVAILABLE`. فیلدی که برای اون نوع معنی نداره نادیده گرفته می‌شه. لیست رنگ‌ها رو از `GET /products/{productId}` بگیر.
+- **موجودی موقع درخواست چک نمی‌شه**؛ اپراتور موقع اجرا چک می‌کنه. به مشتری قول نده.
+- تا رسیدگی: سفارش و عکس‌ها `CHANGE_REQUESTED`، `canCancel` و `canRequestChange` خاموش. چیزی که فرستاده تو `preShipmentMediaDetail.feedback` برمی‌گرده.
+- **بعد از رسیدگی** (`feedback.resolution`: `decision` = `APPLY`/`REJECT`، `variantId` ِ رنگی که واقعاً گذاشته شد، `note` ِ اپراتور): سفارش برمی‌گرده `PROCESSING` و عکس‌ها `WAITING`، تا اپراتور عکس تازه بفرسته؛ دسته‌ی قبلی تا اون موقع دیده می‌شه. پیامک «درخواستت بررسی شد» میاد ولی بدون توضیح: توضیح (`note`) رو تو صفحه‌ی سفارش نشون بده (تایم‌لاین: «درخواستت رد شد»، «رنگ عوض شد»، «مدل عوض شد»، «یه قلم حذف شد»، «درخواستت انجام شد»، با `note` زیرش).
+- **قیمت تازه** قیمت روز رسیدگیه. ارزون‌تر شد ← یه استرداد `PENDING` تو `refunds` (همکارها برای شبا زنگ می‌زنن). گرون‌تر شد ← `totals.balanceDue` و `actions.canPay`:
+
+```js
+POST /me/orders/KV-218340/payments          // Idempotency-Key: …, as for any payment
+201 { "paymentId": "pay_…", "amount": 200000, "redirect": { … }, "expiresAt": "…" }   // amount = balanceDue
+```
+
+- `expiresAt` ِ پرداخت مانده پایان پنجره‌ی ۲۰ دقیقه‌ای همین تلاشه، نه مهلت سفارش: مانده مهلت نداره، ولی تا پرداخت نشه سفارش ارسال نمی‌شه. برگشت از درگاه، صفحه‌ی نتیجه و «تلاش دوباره» عین پرداخت سفارشن (بخش‌های ۴ و ۵). چیزی بدهکار نیست ← `422 ORDER_ALREADY_PAID`. بیشتر از ۱۰ تلاش ← `429`.
+- اگه اپراتور وسط پرداخت دوباره سفارش رو عوض کنه (مانده عوض شد)، اون پرداخت تأیید نمی‌شه و پولش برمی‌گرده؛ صفحه‌ی نتیجه `FAILED` یا `REFUNDED` نشون می‌ده و دکمه‌ی «پرداخت» با مبلغ تازه برمی‌گرده.
+- **جمع‌ها بعد از تغییر:** `subtotal` از قلم‌های فعلی؛ `codeDiscount` منهای سهم کد ِ قلم حذف‌شده؛ `shippingCost` ثابت؛ `payable` یعنی «کل پرداخت‌شده تا الان» (ثبت + مانده‌ها)؛ `balanceDue` مانده. خودت جمع نزن: همیشه `subtotal − codeDiscount + shippingCost = payable + balanceDue − (استردادهای درخواست تغییر)`. `payment` ِ صفحه `purpose` (`ORDER`/`BALANCE`) و `amount` ِ خودش رو داره.
+- سفارش لغوشده مانده نداره.
 
 ## ۷. جاهایی که راحت می‌شه اشتباه کرد
 
@@ -208,3 +241,4 @@ Idempotency-Key: …                           // its own key, as for placing an
 - **بعد از ادغام توکن سبد مهمان رو پاک کن.** سبد مهمان با ادغام پاک شده و توکنش دیگه به هیچ سبدی نمی‌رسه؛ بعد از خروج، اولین درخواست سبد یه سبد مهمان تازه و توکن تازه می‌ده.
 - **`issues` رو جایی نگه ندار**؛ فقط همون پاسخ.
 - **callback رو از جاوااسکریپت صدا نزن** و به `302` ِ اون تکیه نکن؛ صفحه‌ی نتیجه فقط `paymentId` رو از query می‌خونه و `GET /payments/{paymentId}` رو می‌پرسه.
+- **`payable` بعد از درخواست تغییر «پرداخت‌شده» ـه، نه «قابل پرداخت».** مبلغی که هنوز باید پرداخت بشه `balanceDue` ـه؛ دکمه‌ی «پرداخت» رو فقط با `actions.canPay` نشون بده.
