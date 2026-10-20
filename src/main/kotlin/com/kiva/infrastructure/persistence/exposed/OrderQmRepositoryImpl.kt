@@ -152,6 +152,17 @@ class OrderQmRepositoryImpl : OrderQmRepository {
                 AdminOrderQm(row.toOrderQm(), row.getOrNull(ReservationGroupTbl.expiresOn)?.toInstant()?.takeIf { holding })
             }
 
+    override fun recentOfCustomer(userId: UserId, limit: Int): List<AdminOrderQm> =
+        OrderQmTbl.join(ReservationGroupTbl, JoinType.LEFT, OrderQmTbl.reservationGroupId, ReservationGroupTbl.groupId)
+            .select(OrderQmTbl.columns + ReservationGroupTbl.status + ReservationGroupTbl.expiresOn)
+            .where { OrderQmTbl.userId eq userId.value }
+            .orderBy(OrderQmTbl.placedOn to SortOrder.DESC, OrderQmTbl.orderId to SortOrder.DESC)
+            .limit(limit)
+            .map { row ->
+                val holding = row.getOrNull(ReservationGroupTbl.status) == ReservationGroupStatus.HOLDING
+                AdminOrderQm(row.toOrderQm(), row.getOrNull(ReservationGroupTbl.expiresOn)?.toInstant()?.takeIf { holding })
+            }
+
     override fun statusCounts(filter: AdminOrderFilter): Map<OrderStatus, Long> {
         val count = OrderQmTbl.orderId.count()
         return OrderQmTbl.select(OrderQmTbl.status, count)

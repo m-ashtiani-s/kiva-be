@@ -9,6 +9,7 @@ import com.kiva.application.usecase.account.usecase.query.GetMeUc
 import com.kiva.application.usecase.admin.usecase.command.CheckPanelAccessUc
 import com.kiva.application.usecase.admin.usecase.command.SetUserRolesUc
 import com.kiva.application.usecase.admin.usecase.query.FindCustomersUc
+import com.kiva.application.usecase.admin.usecase.query.GetCustomerDetailUc
 import com.kiva.application.usecase.admin.usecase.query.GetCustomerUc
 import com.kiva.application.usecase.auth.OtpIssuer
 import com.kiva.application.usecase.auth.usecase.command.BootstrapAdminUc
@@ -99,6 +100,7 @@ class AuthTestStack(val clock: MutableClock, maxSmsPerHour: Int = 300, val otpCo
     val checkPanelAccess = CheckPanelAccessUc(transactions, sessions, users, events, clock)
     val findCustomers = FindCustomersUc(transactions, AdminCustomerRepositoryImpl(), OrderQmRepositoryImpl())
     val getCustomer = GetCustomerUc(transactions, AdminCustomerRepositoryImpl(), OrderQmRepositoryImpl())
+    val getCustomerDetail = GetCustomerDetailUc(transactions, AdminCustomerRepositoryImpl(), OrderQmRepositoryImpl(), AddressBookRepositoryImpl(), GeoRepositoryImpl())
     val setUserRoles = SetUserRolesUc(transactions, users, sessions, events, AuditTrailImpl(), clock)
     val bootstrapAdmin = BootstrapAdminUc(transactions, users, sessions, events, clock)
     val requestPhoneChange = RequestPhoneChangeUc(transactions, users, sessions, otpIssuer, sms, clock)
@@ -128,7 +130,7 @@ class AuthTestStack(val clock: MutableClock, maxSmsPerHour: Int = 300, val otpCo
                     route(API_V1) {
                         webV1Auth(authUseCases, allowedOrigins, testMediaUrls)
                         webV1Me(MeUseCases(getMe, updateProfile, requestPhoneChange, confirmPhoneChange))
-                        webV1AdminCustomers(AdminCustomerUseCases(checkPanelAccess, findCustomers, getCustomer, setUserRoles))
+                        webV1AdminCustomers(AdminCustomerUseCases(checkPanelAccess, findCustomers, getCustomer, getCustomerDetail, setUserRoles))
                     }
                 }
             }

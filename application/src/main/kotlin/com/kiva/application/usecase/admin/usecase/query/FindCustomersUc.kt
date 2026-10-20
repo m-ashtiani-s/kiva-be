@@ -10,10 +10,12 @@ import com.kiva.common.pagination.Pageable
 import com.kiva.common.railway.FailureKind
 import com.kiva.common.railway.Result
 import com.kiva.common.railway.ResultFailure
+import com.kiva.common.railway.forField
 import com.kiva.common.text.normalizePersian
 import com.kiva.common.transaction.TransactionManager
 import com.kiva.common.usecase.QueryUseCase
 import com.kiva.common.valueobject.IranianMobileNumber
+import com.kiva.domain.aggregate.user.model.valueobject.Role
 
 /**
  * The panel's customer list (`GET /admin/customers`, ADMIN and SUPPORT): everyone, or those matching `q`, newest
@@ -21,7 +23,8 @@ import com.kiva.common.valueobject.IranianMobileNumber
  *
  * `q` is read the way people type it: Persian or Arabic digits and letters are made the same as stored ones. A whole
  * mobile number in any form (`+98 912 …`, `۰۹۱۲…`) finds exactly that phone; otherwise every word must be in the phone,
- * the first name or the last name (`0912` finds every phone with it, «سارا محمدی» finds her).
+ * the first name or the last name (`0912` finds every phone with it, «سارا محمدی» finds her). `role` keeps only those
+ * with that role (the panel's staff page); CUSTOMER is everyone; anything else is 400 ROLE_INVALID on `role`.
  */
 class FindCustomersUc(
     private val transactionManager: TransactionManager,
@@ -31,11 +34,15 @@ class FindCustomersUc(
 
     private val logger = getLogger()
 
-    data class Qry(val pageable: Pageable, val q: String? = null)
+    data class Qry(val pageable: Pageable, val q: String? = null, val role: String? = null)
 
     override suspend fun execute(query: Qry): Result<Page<AdminCustomerDto>, Failure> {
         logger.info("FindCustomersUc.execute q=${if (query.q.isNullOrBlank()) "none" else "given"} page=${query.pageable.page}")
-        val search = searchOf(query.q) ?: return Result.failure(Failure.InvalidInput(listOf(QueryTooLong)))
+        val words = searchOf(query.q)
+        val role = query.role?.trim()?.ifEmpty { null }?.let { Role.makeNew(it).forField("role") } ?: Result.success(null)
+        val problems = listOfNotNull(if (words == null) QueryTooLong else null, role.failureOrNull())
+        if (problems.isNotEmpty()) return Result.failure(Failure.InvalidInput(problems))
+        val search = words!!.copy(role = role.getOrNull()?.takeIf { it != Role.CUSTOMER })
 
         return transactionManager.inTransaction {
             val customers = adminCustomerRepository.find(search, query.pageable)

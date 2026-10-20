@@ -2604,7 +2604,7 @@ Route: 200 با AdminOrder
 | ۴.۰ | کانترکت 1.11.0 | M | ✅ |
 | ۴.۱ | تنظیمات فروشگاه | L | ✅ |
 | ۴.۲ | کدهای تخفیف در پنل | M | ✅ |
-| ۴.۳ | جزئیات مشتری، فیلتر نقش و «آخرین ادمین» | M | ⬜ |
+| ۴.۳ | جزئیات مشتری، فیلتر نقش و «آخرین ادمین» | M | ✅ |
 | ۴.۴ | گزارش مدیریتی | M | ⬜ |
 | ۴.۵ | ریویو | S | ⬜ |
 
@@ -2644,6 +2644,7 @@ Route: 200 با AdminOrder
 | 30 | کد دوحرفی ِ قدیمی (تازه، گام ۴.۲) | `PUT` شکل رو با «دوحرفی هم مجاز» می‌سنجه؛ داخل تراکنش، متن دوحرفی فقط وقتی پذیرفته می‌شه که متن همون کد باشه، وگرنه `400 DISCOUNT_CODE_TEXT_INVALID` روی `code` | تصمیم ۹ گفته کدهای قبلی معتبر می‌مونن ولی کد تازه حداقل ۳ |
 | 31 | لاگ کد تخفیف (تازه، گام ۴.۲) | `DISCOUNT_CODE_CREATED` بدون `changes` (مثل `PRODUCT_CREATED`)؛ `DISCOUNT_CODE_DEACTIVATED` با `isActive` از `true` به `false`؛ `DISCOUNT_CODE_UPDATED` با هر شرط عوض‌شده (لیست‌ها شناسه‌های مرتب) | |
 | 32 | `requiresLogin` ِ پاسخ (تازه، گام ۴.۲) | همیشه مقدار مؤثر (`DiscountCode.needsCustomer`)، حتی برای کدی که با SQL و بدون این پرچم ساخته شده | پنل باید همونی رو ببینه که سبد اجرا می‌کنه |
+| 33 | «آخرین ADMIN» در عمل (تازه، گام ۴.۳) | با خوندن دوباره‌ی نقش‌های انجام‌دهنده زیر قفل، انجام‌دهنده خودش همیشه یه ADMIN ـه، پس قانون `LAST_ADMIN` با یه درخواست تنها هیچ‌وقت نمی‌رسه؛ دیوار دومه. خرابکاری ِ خوندن دوباره نشونش می‌ده: دو ادمین همزمان ← دومی به‌جای `403` همون `422 LAST_ADMIN` می‌گیره | بدون هر دو، دو ادمین همزمان همه‌ی ADMINها رو برمی‌داشتن |
 
 ### ۹.۳ تعریف عددهای گزارش (`GET /admin/reports/overview`)
 
@@ -2822,18 +2823,20 @@ Route: 200 با AdminSettings ِ تازه
 
 ---
 
-#### گام ۴.۳: جزئیات مشتری، فیلتر نقش و «آخرین ادمین» · M ⬜
+#### گام ۴.۳: جزئیات مشتری، فیلتر نقش و «آخرین ادمین» · M ✅
 
 **می‌سازی:** `GetCustomerDetailUc` (به‌جای استفاده‌ی فعلی از `GetCustomerUc` فقط برای پاسخ نقش‌ها)؛ `OrderQmRepository.recentOfCustomer`؛ فیلتر `role` در `AdminCustomerRepository.find`؛ قانون تصمیم ۱۴ در `SetUserRolesUc`؛ route ِ `GET /admin/customers/{customerId}`؛ `AdminCustomerDetailHttpResponse`؛ اصلاح KDoc ِ کهنه‌ی `AdminCustomerHttpResponse`.
 
 وابسته به: ۴.۰
 
 **تموم شده یعنی:**
-- [ ] جزئیات با آدرس‌ها (پیش‌فرض اول) و ۵ سفارش آخر (پرداخت‌نشده هم)؛ مشتری ناموجود و `abc` ← ۴۰۴.
-- [ ] `role=OPERATOR` فقط اپراتورها.
-- [ ] دو ادمین (A و B) همزمان ADMIN ِ همدیگه رو برمی‌دارن، ۱۰ بار ← یکی موفق و دومی `403`؛ همیشه حداقل یه ADMIN می‌مونه.
-- [ ] اسکن لاگ: خوندن جزئیات مشتری هیچ موبایل کامل یا آدرسی تو لاگ برنامه نمی‌ذاره.
-- [ ] خرابکاری: حذف خوندن دوباره‌ی نقش انجام‌دهنده ← تست همزمانی قرمز.
+- [x] جزئیات با آدرس‌ها (پیش‌فرض اول) و ۵ سفارش آخر (پرداخت‌نشده هم)؛ مشتری ناموجود و `abc` ← ۴۰۴.
+- [x] `role=OPERATOR` فقط اپراتورها.
+- [x] دو ادمین (A و B) همزمان ADMIN ِ همدیگه رو برمی‌دارن، ۱۰ بار ← یکی موفق و دومی `403`؛ همیشه حداقل یه ADMIN می‌مونه.
+- [x] اسکن لاگ: خوندن جزئیات مشتری هیچ موبایل کامل یا آدرسی تو لاگ برنامه نمی‌ذاره.
+- [x] خرابکاری: حذف خوندن دوباره‌ی نقش انجام‌دهنده ← تست همزمانی قرمز.
+
+**یادداشت پیاده‌سازی:** `UserRepository.lockRoleChanges()` (قفل advisory ِ `roles`، کلیدش پارامتر) و `countAdmins()`؛ `SetUserRolesUc` به ترتیب: قفل ← نقش‌های فعلی انجام‌دهنده (`403`) ← کاربر (`404`) ← نقش‌های خودش (`422`) ← آخرین ADMIN (`422`، `meta.reason = LAST_ADMIN`). `UserTbl.hasRole` (عملگر `@>`) هم برای شمردن ADMINها و هم فیلتر `role` (`CUSTOMER` یعنی همه، ناشناخته `400 ROLE_INVALID`). `GetCustomerDetailUc` با `OrderQmRepository.recentOfCustomer` و `AdminOrderItems` (ساختن ردیف لیست سفارش، حالا مشترک با `FindAdminOrdersUc`). تست همزمانی با یه latch در `lockRoleChanges`، تا هر دو درخواست از نگهبان route رد شده باشن (۱۰ بار). خرابکاری: حذف خوندن دوباره‌ی نقش‌ها ← `two admins taking ADMIN from each other at once` قرمز (`[200, 422]`). کل مجموعه برای این گام دوباره اجرا نشد (آخرین اجرای کامل: ۲۵۹۵ تست سبز در گام ۴.۲)؛ تست‌های این گام و کلاس‌های پنل ِ مرتبط سبزن.
 
 ---
 
@@ -6156,3 +6159,4 @@ kiva {
 | ۲۸ مهر ۱۴۰۵ | ۴.۰ | Phase 4 step 4.0 | کانترکت 1.11.0 با هر ۶ ردیف ِ ۹.۷ و سه ردیف تازه (۷ تا ۹)؛ هفت تصمیم تازه (۱۸ تا ۲۴ ِ ۹.۲: ترتیب درگاه‌ها، «لازم ولی nullable»، `siteStats`، کدهای فیلدی عمومی، سقف‌های کد تخفیف و `updatedAt`، متن عمومی ِ `ROLE_CHANGE_NOT_ALLOWED`، خطاها و کلیدهای گزارش). YAML با snakeyaml معتبره و هر ۱۳۲۷ `$ref` پیدا می‌شن. متن ۲۵ کد فیلدی تازه. برنچ `panel-settings` از نوک فاز ۳ |
 | ۲۸ مهر ۱۴۰۵ | ۴.۱ | Phase 4 step 4.1 | `V30` ِ کامل؛ VOهای تنظیمات (`DeliveryDays.makeNew`، `ShippingMethodName`، `IconName`، `TrackingUrlTemplate`، `SupportPhone`، `SupportHours`، `SocialLink`، `SiteStats`/`Satisfaction`، `ShopFeatures`)؛ `ShopSettings.change` و `version`؛ `save` با نسخه؛ `ShopSettingsFields`، `GetAdminSettingsUc`، `UpdateSettingsUc`، `SettingsAudit`؛ `webV1AdminSettings.kt`؛ آستانه‌ی موجودی کم و مهلت عکس از تنظیمات؛ `Problems` و حدهای عمومی در `common`. ۲۵۷۲ تست سبز |
 | ۲۸ مهر ۱۴۰۵ | ۴.۲ | Phase 4 step 4.2 | `DiscountTerms`، `DiscountCode.create`/`change`/`deactivate` با نسخه، `DiscountCodeText.makeNewInPanel`، `DiscountCodeRepository` (`findById`، `lockById`، `nextId`، `list`، `add`، `save`، `usageStatsOf`)، پنج UseCase، `DiscountCodeReferences`، `webV1AdminDiscountCodes.kt`، لاگ `DISCOUNT_CODE_*`. چهار تصمیم تازه (۲۹ تا ۳۲). ۲۵۹۵ تست سبز |
+| ۲۸ مهر ۱۴۰۵ | ۴.۳ | Phase 4 step 4.3 | `GetCustomerDetailUc` و `GET /admin/customers/{customerId}`، `recentOfCustomer`، `AdminOrderItems`، فیلتر `role`، قفل نقش‌ها و خوندن دوباره‌ی انجام‌دهنده و `LAST_ADMIN` در `SetUserRolesUc`، اسکن لاگ ِ صفحه‌ی مشتری، KDoc ِ `AdminCustomer`. تصمیم ۳۳. خرابکاری قرمز. کل مجموعه دوباره اجرا نشد |

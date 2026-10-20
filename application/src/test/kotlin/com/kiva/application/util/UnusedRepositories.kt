@@ -97,4 +97,8 @@ abstract class UnusedUserRepository : UserRepository {
     override fun findOrRegister(phone: IranianMobileNumber, now: Instant): FoundOrRegistered = unused()
     override fun save(user: User): Unit = unused()
     override fun hasAnyAdmin(): Boolean = unused()
+
+    override fun countAdmins(): Int = unused()
+
+    override fun lockRoleChanges() = unused()
 }

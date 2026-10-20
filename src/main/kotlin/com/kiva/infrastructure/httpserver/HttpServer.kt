@@ -292,7 +292,7 @@ fun Application.configureRouting() {
                 mediaUrls,
             )
             webV1Me(MeUseCases(getMeUc, updateMyProfileUc, requestPhoneChangeUc, confirmPhoneChangeUc))
-            webV1AdminCustomers(AdminCustomerUseCases(checkPanelAccessUc, findCustomersUc, getCustomerUc, setUserRolesUc))
+            webV1AdminCustomers(AdminCustomerUseCases(checkPanelAccessUc, findCustomersUc, getCustomerUc, get(), setUserRolesUc))
             webV1AdminAudit(AdminAuditUseCases(checkPanelAccessUc, listAuditLogUc))
             webV1AdminMedia(AdminMediaUseCases(checkPanelAccessUc, uploadMediaUc), mediaStorage::newUploadFile, mediaUrls)
             webV1AdminCatalog(adminCatalogUseCases, mediaUrls, config.shop.siteUrl)

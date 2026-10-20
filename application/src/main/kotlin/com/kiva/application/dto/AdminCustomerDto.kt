@@ -8,8 +8,8 @@ import java.time.Instant
 /**
  * A customer as the panel lists them (the contract's AdminCustomer).
  *
- * @property ordersCount the customer's orders the money came in for (OrderRepository's Purchases);
- * @property totalSpent what they paid for them (their payable; the refunds of a later phase will come off it);
+ * @property ordersCount the customer's orders the money came in for (OrderQmRepository's Purchases), cancelled ones too;
+ * @property totalSpent what they paid for them, a balance after a change included, less what went back (completed refunds);
  * @property lastOrderAt when the latest of them was placed; null when they bought nothing.
  */
 data class AdminCustomerDto(

@@ -4,6 +4,7 @@ import com.kiva.application.port.MediaProcessor
 import com.kiva.application.usecase.admin.usecase.command.CheckPanelAccessUc
 import com.kiva.application.usecase.admin.usecase.command.SetUserRolesUc
 import com.kiva.application.usecase.admin.usecase.query.FindCustomersUc
+import com.kiva.application.usecase.admin.usecase.query.GetCustomerDetailUc
 import com.kiva.application.usecase.admin.usecase.query.GetCustomerUc
 import com.kiva.application.usecase.audit.usecase.query.ListAuditLogUc
 import com.kiva.application.usecase.catalog.usecase.command.CreateCategoryUc
@@ -82,6 +83,7 @@ import com.kiva.infrastructure.media.FakeMediaProcessor
 import com.kiva.infrastructure.media.MediaUrls
 import com.kiva.infrastructure.media.RandomMediaIds
 import com.kiva.infrastructure.payment.PaymentConfig
+import com.kiva.infrastructure.persistence.exposed.AddressBookRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.AdminCustomerRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.AuditLogQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.AuditTrailImpl
@@ -90,6 +92,7 @@ import com.kiva.infrastructure.persistence.exposed.CategoryIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.CategoryRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ColorRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.DiscountCodeRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.GeoRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.InventoryAdjustmentQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.InventoryRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.MaterialIdGeneratorImpl
@@ -150,6 +153,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
     // --- the customers page (login phase), the first panel routes ---
     val findCustomers = FindCustomersUc(transactions, AdminCustomerRepositoryImpl(), OrderQmRepositoryImpl())
     val getCustomer = GetCustomerUc(transactions, AdminCustomerRepositoryImpl(), OrderQmRepositoryImpl())
+    val getCustomerDetail = GetCustomerDetailUc(transactions, AdminCustomerRepositoryImpl(), OrderQmRepositoryImpl(), AddressBookRepositoryImpl(), GeoRepositoryImpl())
     val setUserRoles = SetUserRolesUc(transactions, users, sessions, events, auditTrail, clock)
 
     // --- the change log (step 1.1) ---
@@ -323,7 +327,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
             configureAuthentication(accessTokens)
             routing {
                 route(API_V1) {
-                    webV1AdminCustomers(AdminCustomerUseCases(checkPanelAccess, findCustomers, getCustomer, setUserRoles))
+                    webV1AdminCustomers(AdminCustomerUseCases(checkPanelAccess, findCustomers, getCustomer, getCustomerDetail, setUserRoles))
                     webV1AdminAudit(AdminAuditUseCases(checkPanelAccess, listAuditLog))
                     webV1AdminMedia(AdminMediaUseCases(checkPanelAccess, uploadMedia), mediaStorage::newUploadFile, mediaUrls)
                     webV1AdminCatalog(adminCatalog, mediaUrls, SITE_URL)

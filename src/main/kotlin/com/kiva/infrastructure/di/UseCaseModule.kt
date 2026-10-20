@@ -13,6 +13,7 @@ import com.kiva.application.usecase.address.usecase.query.ListMyAddressesUc
 import com.kiva.application.usecase.admin.usecase.command.CheckPanelAccessUc
 import com.kiva.application.usecase.admin.usecase.command.SetUserRolesUc
 import com.kiva.application.usecase.admin.usecase.query.FindCustomersUc
+import com.kiva.application.usecase.admin.usecase.query.GetCustomerDetailUc
 import com.kiva.application.usecase.admin.usecase.query.GetCustomerUc
 import com.kiva.application.usecase.audit.usecase.command.DeleteOldAuditEntriesUc
 import com.kiva.application.usecase.audit.usecase.query.ListAuditLogUc
@@ -520,6 +521,11 @@ val useCaseModule = module(createdAtStart = true) {
     }
     single {
         BootstrapAdminUc(transactionManager = get(), userRepository = get(), authSessionRepository = get(), securityEventLog = get(), clock = get())
+    }
+    single {
+        GetCustomerDetailUc(
+            transactionManager = get(), adminCustomerRepository = get(), orderQmRepository = get(), addressBookRepository = get(), geoRepository = get(),
+        )
     }
 
     // --- admin: orders (phase 2) ---

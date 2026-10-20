@@ -75,6 +75,12 @@ interface OrderQmRepository {
      */
     fun findForAdmin(filter: AdminOrderFilter, pageable: Pageable): Page<AdminOrderQm>
 
+    /**
+     * The last [limit] orders of [userId] in any status (unpaid and expired too, so support sees them), newest placed
+     * first, each with its reservation group's end while the group still holds: a customer's page in the panel.
+     */
+    fun recentOfCustomer(userId: UserId, limit: Int): List<AdminOrderQm>
+
     /** How many orders [filter] lets through in each status, every status there (zero too); the filter's statuses are ignored. */
     fun statusCounts(filter: AdminOrderFilter): Map<OrderStatus, Long>
 

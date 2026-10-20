@@ -43,6 +43,7 @@ class AdminCustomerRepositoryImpl : AdminCustomerRepository {
     private fun conditionOf(search: CustomerSearch): Op<Boolean> {
         val conditions = buildList<Op<Boolean>> {
             search.phone?.let { add(UserTbl.phone eq it.value) }
+            search.role?.let { add(UserTbl.hasRole(it)) }
             search.words.forEach { word ->
                 val pattern = containing(word)
                 add((UserTbl.phone like pattern) or (UserTbl.firstName.lowerCase() like pattern) or (UserTbl.lastName.lowerCase() like pattern))

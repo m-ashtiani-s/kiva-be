@@ -28,6 +28,15 @@ interface UserRepository {
     /** At least one user has the ADMIN role. The first admin comes from the environment only while this is false. */
     fun hasAnyAdmin(): Boolean
 
+    /** How many users have the ADMIN role now. Read under [lockRoleChanges], it can't change before the commit. */
+    fun countAdmins(): Int
+
+    /**
+     * Makes changes of roles one at a time, until the transaction ends (section 4.11, lock 0): two admins taking ADMIN from
+     * each other at once see each other's change, so the last ADMIN is never lost (roadmap phase 4, decision 14).
+     */
+    fun lockRoleChanges()
+
     /** @property isNew the account was made by this call, so the client asks the new customer for their name. */
     data class FoundOrRegistered(val user: User, val isNew: Boolean)
 }

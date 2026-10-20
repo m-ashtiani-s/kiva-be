@@ -15,10 +15,8 @@ import com.kiva.domain.aggregate.user.repository.PhoneTakenException
 import com.kiva.domain.aggregate.user.repository.UserRepository
 import com.kiva.domain.aggregate.user.repository.UserRepository.FoundOrRegistered
 import com.kiva.infrastructure.persistence.exposed.tbl.UserTbl
-import org.jetbrains.exposed.v1.core.Column
-import org.jetbrains.exposed.v1.core.ComparisonOp
-import org.jetbrains.exposed.v1.core.QueryParameter
 import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.TextColumnType
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.statements.UpdateBuilder
@@ -88,9 +86,17 @@ class UserRepositoryImpl : UserRepository {
         if (updated == 0) throw ConcurrentChangeException(AGGREGATE_NAME, EventAggregateId.of(user.id.value))
     }
 
+    override fun countAdmins(): Int =
+        Math.toIntExact(UserTbl.select(UserTbl.id).where { UserTbl.hasRole(Role.ADMIN) }.count())
+
+    /** A transaction-level advisory lock with one key for every change of roles; its key a parameter, so it never reaches the SQL log. */
+    override fun lockRoleChanges() {
+        TransactionManager.current().exec("SELECT pg_advisory_xact_lock(hashtextextended(?, 0))", listOf(TextColumnType() to ROLES_LOCK)) { }
+    }
+
     override fun hasAnyAdmin(): Boolean =
         !UserTbl.select(UserTbl.id)
-            .where { Contains(UserTbl.roles, listOf(Role.ADMIN.name)) }
+            .where { UserTbl.hasRole(Role.ADMIN) }
             .limit(1)
             .empty()
 
@@ -114,13 +120,12 @@ class UserRepositoryImpl : UserRepository {
             UserId.constructFromPersisted(rows.getLong(1))
         } ?: error("nextval of user_tbl's id sequence returned nothing")
 
-    /** Postgres `@>`: the array column holds every one of [values]. */
-    private class Contains(column: Column<List<String>>, values: List<String>) :
-        ComparisonOp(column, QueryParameter(values, column.columnType), "@>")
-
     private companion object {
         /** How a refused save names the user; not an event stream, but the same 409 for the client. */
         val AGGREGATE_NAME = EventAggregateName("USER")
+
+        /** The one key of lockRoleChanges. */
+        const val ROLES_LOCK = "roles"
     }
 }
 

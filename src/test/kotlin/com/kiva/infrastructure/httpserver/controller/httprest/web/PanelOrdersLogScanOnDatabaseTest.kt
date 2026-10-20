@@ -190,6 +190,35 @@ class PanelOrdersLogScanOnDatabaseTest {
         assertTrue(leaks.isEmpty(), leaks.joinToString("\n") { (what, line) -> "$what in: $line" })
     }
 
+    /**
+     * Step 4.3: a customer's page in the panel shows their phone, their addresses and their orders; reading it puts none
+     * of that in the log (the change log doesn't record reads at all).
+     */
+    @Test
+    fun `a customer's page read in the panel leaves no whole phone, name or address in the log`() {
+        val sara = panel.caller(PanelTestStack.phone(955))
+        val support = panel.caller(PanelTestStack.phone(956), Role.SUPPORT)
+        val recipient = PaidOrders.Destination.TEHRAN
+        val nila = panel.purchase.variantOf("nila-crossbody-bag", "black")
+
+        val log = logOf {
+            panel.app(trustedProxyHops = 1) {
+                panel.paidOrders.paid(sara.user.id, nila, addressId = panel.paidOrders.savedAddress(sara.user.id))
+                val page = client.get("$API_V1/admin/customers/${sara.userId}") {
+                    header(HttpHeaders.Authorization, support.bearer)
+                    header(HttpHeaders.XForwardedFor, IP)
+                }
+                assertEquals(HttpStatusCode.OK, page.status, page.bodyAsText())
+                assertTrue(ADDRESS_LINE in page.bodyAsText(), "the page has the address")
+                assertEquals(HttpStatusCode.OK, client.get("$API_V1/admin/customers?q=${sara.user.phone.value}") { header(HttpHeaders.Authorization, support.bearer) }.status)
+            }
+        }
+
+        assertTrue(log.any { "GetCustomerDetailUc" in it.loggerName }, "the use case's own lines were caught")
+        val leaks = leaksIn(log, listOf(sara.user.phone.value, recipient.recipientPhone, MESSENGER_PHONE), texts = listOf(IP, recipient.recipientName, ADDRESS_LINE))
+        assertTrue(leaks.isEmpty(), leaks.joinToString("\n") { (what, line) -> "$what in: $line" })
+    }
+
     @Test
     fun `the scan finds a whole number, a name and a reference, so a pass means something`() {
         val log = logOf {
@@ -248,6 +277,9 @@ class PanelOrdersLogScanOnDatabaseTest {
         const val ASK_NOTE = "بندش برای قد من کوتاهه"
         const val REJECT_NOTE = "زیتونی فعلاً نداریم"
         const val APPLY_NOTE = "مهک مشکی رو گذاشتیم"
+
+        // PaidOrders' address line.
+        const val ADDRESS_LINE = "خیابان ولیعصر، کوچه نسترن"
 
         // PaidOrders' messenger number.
         const val MESSENGER_PHONE = "09121112233"
