@@ -11,7 +11,6 @@ import com.kiva.domain.aggregate.inventory.model.valueobject.AdjustmentReason
 import com.kiva.domain.aggregate.inventory.model.valueobject.StockDelta
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentPublicId
 import com.kiva.domain.aggregate.product.entity.Product
-import com.kiva.domain.aggregate.product.model.policy.StockPolicy
 import com.kiva.domain.aggregate.product.model.valueobject.ProductId
 import com.kiva.domain.aggregate.product.model.valueobject.ProductName
 import com.kiva.domain.aggregate.product.model.valueobject.ProductStatus
@@ -78,7 +77,7 @@ class ProductAdminReadModelOnDatabaseTest {
     }
 
     private fun filter(q: String, status: ProductStatus? = null, stockStatus: StockStatus? = null) =
-        AdminProductFilter(q = q.normalizePersian(), status = status, stockStatus = stockStatus, lowStockThreshold = StockPolicy.LOW_STOCK_THRESHOLD)
+        AdminProductFilter(q = q.normalizePersian(), status = status, stockStatus = stockStatus, lowStockThreshold = 5)
 
     private fun row(product: Product) = transaction(db) { ProductQmTbl.selectAll().where { ProductQmTbl.productId eq product.id.value }.single() }
 

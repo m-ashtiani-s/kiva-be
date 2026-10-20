@@ -50,6 +50,7 @@ object AuditTexts {
             AuditAction.REFUND_CREATED -> refundCreated(name, changes)
             AuditAction.REFUND_UPDATED -> refundUpdated(name, changes)
             AuditAction.ORDER_CHANGE_RESOLVED -> changeResolved(name, changes)
+            AuditAction.SETTINGS_UPDATED -> "تنظیمات فروشگاه ویرایش شد (${changes.size.toLong().toPersianNumber()} مورد)"
         }
     }
 

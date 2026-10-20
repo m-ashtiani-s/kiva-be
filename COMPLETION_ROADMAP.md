@@ -2602,7 +2602,7 @@ Route: 200 با AdminOrder
 | گام | عنوان | اندازه | وضعیت |
 |---|---|---|---|
 | ۴.۰ | کانترکت 1.11.0 | M | ✅ |
-| ۴.۱ | تنظیمات فروشگاه | L | ⬜ |
+| ۴.۱ | تنظیمات فروشگاه | L | ✅ |
 | ۴.۲ | کدهای تخفیف در پنل | M | ⬜ |
 | ۴.۳ | جزئیات مشتری، فیلتر نقش و «آخرین ادمین» | M | ⬜ |
 | ۴.۴ | گزارش مدیریتی | M | ⬜ |
@@ -2636,6 +2636,10 @@ Route: 200 با AdminOrder
 | 22 | کد تخفیف: سقف‌های دیگه (تازه، گام ۴.۰) | `label` ۱ تا ۲۰۰؛ `minSubtotal` ۰ تا ۱٬۰۰۰٬۰۰۰٬۰۰۰؛ `maxDiscount` ۱٬۰۰۰ تا ۱۰۰٬۰۰۰٬۰۰۰؛ `usageLimit`/`perUserLimit` ۱ تا ۱٬۰۰۰٬۰۰۰؛ `categoryIds` حداکثر ۵۰ و `productIds` حداکثر ۲۰۰، بدون تکرار. ناموجود ← `400 CATEGORY_NOT_FOUND` روی `categoryIds.i` و `400 PRODUCT_NOT_FOUND` روی `productIds.i`. `PUT` کل کد رو جایگزین می‌کنه (نیومده = پیش‌فرض کانترکت). پاسخ فیلد تازه‌ی `updatedAt` داره | `V30` ستون `updatedOn` می‌سازه و پنل باید بدونه آخرین بار کی عوض شده؛ سقف‌ها جلوی عدد بی‌معنی (و سرریز `Int`) رو می‌گیرن |
 | 23 | متن `ROLE_CHANGE_NOT_ALLOWED` (تازه، گام ۴.۰) | عمومی شد (نقش‌های خودت، و آخرین ادمین)؛ پنل با `meta.reason = LAST_ADMIN` جمله‌ی خودش رو می‌تونه نشون بده | با `LAST_ADMIN` همون کد میاد و متن قبلی فقط «نقش‌های خودت» رو می‌گفت |
 | 24 | گزارش: خطاها و کلیدها (تازه، گام ۴.۰) | `from`/`to` نیومده ← `400 FIELD_REQUIRED`؛ بدشکل ← `DATE_INVALID`؛ `DATE_RANGE_INVALID` و `DATE_RANGE_TOO_LONG` (`meta.maxDays = 366`) روی `to`. `shippingMix` همه‌ی مقدارهای `ShippingMethodCode` (`COURIER` هم، با صفر) و `messengerMix` همه‌ی `PhotoMessengerChannel` | «هر روش، صفر هم» یعنی کلیدها ثابت باشن تا نمودار پنل شکل عوض نکنه |
+| 25 | `V30` یه‌جا (تازه، گام ۴.۱) | `V30` در گام ۴.۱ **کامل** نوشته شد (ستون‌های کد تخفیف و گزارش و backfill ِ `firstPhotosSentOn`/`changeRequestedEver` هم)، طبق قانون بخش ۲۱؛ گام‌های ۴.۲ و ۴.۴ فقط ازش استفاده می‌کنن. Projector ِ دو ستون گزارش در ۴.۴ | migration ِ commit‌شده ویرایش نمی‌شه |
+| 26 | خطاهای تازه‌ی `siteStats` و ایمیل (تازه، گام ۴.۱) | `RATING_INVALID` (امتیاز با بیشتر از یه رقم اعشار، یا بیرون ۰ تا ۵)، `SATISFACTION_METRIC_INVALID` (کلید ناشناخته‌ی `metrics`)، `SOCIAL_CHANNEL_INVALID` (`sources` ِ ناشناخته)؛ `supportEmail` بیشتر از ۱۰۰ ← `EMAIL_TOO_LONG` با `meta.maxLength = 100` | `NUMBER_OUT_OF_RANGE` برای «۴.۹۵» جمله‌ی غلطی می‌گفت |
+| 27 | متن خالی ِ پشتیبانی (تازه، گام ۴.۱) | `supportPhone`/`supportEmail` ِ خالی (`""`) مثل `null` یعنی پاک | فرم پنل فیلد پاک‌شده رو خالی می‌فرسته |
+| 28 | `ShippingCost.makeNew` (تازه، گام ۴.۱) | ساخته نشد: `baseCost` همون `Money` ـه و سقفش با `NUMBER_OUT_OF_RANGE` ِ عمومی (تصمیم ۲۱) چک می‌شه. به‌جاش `ShippingMethodName` و `IconName` ساخته شدن (اسم و آیکن روش حالا از پنل میان) | یه VO ِ تک‌قانونه که همون کار `requiredIn` رو می‌کرد |
 
 ### ۹.۳ تعریف عددهای گزارش (`GET /admin/reports/overview`)
 
@@ -2757,6 +2761,7 @@ Route: 200 با AdminSettings ِ تازه
 | 7 | `SiteStats` و `SatisfactionSummary` (تازه، گام ۴.۰) | `required` روی همه، سقف‌ها، `satisfaction` nullable، `scale` و `metrics[].label` فقط‌خوندنی (تصمیم ۲۰) |
 | 8 | `DiscountCode` (تازه، گام ۴.۰) | `updatedAt` (تازه) و `required` روی فیلدهای خودش؛ سقف‌های تصمیم ۲۲؛ `409` ِ `POST`/`PUT` و توضیح `DELETE` |
 | 9 | `AdminSettings.supportPhone`/`supportEmail` (تازه، گام ۴.۰) | لازم و nullable (تصمیم ۱۹) |
+| 10 | `AdminSettings.siteStats`، `supportEmail` (تازه، گام ۴.۱) | کدهای تصمیم ۲۶؛ «خالی یعنی پاک» (تصمیم ۲۷) |
 
 **کدهای فیلدی تازه** (فقط متن فارسی، تو `ErrorCode` نمی‌رن): همه‌ی کدهای گام ۴.۰ و تصمیم ۲۱. `DUPLICATE_CODE`، `CHANGED_BY_SOMEONE_ELSE` و `ROLE_CHANGE_NOT_ALLOWED` از قبل تو `ErrorCode` هستن.
 
@@ -2773,22 +2778,24 @@ Route: 200 با AdminSettings ِ تازه
 
 ---
 
-#### گام ۴.۱: تنظیمات فروشگاه · L ⬜
+#### گام ۴.۱: تنظیمات فروشگاه · L ✅
 
 **می‌سازی:** `V30` (بخش تنظیمات)؛ `ShopSettings` با فیلدهای تازه و `change(...)` و Failureهاش؛ `DeliveryDays.makeNew`، `ShippingCost.makeNew`، `TrackingUrlTemplate`، `SupportHours`، `SocialLink`، `SiteStats`، `ShopFeatures` (VOها)؛ `ShopSettingsRepository.save(settings)` با نسخه؛ `GetAdminSettingsUc`، `UpdateSettingsUc`؛ `webV1AdminSettings.kt`؛ `StockPolicy.stockOf(available, maxPerOrder, threshold)` و همه‌ی صدازننده‌هاش (کاتالوگ، سبد) آستانه رو از تنظیمات می‌خونن؛ `SendPreShipmentMediaUc` مهلت رو از تنظیمات می‌خونه؛ `trackingUrlTemplate` در `ShippingMethod`.
 
 وابسته به: ۴.۰
 
 **تموم شده یعنی:**
-- [ ] `GET` همه‌ی فیلدها رو داره؛ همون رو `PUT` کن ← `200` بدون هیچ تغییری و بدون ردیف لاگ.
-- [ ] هر سقف تصمیم ۴ یه تست ۴۰۰ با مسیر درست.
-- [ ] غیرفعال کردن روش پیش‌فرض ← `400 DEFAULT_SHIPPING_METHOD_INVALID`؛ هیچ درگاه فعال ← `400 NO_ACTIVE_GATEWAY`؛ `COURIER` ← `400`.
-- [ ] `lowStockThreshold = 3` ← کارت محصولی با ۴ عدد دیگه «موجودی کم» نیست؛ با ۲ عدد هست.
-- [ ] `preShipmentFeedbackHours = 48` ← عکس بعدی مهلت ۴۸ ساعته؛ عکس‌های قبلی همون ۲۴.
-- [ ] `freeShippingThreshold` عوض می‌شه ← سبد بعدی با آستانه‌ی تازه.
-- [ ] دو `PUT` همزمان ← یکی ۲۰۰ و یکی ۴۰۹.
-- [ ] `SUPPORT` و `OPERATOR` ← 403.
-- [ ] لاگ `SETTINGS_UPDATED` فقط با فیلدهای عوض‌شده.
+- [x] `GET` همه‌ی فیلدها رو داره؛ همون رو `PUT` کن ← `200` بدون هیچ تغییری و بدون ردیف لاگ.
+- [x] هر سقف تصمیم ۴ یه تست ۴۰۰ با مسیر درست.
+- [x] غیرفعال کردن روش پیش‌فرض ← `400 DEFAULT_SHIPPING_METHOD_INVALID`؛ هیچ درگاه فعال ← `400 NO_ACTIVE_GATEWAY`؛ `COURIER` ← `400`.
+- [x] `lowStockThreshold = 3` ← کارت محصولی با ۴ عدد دیگه «موجودی کم» نیست؛ با ۲ عدد هست.
+- [x] `preShipmentFeedbackHours = 48` ← عکس بعدی مهلت ۴۸ ساعته؛ عکس‌های قبلی همون ۲۴.
+- [x] `freeShippingThreshold` عوض می‌شه ← سبد بعدی با آستانه‌ی تازه.
+- [x] دو `PUT` همزمان ← یکی ۲۰۰ و یکی ۴۰۹.
+- [x] `SUPPORT` و `OPERATOR` ← 403.
+- [x] لاگ `SETTINGS_UPDATED` فقط با فیلدهای عوض‌شده.
+
+**یادداشت پیاده‌سازی:** `ShopSettings.change(Change)` قانون‌های بین فیلدها رو همه با هم می‌ده (روش‌ها و درگاه‌ها دقیقاً همونایی که هستن، حداقل یکی فعال، پیش‌فرض‌ها فعال، دقیقاً یه درگاه پیش‌فرض، `freeShippingMethods` از روش‌های فروشگاه)؛ شکل هر فیلد قبلش در `ShopSettingsFields.check()` با مسیر کامل (`shippingMethods.1.maxDays`). `ShopSettingsRepositoryImpl.save` اول ردیف تنظیمات رو فقط روی نسخه‌ی خونده‌شده می‌نویسه (قفل ردیف، پس ذخیره‌ی دوم صبر می‌کنه و بعد نسخه رو رفته می‌بینه ← `ConcurrentChangeException` ← ۴۰۹)، بعد روش‌ها، بعد درگاه‌ها (اول همه بدون پیش‌فرض، تا ایندکس «یه پیش‌فرض» هیچ‌وقت دوتا نبینه). لاگ: هر مقدار روش و درگاه زیر کدش (`shippingMethods.TIPAX.baseCost`)، ترتیب‌ها جدا (`shippingMethods.order`)؛ شماره و ایمیل پشتیبانی عمومی‌ان و همون‌طور ثبت می‌شن. `lowStockThreshold` در `StockPolicy.stockOf`، کارت و صفحه‌ی محصول، سبد و فیلتر `stockStatus` ِ پنل؛ `PreShipmentPolicy.FEEDBACK_HOURS` حذف شد. `Problems` (جمع‌کننده‌ی خطاهای فرم) از `ProductInput` به `common` رفت، با `under(field)` برای مسیر تودرتو و `NumberOutOfRange`/`TextTooLong`/`TooManyItems`/`ListItemDuplicate`. `PanelTestStack` routeهای سبد رو هم داره. همزمانی: دو ذخیره‌ی repository ۱۰ بار، و دو `PUT` ِ route با یه latch بعد از خوندن (یکی ۲۰۰، یکی ۴۰۹، یه ردیف لاگ). ۲۵۷۲ تست سبز.
 
 ---
 
@@ -6141,3 +6148,4 @@ kiva {
 | ۲۷ مهر ۱۴۰۵ | ۳.۴ | Phase 3 step 3.4 | `ResolveChangeRequestUc` (قفل‌های ۶، ۹، ۷، ۸؛ `CANCEL_ITEM` ِ تنها قلم از راه `OrderCancellation` با قفل ۵ و چک «همون درخواست»)، route ِ `…/change-request/resolution`، `OrderItems.snapshotOf` (مشترک با ثبت سفارش)، پیامک «درخواستت بررسی شد» (مسیر کامل ۹ مرحله‌ای)، `ORDER_CHANGE_RESOLVED` با جمله‌اش، `BALANCE_DUE`/`GROUP_NOT_READY` در ارسال. ترتیب دو ۴۲۲: سقف محصول قبل از موجودی. ۱۲ تست route سبز؛ کل مجموعه برای این گام دوباره اجرا نشد |
 | ۲۷ مهر ۱۴۰۵ | ۳.۵ | Phase 3 step 3.5 | `CHANGE_REQUESTS_REVIEW.md` (ردیف‌های ۷، ۸، ۲۱ و ۱۵ با تست‌هاشون؛ شش خرابکاری، همه قرمز)؛ چهار تست تازه (آخرین کیف: تغییر و خرید همزمان؛ دو تعویض ضربدری همزمان؛ یه کلید برای پرداخت مانده؛ اسکن لاگ ِ درخواست تغییر)؛ تست کل مسیر رنگ گرون‌تر تا ارسال با کانترکت و هویت جمع‌ها؛ assertion ِ بی‌اثر ِ `meta.balanceDue` درست شد؛ راهنمای فرانت پنل (بخش ۷) و مشتری. کل مجموعه دوباره اجرا شد: ۲۵۰۵ تست سبز. merge منتظر تأیید |
 | ۲۸ مهر ۱۴۰۵ | ۴.۰ | Phase 4 step 4.0 | کانترکت 1.11.0 با هر ۶ ردیف ِ ۹.۷ و سه ردیف تازه (۷ تا ۹)؛ هفت تصمیم تازه (۱۸ تا ۲۴ ِ ۹.۲: ترتیب درگاه‌ها، «لازم ولی nullable»، `siteStats`، کدهای فیلدی عمومی، سقف‌های کد تخفیف و `updatedAt`، متن عمومی ِ `ROLE_CHANGE_NOT_ALLOWED`، خطاها و کلیدهای گزارش). YAML با snakeyaml معتبره و هر ۱۳۲۷ `$ref` پیدا می‌شن. متن ۲۵ کد فیلدی تازه. برنچ `panel-settings` از نوک فاز ۳ |
+| ۲۸ مهر ۱۴۰۵ | ۴.۱ | Phase 4 step 4.1 | `V30` ِ کامل؛ VOهای تنظیمات (`DeliveryDays.makeNew`، `ShippingMethodName`، `IconName`، `TrackingUrlTemplate`، `SupportPhone`، `SupportHours`، `SocialLink`، `SiteStats`/`Satisfaction`، `ShopFeatures`)؛ `ShopSettings.change` و `version`؛ `save` با نسخه؛ `ShopSettingsFields`، `GetAdminSettingsUc`، `UpdateSettingsUc`، `SettingsAudit`؛ `webV1AdminSettings.kt`؛ آستانه‌ی موجودی کم و مهلت عکس از تنظیمات؛ `Problems` و حدهای عمومی در `common`. ۲۵۷۲ تست سبز |

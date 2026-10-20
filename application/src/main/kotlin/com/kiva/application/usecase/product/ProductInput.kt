@@ -2,6 +2,7 @@ package com.kiva.application.usecase.product
 
 import com.kiva.common.railway.FailureKind
 import com.kiva.common.railway.InputProblems
+import com.kiva.common.railway.Problems
 import com.kiva.common.railway.Result
 import com.kiva.common.railway.ResultFailure
 import com.kiva.common.railway.bind
@@ -362,31 +363,6 @@ class ProductInput(private val htmlSanitizer: HtmlSanitizer) {
         val failures = mapNotNull { it.failureOrNull() }
         if (failures.isNotEmpty()) return Result.failure(InputProblems(failures))
         return Result.success(map { (it as Result.Success).value })
-    }
-
-    /**
-     * Collects the problems of a form checked part by part. Each part is asked once ([take]); when none failed, every
-     * [Part.value] is there. More readable than nested zips for a form of fifteen parts.
-     */
-    private class Problems {
-        private val found = mutableListOf<ResultFailure>()
-
-        class Part<T>(private val result: Result<T, ResultFailure>) {
-            val value: T get() = (result as Result.Success).value
-        }
-
-        fun <T> take(result: Result<T, ResultFailure>): Part<T> {
-            result.failureOrNull()?.let { found += it }
-            return Part(result)
-        }
-
-        fun add(problem: ResultFailure) {
-            found += problem
-        }
-
-        fun any(): Boolean = found.isNotEmpty()
-
-        fun all(): InputProblems = InputProblems(found.toList())
     }
 
     companion object {

@@ -8658,8 +8658,8 @@ components:
           description: 'روزهایی که ارسال نداریم و در روز کاری حساب نمی‌شوند؛ کمتر از ۷ روز (`400 NON_SHIPPING_WEEKDAYS_INVALID`)، روز ناشناخته ← `WEEKDAY_INVALID`'
           items: { type: string, enum: [SATURDAY, SUNDAY, MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY] }
           example: [FRIDAY]
-        supportPhone: { type: string, nullable: true, description: 'موبایل یا تلفن ثابت ایران با پیش‌شماره (ارقام فارسی لاتین می‌شوند)؛ `SUPPORT_PHONE_INVALID`', example: '02191001234' }
-        supportEmail: { type: string, format: email, maxLength: 100, nullable: true, description: '`EMAIL_INVALID`', example: support@kiva.ir }
+        supportPhone: { type: string, nullable: true, description: 'موبایل یا تلفن ثابت ایران با پیش‌شماره (ارقام فارسی لاتین می‌شوند، فاصله و خط تیره حذف)؛ `SUPPORT_PHONE_INVALID`؛ متن خالی مثل `null` یعنی پاک', example: '02191001234' }
+        supportEmail: { type: string, format: email, maxLength: 100, nullable: true, description: '`EMAIL_INVALID`، بیشتر از ۱۰۰ ← `EMAIL_TOO_LONG`؛ متن خالی مثل `null` یعنی پاک', example: support@kiva.ir }
         supportHours:
           type: array
           maxItems: 7
@@ -8683,7 +8683,8 @@ components:
           description: |
             عددهای بازاریابی، **دستی**؛ همین‌ها در `GET /site/stats` منتشر می‌شوند (حساب نمی‌شوند). همه‌ی فیلدهای `SiteStats` لازم‌اند و عددها
             ۰ تا ۱۰٬۰۰۰٬۰۰۰، درصدها ۰ تا ۱۰۰ (`NUMBER_OUT_OF_RANGE`). `satisfaction` بی‌مقدار `null` است؛ با مقدار: `averageRating` ۰ تا ۵ با حداکثر
-            یک رقم اعشار (`NUMBER_OUT_OF_RANGE`)، `totalCount` ≥ ۰، `metrics` هر `key` حداکثر یک بار و `sources` بدون تکرار (`LIST_ITEM_DUPLICATE`).
+            یک رقم اعشار (`RATING_INVALID`)، `totalCount` ≥ ۰، `metrics` هر `key` حداکثر یک بار و `sources` بدون تکرار (`LIST_ITEM_DUPLICATE`)؛
+            کلید ناشناخته‌ی `metrics` ← `SATISFACTION_METRIC_INVALID`، شبکه‌ی ناشناخته‌ی `sources` ← `SOCIAL_CHANNEL_INVALID`.
         features:
           type: object
           description: |

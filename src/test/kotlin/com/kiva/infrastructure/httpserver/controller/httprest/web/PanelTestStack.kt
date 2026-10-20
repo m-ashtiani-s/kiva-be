@@ -48,6 +48,8 @@ import com.kiva.application.usecase.product.usecase.query.FindDueScheduledProduc
 import com.kiva.application.usecase.product.usecase.query.GetAdminProductUc
 import com.kiva.application.usecase.refund.usecase.command.CreateRefundUc
 import com.kiva.application.usecase.refund.usecase.command.UpdateRefundUc
+import com.kiva.application.usecase.settings.usecase.command.UpdateSettingsUc
+import com.kiva.application.usecase.settings.usecase.query.GetAdminSettingsUc
 import com.kiva.common.patch.Patch
 import com.kiva.common.valueobject.IranianMobileNumber
 import com.kiva.common.valueobject.UserId
@@ -184,7 +186,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
     val productInput = ProductInput(JsoupHtmlSanitizer)
     val adminProducts = AdminProductUseCases(
         checkPanelAccess = checkPanelAccess,
-        findProducts = FindAdminProductsUc(transactions, productQm, categories),
+        findProducts = FindAdminProductsUc(transactions, productQm, categories, ShopSettingsRepositoryImpl()),
         getProduct = GetAdminProductUc(transactions, productQm, categories, materials, colors, users, ShopSettingsRepositoryImpl(), clock),
         createProduct = CreateProductUc(
             transactions, productDomainService, products, productQm, productInput, mediaAttachments, InventoryDomainService(inventories), inventories,
@@ -226,7 +228,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         ),
         addNote = AddOrderNoteUc(transactions, purchase.orderByCode, OrderNoteRepositoryImpl(), users, auditTrail, clock),
         setPhotos = SetPreShipmentMediaUc(transactions, purchase.orderByCode, purchase.orders, mediaAttachments, auditTrail, clock),
-        sendPhotos = SendPreShipmentMediaUc(transactions, purchase.orderByCode, purchase.orders, users, auditTrail, purchase.orderNotices, clock),
+        sendPhotos = SendPreShipmentMediaUc(transactions, purchase.orderByCode, purchase.orders, users, purchase.settings, auditTrail, purchase.orderNotices, clock),
         createRefund = CreateRefundUc(
             transactions, purchase.orderByCode, purchase.orderQm, purchase.orders, purchase.payments, purchase.refunds, RefundDomainService(RefundIdGeneratorImpl()),
             auditTrail, clock,
@@ -248,6 +250,13 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
     val adminRefunds = AdminRefundUseCases(
         checkPanelAccess,
         UpdateRefundUc(transactions, purchase.refunds, purchase.orderQm, purchase.orders, users, auditTrail, purchase.orderNotices, clock),
+    )
+
+    // --- the shop's settings (phase 4) ---
+    val adminSettings = AdminSettingsUseCases(
+        checkPanelAccess,
+        GetAdminSettingsUc(transactions, purchase.settings, purchase.gateways),
+        UpdateSettingsUc(transactions, purchase.settings, auditTrail, clock),
     )
 
     // The approve-silent-photos job's two use cases, run by the tests the way PanelJobs runs them.
@@ -303,11 +312,14 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
                     webV1AdminInventory(adminInventory)
                     webV1AdminOrders(adminOrders, mediaUrls)
                     webV1AdminRefunds(adminRefunds)
+                    webV1AdminSettings(adminSettings)
                     // The customer's side of an order, for the tests that follow it from the panel to «سفارش‌های من».
                     webV1MyOrders(purchase.myOrderUseCases, mediaUrls)
                     // Back from the gateway and the result page, for paying what a change left owed (phase 3).
                     webV1Payments(purchase.paymentUseCases, PaymentConfig.DEFAULT.resultUrl)
                     webV1Tracking(purchase.trackingUseCases, mediaUrls)
+                    // The cart, for the tests that follow a change of the settings into the shop (phase 4).
+                    webV1Cart(purchase.cartUseCases, mediaUrls)
                 }
             }
         }

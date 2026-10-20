@@ -46,6 +46,9 @@ enum class AuditAction {
 
     // ---- change requests (phase 3) ----
     ORDER_CHANGE_RESOLVED,
+
+    // ---- settings, discount codes (phase 4) ----
+    SETTINGS_UPDATED,
 }
 
 /** The kind of thing a panel write changed: the contract's AuditEntityType, value for value. */

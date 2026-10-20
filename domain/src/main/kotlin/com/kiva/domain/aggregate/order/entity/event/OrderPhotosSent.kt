@@ -18,8 +18,8 @@ import java.time.Instant
  * @property channel the messenger actually used: the order's own, unless the operator said otherwise.
  * @property manual always true: there is no messenger bot (roadmap section 1, row 8).
  * @property message what the operator wrote with them; only kept.
- * @property feedbackDeadline decided when sent ([occurredOn] + PreShipmentPolicy.FEEDBACK_HOURS then) and kept, so a later
- *   change of the rule never moves it.
+ * @property feedbackDeadline decided when sent ([occurredOn] + the shop's `preShipmentFeedbackHours` then) and kept, so a
+ *   later change of the setting never moves it.
  */
 data class OrderPhotosSent(
     override val orderId: OrderId,

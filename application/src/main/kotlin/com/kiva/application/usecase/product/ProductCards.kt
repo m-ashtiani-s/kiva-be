@@ -24,13 +24,21 @@ import java.time.Instant
  * the two never show one bag differently.
  *
  * The card shows the default color's price. Its stock is the whole product's, through StockPolicy: sold out only when
- * no color is left, the number only when few are left in all. Its badges come from BadgePolicy, «جدید» judged at [now].
+ * no color is left, the number only when few are left in all («few» is the shop's `lowStockThreshold`, which every
+ * caller reads from the settings of this request). Its badges come from BadgePolicy, «جدید» judged at [now].
  */
 object ProductCards {
 
     /** @param palette the colors of the shop by key; every color of [qm] is in it (the read model's foreign key). */
-    fun cardOf(qm: ProductCardQm, category: Category, palette: Map<ColorKey, Color>, now: Instant, freeShippingThreshold: Money): ProductCardDto {
-        val stock = StockPolicy.stockOf(qm.colors.sumOf { it.available }, qm.maxPerOrder)
+    fun cardOf(
+        qm: ProductCardQm,
+        category: Category,
+        palette: Map<ColorKey, Color>,
+        now: Instant,
+        freeShippingThreshold: Money,
+        lowStockThreshold: Int,
+    ): ProductCardDto {
+        val stock = StockPolicy.stockOf(qm.colors.sumOf { it.available }, qm.maxPerOrder, lowStockThreshold)
         val isNew = BadgePolicy.isNew(qm.newUntil, now)
 
         return ProductCardDto(
@@ -50,7 +58,7 @@ object ProductCards {
                     hex = swatch.hex.value,
                     isLight = swatch.isLight,
                     sortOrder = swatch.sortOrder,
-                    stockStatus = StockPolicy.stockOf(color.available, qm.maxPerOrder).status,
+                    stockStatus = StockPolicy.stockOf(color.available, qm.maxPerOrder, lowStockThreshold).status,
                     image = color.photos.getOrNull(0),
                     hoverImage = color.photos.getOrNull(1),
                 )
@@ -81,6 +89,7 @@ object ProductCards {
         media: List<GalleryItemDto>,
         palette: Map<ColorKey, Color>,
         maxPerOrder: MaxPerOrder,
+        lowStockThreshold: Int,
     ): ProductDetailDto.Variant {
         val swatch = palette.getValue(colorKey)
         return ProductDetailDto.Variant(
@@ -89,7 +98,7 @@ object ProductCards {
             color = ProductDetailDto.Swatch(swatch.key.value, swatch.name.value, swatch.hex.value, swatch.isLight, swatch.sortOrder),
             isDefault = isDefault,
             price = PriceDto.from(priceTag),
-            stock = StockPolicy.stockOf(available, maxPerOrder),
+            stock = StockPolicy.stockOf(available, maxPerOrder, lowStockThreshold),
             media = media,
             hasVideo = media.any { it.type == MediaType.VIDEO },
         )

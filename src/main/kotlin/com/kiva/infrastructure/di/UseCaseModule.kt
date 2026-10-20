@@ -119,6 +119,8 @@ import com.kiva.application.usecase.reservation.Reservations
 import com.kiva.application.usecase.reservation.usecase.command.ReleaseReservationGroupUc
 import com.kiva.application.usecase.reservation.usecase.query.FindDueReservationGroupsUc
 import com.kiva.application.usecase.reservation.usecase.query.GetMyReservationUc
+import com.kiva.application.usecase.settings.usecase.command.UpdateSettingsUc
+import com.kiva.application.usecase.settings.usecase.query.GetAdminSettingsUc
 import com.kiva.application.usecase.tracking.usecase.query.ListDailyShipmentDaysUc
 import com.kiva.application.usecase.tracking.usecase.query.ListDailyShipmentsUc
 import com.kiva.application.usecase.tracking.usecase.query.ListMyTrackingUc
@@ -375,7 +377,7 @@ val useCaseModule = module(createdAtStart = true) {
     }
 
     // --- admin: products (step 1.4) ---
-    single { FindAdminProductsUc(transactionManager = get(), productQmRepository = get(), categoryRepository = get()) }
+    single { FindAdminProductsUc(transactionManager = get(), productQmRepository = get(), categoryRepository = get(), shopSettingsRepository = get()) }
     single {
         GetAdminProductUc(
             transactionManager = get(), productQmRepository = get(), categoryRepository = get(), materialRepository = get(), colorRepository = get(),
@@ -524,8 +526,8 @@ val useCaseModule = module(createdAtStart = true) {
     }
     single {
         SendPreShipmentMediaUc(
-            transactionManager = get(), orderByCode = get(), orderRepository = get(), userRepository = get(), auditTrail = get(), orderNotices = get(),
-            clock = get(),
+            transactionManager = get(), orderByCode = get(), orderRepository = get(), userRepository = get(), shopSettingsRepository = get(),
+            auditTrail = get(), orderNotices = get(), clock = get(),
         )
     }
     single {
@@ -572,6 +574,10 @@ val useCaseModule = module(createdAtStart = true) {
             auditTrail = get(), orderNotices = get(), clock = get(),
         )
     }
+
+    // --- admin: the shop's settings (phase 4) ---
+    single { GetAdminSettingsUc(transactionManager = get(), shopSettingsRepository = get(), paymentGateways = get()) }
+    single { UpdateSettingsUc(transactionManager = get(), shopSettingsRepository = get(), auditTrail = get(), clock = get()) }
 
     // --- admin: the change log ---
     single { ListAuditLogUc(transactionManager = get(), auditLogQmRepository = get()) }

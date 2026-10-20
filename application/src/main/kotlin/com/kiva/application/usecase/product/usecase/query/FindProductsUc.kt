@@ -65,11 +65,11 @@ class FindProductsUc(
             val palette = colorRepository.findAll().associateBy { it.key }
             val materials = materialRepository.findAll().associateBy { it.slug }
             // Read on every request, so a change in the settings shows at once.
-            val freeShippingThreshold = shopSettingsRepository.get().freeShippingThreshold
+            val settings = shopSettingsRepository.get()
 
             Result.success(
                 ProductListDto(
-                    page = page.map { ProductCards.cardOf(it, categories.getValue(it.categorySlug), palette, now, freeShippingThreshold) },
+                    page = page.map { ProductCards.cardOf(it, categories.getValue(it.categorySlug), palette, now, settings.freeShippingThreshold, settings.lowStockThreshold) },
                     applied = appliedOf(query.filters, filter, categories, palette, materials),
                 ),
             )

@@ -346,6 +346,9 @@ object ErrorMessages {
         "DISCOUNT_VALUE_INVALID" to "مقدار تخفیف درصدی باید بین ۱ و ۱۰۰ و مبلغی بین ۱٬۰۰۰ و ۱۰۰٬۰۰۰٬۰۰۰ تومان باشه",
         "MAX_DISCOUNT_NOT_ALLOWED" to "سقف تخفیف فقط برای کد درصدی معنی داره",
         "DATE_RANGE_TOO_LONG" to "بازه حداکثر {maxDays} روزه",
+        "RATING_INVALID" to "امتیاز باید عددی بین ۰ و ۵ با حداکثر یه رقم اعشار باشه، مثل 4.9",
+        "SATISFACTION_METRIC_INVALID" to "معیار رضایت باید یکی از PHOTO_MATCH، QUALITY، SHIPPING_SPEED، PACKAGING یا SUPPORT باشه",
+        "SOCIAL_CHANNEL_INVALID" to "شبکه باید یکی از RUBIKA، TELEGRAM، BALE یا INSTAGRAM باشه",
     )
 
     // Used when a code has no text of its own (or its placeholders can't be filled).

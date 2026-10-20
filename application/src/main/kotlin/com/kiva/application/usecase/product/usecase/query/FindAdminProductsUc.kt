@@ -21,21 +21,23 @@ import com.kiva.common.transaction.TransactionManager
 import com.kiva.common.usecase.QueryUseCase
 import com.kiva.common.valueobject.Slug
 import com.kiva.domain.aggregate.category.repository.CategoryRepository
-import com.kiva.domain.aggregate.product.model.policy.StockPolicy
 import com.kiva.domain.aggregate.product.model.valueobject.ProductStatus
 import com.kiva.domain.aggregate.product.model.valueobject.StockStatus
+import com.kiva.domain.aggregate.settings.repository.ShopSettingsRepository
 
 /**
  * The panel's product list (`GET /admin/products`; ADMIN, CATALOG_MANAGER): every status, the exact stock.
  *
  * Filters, every mistake at once (400): `q` (at most 100, through normalizePersian; text, a code's start or an exact
  * barcode), `status`, `category` (slugs), `stockStatus`. The page is read with a fixed number of queries (rows, count,
- * the first media of each default color) plus the categories' names, never one per product.
+ * the first media of each default color) plus the categories' names, never one per product. «Low» is the shop's
+ * `lowStockThreshold` of this moment.
  */
 class FindAdminProductsUc(
     private val transactionManager: TransactionManager,
     private val productQmRepository: ProductQmRepository,
     private val categoryRepository: CategoryRepository,
+    private val shopSettingsRepository: ShopSettingsRepository,
 ) : QueryUseCase<FindAdminProductsUc.Qry, Page<AdminProductListItemDto>, FindAdminProductsUc.Failure> {
 
     private val logger = getLogger()
@@ -51,9 +53,10 @@ class FindAdminProductsUc(
 
     override suspend fun execute(query: Qry): Result<Page<AdminProductListItemDto>, Failure> {
         logger.info("FindAdminProductsUc.execute page=${query.pageable.page} sort=${query.pageable.sort} status=${query.status} stock=${query.stockStatus}")
-        val filter = filterOf(query).unwrapOr { return Result.failure(Failure.InvalidInput(it.causes)) }
+        val filterWith = filterOf(query).unwrapOr { return Result.failure(Failure.InvalidInput(it.causes)) }
 
         return transactionManager.inTransaction {
+            val filter = filterWith(shopSettingsRepository.get().lowStockThreshold)
             val page = productQmRepository.findForAdmin(filter, query.pageable)
             // A handful of categories: read them all once rather than one per product.
             val categories = categoryRepository.findAll().associateBy { it.slug }
@@ -79,7 +82,8 @@ class FindAdminProductsUc(
         }
     }
 
-    private fun filterOf(query: Qry): Result<AdminProductFilter, InputProblems> {
+    /** The filter, checked; it waits for the shop's low stock threshold, read in the transaction. */
+    private fun filterOf(query: Qry): Result<(Int) -> AdminProductFilter, InputProblems> {
         val text = query.q?.trim()?.ifEmpty { null }
         return Result.zip(
             if ((text?.length ?: 0) > MAX_QUERY_LENGTH) Result.failure(Problem.SearchTooLong) else Result.success(text?.normalizePersian()),
@@ -90,7 +94,7 @@ class FindAdminProductsUc(
             } ?: Result.success(null),
             ::InputProblems,
         ) { q, status, categories, stockStatus ->
-            AdminProductFilter(q, status, categories.toSet(), stockStatus, StockPolicy.LOW_STOCK_THRESHOLD)
+            { lowStockThreshold: Int -> AdminProductFilter(q, status, categories.toSet(), stockStatus, lowStockThreshold) }
         }
     }
 

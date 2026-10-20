@@ -63,7 +63,8 @@ class GetProductUc(
             val category = categoryRepository.findBySlug(product.card.categorySlug) ?: error("No category ${product.card.categorySlug.value}")
             val material = materialRepository.findAll().first { it.slug == product.materialSlug }
             val palette = colorRepository.findAll().associateBy { it.key }
-            val card = ProductCards.cardOf(product.card, category, palette, now, shopSettingsRepository.get().freeShippingThreshold)
+            val settings = shopSettingsRepository.get()
+            val card = ProductCards.cardOf(product.card, category, palette, now, settings.freeShippingThreshold, settings.lowStockThreshold)
 
             Result.success(
                 ProductDetailDto(
@@ -76,7 +77,10 @@ class GetProductUc(
                     materialDescription = product.materialDescription?.value,
                     specs = product.specs,
                     variants = product.variants.map {
-                        ProductCards.variantOf(it.variantId, it.sku, it.colorKey, it.priceTag, it.isDefault, it.available, it.media, palette, product.card.maxPerOrder)
+                        ProductCards.variantOf(
+                            it.variantId, it.sku, it.colorKey, it.priceTag, it.isDefault, it.available, it.media, palette, product.card.maxPerOrder,
+                            settings.lowStockThreshold,
+                        )
                     },
                     returnable = product.returnable,
                     reservable = product.reservable,

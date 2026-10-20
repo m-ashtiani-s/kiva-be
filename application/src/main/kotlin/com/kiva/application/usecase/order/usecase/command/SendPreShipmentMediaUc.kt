@@ -18,10 +18,10 @@ import com.kiva.common.transaction.TransactionManager
 import com.kiva.common.usecase.CommandUseCase
 import com.kiva.common.valueobject.IranianMobileNumber
 import com.kiva.domain.aggregate.order.entity.Order
-import com.kiva.domain.aggregate.order.model.policy.PreShipmentPolicy
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
 import com.kiva.domain.aggregate.order.model.valueobject.PhotoMessage
 import com.kiva.domain.aggregate.order.repository.OrderRepository
+import com.kiva.domain.aggregate.settings.repository.ShopSettingsRepository
 import com.kiva.domain.aggregate.user.model.valueobject.MessengerChannel
 import com.kiva.domain.aggregate.user.repository.UserRepository
 import java.time.Clock
@@ -29,7 +29,8 @@ import java.time.Clock
 /**
  * The operator sent the draft to the customer, by hand on their messenger, and records it here
  * (`POST /admin/orders/{orderCode}/pre-shipment-media/send`; ADMIN, OPERATOR): the order is PHOTO_SENT, the customer
- * sees the batch, and has [PreShipmentPolicy.FEEDBACK_HOURS] to answer. There is no messenger bot: `manual` is always
+ * sees the batch, and has the shop's `preShipmentFeedbackHours` of this moment to answer (a later change of the setting
+ * never moves the deadline it was given). There is no messenger bot: `manual` is always
  * true (false is 400 MANUAL_ONLY), `channelOverride` is the messenger actually used, and `message` is only kept.
  *
  * One ORDER_PHOTO_SENT row in the change log; after the commit, «عکس کیفت فرستاده شد» to the buyer's phone. A change
@@ -41,6 +42,7 @@ class SendPreShipmentMediaUc(
     private val orderByCode: OrderByCode,
     private val orderRepository: OrderRepository,
     private val userRepository: UserRepository,
+    private val shopSettingsRepository: ShopSettingsRepository,
     private val auditTrail: AuditTrail,
     private val orderNotices: OrderNotices,
     private val clock: Clock,
@@ -80,7 +82,7 @@ class SendPreShipmentMediaUc(
             val order = orderByCode.loadForPanel(command.orderCode) ?: return@inTransaction Result.failure(Failure.OrderNotFound)
             val now = clock.instant()
             val channel = input.channel ?: order.messenger.channel
-            when (val result = order.sendPhotos(channel, input.message, PreShipmentPolicy.FEEDBACK_HOURS, command.actor.userId, now)) {
+            when (val result = order.sendPhotos(channel, input.message, shopSettingsRepository.get().preShipmentFeedbackHours, command.actor.userId, now)) {
                 is Result.Success -> {}
                 is Result.Failure -> return@inTransaction Result.failure(failureOf(result.failure))
             }

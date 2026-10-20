@@ -60,7 +60,8 @@ class GetAdminProductUc(
             val material = materialRepository.findBySlug(detail.materialSlug) ?: error("No material ${detail.materialSlug.value}")
             val palette = colorRepository.findAll().associateBy { it.key }
             val maxPerOrder = detail.card.maxPerOrder
-            val card = ProductCards.cardOf(detail.card, category, palette, now, shopSettingsRepository.get().freeShippingThreshold)
+            val settings = shopSettingsRepository.get()
+            val card = ProductCards.cardOf(detail.card, category, palette, now, settings.freeShippingThreshold, settings.lowStockThreshold)
 
             val shopPart = ProductDetailDto(
                 card = card,
@@ -72,7 +73,9 @@ class GetAdminProductUc(
                 materialDescription = detail.materialDescription?.value,
                 specs = detail.specs,
                 variants = detail.variants.map {
-                    ProductCards.variantOf(it.variantId, it.sku, it.colorKey, it.priceTag, it.isDefault, it.available, it.media, palette, maxPerOrder)
+                    ProductCards.variantOf(
+                        it.variantId, it.sku, it.colorKey, it.priceTag, it.isDefault, it.available, it.media, palette, maxPerOrder, settings.lowStockThreshold,
+                    )
                 },
                 returnable = detail.returnable,
                 reservable = detail.reservable,
@@ -86,7 +89,9 @@ class GetAdminProductUc(
                     status = product.status,
                     variants = product.variants.map {
                         AdminVariantDto(
-                            shop = ProductCards.variantOf(it.variantId, it.sku, it.colorKey, it.priceTag, it.isDefault, it.available, it.media, palette, maxPerOrder),
+                            shop = ProductCards.variantOf(
+                                it.variantId, it.sku, it.colorKey, it.priceTag, it.isDefault, it.available, it.media, palette, maxPerOrder, settings.lowStockThreshold,
+                            ),
                             barcode = it.barcode,
                             isActive = it.isActive,
                             stockOnHand = it.onHand,

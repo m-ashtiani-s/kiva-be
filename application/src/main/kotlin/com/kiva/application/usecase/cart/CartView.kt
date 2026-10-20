@@ -73,7 +73,7 @@ internal fun cartDtoOf(
                 purchasable = qm.offer.isPurchasable,
                 priceTag = qm.offer.priceTag,
                 lineTotals = totals,
-                stock = StockPolicy.stockOf(qm.offer.available, qm.offer.maxPerOrder),
+                stock = StockPolicy.stockOf(qm.offer.available, qm.offer.maxPerOrder, settings.lowStockThreshold),
                 addedAt = line.addedOn,
                 image = qm.image,
             )

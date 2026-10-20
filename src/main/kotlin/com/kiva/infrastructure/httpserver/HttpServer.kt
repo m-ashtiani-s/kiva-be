@@ -66,6 +66,7 @@ import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminMediaUseC
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminOrderUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminProductUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminRefundUseCases
+import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminSettingsUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AuthUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.CartUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.CheckoutUseCases
@@ -85,6 +86,7 @@ import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminMedi
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminOrders
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminProducts
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminRefunds
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminSettings
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Auth
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Cart
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Catalog
@@ -296,6 +298,7 @@ fun Application.configureRouting() {
             webV1AdminInventory(adminInventoryUseCases)
             webV1AdminOrders(adminOrderUseCases, mediaUrls)
             webV1AdminRefunds(AdminRefundUseCases(checkPanelAccessUc, get()))
+            webV1AdminSettings(AdminSettingsUseCases(checkPanelAccessUc, get(), get()))
             webV1Catalog(listColorsUc, listMaterialsUc, listCategoriesUc, getCategoryUc, mediaUrls, config.shop.siteUrl)
             webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, config.shop.siteUrl, mediaUrls)
             webV1Geo(listProvincesUc, listCitiesOfProvinceUc)

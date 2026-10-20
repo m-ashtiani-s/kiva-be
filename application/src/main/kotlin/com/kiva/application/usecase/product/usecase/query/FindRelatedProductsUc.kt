@@ -51,8 +51,8 @@ class FindRelatedProductsUc(
             val related = productQmRepository.findRelated(productId, limit) ?: return@inTransaction Result.failure(Failure.ProductNotFound)
             val categories = categoryRepository.findAll().associateBy { it.slug }
             val palette = colorRepository.findAll().associateBy { it.key }
-            val freeShippingThreshold = shopSettingsRepository.get().freeShippingThreshold
-            Result.success(related.map { ProductCards.cardOf(it, categories.getValue(it.categorySlug), palette, now, freeShippingThreshold) })
+            val settings = shopSettingsRepository.get()
+            Result.success(related.map { ProductCards.cardOf(it, categories.getValue(it.categorySlug), palette, now, settings.freeShippingThreshold, settings.lowStockThreshold) })
         }
     }
 
