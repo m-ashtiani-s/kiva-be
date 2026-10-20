@@ -6,11 +6,11 @@ import com.kiva.domain.aggregate.settings.model.valueobject.PaymentGatewayCode
 import com.kiva.domain.aggregate.settings.model.valueobject.ShippingMethodCode
 import com.kiva.domain.aggregate.settings.model.valueobject.ShopFeatures
 import com.kiva.domain.aggregate.settings.model.valueobject.SiteStats
+import org.junit.jupiter.api.Test
 import java.time.DayOfWeek
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
-import org.junit.jupiter.api.Test
 
 class ShopSettingsTest {
 

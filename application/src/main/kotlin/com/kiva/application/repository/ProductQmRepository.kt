@@ -65,6 +65,9 @@ interface ProductQmRepository {
     /** Those of [skus] that a product or a color of one, whatever its status, already has. */
     fun findTakenSkus(skus: Collection<Sku>): Set<Sku>
 
+    /** Those of [ids] that are a product, whatever its status (a discount code may name a draft). */
+    fun findExistingIds(ids: Collection<ProductId>): Set<ProductId>
+
     /** How many products in the shop are in each category, by slug. A category with none is missing. */
     fun countActiveByCategory(): Map<Slug, Int>
 

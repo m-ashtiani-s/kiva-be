@@ -389,6 +389,12 @@ class ProductQmRepositoryImpl : ProductQmRepository {
         !ProductQmTbl.select(ProductQmTbl.id).where { ProductQmTbl.slug eq slug.value }.empty()
 
     // A code is unique across products and their colors: KV-1001 can't be one product's and another's color's.
+    override fun findExistingIds(ids: Collection<ProductId>): Set<ProductId> {
+        if (ids.isEmpty()) return emptySet()
+        return ProductQmTbl.select(ProductQmTbl.productId).where { ProductQmTbl.productId inList ids.map { it.value } }
+            .map { ProductId.constructFromPersisted(it[ProductQmTbl.productId]) }.toSet()
+    }
+
     override fun findTakenSkus(skus: Collection<Sku>): Set<Sku> {
         if (skus.isEmpty()) return emptySet()
         val codes = skus.map { it.value }

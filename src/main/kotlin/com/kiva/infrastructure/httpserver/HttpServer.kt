@@ -61,6 +61,7 @@ import com.kiva.infrastructure.httpserver.controller.httprest.web.AddressUseCase
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminAuditUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminCatalogUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminCustomerUseCases
+import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminDiscountCodeUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminInventoryUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminMediaUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminOrderUseCases
@@ -81,6 +82,7 @@ import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Addresses
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminAudit
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminCatalog
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminCustomers
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminDiscountCodes
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminInventory
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminMedia
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminOrders
@@ -299,6 +301,7 @@ fun Application.configureRouting() {
             webV1AdminOrders(adminOrderUseCases, mediaUrls)
             webV1AdminRefunds(AdminRefundUseCases(checkPanelAccessUc, get()))
             webV1AdminSettings(AdminSettingsUseCases(checkPanelAccessUc, get(), get()))
+            webV1AdminDiscountCodes(AdminDiscountCodeUseCases(checkPanelAccessUc, get(), get(), get(), get(), get()))
             webV1Catalog(listColorsUc, listMaterialsUc, listCategoriesUc, getCategoryUc, mediaUrls, config.shop.siteUrl)
             webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, config.shop.siteUrl, mediaUrls)
             webV1Geo(listProvincesUc, listCitiesOfProvinceUc)

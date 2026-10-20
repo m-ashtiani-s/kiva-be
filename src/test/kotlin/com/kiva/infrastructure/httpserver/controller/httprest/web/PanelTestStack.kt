@@ -20,6 +20,12 @@ import com.kiva.application.usecase.catalog.usecase.query.GetAdminColorUc
 import com.kiva.application.usecase.catalog.usecase.query.GetAdminMaterialUc
 import com.kiva.application.usecase.catalog.usecase.query.ListAdminCategoriesUc
 import com.kiva.application.usecase.catalog.usecase.query.ListAdminMaterialsUc
+import com.kiva.application.usecase.discount.DiscountCodeReferences
+import com.kiva.application.usecase.discount.usecase.command.CreateDiscountCodeUc
+import com.kiva.application.usecase.discount.usecase.command.DeactivateDiscountCodeUc
+import com.kiva.application.usecase.discount.usecase.command.UpdateDiscountCodeUc
+import com.kiva.application.usecase.discount.usecase.query.GetDiscountCodeUc
+import com.kiva.application.usecase.discount.usecase.query.ListDiscountCodesUc
 import com.kiva.application.usecase.inventory.usecase.command.AdjustInventoryUc
 import com.kiva.application.usecase.inventory.usecase.query.ListInventoryAdjustmentsUc
 import com.kiva.application.usecase.media.MediaAttachments
@@ -74,8 +80,8 @@ import com.kiva.infrastructure.httpserver.configureHttp
 import com.kiva.infrastructure.media.DiskMediaStorage
 import com.kiva.infrastructure.media.FakeMediaProcessor
 import com.kiva.infrastructure.media.MediaUrls
-import com.kiva.infrastructure.payment.PaymentConfig
 import com.kiva.infrastructure.media.RandomMediaIds
+import com.kiva.infrastructure.payment.PaymentConfig
 import com.kiva.infrastructure.persistence.exposed.AdminCustomerRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.AuditLogQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.AuditTrailImpl
@@ -83,6 +89,7 @@ import com.kiva.infrastructure.persistence.exposed.AuthSessionRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.CategoryIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.CategoryRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ColorRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.DiscountCodeRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.InventoryAdjustmentQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.InventoryRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.MaterialIdGeneratorImpl
@@ -259,6 +266,18 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         UpdateSettingsUc(transactions, purchase.settings, auditTrail, clock),
     )
 
+    // --- discount codes (phase 4) ---
+    val discountCodes = DiscountCodeRepositoryImpl()
+    val discountReferences = DiscountCodeReferences(categories, productQm)
+    val adminDiscountCodes = AdminDiscountCodeUseCases(
+        checkPanelAccess,
+        ListDiscountCodesUc(transactions, discountCodes),
+        GetDiscountCodeUc(transactions, discountCodes),
+        CreateDiscountCodeUc(transactions, discountCodes, discountReferences, auditTrail, clock),
+        UpdateDiscountCodeUc(transactions, discountCodes, discountReferences, auditTrail, clock),
+        DeactivateDiscountCodeUc(transactions, discountCodes, auditTrail, clock),
+    )
+
     // The approve-silent-photos job's two use cases, run by the tests the way PanelJobs runs them.
     val findSilentPhotos = FindSilentPhotoOrdersUc(transactions, purchase.orderQm, clock)
     val approveSilentPhotos = ApproveSilentPhotosUc(transactions, purchase.orders, clock)
@@ -313,6 +332,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
                     webV1AdminOrders(adminOrders, mediaUrls)
                     webV1AdminRefunds(adminRefunds)
                     webV1AdminSettings(adminSettings)
+                    webV1AdminDiscountCodes(adminDiscountCodes)
                     // The customer's side of an order, for the tests that follow it from the panel to «سفارش‌های من».
                     webV1MyOrders(purchase.myOrderUseCases, mediaUrls)
                     // Back from the gateway and the result page, for paying what a change left owed (phase 3).

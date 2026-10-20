@@ -15,6 +15,9 @@ import com.kiva.domain.aggregate.settings.model.valueobject.SupportHours
 import com.kiva.domain.aggregate.settings.model.valueobject.SupportPhone
 import com.kiva.domain.aggregate.user.model.valueobject.Email
 import com.kiva.infrastructure.TestDatabase
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Test
 import java.time.DayOfWeek
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -23,9 +26,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Test
 
 /**
  * Reads the settings V12__shop_settings.sql and V30__admin_settings.sql write into the freshly migrated kiva_test (the

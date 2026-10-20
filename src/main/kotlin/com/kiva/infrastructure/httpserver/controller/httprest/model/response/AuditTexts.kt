@@ -51,6 +51,9 @@ object AuditTexts {
             AuditAction.REFUND_UPDATED -> refundUpdated(name, changes)
             AuditAction.ORDER_CHANGE_RESOLVED -> changeResolved(name, changes)
             AuditAction.SETTINGS_UPDATED -> "تنظیمات فروشگاه ویرایش شد (${changes.size.toLong().toPersianNumber()} مورد)"
+            AuditAction.DISCOUNT_CODE_CREATED -> "کد تخفیف $name ساخته شد"
+            AuditAction.DISCOUNT_CODE_UPDATED -> "کد تخفیف $name ویرایش شد"
+            AuditAction.DISCOUNT_CODE_DEACTIVATED -> "کد تخفیف $name غیرفعال شد"
         }
     }
 

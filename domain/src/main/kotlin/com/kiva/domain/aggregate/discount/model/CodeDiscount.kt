@@ -30,6 +30,9 @@ sealed interface DiscountShopper {
     data class Customer(val userId: UserId, val hasPaidOrder: Boolean) : DiscountShopper
 }
 
+/** What the panel shows of a code's use: how many paid orders kept it ([usedCount]) and what it took off them in all. */
+data class DiscountUsageStats(val usedCount: Int, val totalDiscountGiven: Money)
+
 /**
  * How many times a code is used now: held and confirmed uses, in all ([ofCode]) and by the customer ([ofCustomer], 0 for
  * a guest). Read under the code's lock when an order is placed, so two orders never take its last use together.

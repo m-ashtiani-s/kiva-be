@@ -49,6 +49,9 @@ enum class AuditAction {
 
     // ---- settings, discount codes (phase 4) ----
     SETTINGS_UPDATED,
+    DISCOUNT_CODE_CREATED,
+    DISCOUNT_CODE_UPDATED,
+    DISCOUNT_CODE_DEACTIVATED,
 }
 
 /** The kind of thing a panel write changed: the contract's AuditEntityType, value for value. */

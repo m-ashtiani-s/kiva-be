@@ -60,7 +60,13 @@ import com.kiva.application.usecase.checkout.usecase.command.StartPaymentUc
 import com.kiva.application.usecase.checkout.usecase.query.GetCheckoutContextUc
 import com.kiva.application.usecase.checkout.usecase.query.GetPaymentInitUc
 import com.kiva.application.usecase.checkout.usecase.query.GetPaymentResultUc
+import com.kiva.application.usecase.discount.DiscountCodeReferences
 import com.kiva.application.usecase.discount.Discounts
+import com.kiva.application.usecase.discount.usecase.command.CreateDiscountCodeUc
+import com.kiva.application.usecase.discount.usecase.command.DeactivateDiscountCodeUc
+import com.kiva.application.usecase.discount.usecase.command.UpdateDiscountCodeUc
+import com.kiva.application.usecase.discount.usecase.query.GetDiscountCodeUc
+import com.kiva.application.usecase.discount.usecase.query.ListDiscountCodesUc
 import com.kiva.application.usecase.geo.usecase.query.ListCitiesOfProvinceUc
 import com.kiva.application.usecase.geo.usecase.query.ListProvincesUc
 import com.kiva.application.usecase.idempotency.IdempotencyGuard
@@ -578,6 +584,14 @@ val useCaseModule = module(createdAtStart = true) {
     // --- admin: the shop's settings (phase 4) ---
     single { GetAdminSettingsUc(transactionManager = get(), shopSettingsRepository = get(), paymentGateways = get()) }
     single { UpdateSettingsUc(transactionManager = get(), shopSettingsRepository = get(), auditTrail = get(), clock = get()) }
+
+    // --- admin: discount codes (phase 4) ---
+    single { DiscountCodeReferences(categoryRepository = get(), productQmRepository = get()) }
+    single { ListDiscountCodesUc(transactionManager = get(), discountCodeRepository = get()) }
+    single { GetDiscountCodeUc(transactionManager = get(), discountCodeRepository = get()) }
+    single { CreateDiscountCodeUc(transactionManager = get(), discountCodeRepository = get(), references = get(), auditTrail = get(), clock = get()) }
+    single { UpdateDiscountCodeUc(transactionManager = get(), discountCodeRepository = get(), references = get(), auditTrail = get(), clock = get()) }
+    single { DeactivateDiscountCodeUc(transactionManager = get(), discountCodeRepository = get(), auditTrail = get(), clock = get()) }
 
     // --- admin: the change log ---
     single { ListAuditLogUc(transactionManager = get(), auditLogQmRepository = get()) }

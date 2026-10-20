@@ -49,6 +49,7 @@ abstract class UnusedProductQmRepository : ProductQmRepository {
     override fun findDueScheduled(now: Instant, limit: Int): List<ProductId> = unused()
     override fun isSlugTaken(slug: Slug): Boolean = unused()
     override fun findTakenSkus(skus: Collection<Sku>): Set<Sku> = unused()
+    override fun findExistingIds(ids: Collection<ProductId>): Set<ProductId> = unused()
     override fun countActiveByCategory(): Map<Slug, Int> = unused()
     override fun countActiveByMaterial(): Map<Slug, Int> = unused()
     override fun countActiveByColor(): Map<ColorKey, Int> = unused()

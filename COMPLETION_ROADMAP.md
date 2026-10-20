@@ -2603,7 +2603,7 @@ Route: 200 با AdminOrder
 |---|---|---|---|
 | ۴.۰ | کانترکت 1.11.0 | M | ✅ |
 | ۴.۱ | تنظیمات فروشگاه | L | ✅ |
-| ۴.۲ | کدهای تخفیف در پنل | M | ⬜ |
+| ۴.۲ | کدهای تخفیف در پنل | M | ✅ |
 | ۴.۳ | جزئیات مشتری، فیلتر نقش و «آخرین ادمین» | M | ⬜ |
 | ۴.۴ | گزارش مدیریتی | M | ⬜ |
 | ۴.۵ | ریویو | S | ⬜ |
@@ -2640,6 +2640,10 @@ Route: 200 با AdminOrder
 | 26 | خطاهای تازه‌ی `siteStats` و ایمیل (تازه، گام ۴.۱) | `RATING_INVALID` (امتیاز با بیشتر از یه رقم اعشار، یا بیرون ۰ تا ۵)، `SATISFACTION_METRIC_INVALID` (کلید ناشناخته‌ی `metrics`)، `SOCIAL_CHANNEL_INVALID` (`sources` ِ ناشناخته)؛ `supportEmail` بیشتر از ۱۰۰ ← `EMAIL_TOO_LONG` با `meta.maxLength = 100` | `NUMBER_OUT_OF_RANGE` برای «۴.۹۵» جمله‌ی غلطی می‌گفت |
 | 27 | متن خالی ِ پشتیبانی (تازه، گام ۴.۱) | `supportPhone`/`supportEmail` ِ خالی (`""`) مثل `null` یعنی پاک | فرم پنل فیلد پاک‌شده رو خالی می‌فرسته |
 | 28 | `ShippingCost.makeNew` (تازه، گام ۴.۱) | ساخته نشد: `baseCost` همون `Money` ـه و سقفش با `NUMBER_OUT_OF_RANGE` ِ عمومی (تصمیم ۲۱) چک می‌شه. به‌جاش `ShippingMethodName` و `IconName` ساخته شدن (اسم و آیکن روش حالا از پنل میان) | یه VO ِ تک‌قانونه که همون کار `requiredIn` رو می‌کرد |
+| 29 | جواب ساخت و ویرایش کد (تازه، گام ۴.۲) | `GetDiscountCodeUc` (Query ِ پنجم): Command فقط شناسه برمی‌گردونه (بخش ۴.۵، قانون ۶)، route بدنه رو با این Query می‌سازه | |
+| 30 | کد دوحرفی ِ قدیمی (تازه، گام ۴.۲) | `PUT` شکل رو با «دوحرفی هم مجاز» می‌سنجه؛ داخل تراکنش، متن دوحرفی فقط وقتی پذیرفته می‌شه که متن همون کد باشه، وگرنه `400 DISCOUNT_CODE_TEXT_INVALID` روی `code` | تصمیم ۹ گفته کدهای قبلی معتبر می‌مونن ولی کد تازه حداقل ۳ |
+| 31 | لاگ کد تخفیف (تازه، گام ۴.۲) | `DISCOUNT_CODE_CREATED` بدون `changes` (مثل `PRODUCT_CREATED`)؛ `DISCOUNT_CODE_DEACTIVATED` با `isActive` از `true` به `false`؛ `DISCOUNT_CODE_UPDATED` با هر شرط عوض‌شده (لیست‌ها شناسه‌های مرتب) | |
+| 32 | `requiresLogin` ِ پاسخ (تازه، گام ۴.۲) | همیشه مقدار مؤثر (`DiscountCode.needsCustomer`)، حتی برای کدی که با SQL و بدون این پرچم ساخته شده | پنل باید همونی رو ببینه که سبد اجرا می‌کنه |
 
 ### ۹.۳ تعریف عددهای گزارش (`GET /admin/reports/overview`)
 
@@ -2799,20 +2803,22 @@ Route: 200 با AdminSettings ِ تازه
 
 ---
 
-#### گام ۴.۲: کدهای تخفیف در پنل · M ⬜
+#### گام ۴.۲: کدهای تخفیف در پنل · M ✅
 
 **می‌سازی:** `V30` (بخش کد تخفیف)؛ `DiscountCode.makeNew`/`change` و Failureها؛ `DiscountCodeRepository`: `findById`، `list(active, pageable)`، `add`، `save` (نسخه)، `usageStatsOf(ids)`؛ چهار UseCase؛ `webV1AdminDiscountCodes.kt`؛ `DiscountCodeHttpResponse`.
 
 وابسته به: ۴.۰
 
 **تموم شده یعنی:**
-- [ ] ساخت با ` paeez۱۵ ` ← ذخیره به‌صورت `PAEEZ15`؛ دوباره ← `409 DUPLICATE_CODE`.
-- [ ] `PERCENT` با ۱۲۰، `FIXED` با ۵۰۰، `FIXED` با `maxDiscount` ← ۴۰۰ هر کدوم با کد خودش.
-- [ ] `firstOrderOnly = true` و `requiresLogin = false` ← پاسخ `requiresLogin = true`.
-- [ ] `categoryIds` با دسته‌ی ناموجود ← `400` روی `categoryIds.0`.
-- [ ] کدی که در پنل ساخته شد، در سبد (`POST /cart/discount-code`) کار می‌کنه؛ بعد از غیرفعال کردن، سبد با همگام‌سازی بعدی `DISCOUNT_REMOVED` می‌گیره.
-- [ ] `usedCount` و `totalDiscountGiven` فقط سفارش‌های پرداخت‌شده‌ی برنگشته رو می‌شمرن (سفارش لغوشده‌ی فاز ۲ از شمارش بیرون می‌ره).
-- [ ] `OPERATOR` و `CONTENT_EDITOR` ← 403.
+- [x] ساخت با ` paeez۱۵ ` ← ذخیره به‌صورت `PAEEZ15`؛ دوباره ← `409 DUPLICATE_CODE`.
+- [x] `PERCENT` با ۱۲۰، `FIXED` با ۵۰۰، `FIXED` با `maxDiscount` ← ۴۰۰ هر کدوم با کد خودش.
+- [x] `firstOrderOnly = true` و `requiresLogin = false` ← پاسخ `requiresLogin = true`.
+- [x] `categoryIds` با دسته‌ی ناموجود ← `400` روی `categoryIds.0`.
+- [x] کدی که در پنل ساخته شد، در سبد (`POST /cart/discount-code`) کار می‌کنه؛ بعد از غیرفعال کردن، سبد با همگام‌سازی بعدی `DISCOUNT_REMOVED` می‌گیره.
+- [x] `usedCount` و `totalDiscountGiven` فقط سفارش‌های پرداخت‌شده‌ی برنگشته رو می‌شمرن (سفارش لغوشده‌ی فاز ۲ از شمارش بیرون می‌ره).
+- [x] `OPERATOR` و `CONTENT_EDITOR` ← 403.
+
+**یادداشت پیاده‌سازی:** `DiscountTerms` (دامنه) شکل کامل فرم رو با همه‌ی خطاها با هم می‌سنجه و `requiresLogin` ِ ذخیره‌شده رو می‌سازه؛ `DiscountCode.create`/`change` (بی‌تغییر ← `null`)/`deactivate` (از قبل خاموش ← `null`) با `createdOn`، `updatedOn` و `version`؛ `DiscountCodeText.makeNewInPanel`. شناسه‌ی کد تازه از sequence ِ ستون identity (`nextId`). `DiscountCodeReferences` (سرویس مشترک ساخت و ویرایش) وجود دسته‌ها و محصول‌ها رو با `ProductQmRepository.findExistingIds` چک می‌کنه. `usedCount`/`totalDiscountGiven` با یه کوئری `GROUP BY` برای کل صفحه از ردیف‌های `CONFIRMED`. `PUT` و `DELETE` زیر قفل ردیف کد (قفل ۵). تست‌ها: ۹ تست دامنه، ۳ تست repository (نسخه و متن یکتا)، ۱۱ تست route با کل فهرست بالا. ۲۵۹۵ تست سبز.
 
 ---
 
@@ -6149,3 +6155,4 @@ kiva {
 | ۲۷ مهر ۱۴۰۵ | ۳.۵ | Phase 3 step 3.5 | `CHANGE_REQUESTS_REVIEW.md` (ردیف‌های ۷، ۸، ۲۱ و ۱۵ با تست‌هاشون؛ شش خرابکاری، همه قرمز)؛ چهار تست تازه (آخرین کیف: تغییر و خرید همزمان؛ دو تعویض ضربدری همزمان؛ یه کلید برای پرداخت مانده؛ اسکن لاگ ِ درخواست تغییر)؛ تست کل مسیر رنگ گرون‌تر تا ارسال با کانترکت و هویت جمع‌ها؛ assertion ِ بی‌اثر ِ `meta.balanceDue` درست شد؛ راهنمای فرانت پنل (بخش ۷) و مشتری. کل مجموعه دوباره اجرا شد: ۲۵۰۵ تست سبز. merge منتظر تأیید |
 | ۲۸ مهر ۱۴۰۵ | ۴.۰ | Phase 4 step 4.0 | کانترکت 1.11.0 با هر ۶ ردیف ِ ۹.۷ و سه ردیف تازه (۷ تا ۹)؛ هفت تصمیم تازه (۱۸ تا ۲۴ ِ ۹.۲: ترتیب درگاه‌ها، «لازم ولی nullable»، `siteStats`، کدهای فیلدی عمومی، سقف‌های کد تخفیف و `updatedAt`، متن عمومی ِ `ROLE_CHANGE_NOT_ALLOWED`، خطاها و کلیدهای گزارش). YAML با snakeyaml معتبره و هر ۱۳۲۷ `$ref` پیدا می‌شن. متن ۲۵ کد فیلدی تازه. برنچ `panel-settings` از نوک فاز ۳ |
 | ۲۸ مهر ۱۴۰۵ | ۴.۱ | Phase 4 step 4.1 | `V30` ِ کامل؛ VOهای تنظیمات (`DeliveryDays.makeNew`، `ShippingMethodName`، `IconName`، `TrackingUrlTemplate`، `SupportPhone`، `SupportHours`، `SocialLink`، `SiteStats`/`Satisfaction`، `ShopFeatures`)؛ `ShopSettings.change` و `version`؛ `save` با نسخه؛ `ShopSettingsFields`، `GetAdminSettingsUc`، `UpdateSettingsUc`، `SettingsAudit`؛ `webV1AdminSettings.kt`؛ آستانه‌ی موجودی کم و مهلت عکس از تنظیمات؛ `Problems` و حدهای عمومی در `common`. ۲۵۷۲ تست سبز |
+| ۲۸ مهر ۱۴۰۵ | ۴.۲ | Phase 4 step 4.2 | `DiscountTerms`، `DiscountCode.create`/`change`/`deactivate` با نسخه، `DiscountCodeText.makeNewInPanel`، `DiscountCodeRepository` (`findById`، `lockById`، `nextId`، `list`، `add`، `save`، `usageStatsOf`)، پنج UseCase، `DiscountCodeReferences`، `webV1AdminDiscountCodes.kt`، لاگ `DISCOUNT_CODE_*`. چهار تصمیم تازه (۲۹ تا ۳۲). ۲۵۹۵ تست سبز |

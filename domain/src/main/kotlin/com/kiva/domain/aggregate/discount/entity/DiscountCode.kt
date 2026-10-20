@@ -3,6 +3,7 @@ package com.kiva.domain.aggregate.discount.entity
 import com.kiva.common.valueobject.Money
 import com.kiva.domain.aggregate.cart.model.PurchaseOffer
 import com.kiva.domain.aggregate.category.model.valueobject.CategoryId
+import com.kiva.domain.aggregate.discount.model.DiscountTerms
 import com.kiva.domain.aggregate.discount.model.valueobject.DiscountCodeId
 import com.kiva.domain.aggregate.discount.model.valueobject.DiscountCodeText
 import com.kiva.domain.aggregate.discount.model.valueobject.DiscountType
@@ -11,8 +12,9 @@ import java.time.Instant
 
 /**
  * A discount code (roadmap section 14, the contract's DiscountCode): what it takes off, from what, for whom and how many
- * times. Kept as a row; until the panel's discount codes are built, codes are made by SQL (the dev seeder makes three).
- * How many times it was used is not here: its redemptions are counted (DiscountRedemption), so the count can't drift.
+ * times. Kept as a row; the panel makes and edits it ([create], [change], [deactivate]; roadmap phase 4, step 4.2), and
+ * never deletes one: orders point at it. How many times it was used is not here: its redemptions are counted
+ * (DiscountRedemption), so the count can't drift.
  *
  * Whether it applies to a cart or an order is DiscountDomainService's, in the contract's order; the money is
  * DiscountPolicy's.
@@ -27,6 +29,7 @@ import java.time.Instant
  * @property excludeSaleItems lines already on sale (with a crossed-out price) are not covered.
  * @property categoryIds and [productIds]: when either has something, only the lines of those categories or products are
  *   covered; both empty, every line.
+ * @property version how many times it was saved: a save over another one that came first is refused.
  */
 class DiscountCode private constructor(
     val id: DiscountCodeId,
@@ -46,6 +49,9 @@ class DiscountCode private constructor(
     val categoryIds: Set<CategoryId>,
     val productIds: Set<ProductId>,
     val isActive: Boolean,
+    val createdOn: Instant,
+    val updatedOn: Instant,
+    val version: Long,
 ) {
     // The table's CHECKs say the same: a broken row is a bug.
     init {
@@ -72,6 +78,31 @@ class DiscountCode private constructor(
         return offer.productId in productIds || offer.categoryId in categoryIds
     }
 
+    /**
+     * What the panel set, as the panel's form has it. Its login switch is the one that counts ([needsCustomer]), so a code
+     * made by SQL with a per-customer limit and no login reads as the panel would have saved it.
+     */
+    val terms: DiscountTerms
+        get() = DiscountTerms.constructFromPersisted(
+            code, type, value, label, minSubtotal, maxDiscount, startsAt, endsAt, usageLimit, perUserLimit, firstOrderOnly, needsCustomer,
+            excludeSaleItems, categoryIds.sortedBy { it.value }, productIds.sortedBy { it.value }, isActive,
+        )
+
+    /**
+     * The code with the panel's new [terms], all of them replacing the old (roadmap phase 4, decision 11: a code already
+     * used may change; orders keep what they were given). Null when nothing would change.
+     */
+    fun change(terms: DiscountTerms, now: Instant): DiscountCode? {
+        if (terms.sorted() == this.terms) return null
+        return of(id, terms, createdOn, updatedOn = now, version)
+    }
+
+    /** Switched off (`DELETE`): never removed, as orders point at it. Null when it already is. */
+    fun deactivate(now: Instant): DiscountCode? {
+        if (!isActive) return null
+        return of(id, terms.copyActive(false), createdOn, updatedOn = now, version)
+    }
+
     override fun equals(other: Any?): Boolean = other is DiscountCode && other.id == id
 
     override fun hashCode(): Int = id.hashCode()
@@ -79,6 +110,25 @@ class DiscountCode private constructor(
     override fun toString(): String = "DiscountCode(id=${id.value}, code=${code.value}, type=$type, value=$value, isActive=$isActive)"
 
     companion object {
+        /** A code the panel made [now], with [terms]; [id] is the one the repository gave out. */
+        fun create(id: DiscountCodeId, terms: DiscountTerms, now: Instant): DiscountCode = of(id, terms, now, now, version = 0)
+
+        private fun of(id: DiscountCodeId, terms: DiscountTerms, createdOn: Instant, updatedOn: Instant, version: Long): DiscountCode = DiscountCode(
+            id, terms.code, terms.type, terms.value, terms.label, terms.minSubtotal, terms.maxDiscount, terms.startsAt, terms.endsAt, terms.usageLimit,
+            terms.perUserLimit, terms.firstOrderOnly, terms.requiresLogin, terms.excludeSaleItems, terms.categoryIds.toSet(), terms.productIds.toSet(),
+            terms.isActive, createdOn, updatedOn, version,
+        )
+
+        private fun DiscountTerms.sorted(): DiscountTerms = DiscountTerms.constructFromPersisted(
+            code, type, value, label, minSubtotal, maxDiscount, startsAt, endsAt, usageLimit, perUserLimit, firstOrderOnly, requiresLogin,
+            excludeSaleItems, categoryIds.distinct().sortedBy { it.value }, productIds.distinct().sortedBy { it.value }, isActive,
+        )
+
+        private fun DiscountTerms.copyActive(active: Boolean): DiscountTerms = DiscountTerms.constructFromPersisted(
+            code, type, value, label, minSubtotal, maxDiscount, startsAt, endsAt, usageLimit, perUserLimit, firstOrderOnly, requiresLogin,
+            excludeSaleItems, categoryIds, productIds, active,
+        )
+
         fun constructFromPersisted(
             id: DiscountCodeId,
             code: DiscountCodeText,
@@ -97,9 +147,12 @@ class DiscountCode private constructor(
             categoryIds: Set<CategoryId>,
             productIds: Set<ProductId>,
             isActive: Boolean,
+            createdOn: Instant,
+            updatedOn: Instant,
+            version: Long,
         ): DiscountCode = DiscountCode(
             id, code, type, value, label, minSubtotal, maxDiscount, startsAt, endsAt, usageLimit, perUserLimit, firstOrderOnly,
-            requiresLogin, excludeSaleItems, categoryIds, productIds, isActive,
+            requiresLogin, excludeSaleItems, categoryIds, productIds, isActive, createdOn, updatedOn, version,
         )
     }
 }
