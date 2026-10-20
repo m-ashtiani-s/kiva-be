@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: KIVA Store API — کیوا
-  version: 1.10.0
+  version: 1.11.0
   contact:
     name: KIVA Engineering
     email: support@kiva.ir
@@ -4073,10 +4073,14 @@ paths:
       x-roles: [ADMIN]
       operationId: adminListDiscountCodes
       summary: "کدهای تخفیف"
+      description: |
+        تازه‌ترین ساخته‌شده اول. `active` یعنی پرچم `isActive` (نه «الان در بازه‌ی زمانی‌اش است»)؛ نیامده = همه.
+        `usedCount` و `totalDiscountGiven` از سفارش‌های پرداخت‌شده‌ی برنگشته‌اند (سفارش لغوشده شمرده نمی‌شود).
       security: [{ bearerAuth: [] }]
       parameters:
         - name: active
           in: query
+          description: '`true` فقط فعال‌ها، `false` فقط غیرفعال‌ها؛ مقدار دیگر ← `400 BOOLEAN_INVALID`'
           schema: { type: boolean }
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/Size'
@@ -4100,6 +4104,7 @@ paths:
       x-roles: [ADMIN]
       operationId: adminCreateDiscountCode
       summary: "ساخت کد تخفیف"
+      description: 'قانون‌ها در `DiscountCodeUpsertRequest`. ترتیب: شکل (همه با هم) ← دسته‌ها و محصولات هستند (`400`) ← متن تکراری (`409 DUPLICATE_CODE`). یک ردیف `DISCOUNT_CODE_CREATED` در لاگ تغییرات.'
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -4115,12 +4120,21 @@ paths:
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: "`DUPLICATE_CODE`: کد دیگری همین متن را دارد"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
   /admin/discount-codes/{discountId}:
     put:
       tags: [Admin · Marketing]
       x-roles: [ADMIN]
       operationId: adminUpdateDiscountCode
       summary: "ویرایش کد تخفیف"
+      description: |
+        کل کد را جایگزین می‌کند (فیلد نیامده = پیش‌فرضش). ترتیب: شکل (همه با هم) ← کد هست (`404`؛ شناسه‌ی بدشکل هم `404`) ← دسته‌ها و محصولات هستند (`400`)
+        ← متن تکراری به‌جز خودش (`409 DUPLICATE_CODE`). دو ذخیره‌ی همزمان ← دومی `409 CHANGED_BY_SOMEONE_ELSE`.
+        ذخیره‌ی بی‌تغییر ردیفی در لاگ تغییرات نمی‌گذارد؛ بقیه یک ردیف `DISCOUNT_CODE_UPDATED` با فیلدهای عوض‌شده.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: discountId
@@ -4142,11 +4156,19 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: "`DUPLICATE_CODE` (کد دیگری همین متن را دارد) یا `CHANGED_BY_SOMEONE_ELSE` (ذخیره‌ی همزمان)"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
     delete:
       tags: [Admin · Marketing]
       x-roles: [ADMIN]
       operationId: adminDeleteDiscountCode
       summary: "غیرفعال کردن کد تخفیف"
+      description: |
+        هیچ‌وقت حذف واقعی نیست (سفارش‌ها به کد اشاره می‌کنند): `isActive = false` و `204`، با یک ردیف `DISCOUNT_CODE_DEACTIVATED` در لاگ تغییرات.
+        کد از قبل غیرفعال هم `204` و بی‌اثر است (بدون ردیف). کد ناموجود یا شناسه‌ی بدشکل ← `404`.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: discountId
@@ -4655,6 +4677,7 @@ paths:
       x-roles: [ADMIN]
       operationId: adminGetSettings
       summary: "تنظیمات قابل ویرایش (هزینه‌ی ارسال، آستانه‌ی ارسال رایگان، روزهای رزرو و بازگشت، پشتیبانی، ...)"
+      description: همیشه کل سند با همه‌ی فیلدها (همان چیزی که `PUT` می‌گیرد؛ قانون‌ها در `AdminSettings`).
       security: [{ bearerAuth: [] }]
       responses:
         '200':
@@ -4669,6 +4692,9 @@ paths:
       x-roles: [ADMIN]
       operationId: adminUpdateSettings
       summary: "ذخیره‌ی تنظیمات"
+      description: |
+        **کل سند** را می‌گیرد و جایگزین می‌کند (قانون‌ها، سقف‌ها و «از کِی اثر دارد» در `AdminSettings`). شکل و سقف هر فیلد قبل از هر چیز،
+        همه با هم (`400`)؛ بعد قانون‌های بین فیلدها (روش و درگاه پیش‌فرض فعال، `freeShippingMethods` از روش‌های لیست). پاسخ کل سند تازه است.
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -4681,10 +4707,14 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AdminSettings' }
-
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: "`CHANGED_BY_SOMEONE_ELSE`: کس دیگری همین الان تنظیمات را ذخیره کرد؛ هیچ‌چیز از این درخواست ذخیره نشد"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
   # ================================================================
   #  ADMIN — SUPPORT & REPORTS
   # ================================================================
@@ -4851,11 +4881,15 @@ paths:
       x-roles: [ADMIN, SUPPORT]
       operationId: adminListCustomers
       summary: "مشتریان (جستجو با موبایل/نام)"
+      description: '`role` فقط کاربرانی که آن نقش را دارند (برای صفحه‌ی نقش‌ها و کارمندها)؛ `CUSTOMER` = همه. نقش ناشناخته ← `400 ROLE_INVALID` روی `role`.'
       security: [{ bearerAuth: [] }]
       parameters:
         - name: q
           in: query
           schema: { type: string }
+        - name: role
+          in: query
+          schema: { $ref: '#/components/schemas/UserRole' }
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/Size'
       responses:
@@ -4879,6 +4913,7 @@ paths:
       x-roles: [ADMIN, SUPPORT]
       operationId: adminGetCustomer
       summary: "جزئیات یک مشتری: پروفایل، آدرس‌ها و آخرین سفارش‌ها"
+      description: 'کاربر ناموجود یا شناسه‌ی بدشکل ← `404 NOT_FOUND`. خواندن در لاگ تغییرات ثبت نمی‌شود.'
       security: [{ bearerAuth: [] }]
       parameters:
         - name: customerId
@@ -4904,6 +4939,9 @@ paths:
         لیست کامل نقش‌ها را جایگزین می‌کند (`CUSTOMER` همیشه می‌ماند و لازم نیست فرستاده شود). بعد از تغییر، همه‌ی نشست‌های آن کاربر
         باطل می‌شوند تا با نقش‌های جدید دوباره وارد شود. هر تغییر با «چه کسی، کِی، از چه به چه» در رویدادهای امنیتی ثبت می‌شود.
         هیچ‌کس نقش‌های **خودش** را عوض نمی‌کند (`422 ROLE_CHANGE_NOT_ALLOWED`)، تا آخرین ADMIN اشتباهی خودش را بیرون نیندازد.
+        **آخرین ADMIN نقشش را از دست نمی‌دهد:** تغییری که تعداد ADMINها را صفر کند ← `422 ROLE_CHANGE_NOT_ALLOWED` با `meta.reason = LAST_ADMIN`.
+        تغییرهای نقش یکی‌یکی انجام می‌شوند و نقش‌های **فعلی** ِ انجام‌دهنده همان لحظه دوباره خوانده می‌شوند: اگر دو ADMIN همزمان ADMIN ِ همدیگر را
+        بردارند، یکی انجام می‌شود و دومی (که دیگر ADMIN نیست) `403 FORBIDDEN` می‌گیرد. هر تغییر در رویدادهای امنیتی و لاگ تغییرات (`USER_ROLES_CHANGED`) ثبت می‌شود.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: customerId
@@ -4934,7 +4972,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422':
-          description: "`ROLE_CHANGE_NOT_ALLOWED`: نقش‌های خودت را نمی‌توانی عوض کنی"
+          description: "`ROLE_CHANGE_NOT_ALLOWED`: نقش‌های خودت را نمی‌توانی عوض کنی، یا (`meta.reason = LAST_ADMIN`) این آخرین ADMIN است"
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -4944,16 +4982,24 @@ paths:
       x-roles: [ADMIN]
       operationId: adminReportOverview
       summary: "داشبورد مدیریتی (فروش، تعداد سفارش، میانگین سبد، پرفروش‌ها، نرخ تأیید عکس)"
+      description: |
+        `from` و `to` روزهای تهران‌اند و هر دو **شامل** (`from` از ساعت ۰۰:۰۰ همان روز تا پایان روز `to`). نیامده ← `400 FIELD_REQUIRED`،
+        بدشکل ← `400 DATE_INVALID`، `from` بعد از `to` ← `400 DATE_RANGE_INVALID` روی `to`، بیشتر از ۳۶۶ روز ← `400 DATE_RANGE_TOO_LONG` روی `to`.
+
+        **سفارش دوره** = سفارشی که پولش (`paidOn`، پرداخت اول) در بازه رسیده و لغو نشده. همه‌ی عددهای پولی از همین سفارش‌هاست
+        (معنی هر فیلد در `AdminReportOverview`). همه با ریاضی صحیح؛ درصدها یک رقم اعشار، نیمه به بالا.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: from
           in: query
           required: true
           schema: { type: string, format: date }
+          example: '2026-10-01'
         - name: to
           in: query
           required: true
           schema: { type: string, format: date }
+          example: '2026-10-31'
       responses:
         '200':
           description: OK
@@ -7591,17 +7637,17 @@ components:
     SatisfactionSummary:
       type: object
       properties:
-        averageRating: { type: number, example: 4.9 }
-        scale: { type: integer, example: 5 }
-        totalCount: { type: integer, description: «بر اساس ۲٬۴۸۰ نظر و پیام ثبت‌شده», example: 2480 }
+        averageRating: { type: number, minimum: 0, maximum: 5, description: حداکثر یک رقم اعشار, example: 4.9 }
+        scale: { type: integer, description: 'همیشه ۵؛ در `PUT /admin/settings` فقط خواندنی', example: 5 }
+        totalCount: { type: integer, minimum: 0, description: «بر اساس ۲٬۴۸۰ نظر و پیام ثبت‌شده», example: 2480 }
         metrics:
           type: array
           items:
             type: object
             properties:
               key: { type: string, enum: [PHOTO_MATCH, QUALITY, SHIPPING_SPEED, PACKAGING, SUPPORT] }
-              label: { type: string, example: تطابق با عکس }
-              percent: { type: integer, example: 98 }
+              label: { type: string, description: 'از روی `key` ساخته می‌شود؛ در `PUT /admin/settings` فقط خواندنی', example: تطابق با عکس }
+              percent: { type: integer, minimum: 0, maximum: 100, example: 98 }
         sources:
           type: array
           items: { $ref: '#/components/schemas/SocialChannel' }
@@ -7675,12 +7721,14 @@ components:
               isSignature: { type: boolean, example: true }
     SiteStats:
       type: object
+      description: 'عددهای بازاریابی، دستی از `PUT /admin/settings` (`siteStats`)؛ حساب نمی‌شوند'
+      required: [happyCustomers, preShipmentPhotos, photoMatchSatisfactionPercent, productModels, satisfaction]
       properties:
-        happyCustomers: { type: integer, example: 12000 }
-        preShipmentPhotos: { type: integer, example: 48000 }
-        photoMatchSatisfactionPercent: { type: integer, example: 98 }
-        productModels: { type: integer, example: 60 }
-        satisfaction: { $ref: '#/components/schemas/SatisfactionSummary' }
+        happyCustomers: { type: integer, minimum: 0, example: 12000 }
+        preShipmentPhotos: { type: integer, minimum: 0, example: 48000 }
+        photoMatchSatisfactionPercent: { type: integer, minimum: 0, maximum: 100, example: 98 }
+        productModels: { type: integer, minimum: 0, example: 60 }
+        satisfaction: { allOf: [{ $ref: '#/components/schemas/SatisfactionSummary' }], nullable: true }
 
     # ============ FAQ / CONTACT / PAGES ============
     FaqItem:
@@ -8377,37 +8425,59 @@ components:
     # ============ ADMIN · MARKETING ============
     DiscountCodeUpsertRequest:
       type: object
+      description: |
+        ساخت و ویرایش کد تخفیف. همه‌ی خطاهای شکل با هم (`400`، روی همان فیلد). ویرایش کدی که استفاده شده مجاز است: سفارش‌های قبلی مبلغ
+        ذخیره‌شده‌ی خودشان را دارند و سبدها با همگام‌سازی بعدی دوباره بررسی می‌شوند (کدی که دیگر نمی‌خورد با `DISCOUNT_REMOVED` برداشته می‌شود).
       required: [code, type, value, label]
       properties:
-        code: { type: string, pattern: '^[A-Z0-9_-]{3,32}$', example: PAEEZ15 }
-        type: { type: string, enum: [PERCENT, FIXED] }
-        value: { type: integer, description: درصد (۱ تا ۱۰۰) یا مبلغ تومان, example: 15 }
-        label: { type: string, example: '۱۵٪ تخفیف پاییزه (خرید بالای ۲ میلیون)' }
-        minSubtotal: { type: integer, allOf: [{ $ref: '#/components/schemas/Money' }], nullable: true, example: 2000000 }
-        maxDiscount: { type: integer, allOf: [{ $ref: '#/components/schemas/Money' }], nullable: true, description: سقف تخفیف برای نوع درصدی }
+        code:
+          type: string
+          pattern: '^[A-Z0-9_-]{3,32}$'
+          description: |
+            اول trim، حروف بزرگ و ارقام لاتین می‌شود، بعد با الگو سنجیده می‌شود (` paeez۱۵ ` ← `PAEEZ15`؛ `DISCOUNT_CODE_TEXT_INVALID`).
+            تکراری (به‌جز خود همین کد در ویرایش) ← `409 DUPLICATE_CODE`. کدهای دوحرفی قدیمی معتبر می‌مانند، ولی کد تازه حداقل ۳ حرف است.
+          example: PAEEZ15
+        type: { type: string, enum: [PERCENT, FIXED], description: '`DISCOUNT_TYPE_INVALID`' }
+        value: { type: integer, description: '`PERCENT`: درصد ۱ تا ۱۰۰؛ `FIXED`: ۱٬۰۰۰ تا ۱۰۰٬۰۰۰٬۰۰۰ تومان (`DISCOUNT_VALUE_INVALID`)', example: 15 }
+        label: { type: string, minLength: 1, maxLength: 200, description: 'متنی که سبد نشان می‌دهد (`AppliedDiscount.label`)', example: '۱۵٪ تخفیف پاییزه (خرید بالای ۲ میلیون)' }
+        minSubtotal: { type: integer, allOf: [{ $ref: '#/components/schemas/Money' }], nullable: true, description: '۰ تا ۱٬۰۰۰٬۰۰۰٬۰۰۰؛ `null` = بدون حداقل', example: 2000000 }
+        maxDiscount: { type: integer, allOf: [{ $ref: '#/components/schemas/Money' }], nullable: true, description: 'سقف تخفیف، **فقط** برای `PERCENT` (۱٬۰۰۰ تا ۱۰۰٬۰۰۰٬۰۰۰)؛ با `FIXED` ← `400 MAX_DISCOUNT_NOT_ALLOWED`' }
         startsAt: { type: string, format: date-time, nullable: true }
-        endsAt: { type: string, format: date-time, nullable: true }
-        usageLimit: { type: integer, nullable: true, description: کل دفعات مجاز }
-        perUserLimit: { type: integer, nullable: true, default: 1 }
+        endsAt: { type: string, format: date-time, nullable: true, description: 'بعد از `startsAt` (`DATE_RANGE_INVALID`)؛ کد تا (نه در) این لحظه کار می‌کند' }
+        usageLimit: { type: integer, minimum: 1, nullable: true, description: 'کل دفعات مجاز (سفارش‌های پرداخت‌نشده‌ی در جریان هم شمرده می‌شوند)؛ `null` = بی‌سقف' }
+        perUserLimit: { type: integer, minimum: 1, nullable: true, description: 'دفعات مجاز هر مشتری؛ `null` = بی‌سقف. پیش‌فرض ندارد: نیامده یعنی `null`' }
         firstOrderOnly: { type: boolean, default: false, description: مثل WELCOME }
-        requiresLogin: { type: boolean, default: false }
+        requiresLogin:
+          type: boolean
+          default: false
+          description: |
+            در پاسخ، مقدار **ذخیره‌شده** برمی‌گردد: `requiresLogin` یا `firstOrderOnly` یا `perUserLimit ≠ null`؛ چون مهمان را نمی‌شود شمرد،
+            هر کدام از این‌ها کد را «فقط با ورود» می‌کند (`DISCOUNT_LOGIN_REQUIRED`).
         excludeSaleItems: { type: boolean, default: false, description: اعمال نشدن روی کالاهای تخفیف‌خورده }
         categoryIds:
           type: array
+          maxItems: 50
+          uniqueItems: true
+          description: 'دسته‌هایی که کد شاملشان است؛ هر کدام باید وجود داشته باشد (`400 CATEGORY_NOT_FOUND` روی `categoryIds.i`). با `productIds` «اجتماع» است: ردیفی مشمول است که محصولش در `productIds` یا دسته‌اش در `categoryIds` باشد؛ هر دو خالی = همه‌ی ردیف‌ها'
           items: { type: integer }
         productIds:
           type: array
+          maxItems: 200
+          uniqueItems: true
+          description: 'محصولاتی که کد شاملشان است؛ هر کدام باید وجود داشته باشد (`400 PRODUCT_NOT_FOUND` روی `productIds.i`)'
           items: { type: integer }
         isActive: { type: boolean, default: true }
     DiscountCode:
       allOf:
         - $ref: '#/components/schemas/DiscountCodeUpsertRequest'
         - type: object
+          required: [id, usedCount, totalDiscountGiven, createdAt, updatedAt]
           properties:
             id: { type: integer }
-            usedCount: { type: integer, example: 132 }
-            totalDiscountGiven: { $ref: '#/components/schemas/Money' }
+            usedCount: { type: integer, description: 'سفارش‌های پرداخت‌شده و برنگشته (لغوشده نه) که این کد را دارند', example: 132 }
+            totalDiscountGiven: { allOf: [{ $ref: '#/components/schemas/Money' }], description: 'جمع تخفیف همان سفارش‌ها' }
             createdAt: { type: string, format: date-time }
+            updatedAt: { type: string, format: date-time }
     CampaignUpsertRequest:
       type: object
       required: [slug, title, startsAt, endsAt]
@@ -8522,40 +8592,119 @@ components:
         seo: { $ref: '#/components/schemas/SeoMeta' }
     AdminSettings:
       type: object
-      description: مقادیری که در `/config` منتشر می‌شوند
+      description: |
+        تنظیمات فروشگاه در پنل. بخشی از این‌ها در `/config` منتشر می‌شوند (روش‌های ارسال، ارسال رایگان، رزرو، مهلت مرجوعی، آستانه‌ی موجودی کم،
+        پشتیبانی، شبکه‌های اجتماعی و درگاه‌ها)، `siteStats` در `/site/stats`، و بقیه فقط رفتار سرور را عوض می‌کنند.
+
+        **`PUT` کل سند است:** همه‌ی فیلدهای سطح اول لازم‌اند (فیلد نیامده ← `400 FIELD_REQUIRED` روی همان فیلد؛ `null` فقط برای فیلدهای
+        `nullable`) و لیست‌ها **کامل جایگزین** می‌شوند. فیلدهای فقط‌خواندنی (`shippingMethods[].description`، `paymentGateways[].name`،
+        `paymentGateways[].available`، `siteStats.satisfaction.scale`، `siteStats.satisfaction.metrics[].label`) نادیده گرفته می‌شوند.
+        همه‌ی خطاهای شکل با هم و با مسیر فیلد برمی‌گردند (`shippingMethods.1.maxDays`، `social.0.url`). پاسخ همیشه کل سند تازه است.
+        ذخیره‌ی بی‌تغییر `200` است و ردیفی در لاگ تغییرات نمی‌گذارد؛ هر ذخیره‌ی دیگر یک ردیف `SETTINGS_UPDATED` با فیلدهای عوض‌شده.
+
+        **تغییرها فقط از این لحظه به بعد اثر دارند:** `paymentPendingMinutes` برای سفارش‌های تازه؛ `reservationHoldDays` برای گروه‌های رزرو تازه؛
+        `returnWindowDays` برای سفارش‌هایی که از این به بعد تحویل می‌شوند؛ `preShipmentFeedbackHours` برای عکس‌هایی که از این به بعد فرستاده می‌شوند؛
+        هزینه‌ها و آستانه‌ی ارسال رایگان از همگام‌سازی بعدی سبد (سفارش ثبت‌شده مبلغ خودش را دارد). دو استثنا: **اسم روش ارسال** روی سفارش‌های قبلی هم
+        عوض می‌شود (از تنظیمات خوانده می‌شود)، و `lowStockThreshold` همان لحظه همه‌جا.
+
+        **همزمانی:** دو ذخیره‌ی همزمان ← دومی `409 CHANGED_BY_SOMEONE_ELSE` و هیچ‌چیزش ذخیره نمی‌شود؛ پنل سند را دوباره می‌خواند.
+      required:
+        - shippingMethods
+        - defaultShippingMethod
+        - freeShippingThreshold
+        - freeShippingMethods
+        - reservationEnabled
+        - reservationHoldDays
+        - returnWindowDays
+        - lowStockThreshold
+        - preShipmentFeedbackHours
+        - paymentPendingMinutes
+        - nonShippingWeekdays
+        - supportPhone
+        - supportEmail
+        - supportHours
+        - social
+        - paymentGateways
+        - siteStats
+        - features
       properties:
         shippingMethods:
           type: array
+          description: |
+            دقیقاً همان روش‌هایی که فروشگاه دارد (`TIPAX` و `POST`)، هر کدام یک بار (وگرنه `400 SHIPPING_METHOD_LIST_INVALID`)؛ ترتیب لیست = ترتیب نمایش.
+            `COURIER` تا تصمیمش گرفته نشده `400 SHIPPING_METHOD_NOT_SUPPORTED` است. حداقل یکی فعال (`400 NO_ACTIVE_SHIPPING_METHOD`).
+            هر روش: `name` ۱ تا ۵۰ حرف؛ `baseCost` ۰ تا ۱۰٬۰۰۰٬۰۰۰؛ `minDays` ۰ تا ۳۰ و `maxDays` از `minDays` تا ۳۰ (`NUMBER_OUT_OF_RANGE` با `meta.min` و `meta.max`)؛
+            `icon` ۱ تا ۳۰ حرف کوچک انگلیسی، رقم یا خط تیره (`ICON_INVALID`)؛ `trackingUrlTemplate` با `https://`، شامل `{code}` و حداکثر ۳۰۰ حرف، یا `null`
+            (`TRACKING_URL_TEMPLATE_INVALID`)؛ `description` فقط خواندنی.
           items: { $ref: '#/components/schemas/ShippingMethod' }
-        freeShippingThreshold: { allOf: [{ $ref: '#/components/schemas/Money' }], example: 3000000 }
+        defaultShippingMethod:
+          allOf: [{ $ref: '#/components/schemas/ShippingMethodCode' }]
+          description: 'روش سبد تازه؛ باید یکی از روش‌های **فعال** لیست باشد (`400 DEFAULT_SHIPPING_METHOD_INVALID`)'
+        freeShippingThreshold: { allOf: [{ $ref: '#/components/schemas/Money' }], description: '۰ تا ۱۰۰٬۰۰۰٬۰۰۰؛ با `subtotal` (بعد از تخفیف محصولات، قبل از کد) مقایسه می‌شود', example: 3000000 }
         freeShippingMethods:
           type: array
+          uniqueItems: true
+          description: 'روش‌هایی که از آستانه به بعد رایگان‌اند؛ هر کدام یکی از روش‌های لیست `shippingMethods` (`COURIER` ← `SHIPPING_METHOD_NOT_SUPPORTED`، تکرار ← `LIST_ITEM_DUPLICATE`). خالی = ارسال رایگان نداریم'
           items: { $ref: '#/components/schemas/ShippingMethodCode' }
         reservationEnabled: { type: boolean, example: true }
-        reservationHoldDays: { type: integer, example: 4 }
-        returnWindowDays: { type: integer, example: 7 }
-        lowStockThreshold: { type: integer, example: 5 }
-        preShipmentFeedbackHours: { type: integer, description: '[پیشنهادی] مهلت پاسخ مشتری به عکس قبل از تأیید خودکار', example: 24 }
-        paymentPendingMinutes: { type: integer, example: 15 }
+        reservationHoldDays: { type: integer, minimum: 1, maximum: 14, example: 4 }
+        returnWindowDays: { type: integer, minimum: 0, maximum: 60, example: 7 }
+        lowStockThreshold: { type: integer, minimum: 1, maximum: 20, description: 'کمتر از این ← «موجودی کم» و `availableQuantity`', example: 5 }
+        preShipmentFeedbackHours: { type: integer, minimum: 1, maximum: 168, description: مهلت پاسخ مشتری به عکس قبل از تأیید خودکار, example: 24 }
+        paymentPendingMinutes: { type: integer, minimum: 5, maximum: 60, example: 15 }
         nonShippingWeekdays:
           type: array
-          items: { type: string }
+          uniqueItems: true
+          description: 'روزهایی که ارسال نداریم و در روز کاری حساب نمی‌شوند؛ کمتر از ۷ روز (`400 NON_SHIPPING_WEEKDAYS_INVALID`)، روز ناشناخته ← `WEEKDAY_INVALID`'
+          items: { type: string, enum: [SATURDAY, SUNDAY, MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY] }
           example: [FRIDAY]
-        supportPhone: { type: string }
-        supportEmail: { type: string, format: email }
+        supportPhone: { type: string, nullable: true, description: 'موبایل یا تلفن ثابت ایران با پیش‌شماره (ارقام فارسی لاتین می‌شوند)؛ `SUPPORT_PHONE_INVALID`', example: '02191001234' }
+        supportEmail: { type: string, format: email, maxLength: 100, nullable: true, description: '`EMAIL_INVALID`', example: support@kiva.ir }
         supportHours:
           type: array
+          maxItems: 7
+          description: |
+            هر ردیف (`SUPPORT_HOURS_INVALID` روی همان ردیف): `label` ۱ تا ۵۰ حرف؛ `weekdays` حداقل یک روز، بدون تکرار؛ `from` و `to` به شکل `HH:mm`
+            و `from < to`، یا هر دو `null` برای «تعطیل». بیشتر از ۷ ردیف ← `TOO_MANY_ITEMS`.
           items: { $ref: '#/components/schemas/SupportHours' }
         social:
           type: array
+          maxItems: 10
+          description: 'هر ردیف (`SOCIAL_LINK_INVALID` روی همان ردیف): `channel`؛ `name` ۱ تا ۴۰ حرف؛ `url` با `https://` و حداکثر ۳۰۰ حرف؛ `handle` حداکثر ۵۰ حرف یا `null`. بیشتر از ۱۰ ← `TOO_MANY_ITEMS`'
           items: { $ref: '#/components/schemas/SocialLink' }
         paymentGateways:
           type: array
-          items: { $ref: '#/components/schemas/PaymentGateway' }
-        siteStats: { $ref: '#/components/schemas/SiteStats' }
+          description: |
+            دقیقاً سه درگاه، هر کدام یک بار (`400 PAYMENT_GATEWAY_LIST_INVALID`)؛ ترتیب لیست = ترتیب نمایش در تسویه.
+            حداقل یکی فعال (`400 NO_ACTIVE_GATEWAY`) و دقیقاً یکی پیش‌فرض که فعال هم باشد (`400 DEFAULT_GATEWAY_INVALID`).
+          items: { $ref: '#/components/schemas/AdminPaymentGatewaySetting' }
+        siteStats:
+          allOf: [{ $ref: '#/components/schemas/SiteStats' }]
+          description: |
+            عددهای بازاریابی، **دستی**؛ همین‌ها در `GET /site/stats` منتشر می‌شوند (حساب نمی‌شوند). همه‌ی فیلدهای `SiteStats` لازم‌اند و عددها
+            ۰ تا ۱۰٬۰۰۰٬۰۰۰، درصدها ۰ تا ۱۰۰ (`NUMBER_OUT_OF_RANGE`). `satisfaction` بی‌مقدار `null` است؛ با مقدار: `averageRating` ۰ تا ۵ با حداکثر
+            یک رقم اعشار (`NUMBER_OUT_OF_RANGE`)، `totalCount` ≥ ۰، `metrics` هر `key` حداکثر یک بار و `sources` بدون تکرار (`LIST_ITEM_DUPLICATE`).
         features:
           type: object
-          additionalProperties: { type: boolean }
+          description: |
+            پرچم‌های قابلیت. فقط همین سه کلید (کلید ناشناخته ← `400 FEATURE_UNKNOWN`)، و هر سه لازم: `wishlistShare` (لینک اشتراک علاقه‌مندی‌ها)،
+            `reviewMedia` (عکس در نظرها)، `giftWrap` (فعلاً پشتیبانی نمی‌شود: `true` ← `400 FEATURE_NOT_AVAILABLE`).
+          required: [wishlistShare, reviewMedia, giftWrap]
+          additionalProperties: false
+          properties:
+            wishlistShare: { type: boolean, example: false }
+            reviewMedia: { type: boolean, example: false }
+            giftWrap: { type: boolean, example: false }
+    AdminPaymentGatewaySetting:
+      type: object
+      description: یک درگاه در تنظیمات پنل
+      required: [code, name, isActive, isDefault, available]
+      properties:
+        code: { $ref: '#/components/schemas/PaymentGatewayCode' }
+        name: { type: string, description: فقط خواندنی, example: زرین‌پال }
+        isActive: { type: boolean, description: فروشگاه این درگاه را روشن کرده, example: true }
+        isDefault: { type: boolean, description: درگاهی که تسویه اول انتخاب می‌کند, example: true }
+        available: { type: boolean, description: 'فقط خواندنی: فعال **و** سرور برایش آداپتر دارد؛ فقط همین‌ها به مشتری پیشنهاد می‌شوند', example: true }
 
     # ============ ADMIN · SUPPORT & REPORTS ============
     AdminReviewListResponse:
@@ -8629,42 +8778,51 @@ components:
               items: { $ref: '#/components/schemas/Address' }
             recentOrders:
               type: array
-              description: 'آخرین ۵ سفارش، تازه‌ترین اول؛ برای همه: `GET /admin/orders?q=<موبایل>`'
+              description: 'آخرین ۵ سفارش **در هر وضعیتی** (پرداخت‌نشده و منقضی هم، تا پشتیبانی ببیند)، تازه‌ترین اول؛ برای همه: `GET /admin/orders?q=<موبایل>`'
               items: { $ref: '#/components/schemas/AdminOrderListItem' }
     AdminReportOverview:
       type: object
+      description: 'داشبورد مدیریتی یک بازه. «سفارش دوره» در `GET /admin/reports/overview`.'
+      required: [from, to, revenue, ordersCount, averageOrderValue, newCustomers, reservationShare, mediaApprovalRate, changeRequestRate, returnRate, discountTotal, shippingMix, messengerMix, topProducts, dailySeries]
       properties:
         from: { type: string, format: date }
         to: { type: string, format: date }
-        revenue: { $ref: '#/components/schemas/Money' }
-        ordersCount: { type: integer }
-        averageOrderValue: { $ref: '#/components/schemas/Money' }
-        newCustomers: { type: integer }
-        reservationShare: { type: number, description: درصد سفارش‌های رزروی, example: 18.5 }
-        mediaApprovalRate: { type: number, description: درصد تأیید عکس قبل از ارسال, example: 97.2 }
-        changeRequestRate: { type: number, example: 2.1 }
-        returnRate: { type: number, example: 0.8 }
-        discountTotal: { $ref: '#/components/schemas/Money' }
+        revenue: { allOf: [{ $ref: '#/components/schemas/Money' }], description: 'جمع (پرداخت‌شده − برگشت‌داده‌شده) ِ سفارش‌های دوره؛ پرداخت‌شده = مبلغ ثبت + مانده‌ی پرداخت‌شده' }
+        ordersCount: { type: integer, description: تعداد سفارش‌های دوره }
+        averageOrderValue: { allOf: [{ $ref: '#/components/schemas/Money' }], description: '`revenue ÷ ordersCount` به نزدیک‌ترین تومان (نیمه به بالا)؛ بدون سفارش ۰' }
+        newCustomers: { type: integer, description: کاربرانی که **اولین** سفارش پرداخت‌شده‌شان در این بازه است }
+        reservationShare: { type: number, description: درصد سفارش‌های دوره که عضو گروه رزروند, example: 18.5 }
+        mediaApprovalRate: { type: number, description: 'از سفارش‌هایی که **اولین** عکس قبل از ارسالشان در بازه فرستاده شد، درصد آن‌هایی که هیچ‌وقت درخواست تغییر نداشتند؛ بدون چنین سفارشی ۰', example: 97.2 }
+        changeRequestRate: { type: number, description: 'از همان سفارش‌ها، درصد آن‌هایی که حداقل یک درخواست تغییر داشتند (با `mediaApprovalRate` جمعش ۱۰۰ است، یا هر دو ۰)', example: 2.1 }
+        returnRate: { type: number, description: 'از سفارش‌هایی که در بازه تحویل شدند، درصد آن‌هایی که درخواست مرجوعی دارند (تا ساخته شدن مرجوعی همیشه ۰)', example: 0.8 }
+        discountTotal: { allOf: [{ $ref: '#/components/schemas/Money' }], description: 'جمع تخفیف کد ِ سفارش‌های دوره' }
         shippingMix:
           type: object
+          description: 'تعداد سفارش‌های دوره برای **هر** روش ارسال (`ShippingMethodCode`)، صفر هم'
           additionalProperties: { type: integer }
-          example: { TIPAX: 120, POST: 310 }
+          example: { TIPAX: 120, POST: 310, COURIER: 0 }
         messengerMix:
           type: object
+          description: 'تعداد سفارش‌های دوره برای **هر** پیام‌رسان (`PhotoMessengerChannel`)، صفر هم'
           additionalProperties: { type: integer }
           example: { TELEGRAM: 200, BALE: 130, RUBIKA: 100 }
         topProducts:
           type: array
+          maxItems: 5
+          description: '۵ محصول با بیشترین تعداد فروخته‌شده در سفارش‌های دوره (ردیف‌های **فعلی** سفارش، یعنی بعد از درخواست تغییر)؛ مساوی ← شناسه‌ی کوچک‌تر اول'
           items:
             type: object
+            required: [product, unitsSold, revenue]
             properties:
               product: { $ref: '#/components/schemas/ProductRef' }
               unitsSold: { type: integer }
-              revenue: { $ref: '#/components/schemas/Money' }
+              revenue: { allOf: [{ $ref: '#/components/schemas/Money' }], description: جمع مبلغ ردیف‌های همین محصول }
         dailySeries:
           type: array
+          description: 'هر روز تهران ِ بازه، به ترتیب، **صفر هم**: فروش و تعداد سفارش‌های دوره که `paidOn` شان همان روز است'
           items:
             type: object
+            required: [date, revenue, orders]
             properties:
               date: { type: string, format: date }
               revenue: { $ref: '#/components/schemas/Money' }

@@ -2601,7 +2601,7 @@ Route: 200 با AdminOrder
 
 | گام | عنوان | اندازه | وضعیت |
 |---|---|---|---|
-| ۴.۰ | کانترکت 1.11.0 | M | ⬜ |
+| ۴.۰ | کانترکت 1.11.0 | M | ✅ |
 | ۴.۱ | تنظیمات فروشگاه | L | ⬜ |
 | ۴.۲ | کدهای تخفیف در پنل | M | ⬜ |
 | ۴.۳ | جزئیات مشتری، فیلتر نقش و «آخرین ادمین» | M | ⬜ |
@@ -2629,6 +2629,13 @@ Route: 200 با AdminOrder
 | 15 | فیلتر نقش | پارامتر تازه‌ی `role` روی `GET /admin/customers` | صفحه‌ی نقش‌ها باید کارمندها رو پیدا کنه |
 | 16 | جزئیات مشتری | `recentOrders` = ۵ سفارش آخر **در هر وضعیتی** (پرداخت‌نشده هم، تا پشتیبانی ببینه)، تازه‌ترین اول. خوندن ثبت نمی‌شه (کانترکت)، ولی شماره‌ی مشتری هیچ‌وقت تو لاگ برنامه نمیاد | |
 | 17 | گزارش: کدوم سفارش | «سفارش دوره» = `paidOn` در بازه و لغو نشده. همه‌ی عددهای پولی از همین سفارش‌ها | تعریف یکسان برای همه‌ی کارت‌ها |
+| 18 | ترتیب درگاه‌ها (تازه، گام ۴.۰) | مثل روش‌های ارسال: ترتیب لیست `paymentGateways` = ترتیب نمایش در تسویه (`sortOrder`) | تصمیم ۳ نگفته بود؛ پنل فقط با جابه‌جا کردن ردیف‌ها ترتیب رو عوض می‌کنه |
+| 19 | «لازم ولی nullable» (تازه، گام ۴.۰) | `supportPhone` و `supportEmail` لازم‌ان ولی `null` می‌گیرن: نیومده ← `400 FIELD_REQUIRED`، `null` ← پاک. route فیلد نیومده رو از `null` جدا می‌کنه | تصمیم ۱ «نیومده یعنی ۴۰۰» رو گفته؛ بدون جدا کردن، نیومدن ِ بی‌صدا شماره‌ی پشتیبانی رو پاک می‌کرد |
+| 20 | `siteStats` (تازه، گام ۴.۰) | همه‌ی فیلدهای `SiteStats` لازم؛ عددها ۰ تا ۱۰٬۰۰۰٬۰۰۰، درصدها ۰ تا ۱۰۰؛ `satisfaction` nullable، با مقدار: `averageRating` ۰ تا ۵ با یه رقم اعشار (به‌صورت «دهم» ذخیره می‌شه، بدون `Double`)، `scale` همیشه ۵ و فقط‌خوندنی، `metrics[].label` از `key` ساخته می‌شه (فقط‌خوندنی)، هر `key` یه بار، `sources` بدون تکرار | تصمیم ۴ فقط «عددها ≥ ۰، درصدها ۰ تا ۱۰۰» رو گفته بود؛ متن فارسی فقط لایه‌ی HTTP (بخش ۱، ردیف ۱۶) |
+| 21 | کدهای فیلدی عمومی (تازه، گام ۴.۰) | `NUMBER_OUT_OF_RANGE` (`meta.min`/`meta.max`) برای همه‌ی سقف‌های تصمیم ۴؛ `TEXT_TOO_LONG` (`meta.maxLength`)؛ `TOO_MANY_ITEMS` (`meta.maxItems`)؛ `LIST_ITEM_DUPLICATE`؛ و `SHIPPING_METHOD_LIST_INVALID`، `PAYMENT_GATEWAY_LIST_INVALID`، `ICON_INVALID`، `WEEKDAY_INVALID`، `NON_SHIPPING_WEEKDAYS_INVALID`، `DISCOUNT_TYPE_INVALID` | فهرست ۴.۰ برای سقف عددها، طول اسم روش، تعداد ردیف‌ها و لیستی که روش یا درگاهی رو کم یا دو بار داره کدی نداشت. یه کد عمومی با `meta` به‌جای ده‌ها کد هم‌معنی |
+| 22 | کد تخفیف: سقف‌های دیگه (تازه، گام ۴.۰) | `label` ۱ تا ۲۰۰؛ `minSubtotal` ۰ تا ۱٬۰۰۰٬۰۰۰٬۰۰۰؛ `maxDiscount` ۱٬۰۰۰ تا ۱۰۰٬۰۰۰٬۰۰۰؛ `usageLimit`/`perUserLimit` ۱ تا ۱٬۰۰۰٬۰۰۰؛ `categoryIds` حداکثر ۵۰ و `productIds` حداکثر ۲۰۰، بدون تکرار. ناموجود ← `400 CATEGORY_NOT_FOUND` روی `categoryIds.i` و `400 PRODUCT_NOT_FOUND` روی `productIds.i`. `PUT` کل کد رو جایگزین می‌کنه (نیومده = پیش‌فرض کانترکت). پاسخ فیلد تازه‌ی `updatedAt` داره | `V30` ستون `updatedOn` می‌سازه و پنل باید بدونه آخرین بار کی عوض شده؛ سقف‌ها جلوی عدد بی‌معنی (و سرریز `Int`) رو می‌گیرن |
+| 23 | متن `ROLE_CHANGE_NOT_ALLOWED` (تازه، گام ۴.۰) | عمومی شد (نقش‌های خودت، و آخرین ادمین)؛ پنل با `meta.reason = LAST_ADMIN` جمله‌ی خودش رو می‌تونه نشون بده | با `LAST_ADMIN` همون کد میاد و متن قبلی فقط «نقش‌های خودت» رو می‌گفت |
+| 24 | گزارش: خطاها و کلیدها (تازه، گام ۴.۰) | `from`/`to` نیومده ← `400 FIELD_REQUIRED`؛ بدشکل ← `DATE_INVALID`؛ `DATE_RANGE_INVALID` و `DATE_RANGE_TOO_LONG` (`meta.maxDays = 366`) روی `to`. `shippingMix` همه‌ی مقدارهای `ShippingMethodCode` (`COURIER` هم، با صفر) و `messengerMix` همه‌ی `PhotoMessengerChannel` | «هر روش، صفر هم» یعنی کلیدها ثابت باشن تا نمودار پنل شکل عوض نکنه |
 
 ### ۹.۳ تعریف عددهای گزارش (`GET /admin/reports/overview`)
 
@@ -2747,15 +2754,22 @@ Route: 200 با AdminSettings ِ تازه
 | 4 | `PUT /admin/customers/{customerId}/roles` | «آخرین ADMIN نقشش را از دست نمی‌دهد» (`meta.reason = LAST_ADMIN`)؛ «تغییر در رویدادهای امنیتی و لاگ تغییرات ثبت می‌شود» |
 | 5 | `AdminCustomerDetail` | «`recentOrders` پنج سفارش آخر در هر وضعیت» |
 | 6 | `GET /admin/reports/overview` | جدول ۹.۳؛ `400 DATE_RANGE_INVALID` و `DATE_RANGE_TOO_LONG`؛ `required` روی همه‌ی فیلدهای `AdminReportOverview` |
+| 7 | `SiteStats` و `SatisfactionSummary` (تازه، گام ۴.۰) | `required` روی همه، سقف‌ها، `satisfaction` nullable، `scale` و `metrics[].label` فقط‌خوندنی (تصمیم ۲۰) |
+| 8 | `DiscountCode` (تازه، گام ۴.۰) | `updatedAt` (تازه) و `required` روی فیلدهای خودش؛ سقف‌های تصمیم ۲۲؛ `409` ِ `POST`/`PUT` و توضیح `DELETE` |
+| 9 | `AdminSettings.supportPhone`/`supportEmail` (تازه، گام ۴.۰) | لازم و nullable (تصمیم ۱۹) |
+
+**کدهای فیلدی تازه** (فقط متن فارسی، تو `ErrorCode` نمی‌رن): همه‌ی کدهای گام ۴.۰ و تصمیم ۲۱. `DUPLICATE_CODE`، `CHANGED_BY_SOMEONE_ELSE` و `ROLE_CHANGE_NOT_ALLOWED` از قبل تو `ErrorCode` هستن.
 
 ### ۹.۸ گام‌ها
 
-#### گام ۴.۰: کانترکت 1.11.0 · M ⬜
+#### گام ۴.۰: کانترکت 1.11.0 · M ✅
 
 برنچ `panel-settings`؛ ردیف‌های ۹.۷؛ متن کدهای تازه (`SHIPPING_METHOD_NOT_SUPPORTED`، `NO_ACTIVE_SHIPPING_METHOD`، `NO_ACTIVE_GATEWAY`، `DEFAULT_GATEWAY_INVALID`، `DEFAULT_SHIPPING_METHOD_INVALID`، `FEATURE_NOT_AVAILABLE`، `FEATURE_UNKNOWN`، `TRACKING_URL_TEMPLATE_INVALID`، `SUPPORT_PHONE_INVALID`، `EMAIL_INVALID`، `SUPPORT_HOURS_INVALID`، `SOCIAL_LINK_INVALID`، `MAX_DISCOUNT_NOT_ALLOWED`، `DISCOUNT_VALUE_INVALID`، `DISCOUNT_CODE_TEXT_INVALID`، `DATE_RANGE_TOO_LONG`).
 
 **تموم شده یعنی:**
-- [ ] کانترکت معتبر، `ErrorMessagesTest` سبز.
+- [x] کانترکت معتبر، `ErrorMessagesTest` سبز.
+
+**یادداشت پیاده‌سازی:** برنچ `panel-settings` از نوک فاز ۳ (`change-requests`) ساخته شد، چون فازهای ۱ تا ۳ هنوز منتظر merge به `main` ـن. هفت تصمیم تازه (۱۸ تا ۲۴ ِ ۹.۲) و سه ردیف تازه‌ی ۹.۷ (۷ تا ۹). `AdminSettings` کامل بازنویسی شد (هر قانون و سقف روی همون فیلد، «از کِی اثر داره»، ۴۰۹)؛ `AdminPaymentGatewaySetting` تازه؛ `defaultShippingMethod` تازه؛ `features` با سه کلید و `additionalProperties: false`. `EMAIL_INVALID` از قبل متن داشت. YAML با snakeyaml معتبره و هر ۱۳۲۷ `$ref` پیدا می‌شن. تست‌ها روی یه Postgres ِ موقت (پورت ۵۴۳۳) و با `JAVA_TOOL_OPTIONS=-Djdk.net.unixdomain.tmpdir=C:\t` اجرا شدن (بدونش Gradle «Unable to establish loopback connection» می‌ده).
 
 ---
 
@@ -6126,3 +6140,4 @@ kiva {
 | ۲۷ مهر ۱۴۰۵ | ۳.۳ | Phase 3 step 3.3 | `REQUEST_CHANGE` در `SubmitMediaFeedbackUc` (شکل با همه‌ی خطاها با هم، قفل ۹، رنگ از read model: ناموجود ۴۰۰، غیرفعال ۴۲۲)، `canRequestChange`، `feedback` ِ کامل با `resolution` در پاسخ. دو تست فاز ۲ با قرارداد تازه به‌روز شدن. ۲۴۸۸ تست سبز |
 | ۲۷ مهر ۱۴۰۵ | ۳.۴ | Phase 3 step 3.4 | `ResolveChangeRequestUc` (قفل‌های ۶، ۹، ۷، ۸؛ `CANCEL_ITEM` ِ تنها قلم از راه `OrderCancellation` با قفل ۵ و چک «همون درخواست»)، route ِ `…/change-request/resolution`، `OrderItems.snapshotOf` (مشترک با ثبت سفارش)، پیامک «درخواستت بررسی شد» (مسیر کامل ۹ مرحله‌ای)، `ORDER_CHANGE_RESOLVED` با جمله‌اش، `BALANCE_DUE`/`GROUP_NOT_READY` در ارسال. ترتیب دو ۴۲۲: سقف محصول قبل از موجودی. ۱۲ تست route سبز؛ کل مجموعه برای این گام دوباره اجرا نشد |
 | ۲۷ مهر ۱۴۰۵ | ۳.۵ | Phase 3 step 3.5 | `CHANGE_REQUESTS_REVIEW.md` (ردیف‌های ۷، ۸، ۲۱ و ۱۵ با تست‌هاشون؛ شش خرابکاری، همه قرمز)؛ چهار تست تازه (آخرین کیف: تغییر و خرید همزمان؛ دو تعویض ضربدری همزمان؛ یه کلید برای پرداخت مانده؛ اسکن لاگ ِ درخواست تغییر)؛ تست کل مسیر رنگ گرون‌تر تا ارسال با کانترکت و هویت جمع‌ها؛ assertion ِ بی‌اثر ِ `meta.balanceDue` درست شد؛ راهنمای فرانت پنل (بخش ۷) و مشتری. کل مجموعه دوباره اجرا شد: ۲۵۰۵ تست سبز. merge منتظر تأیید |
+| ۲۸ مهر ۱۴۰۵ | ۴.۰ | Phase 4 step 4.0 | کانترکت 1.11.0 با هر ۶ ردیف ِ ۹.۷ و سه ردیف تازه (۷ تا ۹)؛ هفت تصمیم تازه (۱۸ تا ۲۴ ِ ۹.۲: ترتیب درگاه‌ها، «لازم ولی nullable»، `siteStats`، کدهای فیلدی عمومی، سقف‌های کد تخفیف و `updatedAt`، متن عمومی ِ `ROLE_CHANGE_NOT_ALLOWED`، خطاها و کلیدهای گزارش). YAML با snakeyaml معتبره و هر ۱۳۲۷ `$ref` پیدا می‌شن. متن ۲۵ کد فیلدی تازه. برنچ `panel-settings` از نوک فاز ۳ |
