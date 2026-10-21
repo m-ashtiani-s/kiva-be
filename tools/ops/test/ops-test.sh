@@ -202,8 +202,7 @@ stub curl 'for a in "$@"; do case "$a" in *health*) exit 7;; esac; done; echo "{
 rm -f "$A/state"/last-*
 PATH="$STUB:$PATH" bash "$T/ops/alerts.sh" > "$A/out3" 2>&1
 expect "alerts: Faraz refusing is exit 1 and nothing is marked sent" '[ $? -eq 1 ] && [ ! -f "$A/state/last-HEALTH_DOWN" ]'
-stub curl 'printf "%s
-" "$@" >> "'"$A"'/sent"; echo "{\"status\":\"success\"}"'
+stub curl 'printf "%s\n" "$@" >> "'"$A"'/sent"; echo "{\"status\":\"success\"}"'
 : > "$A/sent"; echo "12:40:00.000 [x] [t] ERROR c.k.Foo - must not be read by --test" > "$A/journal"
 PATH="$STUB:$PATH" bash "$T/ops/alerts.sh" --test > "$A/out4" 2>&1
 expect "alerts: --test sends TEST at once and reads no log" '[ $? -eq 0 ] && grep -q "\"what\":\"TEST\"" "$A/sent" && [ "$(grep -c "\"what\"" "$A/sent")" -eq 1 ] && [ -s "$A/journal" ]'
@@ -265,7 +264,7 @@ if command -v systemd-analyze >/dev/null; then
     echo "== systemd units"
     expect "the backup runs at 03:00 Tehran" 'systemd-analyze calendar "*-*-* 03:00:00 Asia/Tehran" | grep -q "03:00:00 +0330"'
     U="$T/units"; mkdir -p "$U"
-    for u in "$OPS"/systemd/*.service "$OPS"/systemd/*.timer; do tr -d '' < "$u" > "$U/$(basename "$u")"; done
+    for u in "$OPS"/systemd/*.service "$OPS"/systemd/*.timer; do tr -d '\r' < "$u" > "$U/$(basename "$u")"; done
     # The ExecStart paths only exist on the server; anything else systemd-analyze says is a mistake in a unit.
     complaints="$(systemd-analyze verify "$U"/*.service "$U"/*.timer 2>&1 | grep -vE 'is not executable|No such file|Failed to prepare filename|not found' || true)"
     expect "every unit verifies" '[ -z "$complaints" ]'
