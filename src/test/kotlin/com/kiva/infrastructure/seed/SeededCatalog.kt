@@ -39,28 +39,35 @@ class SeededCatalog(clock: Clock) {
 
     private val db = TestDatabase.database
 
-    val seeder: DevCatalogSeeder = run {
-        val transactions = ExposedTransactionManager(db)
+    private val transactions = ExposedTransactionManager(db)
+    private val readModel = ProductQmRepositoryImpl()
+
+    /** The use case the seeder makes its bags with, for a test that wants one more product made the same way. */
+    val createProduct: CreateProductUc = run {
         val products = ProductRepositoryImpl()
         val inventories = InventoryRepositoryImpl()
-        val readModel = ProductQmRepositoryImpl()
         val productDomainService = ProductDomainService(
             products, ProductIdGeneratorImpl(), CategoryRepositoryImpl(), MaterialRepositoryImpl(), ColorRepositoryImpl(),
         )
-        DevCatalogSeeder(
-            CreateProductUc(
-                transactions, productDomainService, products, readModel, ProductInput(JsoupHtmlSanitizer), MediaAttachments(MediaRepositoryImpl()),
-                InventoryDomainService(inventories), inventories, AuditTrailImpl(), clock,
-            ),
-            ListCategoriesUc(transactions, CategoryRepositoryImpl(), readModel, MediaRepositoryImpl()),
-            ListMaterialsUc(transactions, MaterialRepositoryImpl(), readModel),
-            clock,
+        CreateProductUc(
+            transactions, productDomainService, products, readModel, ProductInput(JsoupHtmlSanitizer), MediaAttachments(MediaRepositoryImpl()),
+            InventoryDomainService(inventories), inventories, AuditTrailImpl(), clock,
         )
     }
 
+    val seeder: DevCatalogSeeder = DevCatalogSeeder(
+        createProduct,
+        ListCategoriesUc(transactions, CategoryRepositoryImpl(), readModel, MediaRepositoryImpl()),
+        ListMaterialsUc(transactions, MaterialRepositoryImpl(), readModel),
+        clock,
+    )
+
     val slugs: List<String> = DevCatalogData.bags.map { it.slug }
 
-    fun deleteSeeded() {
+    fun deleteSeeded() = deleteProducts(slugs)
+
+    /** The products of [slugs], events and read model rows, as [deleteSeeded] removes the seeded ones. */
+    fun deleteProducts(slugs: List<String>) {
         transaction(db) {
             val productIds = ProductQmTbl.selectAll().where { ProductQmTbl.slug inList slugs }.map { it[ProductQmTbl.productId] }
             val variantIds = ProductVariantQmTbl.selectAll()
