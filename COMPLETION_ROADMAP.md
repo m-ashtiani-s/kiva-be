@@ -2892,7 +2892,7 @@ Route: 200 با AdminSettings ِ تازه
 | ۵.۲ | سؤالات متداول | M | ✅ |
 | ۵.۳ | نوار اطلاعیه | S | ✅ |
 | ۵.۴ | `GET /config` | M | ✅ |
-| ۵.۵ | ریویو | S | ⬜ |
+| ۵.۵ | ریویو | S | ✅ |
 
 ### ۱۰.۲ تصمیم‌های این فاز
 
@@ -3091,12 +3091,16 @@ CREATE TABLE announcement_tbl (
 
 ---
 
-#### گام ۵.۵: ریویو · S ⬜
+#### گام ۵.۵: ریویو · S ✅
 
 **می‌سازی:** `CONTENT_REVIEW.md` (ردیف ۴ ِ بخش ۳؛ خرابکاری: پاک‌سازی HTML در صفحه، جواب سؤال و توضیح محصول، و هایلایت امن)؛ `docs/FRONTEND_CONTENT.md` (چه چیزی از `/config` میاد و چی دیگه نباید تو `kiva.js` ثابت بمونه)؛ دور با پنل و kiva-fe.
 
 **تموم شده یعنی:**
-- [ ] همه‌ی خرابکاری‌ها قرمز می‌کنن؛ merge به `main`.
+- [x] همه‌ی خرابکاری‌ها قرمز می‌کنن.
+- [ ] دور با پنل و kiva-fe (اینجا نبودن؛ مراحلش در `CONTENT_REVIEW.md`).
+- [ ] merge به `main` (منتظر تأیید؛ فازهای ۱ تا ۴ هم هنوز merge نشدن).
+
+**یادداشت پیاده‌سازی:** `CONTENT_REVIEW.md` (ردیف‌های ۴، ۱ و ۱۵ با تست‌هاشون؛ دوازده خرابکاری، چهارتاش تازه در این گام: پاک‌سازی متن صفحه، جواب سؤال و توضیح محصول، و علامت زدن فقط در متن). `docs/FRONTEND_CONTENT.md` (چی از `/config` میاد و چی دیگه نباید تو `kiva.js` ثابت بمونه) و README. کامپایل همه‌ی تست‌ها از صفر با `OutOfMemoryError` ِ daemon ِ Kotlin می‌شکست؛ `kotlin.daemon.jvmargs=-Xmx3g` در `gradle.properties`. اجرای کامل: ۲۷۲۲ تست سبز، صفر هشدار.
 
 ---
 
@@ -6207,3 +6211,4 @@ kiva {
 | ۲۹ مهر ۱۴۰۵ | ۵.۲ | Phase 5 step 5.2 | `FaqDraft`/`FaqBook`، قفل `faq`، `FaqSearch` و `JsoupHtmlText` (هایلایت امن)، سه UseCase، `GET /faq` ِ کش‌شونده، `FAQ_SAVED`. تصمیم ۲۴. دو خرابکاری قرمز |
 | ۲۹ مهر ۱۴۰۵ | ۵.۳ | Phase 5 step 5.3 | `SiteLink`، `AnnouncementDraft`/`AnnouncementBar` (`showingAt`)، قفل `announcements`، دو UseCase و دو route، `ANNOUNCEMENTS_SAVED`. دو خرابکاری قرمز |
 | ۲۹ مهر ۱۴۰۵ | ۵.۴ | Phase 5 step 5.4 | `SupportHours.isOpenAt`، `SiteContentRepository`، `GetSiteConfigUc`، `SiteConfigHttpResponse` (متن‌های پرشده، `phoneDisplay`)، `GET /config` ِ کش‌شونده، نگاشت‌های مشترک با پاسخ تنظیمات. تصمیم ۲۵. دو خرابکاری قرمز |
+| ۲۹ مهر ۱۴۰۵ | ۵.۵ | Phase 5 step 5.5 | `CONTENT_REVIEW.md` (سه ردیف، دوازده خرابکاری)، `docs/FRONTEND_CONTENT.md`، README، حافظه‌ی daemon ِ Kotlin. ۲۷۲۲ تست سبز. دور با پنل و merge منتظر تو |

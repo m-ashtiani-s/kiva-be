@@ -150,6 +150,14 @@ behaviour for the panel; [PANEL_SETTINGS_REVIEW.md](PANEL_SETTINGS_REVIEW.md) th
 Locally, a shorter payment window shows an order expiring in a few minutes: set it to 5 in the panel (5 to 60; the
 default is 15), and back to 15 afterwards.
 
+The site's content: `GET /config` gives the frontend every number and text that used to be fixed in `kiva.js`
+(shipping, free shipping, messengers, support, the announcement bar, footer links), made from the settings and from
+one row of `sitecontent_tbl` (brand, perks, footer links, trust badges; changed with SQL until the panel has a form for
+it). Static pages (`/pages/{slug}`; terms, privacy, returns and about must be written before launch), the FAQ (`/faq`,
+with search) and the announcement bar are written in the panel by ADMIN or CONTENT_EDITOR.
+[docs/FRONTEND_CONTENT.md](docs/FRONTEND_CONTENT.md) is the whole behaviour; [CONTENT_REVIEW.md](CONTENT_REVIEW.md) the
+risks and the tests that guard them.
+
 A local purchase end to end: start with `KIVA_SEED_ENABLED=true`, run kiva-fe on `http://localhost:3100`, log in with
 the code from the `LogSmsSender` line, place an order, and press «پرداخت موفق» on the pretend bank's page; it sends
 the browser back through the callback to the frontend's result page. [docs/FRONTEND_PURCHASE.md](docs/FRONTEND_PURCHASE.md)
