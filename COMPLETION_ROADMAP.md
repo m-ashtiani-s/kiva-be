@@ -3122,7 +3122,7 @@ CREATE TABLE announcement_tbl (
 | ۶.۵ | امنیت سرور | قبل از ۶.۹ | 🔧 |
 | ۶.۶ | حساب‌ها و رازها: زرین‌پال و الگوهای پیامک | قبل از ۶.۹ | 🔧 |
 | ۶.۷ | داده و محتوای واقعی | بعد از فاز ۵ | 🔧 |
-| ۶.۸ | هشدارها | قبل از ۶.۹ | ⬜ |
+| ۶.۸ | هشدارها | قبل از ۶.۹ | 🔧 |
 | ۶.۹ | دور واقعی و چک‌لیست نهایی | آخر | ⬜ |
 
 ### ۱۱.۲ گام‌ها
@@ -3203,12 +3203,14 @@ CREATE TABLE announcement_tbl (
 
 **یادداشت پیاده‌سازی:** `purge_seed.sql` و `purge-seed.sh` (پیش‌فرض dry run؛ dump قبل از `--apply`؛ رد وقتی برنامه روشنه، پرداختی بازه یا سفارش تستی موجودی ِ محصول واقعی رو نگه داشته؛ تصمیم ۹)، `trust_badges.sql` (با سه حالت روی Postgres امتحان شد). `PurgeSeedSqlOnDatabaseTest`: شش تست روی kiva_test، در یه تراکنش که rollback می‌شه؛ سه خرابکاری (بدون چک پرداخت باز، کیف فقط با کد، نگه داشتن Idempotency-Keyها) هر کدوم یه تست رو قرمز کردن. `SeededCatalog` حالا `createProduct` و `deleteProducts` داره.
 
-#### گام ۶.۸: هشدارها
+#### گام ۶.۸: هشدارها · 🔧
 
 - `tools/ops/alerts.sh` با systemd timer هر ۵ دقیقه: `journalctl -u kiva --since` ِ اجرای قبلی، و اگه یکی از این‌ها پیدا شد، یه پیامک با الگوی `KIVA_FARAZ_ALERT_PATTERN` (متغیر `what`) به موبایل صاحب پروژه: `PAID_BUT_ORDER_NOT_PAYABLE`، `GatewayFailure.Rejected`، `AmountMismatch`، `VERIFYING for over 10 minutes`، `Job .* failed`، و هر ERROR ِ دیگه حداکثر یه بار در ساعت.
 - `/health` هر دقیقه از بیرون (پایش آروان یا یه سرویس ساده).
 
 **تموم شده یعنی:** یه ERROR ِ ساختگی تو لاگ ← پیامک تا ۵ دقیقه بعد.
+
+**یادداشت پیاده‌سازی:** `alerts.sh` (cursor ِ journalctl، هشت نوع، `what` فقط کلمه‌ی ثابت، فوری‌ها هر ۱۵ دقیقه و بقیه ساعتی، `--test`، `KIVA_ALERTS_DRY_RUN`) و `kiva-alerts.service`/`.timer`. چک `/health` و بکاپ دیشب هم اینجاست (تصمیم ۱۰).
 
 #### گام ۶.۹: دور واقعی و چک‌لیست نهایی
 
@@ -3233,6 +3235,7 @@ CREATE TABLE announcement_tbl (
 | ۷ | ۶.۵ | **عددهای `limit_req`** جدول گام ۶.۵ ِ `LAUNCH.md`. ۴۲۹ ِ nginx همون `Problem` ِ `RATE_LIMITED` ِ برنامه‌ست با `Retry-After` و هدرهای CORS؛ بدون CORS مرورگر جواب رو قایم می‌کرد و فرانت «خطای شبکه» می‌دید. IP ِ واقعی فقط از لبه‌های آروان پذیرفته می‌شه. |
 | ۸ | ۶.۶ | **«`provider is Zarinpal (sandbox=false)`» در لاگ نیست** و این برنچ کد برنامه رو عوض نمی‌کنه. «تموم شده» ِ ۶.۶ با `launch-check.sh` چک می‌شه: `KIVA_PAYMENT_PROVIDER=zarinpal`، `KIVA_ZARINPAL_SANDBOX=false`، merchant هست، و از شروع برنامه WARN ِ `Payment gateway is 'fake'` و `no pattern for` نیومده. |
 | ۹ | ۶.۷ | **پاک کردن نمونه‌ها** پیش‌فرض dry run ـه و با `--apply` اول dump می‌گیره. کیف نمونه با کد **و** آدرس با هم شناخته می‌شه؛ کد تخفیف نمونه فقط با متن seed ِ خودش؛ `soldCount` ِ همه صفر (سفارشی نمونده). رد می‌کنه وقتی برنامه روشنه، پرداختی بازه، یا سفارش تستی موجودی ِ محصول واقعی رو نگه داشته؛ ارسال تستی ِ محصول واقعی فقط نام برده می‌شه. عکس‌ها پاک نمی‌شن، آزاد می‌شن تا job ِ شبانه با فایلشون پاکشون کنه. |
+| ۱۰ | ۶.۸ | **هشدارها:** فوری‌ها (`PAID_NOT_PAYABLE`، `AMOUNT_MISMATCH`، `GATEWAY_REJECTED`، `VERIFYING_STUCK`، `JOB_FAILED`، `HEALTH_DOWN`) هر کدوم حداکثر هر ۱۵ دقیقه، بقیه‌ی ERRORها و `BACKUP_OLD` ساعتی؛ job ِ خراب هر دقیقه ۶۰ پیامک در ساعت نمی‌فرسته. `what` فقط کلمه‌ی ثابت و شمارشه، هیچ‌وقت متن لاگ. |
 
 ---
 
@@ -6249,3 +6252,4 @@ kiva {
 | ۲۹ مهر ۱۴۰۵ | ۶.۵ | Phase 6 step 6.5 | SSH، `firewall.sh`، `arvan-real-ip.sh`، محدودیت درخواست با ۴۲۹ ِ هم‌شکل برنامه |
 | ۲۹ مهر ۱۴۰۵ | ۶.۶ | Phase 6 step 6.6 | `kiva.env.example` و متن الگوهای فراز؛ تصمیم ۸ |
 | ۲۹ مهر ۱۴۰۵ | ۶.۷ | Phase 6 step 6.7 | `purge_seed.sql`/`purge-seed.sh`، `trust_badges.sql`، `PurgeSeedSqlOnDatabaseTest` (۶ تست سبز، ۳ خرابکاری قرمز) |
+| ۲۹ مهر ۱۴۰۵ | ۶.۸ | Phase 6 step 6.8 | `alerts.sh` با timer ِ ۵ دقیقه‌ای و `--test` |

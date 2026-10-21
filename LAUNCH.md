@@ -422,3 +422,44 @@ runuser -u postgres -- psql -X -v ON_ERROR_STOP=1 -d kiva \
 (نماد ساماندهی هم داشتی: `-v samandehi_link=… -v samandehi_image=…`.) `GET /config` پنج دقیقه کش می‌شه؛ اگه CDN هم کشش کرده، کش آروان رو پاک کن.
 
 **تموم شده یعنی:** فروشگاه روی سرور فقط محصول واقعی داره، چهار صفحه‌ی قانونی باز می‌شن، و نماد اینماد در فوتره (`launch-check.sh`: «page …» و «/config has the eNamad badge»).
+
+---
+
+## گام ۶.۸: هشدارها
+
+**۱. الگو و موبایل:** الگوی `KIVA_FARAZ_ALERT_PATTERN` با متغیر `what` (گام ۶.۶) تأیید شده باشه:
+
+```bash
+/opt/kiva-ops/set-env.sh KIVA_FARAZ_ALERT_PATTERN
+/opt/kiva-ops/set-env.sh KIVA_ALERT_PHONE           # موبایل خودت
+/opt/kiva-ops/alerts.sh --test                      # همین الان یه پیامک «TEST»
+KIVA_ALERTS_DRY_RUN=1 /opt/kiva-ops/alerts.sh       # اگه الان چیزی بود، چی می‌فرستاد
+systemctl enable --now kiva-alerts.timer
+```
+
+`alerts.sh` هر ۵ دقیقه چیزی رو که `kiva` از اجرای قبلی لاگ کرده می‌خونه (cursor ِ journalctl، پس هیچ خطی دو بار خونده یا جا انداخته نمی‌شه)، `/health` و بکاپ دیشب رو چک می‌کنه، و برای هر نوع یه پیامک می‌فرسته. `what` فقط یه کلمه‌ی ثابت و یه شماره‌ست، هیچ‌وقت خود لاگ (که ممکنه اسم یا موبایل داشته باشه):
+
+| `what` | از کجا | حداکثر |
+|---|---|---|
+| `PAID_NOT_PAYABLE` | `PAID_BUT_ORDER_NOT_PAYABLE`: پول گرفته شد ولی سفارش نمی‌تونست بگیرتش | هر ۱۵ دقیقه |
+| `AMOUNT_MISMATCH` | درگاه مبلغ دیگه‌ای می‌گه | هر ۱۵ دقیقه |
+| `GATEWAY_REJECTED` | زرین‌پال ما رو رد کرد (merchant، دامنه یا IP) | هر ۱۵ دقیقه |
+| `VERIFYING_STUCK` | پرداختی بیشتر از ۱۰ دقیقه `VERIFYING` مونده | هر ۱۵ دقیقه |
+| `JOB_FAILED` | `Job … failed` | هر ۱۵ دقیقه |
+| `HEALTH_DOWN` | `/health` ِ محلی `UP` نیست | هر ۱۵ دقیقه |
+| `ERROR` | هر ERROR ِ دیگه | هر ساعت |
+| `BACKUP_OLD` | بکاپ امروز و دیروز نیست، یا `kiva-backup.service` شکست خورده | هر ساعت |
+
+چند تا از یه نوع در یه اجرا یه پیامکه با شمارش (`JOB_FAILED x3`). نرسیدن پیامک (فراز جواب نده) یعنی دفعه‌ی بعد دوباره امتحان می‌شه.
+
+**۲. پایش از بیرون.** `https://api.kivashop.ir/health` رو هر دقیقه از بیرون بپا (پایش/Health Check ِ آروان، یا هر سرویسی که از ایران به سرور برسه)، با شرط «جواب ۲۰۰ و `"status":"UP"`». این همون جاییه که سرور خاموش رو می‌فهمه؛ `alerts.sh` روی خود سروره.
+
+**تموم شده یعنی:** یه ERROR ِ ساختگی در لاگ ِ `kiva` ← پیامک تا ۵ دقیقه بعد:
+
+```bash
+printf 'MESSAGE=00:00:00.000 [launch-test] [-] ERROR launch.test - alert test, ignore\nOBJECT_PID=%s\n' \
+    "$(systemctl show -p MainPID --value kiva)" | logger --journald
+journalctl -u kiva -n 3 --no-pager       # خط آزمایشی اینجاست؟
+```
+
+(root می‌تونه با `OBJECT_PID` خط رو به اسم `kiva` ثبت کنه. اگه `journalctl -u kiva` نشونش نداد، راه دوم قبل از انتشار: `systemctl stop postgresql`، دو دقیقه صبر، `systemctl start postgresql` ← `JOB_FAILED` و `HEALTH_DOWN`.)

@@ -1,0 +1,11 @@
+# Every 5 minutes, from 2 minutes after boot. LAUNCH.md, step 6.8.
+[Unit]
+Description=Kiva alerts every 5 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target
