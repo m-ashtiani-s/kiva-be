@@ -252,3 +252,76 @@ systemctl daemon-reload && systemctl restart kiva && curl -s http://127.0.0.1:80
 ```
 
 (یه نسخه که `bin/kiva-be` اش فقط `java` ِ بی‌آرگومان اجرا می‌کنه) خطا می‌ده با «the previous one is UP again»، و `https://api.kivashop.ir/health` بعدش `UP` ـه. سایت حداکثر همون ۹۰ ثانیه‌ی انتظار پایینه و پایین نمی‌مونه. بعد یه `.\tools\ops\deploy.ps1` ِ معمولی.
+
+---
+
+## گام ۶.۵: امنیت سرور
+
+**۱. SSH بدون رمز.** اول مطمئن شو راه برگشت هست: `ssh kiva true` با کلید کار می‌کنه، و کنسول وب سرور در پنل آروان رو باز کردی. بعد:
+
+```bash
+cp /opt/kiva-ops/ssh/00-kiva.conf /etc/ssh/sshd_config.d/
+sshd -t && systemctl reload ssh
+sshd -T | grep -E '^(passwordauthentication|permitrootlogin)'   # no، without-password
+```
+
+پنجره‌ی فعلی رو نبند؛ از یه پنجره‌ی تازه امتحان کن:
+
+```powershell
+ssh kiva true                                                                   # باید وصل شه
+ssh -o PubkeyAuthentication=no -o PreferredAuthentications=password kiva true   # Permission denied (publickey)
+```
+
+`00-` یعنی این فایل قبل از `50-cloud-init.conf` ِ خود سیستم خونده می‌شه، و sshd اولین مقدار هر تنظیم رو نگه می‌داره.
+
+**۲. فایروال:**
+
+```bash
+/opt/kiva-ops/firewall.sh
+```
+
+اول پورت SSH ِ واقعی (از `sshd -T`) رو باز می‌کنه، بعد ۸۰ و ۴۴۳، بعد بقیه رو می‌بنده و ufw رو روشن می‌کنه. قانون‌های قبلی ِ دیگه رو پاک نمی‌کنه، فقط اسمشون رو می‌گه؛ اگه لازم نیستن: `ufw status numbered` و `ufw delete <شماره>`.
+
+**۳. آروان ← سرور با HTTPS.** در پنل آروان، تنظیمات CDN ِ دامنه: پروتکل اتصال به سرور اصلی = HTTPS. (برای همینه که nginx به برنامه `X-Forwarded-Proto https` می‌گه.)
+
+**۴. IP ِ واقعی و محدودیت درخواست:**
+
+```bash
+/opt/kiva-ops/arvan-real-ip.sh
+```
+
+فهرست IPهای آروان رو از `https://www.arvancloud.ir/fa/ips.txt` می‌گیره و `conf.d/arvan-real-ip.conf` رو می‌سازه: هدر `ar-real-ip` فقط وقتی پذیرفته می‌شه که درخواست واقعاً از لبه‌ی آروان بیاد. هر ماه یه بار دوباره اجراش کن (`launch-check.sh` بعد از ۳۰ روز یادت می‌ندازه).
+
+بعد بقیه‌ی بلوک API از مرجع: `error_page 429 = @kiva_rate_limited;`، پنج location ِ محدود، و خود `@kiva_rate_limited`:
+
+```bash
+diff <(nginx -T 2>/dev/null | sed -n '/server_name api.kivashop.ir/,/^}/p') /opt/kiva-ops/nginx/api.kivashop.ir.conf
+nano /etc/nginx/sites-available/api.kivashop.ir
+nginx -t && systemctl reload nginx
+```
+
+| مسیر | به ازای هر IP |
+|---|---|
+| `/api/v1/auth/otp/` | ۱۰ در دقیقه، تا ۵ تا پشت‌سرهم |
+| `/api/v1/cart` | ۱۲۰ در دقیقه، تا ۶۰ تا پشت‌سرهم |
+| `/api/v1/orders` | ۳۰ در دقیقه، تا ۱۰ تا پشت‌سرهم (دوازدهمی ۴۲۹) |
+| `/api/v1/tracking/lookup` | ۱۰ در دقیقه، تا ۵ تا (برنامه خودش ۱۰ در ۱۰ دقیقه) |
+| `/api/v1/contact/messages` | ۶ در دقیقه، تا ۳ تا (فاز ۱۳) |
+
+۴۲۹ ِ nginx همون Problem ِ برنامه‌ست (`RATE_LIMITED`، `meta.retryAfterSeconds`) با هدرهای CORS، تا فرانت فرقشون رو نفهمه. فهرست origin ِ `map` در `kiva-http.conf` باید همون `KIVA_ALLOWED_ORIGINS` باشه.
+
+**۵. بدون localhost:**
+
+```bash
+/opt/kiva-ops/set-env.sh KIVA_ALLOWED_ORIGINS   # https://kivashop.ir,https://www.kivashop.ir,https://admin.kivashop.ir
+/opt/kiva-ops/set-env.sh KIVA_TRUSTED_PROXY_HOPS   # 1 (اگه نیست)
+systemctl restart kiva
+```
+
+**تموم شده یعنی:** ورود با رمز رد می‌شه، `ufw status` فقط سه پورت داره، و
+
+```bash
+/opt/kiva-ops/launch-check.sh --rate-limit | grep -E '429|SSH|ufw'
+```
+
+برای همه‌شون `ok` می‌گه (بیست POST ِ پشت‌سرهم به `/api/v1/orders` از سرور، از راه آروان؛ دوازدهمی به بعد ۴۲۹).
