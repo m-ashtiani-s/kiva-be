@@ -21,8 +21,11 @@ import com.kiva.application.usecase.catalog.usecase.query.GetAdminColorUc
 import com.kiva.application.usecase.catalog.usecase.query.GetAdminMaterialUc
 import com.kiva.application.usecase.catalog.usecase.query.ListAdminCategoriesUc
 import com.kiva.application.usecase.catalog.usecase.query.ListAdminMaterialsUc
+import com.kiva.application.usecase.content.usecase.command.SaveFaqUc
 import com.kiva.application.usecase.content.usecase.command.SavePageUc
+import com.kiva.application.usecase.content.usecase.query.GetFaqUc
 import com.kiva.application.usecase.content.usecase.query.GetPageUc
+import com.kiva.application.usecase.content.usecase.query.ListFaqForEditUc
 import com.kiva.application.usecase.content.usecase.query.ListPagesUc
 import com.kiva.application.usecase.discount.DiscountCodeReferences
 import com.kiva.application.usecase.discount.usecase.command.CreateDiscountCodeUc
@@ -78,6 +81,7 @@ import com.kiva.infrastructure.TestDatabase
 import com.kiva.infrastructure.auth.JwtAccessTokens
 import com.kiva.infrastructure.auth.RandomSessionTokens
 import com.kiva.infrastructure.common.html.JsoupHtmlSanitizer
+import com.kiva.infrastructure.common.html.JsoupHtmlText
 import com.kiva.infrastructure.common.persistence.ExposedTransactionManager
 import com.kiva.infrastructure.httpserver.API_V1
 import com.kiva.infrastructure.httpserver.auth.configureAuthentication
@@ -96,6 +100,7 @@ import com.kiva.infrastructure.persistence.exposed.CategoryIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.CategoryRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ColorRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.DiscountCodeRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.FaqRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.GeoRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.InventoryAdjustmentQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.InventoryRepositoryImpl
@@ -294,8 +299,12 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
     // --- content (phase 5) ---
     val pages = StaticPageRepositoryImpl()
     val getPage = GetPageUc(transactions, pages)
-    val adminContent = AdminContentUseCases(checkPanelAccess, ListPagesUc(transactions, pages), getPage, SavePageUc(transactions, pages, JsoupHtmlSanitizer, auditTrail, clock))
-    val content = ContentUseCases(getPage)
+    val faq = FaqRepositoryImpl()
+    val adminContent = AdminContentUseCases(
+        checkPanelAccess, ListPagesUc(transactions, pages), getPage, SavePageUc(transactions, pages, JsoupHtmlSanitizer, auditTrail, clock),
+        ListFaqForEditUc(transactions, faq), SaveFaqUc(transactions, faq, JsoupHtmlSanitizer, auditTrail, clock),
+    )
+    val content = ContentUseCases(getPage, GetFaqUc(transactions, faq, JsoupHtmlText))
 
     // The approve-silent-photos job's two use cases, run by the tests the way PanelJobs runs them.
     val findSilentPhotos = FindSilentPhotoOrdersUc(transactions, purchase.orderQm, clock)

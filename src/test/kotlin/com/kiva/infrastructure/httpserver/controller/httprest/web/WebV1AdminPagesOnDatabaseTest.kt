@@ -223,6 +223,7 @@ class WebV1AdminPagesOnDatabaseTest {
         }
         val useCases = AdminContentUseCases(
             panel.checkPanelAccess, panel.adminContent.listPages, panel.getPage, SavePageUc(panel.transactions, pages, JsoupHtmlSanitizer, panel.auditTrail, clock),
+            panel.adminContent.listFaq, panel.adminContent.saveFaq,
         )
         testApplication {
             environment { config = MapApplicationConfig() }

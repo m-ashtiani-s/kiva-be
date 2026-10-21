@@ -309,11 +309,11 @@ fun Application.configureRouting() {
             webV1AdminSettings(AdminSettingsUseCases(checkPanelAccessUc, get(), get()))
             webV1AdminDiscountCodes(AdminDiscountCodeUseCases(checkPanelAccessUc, get(), get(), get(), get(), get()))
             webV1AdminReports(AdminReportUseCases(checkPanelAccessUc, get()), mediaUrls)
-            webV1AdminContent(AdminContentUseCases(checkPanelAccessUc, get(), get(), get()), config.shop.siteUrl)
+            webV1AdminContent(AdminContentUseCases(checkPanelAccessUc, get(), get(), get(), get(), get()), config.shop.siteUrl)
             webV1Catalog(listColorsUc, listMaterialsUc, listCategoriesUc, getCategoryUc, mediaUrls, config.shop.siteUrl)
             webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, config.shop.siteUrl, mediaUrls)
             webV1Geo(listProvincesUc, listCitiesOfProvinceUc)
-            webV1Content(ContentUseCases(get()), config.shop.siteUrl)
+            webV1Content(ContentUseCases(get(), get()), config.shop.siteUrl)
             webV1Addresses(AddressUseCases(listMyAddressesUc, getMyAddressUc, addAddressUc, updateAddressUc, deleteAddressUc, setDefaultAddressUc))
             webV1Cart(
                 CartUseCases(

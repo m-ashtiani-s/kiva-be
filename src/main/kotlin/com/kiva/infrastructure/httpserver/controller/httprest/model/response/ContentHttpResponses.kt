@@ -1,5 +1,7 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.model.response
 
+import com.kiva.application.dto.FaqGroupDto
+import com.kiva.application.dto.FaqPageDto
 import com.kiva.application.dto.StaticPageDto
 import kotlinx.serialization.Serializable
 
@@ -46,4 +48,53 @@ data class AdminStaticPageSummaryHttpResponse(val slug: String, val title: Strin
     companion object {
         fun from(page: StaticPageDto) = AdminStaticPageSummaryHttpResponse(page.slug, page.title, page.updatedOn.toString())
     }
+}
+
+/** Contract schema `FaqGroup`; `sortOrder` is the place in the list. */
+@Serializable
+data class FaqGroupHttpResponse(
+    val id: String,
+    val name: String,
+    val icon: String?,
+    val isSignature: Boolean,
+    val sortOrder: Int,
+    val questions: List<FaqItemHttpResponse>,
+) {
+    companion object {
+        fun from(group: FaqGroupDto, sortOrder: Int) = FaqGroupHttpResponse(
+            id = group.anchor,
+            name = group.name,
+            icon = group.icon,
+            isSignature = group.isSignature,
+            sortOrder = sortOrder,
+            questions = group.questions.mapIndexed { q, it -> FaqItemHttpResponse(it.id, it.question, it.answer, it.questionHighlighted, it.answerHighlighted, q) },
+        )
+
+        fun listOf(groups: List<FaqGroupDto>): List<FaqGroupHttpResponse> = groups.mapIndexed { g, group -> from(group, g) }
+    }
+}
+
+/** Contract schema `FaqItem`. */
+@Serializable
+data class FaqItemHttpResponse(
+    val id: Long,
+    val question: String,
+    val answer: String,
+    val questionHighlighted: String?,
+    val answerHighlighted: String?,
+    val sortOrder: Int,
+)
+
+/** Contract schema `FaqResponse`: [emptyMessage] only when there is nothing to show. */
+@Serializable
+data class FaqResponseHttpResponse(val groups: List<FaqGroupHttpResponse>, val totalMatches: Int, val emptyMessage: String?) {
+    companion object {
+        fun from(page: FaqPageDto) =
+            FaqResponseHttpResponse(FaqGroupHttpResponse.listOf(page.groups), page.totalMatches, ContentTexts.FAQ_EMPTY.takeIf { page.groups.isEmpty() })
+    }
+}
+
+/** The Persian texts of the content endpoints. */
+object ContentTexts {
+    const val FAQ_EMPTY = "سوالی با این کلمه پیدا نکردیم؛ از پشتیبانی بپرس"
 }

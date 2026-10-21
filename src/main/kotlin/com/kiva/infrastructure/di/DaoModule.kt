@@ -19,6 +19,7 @@ import com.kiva.domain.aggregate.category.repository.CategoryRepository
 import com.kiva.domain.aggregate.color.repository.ColorRepository
 import com.kiva.domain.aggregate.discount.repository.DiscountCodeRepository
 import com.kiva.domain.aggregate.discount.repository.DiscountRedemptionRepository
+import com.kiva.domain.aggregate.faq.repository.FaqRepository
 import com.kiva.domain.aggregate.geo.repository.GeoRepository
 import com.kiva.domain.aggregate.inventory.repository.InventoryRepository
 import com.kiva.domain.aggregate.material.repository.MaterialIdGenerator
@@ -56,6 +57,7 @@ import com.kiva.infrastructure.persistence.exposed.CategoryRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ColorRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.DiscountCodeRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.DiscountRedemptionRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.FaqRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.GeoRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.IdempotencyStoreImpl
 import com.kiva.infrastructure.persistence.exposed.InventoryAdjustmentQmRepositoryImpl
@@ -128,6 +130,7 @@ val daoModule = module(createdAtStart = true) {
     single<AuditLogQmRepository> { AuditLogQmRepositoryImpl() }
     single<ReportQmRepository> { ReportQmRepositoryImpl() }
     single<StaticPageRepository> { StaticPageRepositoryImpl() }
+    single<FaqRepository> { FaqRepositoryImpl() }
     single<MediaRepository> { MediaRepositoryImpl() }
     single<MediaIdGenerator> { RandomMediaIds() }
 }

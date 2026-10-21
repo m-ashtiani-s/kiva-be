@@ -2889,7 +2889,7 @@ Route: 200 با AdminSettings ِ تازه
 |---|---|---|---|
 | ۵.۰ | کانترکت 1.12.0 | S | ✅ |
 | ۵.۱ | صفحه‌های ثابت، و لینک نسبی در HTML | M | ✅ |
-| ۵.۲ | سؤالات متداول | M | ⬜ |
+| ۵.۲ | سؤالات متداول | M | ✅ |
 | ۵.۳ | نوار اطلاعیه | S | ⬜ |
 | ۵.۴ | `GET /config` | M | ⬜ |
 | ۵.۵ | ریویو | S | ⬜ |
@@ -2921,6 +2921,7 @@ Route: 200 با AdminSettings ِ تازه
 | 21 | کش ِ `GET /pages/{slug}` (تازه، گام ۵.۰) | مثل `/faq`: `ETag` و `max-age=300`؛ پنل از `GET /admin/pages` و پاسخ `PUT` می‌خونه، نه از این | صفحه‌های قانونی کم عوض می‌شن و پربازدیدن |
 | 22 | `SLUG_IMMUTABLE` (تازه، گام ۵.۰) | متن عمومی شد («آدرس بعد از ساخت عوض نمی‌شه»)، چون صفحه‌ی ثابت هم ازش استفاده می‌کنه | متن قبلی «محصول تازه بساز» می‌گفت |
 | 23 | عددها در متن‌های ثابت (تازه، گام ۵.۱) | متن‌های `sitecontent_tbl` می‌تونن `{holdDays}`، `{returnWindowDays}` و `{freeShippingThreshold}` داشته باشن و `GET /config` با مقدار همون لحظه‌ی تنظیمات (ارقام فارسی) پرشون می‌کنه. `trustBadges` تا داشتن کد اینماد و ساماندهی خالیه (چک‌لیست ۶.۷)؛ مسیرهای برند که با `/` شروع می‌شن با آدرس سایت کامل می‌شن | «رزرو ۴ روزه» و «۷ روز بازگشت» ِ نمونه با عوض شدن تنظیمات دروغ می‌شدن؛ یه منبع برای هر عدد (تصمیم ۲) |
+| 24 | خطای کل آرایه (تازه، گام ۵.۲) | بدنه‌ی `PUT /admin/faq/groups` و `PUT /admin/announcements` آرایه‌ست و اسم نداره: «بیشتر از ۲۰ گروه» روی فیلد `groups` و «بیشتر از ۱۰ پیام» روی فیلد `announcements` میان (کانترکت هم گفت) | `FieldError` بدون `field` معنی نداره و پنل باید جایی نشونش بده |
 
 ### ۱۰.۳ جدول‌ها
 
@@ -3040,18 +3041,20 @@ CREATE TABLE announcement_tbl (
 
 ---
 
-#### گام ۵.۲: سؤالات متداول · M ⬜
+#### گام ۵.۲: سؤالات متداول · M ✅
 
 **می‌سازی:** `V31` (بخش سؤالات)؛ `FaqBook`؛ هایلایت (`FaqHighlighter` با jsoup، فقط روی text nodeها)؛ سه UseCase؛ routeها (عمومی با `respondResultCacheable`).
 
 وابسته به: ۵.۱
 
 **تموم شده یعنی:**
-- [ ] ذخیره‌ی درخت با سه گروه، و دوباره با یه سؤال کمتر و یه سؤال تازه ← سؤال حذف‌شده نیست، سؤال قبلی همون `id` رو داره، تازه `id` ِ تازه.
-- [ ] دو گروه با یه anchor ← ۴۰۰؛ `id` ِ سؤال ناشناخته ← ۴۰۰.
-- [ ] `q = رزرو` (با `ي` عربی هم) ← فقط گروه‌های جور، `<mark>` دور تطابق، و تطابق داخل اسم تگ HTML هایلایت نمی‌شه.
-- [ ] `q` بی‌نتیجه ← `groups = []` و `emptyMessage`.
-- [ ] `GET /faq` با `If-None-Match` ِ درست ← `304`؛ `GET /admin/faq/groups` کش نمی‌شه.
+- [x] ذخیره‌ی درخت با سه گروه، و دوباره با یه سؤال کمتر و یه سؤال تازه ← سؤال حذف‌شده نیست، سؤال قبلی همون `id` رو داره، تازه `id` ِ تازه.
+- [x] دو گروه با یه anchor ← ۴۰۰؛ `id` ِ سؤال ناشناخته ← ۴۰۰.
+- [x] `q = رزرو` (با `ي` عربی هم) ← فقط گروه‌های جور، `<mark>` دور تطابق، و تطابق داخل اسم تگ HTML هایلایت نمی‌شه.
+- [x] `q` بی‌نتیجه ← `groups = []` و `emptyMessage`.
+- [x] `GET /faq` با `If-None-Match` ِ درست ← `304`؛ `GET /admin/faq/groups` کش نمی‌شه.
+
+**یادداشت پیاده‌سازی:** دامنه: `FaqAnchor`، `FaqItemId`، `FaqDraft` (شکل فرم با همه‌ی خطاها و مسیرها، `unknownIds`، `toBook`، `isSameAs`) و `FaqBook`؛ `FaqRepository` با قفل advisory ِ `faq`، و `save` که کل درخت رو جایگزین می‌کنه (گروه‌ها پاک و سؤال‌ها با cascade، بعد درج به ترتیب). جستجو در application (`FaqSearch`: تا کردن حرف‌به‌حرف، بازه‌ها، `markText` با escape) و پورت `HtmlText` با `JsoupHtmlText` (متن ساده، و `<mark>` فقط در text nodeها). `GetFaqUc` (کش‌شونده)، `ListFaqForEditUc`، `SaveFaqUc`؛ `FAQ_SAVED` با تعداد گروه و سؤال. تصمیم ۲۴. تست‌ها: ۵ تست دامنه، ۴ تست `FaqSearch`، ۴ تست `JsoupHtmlText`، ۱۱ تست route (با دو ذخیره‌ی همزمان، ۱۰ بار). خرابکاری: بدون قفل ← `two saves at the same moment` قرمز (دو درخت با هم)؛ بدون escape ِ سؤال ← تست `FaqSearch` و `a question's own HTML is shown escaped` قرمز. جاافتاده: Gradle یه بار با `OutOfMemoryError` ِ daemon ِ Kotlin شکست (چهار daemon ِ کهنه)؛ `--stop` و دوباره درست شد.
 
 ---
 
@@ -6196,3 +6199,4 @@ kiva {
 | ۲۹ مهر ۱۴۰۵ | ۴.۵ | Contract 1.11.1 | `FieldError.meta` (تصمیم ۳۹، راه الف ِ صاحب پروژه)؛ `FieldErrorHttpResponse.meta` از `meta` ِ همون خطا؛ تست‌های JSON ِ دقیق به‌روز شدن (`maxSize`، `allowed`)، تست تازه در `HttpEdgeTest` |
 | ۲۹ مهر ۱۴۰۵ | ۵.۰ | Phase 5 step 5.0 | کانترکت 1.12.0 با هر ۵ ردیف ِ ۱۰.۵ و سه ردیف تازه (۶ تا ۸)؛ ده تصمیم تازه (۱۳ تا ۲۲). YAML معتبر، ۱۳۲۸ `$ref`. متن ۱۲ کد تازه. برنچ `content-basics` از نوک فاز ۴ |
 | ۲۹ مهر ۱۴۰۵ | ۵.۱ | Phase 5 step 5.1 | `V31` ِ کامل با ردیف محتوای سایت، لینک نسبی امن در `JsoupHtmlSanitizer`، `PageDraft`/`StaticPage`، قفل صفحه، سه UseCase، `webV1Content.kt` و `webV1AdminContent.kt`، `PAGE_SAVED`. تصمیم ۲۳. دو خرابکاری قرمز |
+| ۲۹ مهر ۱۴۰۵ | ۵.۲ | Phase 5 step 5.2 | `FaqDraft`/`FaqBook`، قفل `faq`، `FaqSearch` و `JsoupHtmlText` (هایلایت امن)، سه UseCase، `GET /faq` ِ کش‌شونده، `FAQ_SAVED`. تصمیم ۲۴. دو خرابکاری قرمز |

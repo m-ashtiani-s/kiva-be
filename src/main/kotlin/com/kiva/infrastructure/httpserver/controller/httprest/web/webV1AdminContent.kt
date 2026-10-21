@@ -1,8 +1,10 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
 import com.kiva.application.usecase.admin.usecase.command.CheckPanelAccessUc
+import com.kiva.application.usecase.content.usecase.command.SaveFaqUc
 import com.kiva.application.usecase.content.usecase.command.SavePageUc
 import com.kiva.application.usecase.content.usecase.query.GetPageUc
+import com.kiva.application.usecase.content.usecase.query.ListFaqForEditUc
 import com.kiva.application.usecase.content.usecase.query.ListPagesUc
 import com.kiva.common.railway.unwrapOr
 import com.kiva.domain.aggregate.user.model.valueobject.Role
@@ -10,8 +12,10 @@ import com.kiva.infrastructure.common.http.respondFailure
 import com.kiva.infrastructure.common.http.respondResult
 import com.kiva.infrastructure.httpserver.auth.panelActor
 import com.kiva.infrastructure.httpserver.auth.requireRoles
+import com.kiva.infrastructure.httpserver.controller.httprest.model.request.FaqGroupInputHttpRequest
 import com.kiva.infrastructure.httpserver.controller.httprest.model.request.StaticPageUpsertHttpRequest
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.AdminStaticPageSummaryHttpResponse
+import com.kiva.infrastructure.httpserver.controller.httprest.model.response.FaqGroupHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.StaticPageHttpResponse
 import io.ktor.server.request.receive
 import io.ktor.server.routing.Route
@@ -24,11 +28,13 @@ class AdminContentUseCases(
     val listPages: ListPagesUc,
     val getPage: GetPageUc,
     val savePage: SavePageUc,
+    val listFaq: ListFaqForEditUc,
+    val saveFaq: SaveFaqUc,
 )
 
 /**
- * The panel's content (contract tags `Admin · Content` and `Admin · Marketing`; ADMIN and CONTENT_EDITOR): static pages.
- * Mounted under `/api/v1`. Nothing here is cached: a form must see what it just saved.
+ * The panel's content (contract tags `Admin · Content` and `Admin · Marketing`; ADMIN and CONTENT_EDITOR): static pages
+ * and the FAQ. Mounted under `/api/v1`. Nothing here is cached: a form must see what it just saved.
  *
  * @param siteUrl the shop's address, for a page's canonical address.
  */
@@ -43,6 +49,15 @@ fun Route.webV1AdminContent(useCases: AdminContentUseCases, siteUrl: String) {
             val command = SavePageUc.Cmd(call.pathParameters["slug"].orEmpty(), request.toFields(), call.panelActor())
             val slug = useCases.savePage.execute(command).unwrapOr { return@put call.respondFailure(it) }
             call.respondResult(useCases.getPage.execute(GetPageUc.Qry(slug.value))) { StaticPageHttpResponse.from(it, siteUrl) }
+        }
+        get("/admin/faq/groups") {
+            call.respondResult(useCases.listFaq.execute(ListFaqForEditUc.Qry)) { FaqGroupHttpResponse.listOf(it) }
+        }
+        // The answer is the whole FAQ as saved, with the new questions' ids.
+        put("/admin/faq/groups") {
+            val request = call.receive<List<FaqGroupInputHttpRequest>>()
+            useCases.saveFaq.execute(SaveFaqUc.Cmd(request.map { it.toInput() }, call.panelActor())).unwrapOr { return@put call.respondFailure(it) }
+            call.respondResult(useCases.listFaq.execute(ListFaqForEditUc.Qry)) { FaqGroupHttpResponse.listOf(it) }
         }
     }
 }

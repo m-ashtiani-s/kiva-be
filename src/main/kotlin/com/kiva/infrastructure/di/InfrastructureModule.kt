@@ -1,6 +1,7 @@
 package com.kiva.infrastructure.di
 
 import com.kiva.application.port.AccessTokens
+import com.kiva.application.port.HtmlText
 import com.kiva.application.port.MediaProcessor
 import com.kiva.application.port.MediaStorage
 import com.kiva.application.port.OtpCodes
@@ -15,6 +16,7 @@ import com.kiva.infrastructure.auth.RandomSessionTokens
 import com.kiva.infrastructure.auth.sms.FarazSmsSender
 import com.kiva.infrastructure.auth.sms.LogSmsSender
 import com.kiva.infrastructure.common.html.JsoupHtmlSanitizer
+import com.kiva.infrastructure.common.html.JsoupHtmlText
 import com.kiva.infrastructure.common.persistence.ExposedTransactionManager
 import com.kiva.infrastructure.config.AppConfig
 import com.kiva.infrastructure.config.SmsProvider
@@ -40,6 +42,7 @@ fun infrastructureModule(config: AppConfig, database: Database) = module {
     // Use cases read "now" from this, so tests can fix the time.
     single<Clock> { Clock.systemUTC() }
     single<HtmlSanitizer> { JsoupHtmlSanitizer }
+    single<HtmlText> { JsoupHtmlText }
     single<OtpCodes> { HmacOtpCodes(config.auth.otpPepper) }
     // One instance: it signs tokens for the use cases and its verifier checks them for the routes.
     single { JwtAccessTokens(config.auth.jwtSecret, clock = get()) }
