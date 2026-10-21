@@ -325,3 +325,58 @@ systemctl restart kiva
 ```
 
 برای همه‌شون `ok` می‌گه (بیست POST ِ پشت‌سرهم به `/api/v1/orders` از سرور، از راه آروان؛ دوازدهمی به بعد ۴۲۹).
+
+---
+
+## گام ۶.۶: حساب‌ها و رازها
+
+`/opt/kiva-ops/kiva.env.example` همه‌ی متغیرهای سرور رو با مقدار درستشون داره (رازها `<SECRET>`). فایل زنده رو باهاش مقایسه کن:
+
+```bash
+diff <(grep -oE '^[A-Z_]+=' /opt/kiva/conf/kiva.env | sort) <(grep -oE '^[A-Z_]+=' /opt/kiva-ops/kiva.env.example | sort)
+```
+
+**۱. زرین‌پال.** در پنل زرین‌پال:
+
+- سطح احراز پذیرنده به حد لازم برسه (وگرنه خطای ‎`-16`).
+- دامنه‌ی ثبت‌شده‌ی درگاه `api.kivashop.ir` باشه، چون callback به `https://api.kivashop.ir/api/v1/payment-callbacks/…` برمی‌گرده (وگرنه ‎`-14`).
+- IP ِ سرور ثبت بشه (برای `reverse` ِ پرداخت‌هایی که سفارششون دیگه پذیرفتنی نیست).
+
+بعد روی سرور:
+
+```bash
+/opt/kiva-ops/set-env.sh KIVA_PAYMENT_PROVIDER       # zarinpal
+/opt/kiva-ops/set-env.sh KIVA_ZARINPAL_SANDBOX       # false
+/opt/kiva-ops/set-env.sh --secret KIVA_ZARINPAL_MERCHANT_ID
+/opt/kiva-ops/set-env.sh KIVA_API_PUBLIC_URL         # https://api.kivashop.ir
+/opt/kiva-ops/set-env.sh KIVA_PAYMENT_RESULT_URL     # https://kivashop.ir/checkout/result (یا مسیر واقعی صفحه‌ی نتیجه‌ی فروشگاه)
+/opt/kiva-ops/set-env.sh KIVA_SITE_URL               # https://kivashop.ir
+```
+
+**۲. فراز اس‌ام‌اس.** کلیدی که یه بار تو گفتگو فرستاده شده بود سوخته: در پنل فراز یه کلید تازه بساز، `set-env.sh --secret KIVA_FARAZ_API_KEY`، restart، یه کد ورود امتحان کن، بعد کلید قدیمی رو در پنل حذف کن.
+
+هر الگو رو در پنل فراز بساز، منتظر تأییدش بمون، و کدش رو با `set-env.sh <متغیر>` بذار. متن‌ها پیشنهادن؛ فقط اسم متغیرها (`%order%` و …) باید همین باشه:
+
+| متغیر env | متغیرها | متن پیشنهادی |
+|---|---|---|
+| `KIVA_FARAZ_CODE_PATTERN` | `code` | (موجود) «کد ورود: %code% / وبسایت کیوا» |
+| `KIVA_FARAZ_PHONE_CHANGED_PATTERN` | `ending` | «حساب کیوای شما به شماره‌ی منتهی به %ending% منتقل شد. اگه خودت نبودی، به پشتیبانی بگو.» |
+| `KIVA_FARAZ_ORDER_PAID_PATTERN` | `order` | «سفارش %order% پرداخت شد. پیگیری: https://kivashop.ir/track?order=%order%» |
+| `KIVA_FARAZ_PHOTOS_SENT_PATTERN` | `order` | «عکس کیف سفارش %order% تو پیام‌رسانت فرستاده شد. همونه؟ تو صفحه‌ی سفارش بگو.» |
+| `KIVA_FARAZ_ORDER_SHIPPED_PATTERN` | `order`، `carrier`، `tracking` | «سفارش %order% با %carrier% ارسال شد. کد رهگیری: %tracking%» |
+| `KIVA_FARAZ_ORDER_DELIVERED_PATTERN` | `order` | «سفارش %order% تحویل شد. نظرت درباره‌ی کیفت برامون مهمه.» |
+| `KIVA_FARAZ_ORDER_CANCELLED_PATTERN` | `order` | «سفارش %order% لغو شد.» |
+| `KIVA_FARAZ_REFUND_COMPLETED_PATTERN` | `order` | «مبلغ سفارش %order% به حسابت برگشت.» |
+| `KIVA_FARAZ_CHANGE_RESOLVED_PATTERN` | `order` | «درخواستت برای سفارش %order% بررسی شد؛ جزئیات تو صفحه‌ی سفارش.» |
+| `KIVA_FARAZ_ALERT_PATTERN` (گام ۶.۸) | `what` | «هشدار کیوا: %what%» |
+
+الگوهای فازهای بعد (مرجوعی، «موجود شد»، پاسخ تماس) با همون فازها اضافه می‌شن.
+
+**۳. آدرس‌های رهگیری.** در پنل، تنظیمات ← روش‌های ارسال: آدرس رهگیری تیپاکس و پست رو با یه کد واقعی در سایت خودشون امتحان کن و اگه لازمه اصلاح کن (`{code}` جای کد).
+
+```bash
+systemctl restart kiva
+journalctl -u kiva -n 300 --no-pager | grep -E "no pattern for|is 'fake'|is 'log'"     # هیچی
+```
+
+**تموم شده یعنی:** لاگ شروع هیچ WARN ِ «no pattern for …» نداره، و `launch-check.sh` برای خط‌های «payment» و «SMS» `ok` می‌گه. برنامه خطی مثل `provider is Zarinpal (sandbox=false)` لاگ نمی‌کنه (تصمیم ۴ ِ این فاز)؛ به جاش نبود WARN ِ `Payment gateway is 'fake'` و مقدارهای `kiva.env` چک می‌شن.
