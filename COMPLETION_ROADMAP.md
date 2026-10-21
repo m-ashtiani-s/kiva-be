@@ -3255,7 +3255,7 @@ CREATE TABLE announcement_tbl (
 
 | گام | عنوان | اندازه | وضعیت |
 |---|---|---|---|
-| ۷.۰ | کانترکت 1.13.0 | S | ⬜ |
+| ۷.۰ | کانترکت 1.13.0 | S | ✅ |
 | ۷.۱ | آپلود مشتری (`/me/uploads`) | M | ⬜ |
 | ۷.۲ | دامنه‌ی مرجوعی، رویدادهای سفارش و جدول | L | ⬜ |
 | ۷.۳ | درخواست مرجوعی و «مرجوعی‌های من» | M | ⬜ |
@@ -3291,6 +3291,12 @@ CREATE TABLE announcement_tbl (
 | 22 | چی رو مشتری می‌بینه | `ReturnRequest` همه‌چیز جز نتیجه‌ی بازبینی. `AdminReturnRequest` به‌علاوه‌ی `customer`، `receipt`، `allowedTransitions`، `suggestedRefund` | یادداشت بازبینی داخلیه |
 | 23 | آپلود مشتری | `POST /me/uploads` با purpose ِ `RETURN_EVIDENCE` یا `REVIEW_PHOTO` (فاز ۸ هم ازش استفاده می‌کنه)، سقف‌های جدول ۵.۲، بدون `alt`. **حداکثر ۲۰ آپلود در ساعت برای هر کاربر** ← `429 RATE_LIMITED` با `Retry-After`. آپلودی که ۴۸ ساعت به چیزی وصل نشه با job ِ فاز ۱ پاک می‌شه | هر آپلود پردازش libvips/ffmpeg داره؛ بی‌سقف یعنی پر کردن CPU و دیسک |
 | 24 | لاگ تغییرات | `RETURN_DECIDED`، `RETURN_PICKUP_SCHEDULED`، `RETURN_RECEIVED`، `RETURN_CLOSED` (بخش ۵.۱). برگشت به موجودی جداگانه `INVENTORY_ADJUSTED` نمی‌گیره (ردیف `RETURN_RECEIVED` و تاریخچه‌ی موجودی هر دو هستن). استرداد همون `REFUND_*` | یه کار، یه ردیف |
+| 25 | کدهای فیلدی و `ErrorCode` (تازه، گام ۷.۰) | فقط کدهایی که `code` ِ اصلی پاسخ می‌شن به enum ِ `ErrorCode` می‌رن: `RETURN_NOT_FOUND` (۴۰۴ ِ مسیر)، `RETURN_REFUND_EXISTS`، `RETURN_REFUND_OPEN`. کدهای فیلدی ِ ردیف ۱۳ ِ ۱۲.۱۰ (`ITEM_NOT_RETURNABLE`، `EVIDENCE_REQUIRED`، …) فقط در `errors[].code` میان: متن در `ErrorMessages.kt` و اسم در توضیح همون endpoint | کانترکت می‌گه `FieldError.code` فهرست ثابت نداره و `ErrorCode` کد اصلی ِ پاسخه؛ فازهای ۴ و ۵ هم کدهای فیلدی رو به enum نبردن |
+| 26 | کدهای عمومی به‌جای هم‌معنی (تازه، گام ۷.۰) | `DUPLICATE_ITEM` ساخته نمی‌شه: قلم یا `mediaId` ِ تکراری ← `LIST_ITEM_DUPLICATE` (تصمیم ۲۱ ِ فاز ۴). متن‌های آزاد ← `TEXT_TOO_LONG` (`meta.maxLength`) و کد عمومی ِ تازه‌ی `TEXT_INVALID` (نویسه‌ی کنترلی)؛ فیلد نیومده ← `FIELD_REQUIRED`؛ `quantity` ِ درخواست بیرون ۱ تا ۲۰ ← `QUANTITY_INVALID`؛ عددهای رسید بیرون ۰ تا ۲۰ ← `NUMBER_OUT_OF_RANGE`؛ `items` بیشتر از ۲۰ و `mediaIds` بیشتر از ۶ ← `TOO_MANY_ITEMS`؛ `mediaId` ِ بدشکل ← `MEDIA_ID_INVALID` (شکله و چیزی لو نمی‌ده). کدهای تازه‌ی فیلدی: `RETURN_REASON_INVALID`، `SHIPPING_PAYER_INVALID`، `RETURN_STATUS_INVALID` (فیلتر صف)، `CLOSE_REASON_REQUIRED` | یه کد عمومی با `meta` به‌جای ده‌ها کد هم‌معنی |
+| 27 | کد رهگیری ِ جمع‌آوری (تازه، گام ۷.۰) | همون VO ِ `TrackingCode` ِ ارسال (۶ تا ۴۰، `[0-9A-Z-]` بعد از حروف بزرگ و ارقام لاتین، `TRACKING_CODE_INVALID`)؛ `PickupTrackingCode` ساخته نمی‌شه. خالی = بی‌کد | قانون یکیه؛ حامل‌ها همون تیپاکس و پستن |
+| 28 | `refund` و `instructions` ِ پاسخ (تازه، گام ۷.۰) | `ReturnRequest.refund` = تازه‌ترین استرداد ِ همین مرجوعی، `FAILED` هم (مشتری `statusNote` ِ «شماره شبا تأیید نشد» رو می‌بینه)؛ قبل از هر استرداد `null`. `instructions` در `REQUESTED` و `REJECTED` `null`، بعدش متن اپراتور یا متن پیش‌فرض ِ `shippingPaidBy` (تصمیم ۸) | کانترکت نگفته بود کدوم استرداد؛ دستورالعمل قبل از تأیید معنی نداره |
+| 29 | سقف ساعتی ِ آپلود در عمل (تازه، گام ۷.۰) | یه بار **قبل** از پردازش شمرده می‌شه (۲۰ تا یا بیشتر ← `429` بدون کار ِ libvips)، و یه بار دیگه در تراکنش ِ insert زیر قفل advisory ِ `media-uploads:{userId}` (۲۰ تا یا بیشتر ← فایل‌ها پاک و `429`). `Retry-After` = قدیمی‌ترین آپلود ِ ساعت گذشته + ۱ ساعت − الان (حداقل ۱). این قفل تنها قفل ِ همون تراکنشه، پس در ترتیب ۴.۱۱ جایی نمی‌خواد | بدون شمارش دوم، ۵۰ آپلود همزمان همه از چک اول رد می‌شدن |
+| 30 | `required` ِ پاسخ‌ها (تازه، گام ۷.۰) | `ReturnRequest` و `AdminReturnRequest` (و `customer`) `required` روی همه‌ی فیلدها، مثل تصمیم ۱۳ ِ فاز ۵ | همه‌ی فیلدها همیشه فرستاده می‌شن (بخش ۱ ِ کانترکت) |
 
 ### ۱۲.۳ ماشین وضعیت مرجوعی
 
@@ -3604,15 +3610,20 @@ Route: 200
 | 13 | `ErrorCode` | `ITEM_NOT_RETURNABLE`، `DUPLICATE_ITEM`، `RETURN_QUANTITY_EXCEEDS`، `EVIDENCE_REQUIRED`، `DESCRIPTION_REQUIRED`، `REJECTION_REASON_REQUIRED`، `PICKUP_TIME_INVALID`، `RECEIPT_ITEMS_MISMATCH`، `RECEIVED_QUANTITY_EXCEEDS`، `RESTOCK_EXCEEDS_RECEIVED`، `RETURN_REFUND_EXISTS`، `RETURN_REFUND_OPEN` (و `RETURN_NOT_FOUND` اگه فاز ۲ اضافه نکرده) | — |
 | 14 | بخش ۴ ِ کانترکت (مرجوعی) | جدول نگاشت وضعیت مرجوعی به وضعیت سفارش؛ «بستن خودکار نداریم» | تصمیم‌های ۱۴، ۱۹ |
 | 15 | بخش ۵ (پیامک‌ها) | چهار پیامک ۱۲.۹ | — |
+| 16 | `ErrorCode` (تازه، گام ۷.۰؛ جایگزین ردیف ۱۳) | فقط `RETURN_NOT_FOUND`، `RETURN_REFUND_EXISTS`، `RETURN_REFUND_OPEN`؛ کدهای فیلدی در توضیح هر endpoint و فیلد | تصمیم‌های ۲۵ و ۲۶ |
+| 17 | `ReturnRequest`، `AdminReturnRequest` (تازه، گام ۷.۰) | `required`؛ `code` با الگو؛ `refund` = تازه‌ترین استرداد؛ `instructions` در `REQUESTED`/`REJECTED` `null` | تصمیم‌های ۲۸ و ۳۰ |
+| 18 | `POST /me/uploads` (تازه، گام ۷.۰) | سقف‌های مشتری با `VIDEO_TOO_LONG`، `MEDIA_PURPOSE_INVALID`، `429` با هدر `RetryAfter` ِ مشترک | تصمیم‌های ۲۳ و ۲۹ |
 
 ### ۱۲.۱۱ گام‌ها
 
-#### گام ۷.۰: کانترکت 1.13.0 · S ⬜
+#### گام ۷.۰: کانترکت 1.13.0 · S ✅
 
 **می‌سازی:** برنچ `returns`؛ ردیف‌های ۱۲.۱۰؛ متن فارسی همه‌ی کدهای تازه در `ErrorMessages.kt`.
 
 **تموم شده یعنی:**
-- [ ] کانترکت معتبر، `ErrorMessagesTest` و `RouteGuardsTest` سبز (`x-roles` ِ پنج route ِ مرجوعی دست نخورده: `[ADMIN, OPERATOR]`).
+- [x] کانترکت معتبر، `ErrorMessagesTest` و `RouteGuardsTest` سبز (`x-roles` ِ پنج route ِ مرجوعی دست نخورده: `[ADMIN, OPERATOR]`).
+
+**یادداشت پیاده‌سازی:** برنچ `returns` از نوک فاز ۶ (`launch`) ساخته شد، چون فازهای قبل هنوز منتظر merge به `main` ـن. شش تصمیم تازه (۲۵ تا ۳۰ ِ ۱۲.۲) و سه ردیف تازه‌ی ۱۲.۱۰ (۱۶ تا ۱۸؛ ۱۶ جای ردیف ۱۳ رو می‌گیره). جدول مرجوعی ↔ سفارش و «بستن خودکار نداریم» در بخش ۴ ِ کانترکت، قانون ۷ روز و چهار دلیل «تقصیر کیوا» در بخش ۳، چهار پیامک در بخش ۵؛ `iban` از هر دو شِما رفت؛ `sort` ِ صف؛ `suggestedRefund`. YAML با snakeyaml معتبره و هر ۱۳۳۱ `$ref` پیدا می‌شن. متن ۱۶ کد تازه (و `ORDER_NOT_RETURNABLE` که حالا «قبلاً مرجوعی داره» رو هم می‌گه).
 
 ---
 
@@ -6257,3 +6268,4 @@ kiva {
 | ۲۹ مهر ۱۴۰۵ | ۶.۷ | Phase 6 step 6.7 | `purge_seed.sql`/`purge-seed.sh`، `trust_badges.sql`، `PurgeSeedSqlOnDatabaseTest` (۶ تست سبز، ۳ خرابکاری قرمز) |
 | ۲۹ مهر ۱۴۰۵ | ۶.۸ | Phase 6 step 6.8 | `alerts.sh` با timer ِ ۵ دقیقه‌ای و `--test` |
 | ۲۹ مهر ۱۴۰۵ | ۶.۹ | Phase 6 step 6.9 | `launch-check.sh` و `tools/ops/test/ops-test.sh` (۷۷ سبز روی لینوکس). فاز ۶ از طرف ریپو کامله؛ همه‌ی گام‌ها منتظر اجرای تو روی سرورن |
+| ۲۹ مهر ۱۴۰۵ | ۷.۰ | Phase 7 step 7.0 | کانترکت 1.13.0 با هر ۱۵ ردیف ِ ۱۲.۱۰ و سه ردیف تازه (۱۶ تا ۱۸)؛ شش تصمیم تازه (۲۵ تا ۳۰). YAML معتبر، ۱۳۳۱ `$ref`. متن ۱۶ کد تازه. برنچ `returns` از نوک فاز ۶ |

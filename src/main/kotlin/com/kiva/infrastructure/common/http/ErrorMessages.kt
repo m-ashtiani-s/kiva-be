@@ -75,7 +75,7 @@ object ErrorMessages {
         // --- orders & payment ---
         "ORDER_NOT_FOUND" to "سفارش پیدا نشد",
         "ORDER_NOT_CANCELLABLE" to "این سفارش دیگه قابل لغو نیست",
-        "ORDER_NOT_RETURNABLE" to "این سفارش قابل مرجوع کردن نیست",
+        "ORDER_NOT_RETURNABLE" to "این سفارش قابل مرجوع کردن نیست، یا قبلاً براش مرجوعی ثبت شده",
         "RETURN_WINDOW_EXPIRED" to "مهلت مرجوع کردن این سفارش تموم شده",
         "ORDER_ALREADY_PAID" to "این سفارش قبلاً پرداخت شده",
         "CHANGE_REQUEST_NOT_ALLOWED" to "الان نمی‌شه برای این سفارش درخواست تغییر داد؛ فقط بعد از دیدن عکس و قبل از ارسال، و یکی یکی",
@@ -362,6 +362,23 @@ object ErrorMessages {
         "ANNOUNCEMENT_TEXT_REQUIRED" to "متن اطلاعیه رو بنویس",
         "ANNOUNCEMENT_NOT_FOUND" to "این اطلاعیه پیدا نشد؛ صفحه رو دوباره باز کن",
         "URL_INVALID" to "لینک باید با https:// یا با یه / (مثل /faq#reserve) شروع بشه و حداکثر ۳۰۰ حرف باشه",
+        // --- returns (phase 7) ---
+        "RETURN_REFUND_EXISTS" to "برای این مرجوعی قبلاً استرداد ثبت شده؛ فقط وقتی ناموفق بشه می‌شه یکی دیگه ثبت کرد",
+        "RETURN_REFUND_OPEN" to "استرداد این مرجوعی هنوز تموم نشده؛ اول انجامش بده یا ناموفقش کن",
+        "ITEM_NOT_RETURNABLE" to "این کالا قابل مرجوع کردن نیست",
+        "RETURN_QUANTITY_EXCEEDS" to "از این کالا حداکثر {maxQuantity} عدد می‌تونی برگردونی",
+        "EVIDENCE_REQUIRED" to "برای این دلیل حداقل یه عکس یا ویدیو از مشکل بذار",
+        "DESCRIPTION_REQUIRED" to "توضیح بده چه مشکلی پیش اومده",
+        "RETURN_REASON_INVALID" to "دلیل مرجوعی از گزینه‌های مجاز نیست",
+        "REJECTION_REASON_REQUIRED" to "دلیل رد رو بنویس (حداقل ۳ حرف)",
+        "CLOSE_REASON_REQUIRED" to "دلیل بستن رو بنویس (حداقل ۳ حرف)",
+        "SHIPPING_PAYER_INVALID" to "پرداخت‌کننده‌ی هزینه‌ی برگشت باید KIVA یا CUSTOMER باشه",
+        "PICKUP_TIME_INVALID" to "زمان جمع‌آوری باید بین یه ساعت پیش تا ۳۰ روز بعد باشه",
+        "RECEIPT_ITEMS_MISMATCH" to "برای هر کالای این مرجوعی دقیقاً یه ردیف بنویس، نه کمتر و نه بیشتر",
+        "RECEIVED_QUANTITY_EXCEEDS" to "از این کالا فقط {maxQuantity} عدد مرجوع شده",
+        "RESTOCK_EXCEEDS_RECEIVED" to "تعداد برگشتی به موجودی نمی‌تونه از تعداد رسیده بیشتر باشه",
+        "RETURN_STATUS_INVALID" to "وضعیت مرجوعی از مقدارهای مجاز نیست",
+        "TEXT_INVALID" to "این متن علامت نامعتبر داره",
     )
 
     // Used when a code has no text of its own (or its placeholders can't be filled).

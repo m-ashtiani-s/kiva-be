@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: KIVA Store API — کیوا
-  version: 1.12.0
+  version: 1.13.0
   contact:
     name: KIVA Engineering
     email: support@kiva.ir
@@ -139,7 +139,9 @@ info:
       بعد از آن لغو با درخواست تغییر یا پشتیبانی است. پنل تا قبل از `SHIPPED` لغو می‌کند. سفارش پرداخت‌نشده لغو نمی‌شود (خودش منقضی می‌شود).
       **بازگشت وجه دستی است:** با هر لغو یک استرداد `PENDING` به اندازه‌ی کل مبلغ پرداخت‌شده (منهای استردادهای قبلی) ثبت می‌شود
       و همکاران برای گرفتن شماره شبا با مشتری تماس می‌گیرند؛ شماره شبا در سیستم ذخیره نمی‌شود. موجودی آزاد و استفاده‌ی کد تخفیف برگردانده می‌شود.
-    * **بازگشت کالا:** تا ۷ روز بعد از تحویل. اگر مشکل از کیوا باشد (`NOT_AS_PICTURED`، `MANUFACTURING_DEFECT`، ...) هزینه‌ی برگشت با کیواست؛ در `CHANGED_MIND` با مشتری.
+    * **بازگشت کالا:** تا `returnableUntil` (لحظه‌ی تحویل + `returnWindowDays` ِ همان لحظه، پیش‌فرض ۷ روز). اگر مشکل از کیوا باشد (`NOT_AS_PICTURED`، `MANUFACTURING_DEFECT`، `WRONG_ITEM`، `DAMAGED_IN_TRANSIT`)
+      هزینه‌ی برگشت با کیواست و دست‌کم یک عکس یا ویدیو لازم است؛ در `CHANGED_MIND` و `OTHER` با مشتری (اپراتور موقع تأیید می‌تواند عوضش کند).
+      هر سفارش حداکثر یک مرجوعی ِ غیر `REJECTED` دارد. بازگشت وجه مرجوعی هم دستی است: همان استرداد `POST /admin/orders/{orderCode}/refunds` با `returnId`؛ شماره شبا ذخیره نمی‌شود.
     * **جمعه‌ها** ارسال نداریم (`nonShippingWeekdays`). سفارشی که جمعه (به وقت تهران) ثبت می‌شود شنبه ارسال می‌شود، و `estimatedDelivery`
       از روز ارسال شمرده می‌شود: `minDays` تا `maxDays` روز کاری بعد از آن، بدون جمعه‌ها. پس سفارش جمعه یک روز دیرتر از سفارش پنجشنبه می‌رسد.
 
@@ -201,8 +203,20 @@ info:
 
     وضعیت سفارش دنبال مرجوعی باز آن می‌رود: تا مرجوعی `REQUESTED`، `APPROVED` یا `PICKUP_SCHEDULED` است سفارش `RETURN_REQUESTED`،
     بعد از `RECEIVED` سفارش `RETURNED` و بعد از `REFUNDED` سفارش `REFUNDED` است. اگر مرجوعی `REJECTED` یا `CLOSED` شود (یعنی بدون استرداد)،
-    سفارش به `DELIVERED` برمی‌گردد. انتقال نامجاز در همه‌ی این endpointها `422 INVALID_STATUS_TRANSITION` است و پاسخ پنل
+    سفارش به `DELIVERED` برمی‌گردد. انتقال نامجاز در همه‌ی این endpointها `422 INVALID_STATUS_TRANSITION` (با `meta.from`، `meta.to` و `meta.allowed`) است و پاسخ پنل
     (`AdminReturnRequest.allowedTransitions`) قدم‌های مجاز بعدی را می‌گوید.
+
+    | وضعیت مرجوعی | وضعیت سفارش | `allowedTransitions` ِ مرجوعی |
+    |---|---|---|
+    | `REQUESTED` | `RETURN_REQUESTED` | `[APPROVED, REJECTED]` |
+    | `APPROVED`، `PICKUP_SCHEDULED` | `RETURN_REQUESTED` | `[PICKUP_SCHEDULED, RECEIVED, CLOSED]` |
+    | `RECEIVED` | `RETURNED` | `[REFUNDED, CLOSED]`؛ وقتی استرداد `PENDING`/`PROCESSING` ِ همین مرجوعی هست `[]` (هر دو قدم منتظر نتیجه‌ی آن استردادند) |
+    | `REFUNDED` | `REFUNDED` | `[]` |
+    | `REJECTED` | `DELIVERED` (تا مهلت باز است، مشتری دوباره درخواست می‌دهد) | `[]` |
+    | `CLOSED` | `DELIVERED` (دیگر مرجوعی ندارد) | `[]` |
+
+    مرجوعی **بستن خودکار ندارد**: مرسوله‌ای که نرسید را اپراتور با `…/close` می‌بندد (صف پنل با `sort=oldest` قدیمی‌ها را اول نشان می‌دهد).
+    مرجوعی `soldCount` ِ محصول را کم نمی‌کند (سفارش مرجوعی‌شده هنوز خرید است).
 
     ## ۵. پیامک‌ها و اعلان‌ها
 
@@ -215,7 +229,10 @@ info:
     | تحویل به پست/تیپاکس | SMS | کد رهگیری + اسم حامل (اصلاح کد رهگیری پیامک ندارد) |
     | تحویل شد | SMS | درخواست ثبت نظر (با `notifyCustomer`) |
     | لغو شد | SMS | کد سفارش؛ لغو مشتری همیشه، لغو پنل با `notifyCustomer` |
-    | پول برگشت | SMS | کد سفارش؛ وقتی استرداد `COMPLETED` می‌شود |
+    | پول برگشت | SMS | کد سفارش؛ وقتی استرداد `COMPLETED` می‌شود (استرداد مرجوعی هم) |
+    | مرجوعی تأیید شد / رد شد | SMS | کد مرجوعی (`RT-…`) + «جزئیات تو حسابت»؛ همیشه. **بدون** دلیل رد یا دستورالعمل (متن آزاد پیامک نداریم) |
+    | جمع‌آوری مرجوعی | SMS | کد مرجوعی + اسم حامل؛ با `notifyCustomer` |
+    | مرجوعی بسته شد | SMS | کد مرجوعی + «جزئیات تو حسابت»؛ با `notifyCustomer`. **بدون** دلیل بستن |
     | درخواست تغییر بررسی شد | SMS | کد سفارش + «جزئیات در صفحه‌ی سفارش»؛ با `notifyCustomer`. **بدون `note`**: متن آزاد پیامک نداریم، `note` در `feedback.resolution` و تایم‌لاین دیده می‌شود |
     | موجود شد | SMS | لینک محصول (اشتراک «موجود شد خبرم کن») |
     | افت قیمت علاقه‌مندی | SMS | فقط با رضایت بازاریابی [پیشنهادی] |
@@ -2383,6 +2400,18 @@ paths:
       tags: [Orders]
       operationId: createReturnRequest
       summary: "درخواست مرجوعی (تا ۷ روز بعد از تحویل)"
+      description: |
+        **ترتیب قانون‌ها:** شکل (`400`، همه با هم؛ قانون هر فیلد در `CreateReturnRequest`) ← سفارش (کد بدشکل، ناموجود یا مال کاربر دیگر ← `404 ORDER_NOT_FOUND`)
+        ← عکس‌ها: هر `mediaIds.{i}` باید آپلود `RETURN_EVIDENCE` ِ **خود همین کاربر** باشد؛ ناموجود، مال کس دیگر یا آپلود‌شده برای کار دیگر
+        همه همان `400 MEDIA_NOT_FOUND` روی `mediaIds.{i}` (هیچ پاسخی نشان نمی‌دهد یک `mediaId` ِ دیگر وجود دارد)
+        ← قابل مرجوعی بودن سفارش: `DELIVERED` و حداقل یک قلم قابل مرجوعی، و هیچ مرجوعی ِ غیر `REJECTED` ِ دیگری
+        (یک مرجوعی باز یا تمام‌شده، یا سفارش لغوشده/در راه ← `422 ORDER_NOT_RETURNABLE`) ← مهلت: `now ≤ returnableUntil`
+        (گذشته ← `422 RETURN_WINDOW_EXPIRED` با `meta.returnableUntil`) ← قلم‌ها: `items.{i}.orderItemId` باید قلم همین سفارش باشد
+        (`400 ORDER_ITEM_NOT_FOUND`)، قابل مرجوعی در لحظه‌ی خرید (`400 ITEM_NOT_RETURNABLE`)، و `items.{i}.quantity` حداکثر تعداد همان قلم
+        (`400 RETURN_QUANTITY_EXCEEDS` با `meta.maxQuantity`) ← مدرک: برای چهار دلیل «تقصیر کیوا» (`ReturnReason`) حداقل یک `mediaIds`
+        (`400 EVIDENCE_REQUIRED` روی `mediaIds`) و برای `OTHER` توضیح (`400 DESCRIPTION_REQUIRED` روی `description`).
+        بعد از `REJECTED`، تا مهلت باز است، مشتری دوباره درخواست می‌دهد (مثلاً با عکس بهتر). مهلت فقط موقع درخواست چک می‌شود.
+        با ثبت، سفارش `RETURN_REQUESTED` می‌شود و `shippingPaidBy` پیشنهاد دلیل است (`ReturnReason`). پیامکی نمی‌رود (مشتری خودش همین الان ثبت کرده).
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/OrderCode'
@@ -2446,6 +2475,9 @@ paths:
       tags: [Orders]
       operationId: listMyReturns
       summary: "درخواست‌های مرجوعی من"
+      description: |
+        آرایه‌ی ساده (نه `{items, meta}`): همه‌ی مرجوعی‌های کاربر، `REJECTED` ها هم، تازه‌ترین اول، حداکثر ۵۰.
+        `items[].name` و `color` همان snapshot ِ قلم سفارش‌اند (نه محصول امروز).
       security: [{ bearerAuth: [] }]
       responses:
         '200':
@@ -2597,6 +2629,12 @@ paths:
       tags: [Uploads]
       operationId: uploadMyFile
       summary: "آپلود عکس/ویدیو (برای مرجوعی یا نظر) — خروجی mediaId"
+      description: |
+        همان پردازش `POST /admin/media` (نوع از روی محتوا، حذف همه‌ی metadata مثل GPS، webp در چند اندازه) با سقف‌های مشتری:
+        عکس jpeg/png/webp تا ۸MB (کوتاه‌ترین ضلع حداقل ۳۲۰، حداکثر ۴۰ مگاپیکسل)، ویدیو mp4 با H.264 تا ۵۰MB و ۶۰ ثانیه
+        (بیشتر ← `400 VIDEO_TOO_LONG` روی `file`). فقط `purpose` های مشتری (`RETURN_EVIDENCE`، `REVIEW_PHOTO`؛ بقیه ← `400 MEDIA_PURPOSE_INVALID`)؛ `alt` ندارد.
+        **حداکثر ۲۰ آپلود در ساعت برای هر کاربر** (`429 RATE_LIMITED` با `Retry-After` و `meta.retryAfterSeconds`).
+        آپلود فقط به چیزی ِ خود همین کاربر وصل می‌شود (مرجوعی، نظر)؛ آپلودی که ۴۸ ساعت به چیزی وصل نشود پاک می‌شود.
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -2627,7 +2665,15 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
-
+        '429':
+          description: |
+            `RATE_LIMITED` — ۲۰ آپلود در ساعت گذشته. `Retry-After` و `meta.retryAfterSeconds` = ثانیه‌های باقی‌مانده تا یک ساعت بعد از
+            قدیمی‌ترین آپلود ِ همین ساعت.
+          headers:
+            Retry-After: { $ref: '#/components/headers/RetryAfter' }
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
   # ================================================================
@@ -3854,8 +3900,11 @@ paths:
         جمع استردادهای غیر `FAILED` یک سفارش از مبلغ پرداخت‌شده‌اش بیشتر نمی‌شود (`400 REFUND_EXCEEDS_PAID` روی `amount` با `meta.refundable`).
         `reason` اجباری است (`400 REFUND_REASON_REQUIRED`). `method` پیش‌فرض `ORIGINAL_PAYMENT` (برگشت به همان کارت با کارت‌به‌کارت دستی)؛
         `BANK_TRANSFER` به شبایی که تلفنی گرفته شده.
-        با `returnId`، مرجوعی باید `RECEIVED` باشد و مال همین سفارش؛ وقتی این استرداد `COMPLETED` شود مرجوعی `REFUNDED` می‌شود.
-        تا ساخته شدن مرجوعی، هر `returnId` ← `400 RETURN_NOT_FOUND` روی `returnId`.
+        **استرداد مرجوعی (`returnId`):** مرجوعی باید مال همین سفارش باشد (ناموجود یا مال سفارش دیگر ← `400 RETURN_NOT_FOUND` روی `returnId`)،
+        `RECEIVED` باشد (← `422 INVALID_STATUS_TRANSITION`)، و استرداد ِ غیر `FAILED` ِ دیگری برای همین مرجوعی نباشد (← `422 RETURN_REFUND_EXISTS`؛
+        بعد از `FAILED` ِ قبلی، استرداد تازه مجاز است). `source = RETURN`؛ `method` نیامده ← همان `refundMethod` ِ مرجوعی. سقف همان «قابل استرداد» ِ سفارش است
+        و هزینه‌ی ارسال خودکار کم یا اضافه نمی‌شود (`AdminReturnRequest.suggestedRefund` پیشنهاد است). وقتی این استرداد `COMPLETED` شود
+        مرجوعی `REFUNDED` و سفارش `REFUNDED` می‌شود؛ `FAILED` مرجوعی را `RECEIVED` نگه می‌دارد.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/OrderCode'
@@ -3871,7 +3920,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Refund' }
         '422':
-          description: "`INVALID_STATUS_TRANSITION` — مرجوعی `returnId` هنوز `RECEIVED` نیست"
+          description: "`INVALID_STATUS_TRANSITION` — مرجوعی `returnId` هنوز `RECEIVED` نیست؛ `RETURN_REFUND_EXISTS` — این مرجوعی استرداد ِ غیر `FAILED` دارد"
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -3925,11 +3974,18 @@ paths:
       x-roles: [ADMIN, OPERATOR]
       operationId: adminListReturns
       summary: "درخواست‌های مرجوعی"
+      description: |
+        `status` یکی از `ReturnStatus` (نیامده = همه؛ ناشناخته ← `400 RETURN_STATUS_INVALID`). `sort`: `newest` (پیش‌فرض) یا `oldest` بر اساس
+        زمان درخواست، تا مرجوعی‌های قدیمی ِ نرسیده دیده شوند (بستن خودکار نداریم). `size` پیش‌فرض ۲۰، حداکثر ۱۰۰.
+        هر ردیف `AdminReturnRequest` ِ کامل است؛ `customer.fullName` و `phone` از حساب **فعلی** مشتری.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: status
           in: query
           schema: { $ref: '#/components/schemas/ReturnStatus' }
+        - name: sort
+          in: query
+          schema: { type: string, enum: [newest, oldest], default: newest }
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/Size'
       responses:
@@ -3953,6 +4009,12 @@ paths:
       x-roles: [ADMIN, OPERATOR]
       operationId: adminDecideReturn
       summary: "تأیید/رد مرجوعی و تعیین پرداخت‌کننده‌ی هزینه‌ی برگشت"
+      description: |
+        فقط از `REQUESTED` (وگرنه `422 INVALID_STATUS_TRANSITION`). **تأیید** ← `APPROVED`: `shippingPaidBy` نیامده = همان پیشنهاد ِ دلیل،
+        `instructions` نیامده = متن پیش‌فرض همان پرداخت‌کننده؛ سفارش `RETURN_REQUESTED` می‌ماند. **رد** ← `REJECTED`: `rejectionReason` ۳ تا ۵۰۰ نویسه
+        لازم است (`400 REJECTION_REASON_REQUIRED`)؛ سفارش به `DELIVERED` برمی‌گردد و تا مهلت باز است مشتری دوباره درخواست می‌دهد.
+        `rejectionReason` در تأیید و `shippingPaidBy`/`instructions` در رد نادیده گرفته می‌شوند. **هر دو همیشه پیامک دارند** (بدون متن دلیل).
+        یک ردیف `RETURN_DECIDED` در لاگ تغییرات.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: returnId
@@ -3987,7 +4049,12 @@ paths:
       summary: "زمان‌بندی جمع‌آوری مرسوله‌ی مرجوعی (APPROVED ← PICKUP_SCHEDULED)"
       description: |
         وقتی کیوا مرسوله را از مشتری جمع می‌کند (معمولاً `shippingPaidBy = KIVA`). اگر مشتری خودش می‌فرستد، این قدم لازم نیست و
-        مرجوعی مستقیم از `APPROVED` به `RECEIVED` می‌رود. صدا زدن دوباره در `PICKUP_SCHEDULED` زمان یا کد رهگیری را عوض می‌کند.
+        مرجوعی مستقیم از `APPROVED` به `RECEIVED` می‌رود؛ مشتری کد رهگیری‌اش را برای پشتیبانی می‌فرستد و اپراتور آن را یادداشت داخلی
+        سفارش می‌کند (endpoint ِ جدا ندارد). فقط از `APPROVED` یا `PICKUP_SCHEDULED` (وگرنه `422 INVALID_STATUS_TRANSITION`).
+        صدا زدن دوباره در `PICKUP_SCHEDULED` **همه‌ی** فیلدهای جمع‌آوری را جایگزین می‌کند. `carrier` فقط `TIPAX` یا `POST`
+        (`COURIER` ← `400 SHIPPING_METHOD_NOT_SUPPORTED`)؛ `scheduledFor` بین یک ساعت قبل تا ۳۰ روز بعد (← `400 PICKUP_TIME_INVALID`)؛
+        `trackingCode` همان قانون کد رهگیری ارسال (۶ تا ۴۰ حرف و رقم انگلیسی یا خط تیره، `TRACKING_CODE_INVALID`). پیامک فقط با `notifyCustomer`.
+        یک ردیف `RETURN_PICKUP_SCHEDULED` در لاگ تغییرات.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: returnId
@@ -4022,8 +4089,11 @@ paths:
       summary: "ثبت رسیدن کالای مرجوعی به انبار و نتیجه‌ی بازبینی (← RECEIVED)"
       description: |
         برای هر قلم: چند عدد رسید و چند عددش به موجودی برمی‌گردد (`restockQuantity`، سالم و قابل فروش). عددهای برگشتی با دلیل `RETURNED`
-        در تاریخچه‌ی موجودی ثبت می‌شوند (همان `POST /admin/inventory/adjustments`) و اگر ورینت ناموجود بوده، پیامک «موجود شد» هم می‌رود.
-        قدم بعد: استرداد با `returnId` (← `REFUNDED`) یا بستن بدون استرداد (← `CLOSED`).
+        در تاریخچه‌ی موجودی ثبت می‌شوند (`GET /admin/inventory/adjustments`، با `note` = کد مرجوعی و `createdBy` = همین اپراتور؛ رنگ غیرفعال
+        و محصول بایگانی‌شده هم). پیامک «موجود شد» با کار ِ «موجود شد خبرم کن» می‌رود، نه با این درخواست. این درخواست به مشتری پیامک نمی‌دهد.
+        فقط از `APPROVED` یا `PICKUP_SCHEDULED` (وگرنه `422 INVALID_STATUS_TRANSITION`). `items` باید **هر قلم مرجوعی را دقیقاً یک بار** داشته باشد
+        (← `400 RECEIPT_ITEMS_MISMATCH` روی `items` با `meta.expectedItemIds`)؛ همه صفر هم مجاز است (بسته خالی رسید). سفارش `RETURNED` می‌شود.
+        قدم بعد: استرداد با `returnId` (← `REFUNDED`) یا بستن بدون استرداد (← `CLOSED`). یک ردیف `RETURN_RECEIVED` در لاگ تغییرات.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: returnId
@@ -4057,8 +4127,10 @@ paths:
       operationId: adminCloseReturn
       summary: "بستن مرجوعی بدون استرداد (← CLOSED)"
       description: |
-        از `APPROVED` یا `PICKUP_SCHEDULED` (کالا هیچ‌وقت نرسید) یا `RECEIVED` (بازبینی رد شد و کالا به مشتری برمی‌گردد).
-        دلیل برای مشتری پیامک و در جزئیات مرجوعی نمایش داده می‌شود. سفارش به `DELIVERED` برمی‌گردد.
+        از `APPROVED` یا `PICKUP_SCHEDULED` (کالا هیچ‌وقت نرسید) یا `RECEIVED` (بازبینی رد شد و کالا به مشتری برمی‌گردد)؛ `REQUESTED` را با رد ببندید
+        (همه‌ی بقیه ← `422 INVALID_STATUS_TRANSITION`). اگر استرداد ِ `PENDING`/`PROCESSING` ِ همین مرجوعی هست ← `422 RETURN_REFUND_OPEN` (اول آن را
+        تمام یا `FAILED` کنید). دلیل در جزئیات مرجوعی نمایش داده می‌شود و پیامک (با `notifyCustomer`) فقط کد مرجوعی را دارد. سفارش به `DELIVERED` برمی‌گردد
+        و دیگر مرجوعی نمی‌گیرد؛ عددهایی که با رسید به موجودی برگشته‌اند سر جایشان می‌مانند. یک ردیف `RETURN_CLOSED` در لاگ تغییرات.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: returnId
@@ -4077,7 +4149,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/AdminReturnRequest' }
         '422':
-          description: "`INVALID_STATUS_TRANSITION`"
+          description: "`INVALID_STATUS_TRANSITION`، یا `RETURN_REFUND_OPEN` (استرداد این مرجوعی هنوز باز است)"
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -5588,6 +5660,10 @@ components:
         - PHOTOS_INCOMPLETE
         - REFUND_NOT_FOUND
         - PAYMENT_IN_PROGRESS
+        # --- مرجوعی (کدهای فیلدی مثل ITEM_NOT_RETURNABLE و EVIDENCE_REQUIRED فقط در errors[].code می‌آیند) ---
+        - RETURN_NOT_FOUND
+        - RETURN_REFUND_EXISTS
+        - RETURN_REFUND_OPEN
       example: DISCOUNT_MIN_SUBTOTAL_NOT_MET
 
     # ============ MEDIA ============
@@ -7078,35 +7154,44 @@ components:
       enum: [REQUESTED, APPROVED, REJECTED, PICKUP_SCHEDULED, RECEIVED, REFUNDED, CLOSED]
     ReturnReason:
       type: string
-      description: سه مورد اول «مشکل از کیوا» حساب می‌شوند و هزینه‌ی برگشت با کیواست
+      description: |
+        چهار مورد اول (`NOT_AS_PICTURED`، `MANUFACTURING_DEFECT`، `WRONG_ITEM`، `DAMAGED_IN_TRANSIT`) «تقصیر کیوا»اند: پیشنهاد پیش‌فرض
+        `shippingPaidBy = KIVA` و حداقل یک عکس یا ویدیو لازم است. `CHANGED_MIND` و `OTHER`: `CUSTOMER`؛ `OTHER` توضیح لازم دارد.
+        آسیب در راه تقصیر مشتری نیست (کیوا خسارت را از حامل می‌گیرد).
       enum: [NOT_AS_PICTURED, MANUFACTURING_DEFECT, WRONG_ITEM, DAMAGED_IN_TRANSIT, CHANGED_MIND, OTHER]
     CreateReturnRequest:
       type: object
+      description: |
+        همه‌ی خطاهای شکل با هم (`400`، روی همان فیلد). شماره شبا گرفته نمی‌شود: برای `BANK_TRANSFER` اپراتور تماس می‌گیرد
+        (فیلد `iban` ِ کلاینت قدیمی نادیده گرفته می‌شود).
       required: [items, reason]
       properties:
         items:
           type: array
           minItems: 1
+          maxItems: 20
+          description: 'همه‌ی قلم‌هایی که برمی‌گردند، یک جا. خالی یا نیامده ← `FIELD_REQUIRED`؛ بیشتر از ۲۰ ← `TOO_MANY_ITEMS`؛ هر `orderItemId` یک بار (← `LIST_ITEM_DUPLICATE` روی `items.{i}.orderItemId`)'
           items:
             type: object
             required: [orderItemId, quantity]
             properties:
-              orderItemId: { type: integer }
-              quantity: { type: integer, minimum: 1 }
+              orderItemId: { type: integer, description: '`OrderItem.id`؛ نیامده ← `FIELD_REQUIRED`؛ کمتر از ۱ یا نه قلم این سفارش ← `ORDER_ITEM_NOT_FOUND`؛ قلم غیرقابل مرجوعی ← `ITEM_NOT_RETURNABLE`' }
+              quantity: { type: integer, minimum: 1, maximum: 20, description: 'نیامده ← `FIELD_REQUIRED`؛ بیرون ۱ تا ۲۰ ← `QUANTITY_INVALID`؛ بیشتر از تعداد قلم ← `RETURN_QUANTITY_EXCEEDS` با `meta.maxQuantity`' }
         reason: { $ref: '#/components/schemas/ReturnReason' }
-        description: { type: string, maxLength: 1000, example: رنگ کیف با عکس قبل از ارسال فرق داشت. }
+        description: { type: string, maxLength: 1000, nullable: true, description: 'خالی = بی‌توضیح؛ خط تازه = فاصله؛ نویسه‌ی کنترلی ← `TEXT_INVALID`؛ بیشتر ← `TEXT_TOO_LONG`؛ برای `OTHER` لازم (`DESCRIPTION_REQUIRED`)', example: رنگ کیف با عکس قبل از ارسال فرق داشت. }
         mediaIds:
           type: array
           maxItems: 6
-          description: عکس‌های مستندات از `POST /me/uploads`
-          items: { type: string }
-        refundMethod: { type: string, enum: [ORIGINAL_PAYMENT, BANK_TRANSFER], default: ORIGINAL_PAYMENT }
-        iban: { type: string, nullable: true, pattern: '^IR\d{24}$', description: فقط برای BANK_TRANSFER }
+          description: 'عکس‌ها و ویدیوهای مستندات از `POST /me/uploads` (`purpose = RETURN_EVIDENCE`، فقط آپلودهای خود همین کاربر). بیشتر از ۶ ← `TOO_MANY_ITEMS`؛ شناسه‌ی بدشکل ← `MEDIA_ID_INVALID`؛ تکراری ← `LIST_ITEM_DUPLICATE`؛ برای دلیل‌های «تقصیر کیوا» حداقل یکی (`EVIDENCE_REQUIRED`)'
+          items: { type: string, pattern: '^med_[0-9A-Za-z]{22}$' }
+        refundMethod: { type: string, enum: [ORIGINAL_PAYMENT, BANK_TRANSFER], default: ORIGINAL_PAYMENT, description: 'ترجیح مشتری برای برگشت پول؛ ناشناخته (`STORE_CREDIT` هم) ← `REFUND_METHOD_INVALID`' }
     ReturnRequest:
       type: object
+      description: 'مرجوعی، همان‌طور که مشتری می‌بیند (`GET /me/returns`، `OrderDetail.returns`). همه‌ی فیلدها همیشه فرستاده می‌شوند'
+      required: [id, code, orderCode, status, statusLabel, reason, description, items, media, shippingPaidBy, instructions, refundMethod, rejectionReason, pickup, refund, createdAt, decidedAt, receivedAt, closedAt, closeReason]
       properties:
         id: { type: integer, example: 12 }
-        code: { type: string, example: RT-1012 }
+        code: { type: string, pattern: '^RT-\d{4,}$', description: '`RT-` + (۱۰۰۰ + `id`)', example: RT-1012 }
         orderCode: { $ref: '#/components/schemas/OrderCode' }
         status: { $ref: '#/components/schemas/ReturnStatus' }
         statusLabel: { type: string, example: در حال بررسی }
@@ -7124,8 +7209,12 @@ components:
         media:
           type: array
           items: { $ref: '#/components/schemas/MediaAsset' }
-        shippingPaidBy: { type: string, enum: [KIVA, CUSTOMER] }
-        instructions: { type: string, nullable: true, example: بسته رو با تیپاکس به آدرس انبار کیوا بفرست و کد رهگیری رو این‌جا ثبت کن. }
+        shippingPaidBy: { type: string, enum: [KIVA, CUSTOMER], description: 'از لحظه‌ی درخواست پر است: پیشنهاد دلیل (`ReturnReason`)، تا اپراتور موقع تأیید عوضش کند' }
+        instructions:
+          type: string
+          nullable: true
+          description: 'دستورالعمل فرستادن، بعد از تأیید (و در قدم‌های بعدی): متن اپراتور، یا اگر ننوشت متن پیش‌فرض همان `shippingPaidBy`. در `REQUESTED` و `REJECTED` `null`'
+          example: بسته رو با تیپاکس به آدرس انبار کیوا بفرست و کد رهگیری رو برای پشتیبانی بفرست.
         refundMethod: { type: string, enum: [ORIGINAL_PAYMENT, BANK_TRANSFER] }
         rejectionReason: { type: string, nullable: true, description: فقط برای `REJECTED` }
         pickup:
@@ -7138,7 +7227,7 @@ components:
             scheduledFor: { type: string, format: date-time, nullable: true }
             trackingCode: { type: string, nullable: true }
             note: { type: string, nullable: true }
-        refund: { type: object, allOf: [{ $ref: '#/components/schemas/Refund' }], nullable: true }
+        refund: { type: object, allOf: [{ $ref: '#/components/schemas/Refund' }], nullable: true, description: 'تازه‌ترین استرداد ِ همین مرجوعی (`FAILED` هم، با `statusNote`)؛ تا ثبت استرداد `null`' }
         createdAt: { type: string, format: date-time }
         decidedAt: { type: string, format: date-time, nullable: true }
         receivedAt: { type: string, format: date-time, nullable: true }
@@ -8471,16 +8560,16 @@ components:
       properties:
         amount: { $ref: '#/components/schemas/Money' }
         reason: { type: string, maxLength: 300 }
-        method: { type: string, enum: [ORIGINAL_PAYMENT, BANK_TRANSFER], default: ORIGINAL_PAYMENT }
-        returnId: { type: integer, nullable: true }
+        method: { type: string, enum: [ORIGINAL_PAYMENT, BANK_TRANSFER], description: 'نیامده: `refundMethod` ِ مرجوعی با `returnId`، وگرنه `ORIGINAL_PAYMENT`' }
+        returnId: { type: integer, nullable: true, description: 'استرداد ِ یک مرجوعی `RECEIVED` ِ همین سفارش (`RETURN_NOT_FOUND`، `422 INVALID_STATUS_TRANSITION`، `422 RETURN_REFUND_EXISTS`)' }
     AdminReturnDecisionRequest:
       type: object
       required: [approve]
       properties:
-        approve: { type: boolean }
-        shippingPaidBy: { type: string, enum: [KIVA, CUSTOMER] }
-        instructions: { type: string, maxLength: 1000 }
-        rejectionReason: { type: string, maxLength: 500, nullable: true }
+        approve: { type: boolean, description: 'نیامده ← `FIELD_REQUIRED`' }
+        shippingPaidBy: { type: string, enum: [KIVA, CUSTOMER], nullable: true, description: 'فقط تأیید؛ نیامده = پیشنهاد ِ دلیل؛ ناشناخته ← `SHIPPING_PAYER_INVALID`' }
+        instructions: { type: string, maxLength: 1000, nullable: true, description: 'فقط تأیید؛ نیامده = متن پیش‌فرض همان پرداخت‌کننده (`TEXT_TOO_LONG` / `TEXT_INVALID`)' }
+        rejectionReason: { type: string, minLength: 3, maxLength: 500, nullable: true, description: 'برای رد لازم: ۳ تا ۵۰۰ نویسه (`REJECTION_REASON_REQUIRED` / `TEXT_TOO_LONG` / `TEXT_INVALID`)؛ در تأیید نادیده' }
     AdminChangeRequestResolutionRequest:
       type: object
       required: [decision]
@@ -8510,19 +8599,28 @@ components:
           example: '140507181234567'
         note: { type: string, maxLength: 300, nullable: true, description: 'می‌شود `Refund.statusNote`؛ مشتری هم می‌بیند' }
     AdminReturnRequest:
-      description: مرجوعی در پنل؛ `ReturnRequest` به‌اضافه‌ی مشتری، شماره شبا و قدم‌های مجاز بعدی
+      description: 'مرجوعی در پنل؛ `ReturnRequest` به‌اضافه‌ی مشتری، نتیجه‌ی بازبینی، قدم‌های مجاز بعدی و مبلغ پیشنهادی. شماره شبا در سیستم نیست (تلفنی گرفته می‌شود)'
       allOf:
         - $ref: '#/components/schemas/ReturnRequest'
         - type: object
-          required: [customer, iban, receipt, allowedTransitions]
+          required: [customer, receipt, allowedTransitions, suggestedRefund]
           properties:
             customer:
               type: object
+              required: [id, fullName, phone]
               properties:
                 id: { type: integer }
                 fullName: { type: string, nullable: true }
                 phone: { $ref: '#/components/schemas/PhoneNumber' }
-            iban: { type: string, nullable: true, pattern: '^IR\d{24}$', description: 'برای `refundMethod = BANK_TRANSFER`؛ در بقیه `null`' }
+            suggestedRefund:
+              type: integer
+              allOf: [{ $ref: '#/components/schemas/Money' }]
+              nullable: true
+              description: |
+                فقط در `RECEIVED` (وگرنه `null`): جمع `floor(سهم پرداخت‌شده‌ی قلم × receivedQuantity ÷ تعداد قلم)`، سهم پرداخت‌شده = جمع قلم منهای سهم کد تخفیف
+                (`floor(lineTotal × codeDiscount ÷ subtotal)` ِ لحظه‌ی ثبت)، حداکثر «قابل استرداد» ِ سفارش. **هزینه‌ی ارسال جزوش نیست.**
+                پیشنهاد است؛ ادمین مبلغ را خودش در `POST /admin/orders/{orderCode}/refunds` می‌زند.
+              example: 1890000
             receipt:
               type: object
               nullable: true
@@ -8539,17 +8637,18 @@ components:
                 note: { type: string, nullable: true }
             allowedTransitions:
               type: array
-              description: 'قدم‌های مجاز بعدی (بخش ۴)؛ `REFUNDED` یعنی «ثبت استرداد با `returnId`»'
+              description: 'قدم‌های مجاز بعدی (جدول بخش ۴)؛ `REFUNDED` یعنی «ثبت استرداد با `returnId`»؛ `RECEIVED` با استرداد باز `[]`'
               items: { $ref: '#/components/schemas/ReturnStatus' }
               example: [REFUNDED, CLOSED]
     AdminReturnPickupRequest:
       type: object
+      description: 'جایگزین کامل جمع‌آوری قبلی (فیلد نیامده = خالی). همه‌ی خطاهای شکل با هم'
       required: [carrier]
       properties:
-        carrier: { $ref: '#/components/schemas/ShippingMethodCode' }
-        scheduledFor: { type: string, format: date-time, nullable: true, description: زمان مراجعه‌ی مأمور }
-        trackingCode: { type: string, minLength: 6, maxLength: 40, nullable: true }
-        note: { type: string, maxLength: 500, nullable: true, description: برای مشتری }
+        carrier: { allOf: [{ $ref: '#/components/schemas/ShippingMethodCode' }], description: 'فقط `TIPAX` یا `POST`؛ `COURIER` ← `SHIPPING_METHOD_NOT_SUPPORTED`؛ نیامده ← `FIELD_REQUIRED`؛ ناشناخته ← `CARRIER_INVALID`' }
+        scheduledFor: { type: string, format: date-time, nullable: true, description: 'زمان مراجعه‌ی مأمور: از یک ساعت پیش تا ۳۰ روز بعد (`PICKUP_TIME_INVALID`؛ بدشکل ← `DATE_TIME_INVALID`)' }
+        trackingCode: { type: string, minLength: 6, maxLength: 40, nullable: true, description: 'خالی = بی‌کد؛ همان قانون کد رهگیری ارسال (`TRACKING_CODE_INVALID`)' }
+        note: { type: string, maxLength: 500, nullable: true, description: 'برای مشتری (`TEXT_TOO_LONG` / `TEXT_INVALID`)' }
         notifyCustomer: { type: boolean, default: true }
     AdminReturnReceiptRequest:
       type: object
@@ -8558,20 +8657,24 @@ components:
         items:
           type: array
           minItems: 1
-          description: 'برای هر قلم مرجوعی؛ `restockQuantity ≤ receivedQuantity ≤` تعداد درخواست‌شده'
+          maxItems: 20
+          description: |
+            برای هر قلم مرجوعی **دقیقاً یک ردیف** (کم، اضافه یا تکراری ← `RECEIPT_ITEMS_MISMATCH` روی `items` با `meta.expectedItemIds`)؛
+            `restockQuantity ≤ receivedQuantity ≤` تعداد درخواست‌شده (`RESTOCK_EXCEEDS_RECEIVED` / `RECEIVED_QUANTITY_EXCEEDS` با `meta.maxQuantity`).
+            خالی یا نیامده ← `FIELD_REQUIRED`؛ بیشتر از ۲۰ ← `TOO_MANY_ITEMS`.
           items:
             type: object
             required: [orderItemId, receivedQuantity, restockQuantity]
             properties:
               orderItemId: { type: integer }
-              receivedQuantity: { type: integer, minimum: 0 }
-              restockQuantity: { type: integer, minimum: 0, description: عددهای سالم که به موجودی برمی‌گردند }
-        note: { type: string, maxLength: 1000, nullable: true, description: نتیجه‌ی بازبینی (داخلی) }
+              receivedQuantity: { type: integer, minimum: 0, maximum: 20, description: 'نیامده ← `FIELD_REQUIRED`؛ بیرون ۰ تا ۲۰ ← `NUMBER_OUT_OF_RANGE`' }
+              restockQuantity: { type: integer, minimum: 0, maximum: 20, description: 'عددهای سالم که به موجودی برمی‌گردند (همان قانون‌های `receivedQuantity`)' }
+        note: { type: string, maxLength: 1000, nullable: true, description: 'نتیجه‌ی بازبینی؛ داخلی، مشتری نمی‌بیند (`TEXT_TOO_LONG` / `TEXT_INVALID`)' }
     AdminReturnCloseRequest:
       type: object
       required: [reason]
       properties:
-        reason: { type: string, minLength: 3, maxLength: 500, description: برای مشتری, example: مرسوله تا ۱۴ روز بعد از تأیید به انبار نرسید. }
+        reason: { type: string, minLength: 3, maxLength: 500, description: 'برای مشتری، در جزئیات مرجوعی (نه در پیامک)؛ کمتر از ۳ یا نیامده ← `CLOSE_REASON_REQUIRED` (`TEXT_TOO_LONG` / `TEXT_INVALID`)', example: مرسوله‌ای از طرفت به انبار نرسید؛ اگه فرستادی با پشتیبانی تماس بگیر. }
         notifyCustomer: { type: boolean, default: true }
 
     # ============ ADMIN · MARKETING ============
