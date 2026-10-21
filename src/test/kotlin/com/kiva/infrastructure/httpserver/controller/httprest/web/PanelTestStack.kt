@@ -65,7 +65,14 @@ import com.kiva.application.usecase.product.usecase.query.GetAdminProductUc
 import com.kiva.application.usecase.refund.usecase.command.CreateRefundUc
 import com.kiva.application.usecase.refund.usecase.command.UpdateRefundUc
 import com.kiva.application.usecase.report.usecase.query.GetReportOverviewUc
+import com.kiva.application.usecase.returnrequest.AdminReturnRequests
+import com.kiva.application.usecase.returnrequest.ReturnByIdForPanel
+import com.kiva.application.usecase.returnrequest.ReturnNotices
 import com.kiva.application.usecase.returnrequest.usecase.command.CreateReturnUc
+import com.kiva.application.usecase.returnrequest.usecase.command.DecideReturnUc
+import com.kiva.application.usecase.returnrequest.usecase.command.ScheduleReturnPickupUc
+import com.kiva.application.usecase.returnrequest.usecase.query.FindAdminReturnsUc
+import com.kiva.application.usecase.returnrequest.usecase.query.GetAdminReturnUc
 import com.kiva.application.usecase.returnrequest.usecase.query.GetMyReturnUc
 import com.kiva.application.usecase.returnrequest.usecase.query.ListMyReturnsUc
 import com.kiva.application.usecase.settings.usecase.command.UpdateSettingsUc
@@ -286,6 +293,18 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         ListMyReturnsUc(transactions, purchase.returns, purchase.returnRequests, purchase.settings),
         GetMyReturnUc(transactions, purchase.returns, purchase.returnRequests, purchase.settings),
     )
+    val returnNotices = ReturnNotices(purchase.auth.sms)
+    val returnByIdForPanel = ReturnByIdForPanel(purchase.returns, purchase.orderQm, purchase.orders)
+    val adminReturnRequests = AdminReturnRequests(
+        purchase.returnRequests, AdminCustomerRepositoryImpl(), purchase.refunds, purchase.payments, RefundDomainService(RefundIdGeneratorImpl()),
+    )
+    val adminReturns = AdminReturnUseCases(
+        checkPanelAccess,
+        FindAdminReturnsUc(transactions, purchase.returns, adminReturnRequests, purchase.settings),
+        GetAdminReturnUc(transactions, purchase.returns, adminReturnRequests, purchase.settings),
+        DecideReturnUc(transactions, returnByIdForPanel, purchase.returns, purchase.orders, users, auditTrail, returnNotices, clock),
+        ScheduleReturnPickupUc(transactions, returnByIdForPanel, purchase.returns, purchase.settings, users, auditTrail, returnNotices, clock),
+    )
 
     val adminRefunds = AdminRefundUseCases(
         checkPanelAccess,
@@ -393,6 +412,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
                     // A customer's uploads (phase 7): the same use case and media root as the panel's.
                     webV1MyUploads(uploadMedia, mediaStorage::newUploadFile, mediaUrls)
                     webV1MyReturns(myReturns, mediaUrls)
+                    webV1AdminReturns(adminReturns, mediaUrls)
                     // Back from the gateway and the result page, for paying what a change left owed (phase 3).
                     webV1Payments(purchase.paymentUseCases, PaymentConfig.DEFAULT.resultUrl)
                     webV1Tracking(purchase.trackingUseCases, mediaUrls)

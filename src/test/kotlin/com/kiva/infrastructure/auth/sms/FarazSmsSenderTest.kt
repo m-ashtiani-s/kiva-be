@@ -7,6 +7,7 @@ import com.kiva.common.valueobject.IranianMobileNumber
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpPurpose
+import com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnCode
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.MockRequestHandleScope
 import io.ktor.client.engine.mock.respond
@@ -147,6 +148,10 @@ class FarazSmsSenderTest {
             sms.sendOrderShipped(sara, OrderCode.constructFromPersisted("KV-218340"), "TIPAX_NAME", "TRK-123456")
             sms.sendOrderDelivered(sara, OrderCode.constructFromPersisted("KV-218340"))
             sms.sendChangeResolved(sara, OrderCode.constructFromPersisted("KV-218340"))
+            sms.sendReturnApproved(sara, ReturnCode.constructFromPersisted("RT-1012"))
+            sms.sendReturnRejected(sara, ReturnCode.constructFromPersisted("RT-1012"))
+            sms.sendReturnPickup(sara, ReturnCode.constructFromPersisted("RT-1012"), "TIPAX_NAME")
+            sms.sendReturnClosed(sara, ReturnCode.constructFromPersisted("RT-1012"))
         }
 
         assertTrue(sent.isEmpty())
@@ -158,6 +163,7 @@ class FarazSmsSenderTest {
             "https://api.iranpayamak.com", key, "90008361", "vdXmsAfAQs", phoneChangedPattern = "pHoNe1234x", orderPaidPattern = "oRdEr5678y",
             photosSentPattern = "pH0t05ent1", refundCompletedPattern = "r3fund0ne1", orderCancelledPattern = "c4ncel1ed1",
             orderShippedPattern = "sh1pped001", orderDeliveredPattern = "de1ivered1", changeResolvedPattern = "ch4nged001",
+            returnApprovedPattern = "rtApproved", returnRejectedPattern = "rtRejected", returnPickupPattern = "rtPickup01", returnClosedPattern = "rtClosed01",
         )
         runBlocking {
             val sms = sender(withAll)
@@ -169,6 +175,10 @@ class FarazSmsSenderTest {
             sms.sendOrderShipped(sara, OrderCode.constructFromPersisted("KV-218340"), "TIPAX_NAME", "TRK-123456")
             sms.sendOrderDelivered(sara, OrderCode.constructFromPersisted("KV-218340"))
             sms.sendChangeResolved(sara, OrderCode.constructFromPersisted("KV-218340"))
+            sms.sendReturnApproved(sara, ReturnCode.constructFromPersisted("RT-1012"))
+            sms.sendReturnRejected(sara, ReturnCode.constructFromPersisted("RT-1012"))
+            sms.sendReturnPickup(sara, ReturnCode.constructFromPersisted("RT-1012"), "TIPAX_NAME")
+            sms.sendReturnClosed(sara, ReturnCode.constructFromPersisted("RT-1012"))
         }
 
         assertEquals(
@@ -179,6 +189,9 @@ class FarazSmsSenderTest {
                 """{"code":"sh1pped001","attributes":{"order":"KV-218340","carrier":"TIPAX_NAME","tracking":"TRK-123456"}}""",
                 """{"code":"de1ivered1","attributes":{"order":"KV-218340"}}""",
                 """{"code":"ch4nged001","attributes":{"order":"KV-218340"}}""",
+                """{"code":"rtApproved","attributes":{"code":"RT-1012"}}""", """{"code":"rtRejected","attributes":{"code":"RT-1012"}}""",
+                """{"code":"rtPickup01","attributes":{"code":"RT-1012","carrier":"TIPAX_NAME"}}""",
+                """{"code":"rtClosed01","attributes":{"code":"RT-1012"}}""",
             ),
             sent.map { (_, body) -> JsonObject(body.filterKeys { it == "code" || it == "attributes" }).toString() },
         )

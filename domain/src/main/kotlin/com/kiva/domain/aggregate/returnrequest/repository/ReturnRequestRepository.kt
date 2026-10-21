@@ -1,9 +1,12 @@
 package com.kiva.domain.aggregate.returnrequest.repository
 
+import com.kiva.common.pagination.Page
+import com.kiva.common.pagination.Pageable
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.order.model.valueobject.OrderId
 import com.kiva.domain.aggregate.returnrequest.entity.ReturnRequest
 import com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnId
+import com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnStatus
 
 /**
  * Returns, kept as rows. A change runs under the lock of its order's row in the read model (roadmap section 4.11, lock
@@ -27,6 +30,12 @@ interface ReturnRequestRepository {
 
     /** At most [limit] returns of [userId], newest first, for reading only. */
     fun findOfUser(userId: UserId, limit: Int): List<ReturnRequest>
+
+    /**
+     * The panel's queue, for reading only: the returns in [status] (every return when null), newest asked first or oldest
+     * (the pageable's sort: `newest`, `oldest`; ties to the return's id the same way).
+     */
+    fun page(status: ReturnStatus?, pageable: Pageable): Page<ReturnRequest>
 
     /**
      * Writes the return's change, only if its row still has the version it was read with, and raises that version.

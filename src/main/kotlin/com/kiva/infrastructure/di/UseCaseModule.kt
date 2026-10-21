@@ -131,8 +131,15 @@ import com.kiva.application.usecase.product.usecase.query.GetProductFacetsUc
 import com.kiva.application.usecase.product.usecase.query.GetProductUc
 import com.kiva.application.usecase.refund.usecase.command.CreateRefundUc
 import com.kiva.application.usecase.refund.usecase.command.UpdateRefundUc
+import com.kiva.application.usecase.returnrequest.AdminReturnRequests
+import com.kiva.application.usecase.returnrequest.ReturnByIdForPanel
+import com.kiva.application.usecase.returnrequest.ReturnNotices
 import com.kiva.application.usecase.returnrequest.ReturnRequests
 import com.kiva.application.usecase.returnrequest.usecase.command.CreateReturnUc
+import com.kiva.application.usecase.returnrequest.usecase.command.DecideReturnUc
+import com.kiva.application.usecase.returnrequest.usecase.command.ScheduleReturnPickupUc
+import com.kiva.application.usecase.returnrequest.usecase.query.FindAdminReturnsUc
+import com.kiva.application.usecase.returnrequest.usecase.query.GetAdminReturnUc
 import com.kiva.application.usecase.returnrequest.usecase.query.GetMyReturnUc
 import com.kiva.application.usecase.returnrequest.usecase.query.ListMyReturnsUc
 import com.kiva.application.usecase.report.usecase.query.GetReportOverviewUc
@@ -605,6 +612,29 @@ val useCaseModule = module(createdAtStart = true) {
     }
     single { ListMyReturnsUc(transactionManager = get(), returnRequestRepository = get(), returnRequests = get(), shopSettingsRepository = get()) }
     single { GetMyReturnUc(transactionManager = get(), returnRequestRepository = get(), returnRequests = get(), shopSettingsRepository = get()) }
+
+    // --- admin: returns (phase 7) ---
+    single { ReturnNotices(smsSender = get()) }
+    single { ReturnByIdForPanel(returnRequestRepository = get(), orderQmRepository = get(), orderRepository = get()) }
+    single {
+        AdminReturnRequests(
+            returnRequests = get(), adminCustomerRepository = get(), refundRepository = get(), paymentRepository = get(), refundDomainService = get(),
+        )
+    }
+    single { FindAdminReturnsUc(transactionManager = get(), returnRequestRepository = get(), adminReturnRequests = get(), shopSettingsRepository = get()) }
+    single { GetAdminReturnUc(transactionManager = get(), returnRequestRepository = get(), adminReturnRequests = get(), shopSettingsRepository = get()) }
+    single {
+        DecideReturnUc(
+            transactionManager = get(), returnByIdForPanel = get(), returnRequestRepository = get(), orderRepository = get(), userRepository = get(),
+            auditTrail = get(), returnNotices = get(), clock = get(),
+        )
+    }
+    single {
+        ScheduleReturnPickupUc(
+            transactionManager = get(), returnByIdForPanel = get(), returnRequestRepository = get(), shopSettingsRepository = get(), userRepository = get(),
+            auditTrail = get(), returnNotices = get(), clock = get(),
+        )
+    }
 
     // --- admin: refunds (phase 2) ---
     single {

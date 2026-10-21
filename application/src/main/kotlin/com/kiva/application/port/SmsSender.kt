@@ -4,6 +4,7 @@ import com.kiva.common.valueobject.IranianMobileNumber
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpPurpose
+import com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnCode
 
 /**
  * Sends SMS through the shop's SMS provider. The domain doesn't know which provider; development writes to the log.
@@ -70,4 +71,29 @@ interface SmsSender {
      * like [sendCode].
      */
     suspend fun sendChangeResolved(to: IranianMobileNumber, orderCode: OrderCode)
+
+    /**
+     * «مرجوعی تأیید شد»: staff approved the return [returnCode]; how to send it back is on its page. Sent after the commit;
+     * when it fails, only the log knows. Throws like [sendCode].
+     */
+    suspend fun sendReturnApproved(to: IranianMobileNumber, returnCode: ReturnCode)
+
+    /**
+     * «مرجوعی رد شد»: staff turned the return [returnCode] down; why is on its page, never in the SMS (no free text in an
+     * SMS, roadmap section 1, row 14). Sent after the commit; when it fails, only the log knows. Throws like [sendCode].
+     */
+    suspend fun sendReturnRejected(to: IranianMobileNumber, returnCode: ReturnCode)
+
+    /**
+     * «جمع‌آوری مرجوعی»: [carrierName] will collect the parcel of the return [returnCode]; when is on its page. Sent after
+     * the commit, only when staff chose to tell the customer; when it fails, only the log knows. Throws like [sendCode].
+     */
+    suspend fun sendReturnPickup(to: IranianMobileNumber, returnCode: ReturnCode, carrierName: String)
+
+    /**
+     * «مرجوعی بسته شد»: staff closed the return [returnCode] without money back; why is on its page, never in the SMS.
+     * Sent after the commit, only when staff chose to tell the customer; when it fails, only the log knows. Throws like
+     * [sendCode].
+     */
+    suspend fun sendReturnClosed(to: IranianMobileNumber, returnCode: ReturnCode)
 }

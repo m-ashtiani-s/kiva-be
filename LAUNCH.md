@@ -368,9 +368,13 @@ diff <(grep -oE '^[A-Z_]+=' /opt/kiva/conf/kiva.env | sort) <(grep -oE '^[A-Z_]+
 | `KIVA_FARAZ_ORDER_CANCELLED_PATTERN` | `order` | «سفارش %order% لغو شد.» |
 | `KIVA_FARAZ_REFUND_COMPLETED_PATTERN` | `order` | «مبلغ سفارش %order% به حسابت برگشت.» |
 | `KIVA_FARAZ_CHANGE_RESOLVED_PATTERN` | `order` | «درخواستت برای سفارش %order% بررسی شد؛ جزئیات تو صفحه‌ی سفارش.» |
+| `KIVA_FARAZ_RETURN_APPROVED_PATTERN` (فاز ۷) | `code` | «مرجوعی %code% تأیید شد؛ نحوه‌ی ارسال تو صفحه‌ی مرجوعی.» |
+| `KIVA_FARAZ_RETURN_REJECTED_PATTERN` (فاز ۷) | `code` | «وضعیت مرجوعی %code% عوض شد؛ جزئیات تو حسابت.» |
+| `KIVA_FARAZ_RETURN_PICKUP_PATTERN` (فاز ۷) | `code`، `carrier` | «بسته‌ی مرجوعی %code% رو %carrier% ازت تحویل می‌گیره؛ زمانش تو حسابت.» |
+| `KIVA_FARAZ_RETURN_CLOSED_PATTERN` (فاز ۷) | `code` | «مرجوعی %code% بسته شد؛ جزئیات تو حسابت.» |
 | `KIVA_FARAZ_ALERT_PATTERN` (گام ۶.۸) | `what` | «هشدار کیوا: %what%» |
 
-الگوهای فازهای بعد (مرجوعی، «موجود شد»، پاسخ تماس) با همون فازها اضافه می‌شن.
+الگوهای فازهای بعد («موجود شد»، پاسخ تماس) با همون فازها اضافه می‌شن.
 
 **۳. آدرس‌های رهگیری.** در پنل، تنظیمات ← روش‌های ارسال: آدرس رهگیری تیپاکس و پست رو با یه کد واقعی در سایت خودشون امتحان کن و اگه لازمه اصلاح کن (`{code}` جای کد).
 

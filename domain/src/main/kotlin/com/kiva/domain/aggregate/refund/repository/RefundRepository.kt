@@ -27,6 +27,9 @@ interface RefundRepository {
     /** Every refund of [orderId], oldest first, for reading only. */
     fun findAllOf(orderId: OrderId): List<Refund>
 
+    /** Every refund of [orderIds], oldest first, for reading only: a page of the panel's returns in one read. */
+    fun findAllOfOrders(orderIds: Collection<OrderId>): List<Refund>
+
     /** Every refund of the returns [returnIds] (phase 7), oldest first, for reading only: a page of returns in one read. */
     fun findAllOfReturns(returnIds: Collection<ReturnId>): List<Refund>
 

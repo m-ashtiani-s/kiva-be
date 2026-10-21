@@ -73,6 +73,10 @@ whose pattern isn't set is not sent, and a `WARN` says so.
 | `KIVA_FARAZ_ORDER_SHIPPED_PATTERN` | Optional: «ارسال شد», when an order (or a whole reservation group, once) leaves with the courier; not for a corrected tracking code. Its variables are `order`, `carrier` (the carrier's name) and `tracking` (the tracking code). |
 | `KIVA_FARAZ_ORDER_DELIVERED_PATTERN` | Optional: «تحویل شد», when staff record an order as delivered with `notifyCustomer`. Its variable is `order`. |
 | `KIVA_FARAZ_CHANGE_RESOLVED_PATTERN` | Optional: «درخواستت بررسی شد», when staff resolve a change request with `notifyCustomer`; the details are on the order's page, never in the SMS. Its variable is `order`. |
+| `KIVA_FARAZ_RETURN_APPROVED_PATTERN` | Optional: «مرجوعی تأیید شد», when staff approve a return. Its variable is `code` (the return's, `RT-1012`). Suggested text: «مرجوعی %code% تأیید شد؛ نحوه‌ی ارسال تو صفحه‌ی مرجوعی.» |
+| `KIVA_FARAZ_RETURN_REJECTED_PATTERN` | Optional: «مرجوعی رد شد», when staff turn a return down; the reason is on the return's page, never in the SMS. Its variable is `code`. Suggested text: «وضعیت مرجوعی %code% عوض شد؛ جزئیات تو حسابت.» |
+| `KIVA_FARAZ_RETURN_PICKUP_PATTERN` | Optional: «جمع‌آوری مرجوعی», when staff schedule the pickup with `notifyCustomer`. Its variables are `code` and `carrier` (its name). Suggested text: «بسته‌ی مرجوعی %code% رو %carrier% ازت تحویل می‌گیره؛ زمانش تو حسابت.» |
+| `KIVA_FARAZ_RETURN_CLOSED_PATTERN` | Optional: «مرجوعی بسته شد», when staff close a return with `notifyCustomer`; the reason is on its page. Its variable is `code`. Suggested text: «مرجوعی %code% بسته شد؛ جزئیات تو حسابت.» |
 | `KIVA_FARAZ_BASE_URL` | The web service's address, default `https://api.iranpayamak.com`. |
 
 A code that can't be sent makes `POST /auth/otp/send` answer 500, and the log says why (the provider's own words, with

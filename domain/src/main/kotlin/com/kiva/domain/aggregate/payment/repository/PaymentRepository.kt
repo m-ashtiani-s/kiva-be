@@ -48,6 +48,9 @@ interface PaymentRepository {
     /** Every attempt of [orderId], oldest first, for reading only: nothing is locked (the order's page). */
     fun findAttemptsOf(orderId: OrderId): List<Payment>
 
+    /** Every attempt of [orderIds], oldest first, for reading only: a page of the panel's returns in one read. */
+    fun findAttemptsOfOrders(orderIds: Collection<OrderId>): List<Payment>
+
     /** The attempt as it is, for reading only: nothing is locked. */
     fun find(publicId: PaymentPublicId): Payment?
 

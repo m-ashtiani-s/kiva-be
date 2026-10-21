@@ -3259,7 +3259,7 @@ CREATE TABLE announcement_tbl (
 | ۷.۱ | آپلود مشتری (`/me/uploads`) | M | ✅ |
 | ۷.۲ | دامنه‌ی مرجوعی، رویدادهای سفارش و جدول | L | ✅ |
 | ۷.۳ | درخواست مرجوعی و «مرجوعی‌های من» | M | ✅ |
-| ۷.۴ | صف پنل، تصمیم و جمع‌آوری | M | ⬜ |
+| ۷.۴ | صف پنل، تصمیم و جمع‌آوری | M | ✅ |
 | ۷.۵ | رسیدن به انبار، بستن، و استرداد ِ مرجوعی | L | ⬜ |
 | ۷.۶ | ریویو و دور با پنل | M | ⬜ |
 
@@ -3310,6 +3310,10 @@ CREATE TABLE announcement_tbl (
 | 41 | ساختن ِ `ReturnRequest` (تازه، گام ۷.۳) | سرویس مشترک `ReturnRequests` (`ofOrder` برای صفحه‌ی سفارش و پنل، `of` برای لیست): اسم و رنگ از ردیف ِ سفارش، مدیا، تازه‌ترین استرداد. برای «مرجوعی‌های من» بدون N+1: `OrderQmRepository.findByIds` و `RefundRepository.findAllOfReturns`. `pickup.carrierName` از تنظیمات ِ الان | قانون ۱۵: یه ساختن برای سه جا |
 | 42 | برچسب دلیل (تازه، گام ۷.۳) | `ReturnTexts.reasonLabel` ساخته نشد: کانترکت `reasonLabel` نداره و برچسب دلیل‌ها کار فرانت‌ـه. `ReturnTexts` برچسب ۷ وضعیت و دو متن پیش‌فرض دستورالعمل رو داره | کد بی‌مصرف نه |
 | 43 | مدیای پاک‌شده وسط درخواست (تازه، گام ۷.۳) | اگه `markAttached` کمتر از تعداد خواسته‌شده رو علامت بزنه (پاک‌کن ِ ۴۸ ساعته وسط کار) ← کل تراکنش برمی‌گرده و `400 MEDIA_NOT_FOUND` روی `mediaIds` | مثل اینکه از اول نبوده |
+| 44 | پاسخ ِ قدم‌های پنل (تازه، گام ۷.۴) | `DecideReturnUc` و `ScheduleReturnPickupUc` (و ۷.۵) `Unit` برمی‌گردونن و route بدنه رو با Query ِ تازه‌ی `GetAdminReturnUc` می‌خونه؛ شناسه‌ی بدشکل یا ناموجود ← `404 RETURN_NOT_FOUND` | قانون ۶ ِ ۴.۵ |
+| 45 | جمع‌آوری ِ تکراری (تازه، گام ۷.۴) | همون جمع‌آوری (بعد از نرمال شدن کد رهگیری) دوباره ← `200` بدون ذخیره، بدون ردیف لاگ و بدون پیامک. `changes` ِ `RETURN_PICKUP_SCHEDULED` `status` رو هم داره (اولین بار `APPROVED` ← `PICKUP_SCHEDULED`) | کاری که چیزی رو عوض نکرد ردیف نمی‌ذاره (۵.۱) |
+| 46 | ترتیب `allowedTransitions` (تازه، گام ۷.۴) | به ترتیب قدم‌ها (ترتیب `ReturnStatus`)، نه الفبا: `[PICKUP_SCHEDULED, RECEIVED, CLOSED]`، `[REFUNDED, CLOSED]` | همون مثال‌های کانترکت و جدول ۱۲.۳ |
+| 47 | ساختن ِ `AdminReturnRequest` (تازه، گام ۷.۴) | سرویس مشترک `AdminReturnRequests` روی `ReturnRequests` (`ordersOf` و `of(returns, orders, settings)` ِ تازه): حساب‌ها، استردادهای سفارش‌ها (`RefundRepository.findAllOfOrders`) و فقط برای `RECEIVED` ها پرداخت‌ها (`PaymentRepository.findAttemptsOfOrders`)، هر کدوم یه خوندن برای کل صفحه. `suggestedRefund` همین‌جا ساخته شد (تستش با ۷.۵). `customer.phone` ِ حساب ِ نبوده ← موبایل گیرنده‌ی سفارش (مثل `AdminOrder`) | بدون N+1؛ یه ساختن برای صف و هر قدم |
 
 ### ۱۲.۳ ماشین وضعیت مرجوعی
 
@@ -3701,18 +3705,20 @@ Route: 200
 
 ---
 
-#### گام ۷.۴: صف پنل، تصمیم و جمع‌آوری · M ⬜
+#### گام ۷.۴: صف پنل، تصمیم و جمع‌آوری · M ✅
 
 **می‌سازی:** `ReturnByIdForPanel`؛ `FindAdminReturnsUc`، `DecideReturnUc`، `ScheduleReturnPickupUc`؛ `webV1AdminReturns.kt` (سه route)؛ `AdminReturnRequestHttpResponse`؛ پیامک‌های تأیید، رد و جمع‌آوری (مسیر ۹ مرحله‌ای بخش ۲۴)؛ لاگ تغییرات.
 
 وابسته به: ۷.۳
 
 **تموم شده یعنی:**
-- [ ] تأیید ← `APPROVED`، پیامک، لاگ؛ رد بدون دلیل ← `400`؛ رد ← `REJECTED`، سفارش `DELIVERED`، `canReturn` دوباره `true` (اگه مهلت مونده).
-- [ ] تصمیم دوباره ← `422`.
-- [ ] جمع‌آوری از `REQUESTED` ← `422`؛ از `APPROVED` ← `PICKUP_SCHEDULED`؛ دوباره ← فیلدها جایگزین؛ `COURIER` ← `400`؛ زمان ۴۰ روز بعد ← `400`.
-- [ ] `CUSTOMER` ← `403` روی هر سه؛ `CATALOG_MANAGER` ← `403`.
-- [ ] `GET /admin/returns?status=APPROVED&sort=oldest` ترتیب درست؛ `status=FOO` ← `400`.
+- [x] تأیید ← `APPROVED`، پیامک، لاگ؛ رد بدون دلیل ← `400`؛ رد ← `REJECTED`، سفارش `DELIVERED`، `canReturn` دوباره `true` (اگه مهلت مونده).
+- [x] تصمیم دوباره ← `422`.
+- [x] جمع‌آوری از `REQUESTED` ← `422`؛ از `APPROVED` ← `PICKUP_SCHEDULED`؛ دوباره ← فیلدها جایگزین؛ `COURIER` ← `400`؛ زمان ۴۰ روز بعد ← `400`.
+- [x] `CUSTOMER` ← `403` روی هر سه؛ `CATALOG_MANAGER` ← `403`.
+- [x] `GET /admin/returns?status=APPROVED&sort=oldest` ترتیب درست؛ `status=FOO` ← `400`.
+
+**یادداشت پیاده‌سازی:** چهار تصمیم تازه (۴۴ تا ۴۷). `ReturnByIdForPanel` (بی‌قفل ← ۹ ← ۱۰ ← سفارش)، `AdminReturnRequests`، `FindAdminReturnsUc` (با `ReturnRequestRepository.page` و `ReturnSorts`)، `GetAdminReturnUc`، `DecideReturnUc` (رد ← `OrderReturnEnded(REJECTED)`)، `ScheduleReturnPickupUc`؛ `ReturnNotices` و چهار پیامک ِ ۱۲.۹ با مسیر کامل ۹ مرحله‌ای (پیامک بستن هم الان، چون مسیرش یکیه)؛ چهار `AuditAction` ِ مرجوعی با جمله‌شون؛ `webV1AdminReturns.kt`، `AdminReturnRequestHttpResponse`. تست: `WebV1AdminReturnsOnDatabaseTest` (۱۰ تست، هر پاسخ با شِمای کانترکت)، و `AskedReturns` (کمک‌تست ِ مشترک ِ ۷.۴ تا ۷.۶). خرابکاری: بدون `order.endReturn` در رد ← «turned down without a reason is 400 - with one REJECTED, the order DELIVERED again…» قرمز. تست‌ها روی یه Postgres ِ موقت (پورت ۵۴۳۳) اجرا شدن، چون سرویس Postgres ِ این ماشین رمز `kiva` رو قبول نمی‌کنه (`KIVA_TEST_DB_URL`).
 
 ---
 
@@ -6291,3 +6297,4 @@ kiva {
 | ۲۹ مهر ۱۴۰۵ | ۷.۱ | Phase 7 step 7.1 | `POST /me/uploads` با `MediaUploader.Customer`، سقف ۲۰ در ساعت (دو شمارش، قفل ِ آپلودهای کاربر)، `withUpload` ِ مشترک. سه تصمیم تازه (۳۱ تا ۳۳). خرابکاری ِ قفل قرمز. ۲۷۵۰ تست سبز (۵ تست ابزار واقعی skip) |
 | ۲۹ مهر ۱۴۰۵ | ۷.۲ | Phase 7 step 7.2 | Aggregate ِ `ReturnRequest` و VOها و سه سیاست، `ReturnDomainService.open` (به ترتیب کانترکت)، سه رویداد سفارش با payload و JSON ِ طلایی، `Order.returnRefusal`/`requestReturn`/`receiveReturn`/`endReturn`، `canReturn`، `restockForReturn`، `V32` ِ کامل، `ReturnRequestRepositoryImpl`، Projector و پنج ردیف تایم‌لاین. شش تصمیم تازه (۳۴ تا ۳۹). دو خرابکاری قرمز. کل مجموعه: ۲۸۲۱ تست، یکی قرمز (دکمه‌ی `canReturn` ِ سفارش تحویل‌شده در تست سفر فاز ۲، که حالا درست روشنه؛ به‌روز شد)، ۵ skip |
 | ۲۹ مهر ۱۴۰۵ | ۷.۳ | Phase 7 step 7.3 | `POST /me/orders/{orderCode}/returns` و `GET /me/returns`: `CreateReturnUc` (قفل ۹، به ترتیب کانترکت)، `ListMyReturnsUc`، `GetMyReturnUc`، `ReturnRequests` (بدون N+1)، `ReturnRequestHttpResponse`، `ReturnTexts`؛ `returns` در صفحه‌ی سفارش. چهار تصمیم تازه (۴۰ تا ۴۳). دو خرابکاری قرمز |
+| ۳۰ مهر ۱۴۰۵ | ۷.۴ | Phase 7 step 7.4 | صف پنل (`GET /admin/returns` با `status` و `sort`)، تصمیم (تأیید/رد با `OrderReturnEnded(REJECTED)`) و جمع‌آوری؛ `ReturnByIdForPanel` (قفل‌های ۹ و ۱۰)، `AdminReturnRequests` (بدون N+1، با `suggestedRefund`)، چهار پیامک مرجوعی با مسیر کامل، چهار `AuditAction`. چهار تصمیم تازه (۴۴ تا ۴۷). خرابکاری قرمز. کل مجموعه: ۲۸۴۲ تست سبز، ۵ skip (روی Postgres ِ موقت ِ پورت ۵۴۳۳) |

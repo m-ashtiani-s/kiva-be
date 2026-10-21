@@ -21,3 +21,26 @@ data class CreateReturnHttpRequest(
 /** One line of CreateReturnRequest.items. */
 @Serializable
 data class ReturnItemHttpRequest(val orderItemId: Int? = null, val quantity: Int? = null)
+
+/** The body of `POST /admin/returns/{returnId}/decision` (contract AdminReturnDecisionRequest). Staff's texts: [toString] hides them. */
+@Serializable
+data class AdminReturnDecisionHttpRequest(
+    val approve: Boolean? = null,
+    val shippingPaidBy: String? = null,
+    val instructions: String? = null,
+    val rejectionReason: String? = null,
+) {
+    override fun toString(): String = "AdminReturnDecisionHttpRequest(approve=$approve, shippingPaidBy=$shippingPaidBy)"
+}
+
+/** The body of `PUT /admin/returns/{returnId}/pickup` (contract AdminReturnPickupRequest). The note: [toString] hides it. */
+@Serializable
+data class AdminReturnPickupHttpRequest(
+    val carrier: String? = null,
+    val scheduledFor: String? = null,
+    val trackingCode: String? = null,
+    val note: String? = null,
+    val notifyCustomer: Boolean? = null,
+) {
+    override fun toString(): String = "AdminReturnPickupHttpRequest(carrier=$carrier, scheduledFor=$scheduledFor, notifyCustomer=$notifyCustomer)"
+}

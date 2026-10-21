@@ -68,6 +68,11 @@ class RefundRepositoryImpl : RefundRepository {
     override fun findAllOf(orderId: OrderId): List<Refund> =
         RefundTbl.selectAll().where { RefundTbl.orderId eq orderId.value }.orderBy(RefundTbl.refundId to SortOrder.ASC).map { it.toRefund() }
 
+    override fun findAllOfOrders(orderIds: Collection<OrderId>): List<Refund> {
+        if (orderIds.isEmpty()) return emptyList()
+        return RefundTbl.selectAll().where { RefundTbl.orderId inList orderIds.map { it.value } }.orderBy(RefundTbl.refundId to SortOrder.ASC).map { it.toRefund() }
+    }
+
     override fun findAllOfReturns(returnIds: Collection<ReturnId>): List<Refund> {
         if (returnIds.isEmpty()) return emptyList()
         return RefundTbl.selectAll().where { RefundTbl.returnId inList returnIds.map { it.value } }.orderBy(RefundTbl.refundId to SortOrder.ASC).map { it.toRefund() }

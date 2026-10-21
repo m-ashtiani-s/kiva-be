@@ -57,6 +57,14 @@ object AuditTexts {
             AuditAction.PAGE_SAVED -> "صفحه‌ی $name ذخیره شد"
             AuditAction.FAQ_SAVED -> "سؤالات متداول ذخیره شد"
             AuditAction.ANNOUNCEMENTS_SAVED -> "نوار اطلاعیه ذخیره شد"
+            AuditAction.RETURN_DECIDED -> when (changes.firstOrNull { it.field == "status" }?.to) {
+                "APPROVED" -> "مرجوعی سفارش $name تأیید شد"
+                "REJECTED" -> "مرجوعی سفارش $name رد شد"
+                else -> "درباره‌ی مرجوعی سفارش $name تصمیم گرفته شد"
+            }
+            AuditAction.RETURN_PICKUP_SCHEDULED -> "جمع‌آوری مرجوعی سفارش $name زمان‌بندی شد"
+            AuditAction.RETURN_RECEIVED -> "کالای مرجوعی سفارش $name به انبار رسید"
+            AuditAction.RETURN_CLOSED -> "مرجوعی سفارش $name بدون استرداد بسته شد"
         }
     }
 

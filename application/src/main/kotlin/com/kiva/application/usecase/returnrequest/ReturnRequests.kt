@@ -33,10 +33,14 @@ class ReturnRequests(
         dtosOf(returnRequestRepository.findOfOrder(order.orderId), mapOf(order.orderId to order), settings)
 
     /** [returns], in their order, with their orders read in one go. */
-    fun of(returns: List<ReturnRequest>, settings: ShopSettings): List<ReturnRequestDto> {
-        val orders = orderQmRepository.findByIds(returns.map { it.orderId }).associateBy { it.orderId }
-        return dtosOf(returns, orders, settings)
-    }
+    fun of(returns: List<ReturnRequest>, settings: ShopSettings): List<ReturnRequestDto> = dtosOf(returns, ordersOf(returns), settings)
+
+    /** The orders of [returns] in one read, by id: for a caller that needs them too (the panel's suggested refund). */
+    fun ordersOf(returns: List<ReturnRequest>): Map<OrderId, OrderQm> =
+        if (returns.isEmpty()) emptyMap() else orderQmRepository.findByIds(returns.map { it.orderId }.distinct()).associateBy { it.orderId }
+
+    /** [returns], in their order, with their [orders] read already ([ordersOf]). */
+    fun of(returns: List<ReturnRequest>, orders: Map<OrderId, OrderQm>, settings: ShopSettings): List<ReturnRequestDto> = dtosOf(returns, orders, settings)
 
     /** The latest refund of each of [returns] (by return id), a FAILED one too: what the customer and the panel show. */
     fun latestRefunds(returns: List<ReturnRequest>): Map<Long, Refund> =

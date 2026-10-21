@@ -28,6 +28,7 @@ import com.kiva.domain.aggregate.discount.DiscountDomainService
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpPurpose
+import com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnCode
 import com.kiva.domain.aggregate.reservation.ReservationDomainService
 import com.kiva.infrastructure.MutableClock
 import com.kiva.infrastructure.TestDatabase
@@ -192,6 +193,14 @@ class RecordingSmsSender : SmsSender {
     /** «درخواستت بررسی شد» messages, as (phone, order). */
     val changeResolved: MutableList<Pair<IranianMobileNumber, OrderCode>> = Collections.synchronizedList(mutableListOf())
 
+    /** A return's messages, as (phone, return code): approved, turned down, closed. */
+    val returnsApproved: MutableList<Pair<IranianMobileNumber, ReturnCode>> = Collections.synchronizedList(mutableListOf())
+    val returnsRejected: MutableList<Pair<IranianMobileNumber, ReturnCode>> = Collections.synchronizedList(mutableListOf())
+    val returnsClosed: MutableList<Pair<IranianMobileNumber, ReturnCode>> = Collections.synchronizedList(mutableListOf())
+
+    /** «جمع‌آوری مرجوعی» messages, as (phone, return code, carrier's name). */
+    val returnPickups: MutableList<Triple<IranianMobileNumber, ReturnCode, String>> = Collections.synchronizedList(mutableListOf())
+
     data class Shipped(val to: IranianMobileNumber, val orderCode: OrderCode, val carrierName: String, val trackingCode: String)
 
     @Volatile
@@ -240,5 +249,25 @@ class RecordingSmsSender : SmsSender {
     override suspend fun sendChangeResolved(to: IranianMobileNumber, orderCode: OrderCode) {
         check(!down) { "the SMS provider is down" }
         changeResolved += to to orderCode
+    }
+
+    override suspend fun sendReturnApproved(to: IranianMobileNumber, returnCode: ReturnCode) {
+        check(!down) { "the SMS provider is down" }
+        returnsApproved += to to returnCode
+    }
+
+    override suspend fun sendReturnRejected(to: IranianMobileNumber, returnCode: ReturnCode) {
+        check(!down) { "the SMS provider is down" }
+        returnsRejected += to to returnCode
+    }
+
+    override suspend fun sendReturnPickup(to: IranianMobileNumber, returnCode: ReturnCode, carrierName: String) {
+        check(!down) { "the SMS provider is down" }
+        returnPickups += Triple(to, returnCode, carrierName)
+    }
+
+    override suspend fun sendReturnClosed(to: IranianMobileNumber, returnCode: ReturnCode) {
+        check(!down) { "the SMS provider is down" }
+        returnsClosed += to to returnCode
     }
 }

@@ -1,8 +1,11 @@
 package com.kiva.infrastructure.persistence.exposed
 
+import com.kiva.application.usecase.returnrequest.usecase.query.ReturnSorts
 import com.kiva.common.event.ConcurrentChangeException
 import com.kiva.common.event.valueobject.EventAggregateId
 import com.kiva.common.event.valueobject.EventAggregateName
+import com.kiva.common.pagination.Page
+import com.kiva.common.pagination.Pageable
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.media.model.valueobject.MediaId
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
@@ -15,9 +18,12 @@ import com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnId
 import com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnItem
 import com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnPickup
 import com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnReceipt
+import com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnStatus
 import com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnText
 import com.kiva.domain.aggregate.returnrequest.repository.ReturnIdGenerator
 import com.kiva.domain.aggregate.returnrequest.repository.ReturnRequestRepository
+import com.kiva.infrastructure.common.persistence.SortOrders
+import com.kiva.infrastructure.common.persistence.paginate
 import com.kiva.infrastructure.persistence.exposed.tbl.ReceiptLineQm
 import com.kiva.infrastructure.persistence.exposed.tbl.ReturnItemQm
 import com.kiva.infrastructure.persistence.exposed.tbl.ReturnReceiptQm
@@ -73,6 +79,11 @@ class ReturnRequestRepositoryImpl : ReturnRequestRepository {
             .orderBy(ReturnRequestTbl.createdOn to SortOrder.DESC, ReturnRequestTbl.returnId to SortOrder.DESC)
             .limit(limit)
             .map { it.toReturnRequest() }
+
+    override fun page(status: ReturnStatus?, pageable: Pageable): Page<ReturnRequest> {
+        val query = if (status == null) ReturnRequestTbl.selectAll() else ReturnRequestTbl.selectAll().where { ReturnRequestTbl.status eq status }
+        return query.paginate(pageable, SORT_ORDERS, tiebreaker = ReturnRequestTbl.returnId) { it.toReturnRequest() }
+    }
 
     override fun save(returnRequest: ReturnRequest) {
         val updated = ReturnRequestTbl.update({ (ReturnRequestTbl.returnId eq returnRequest.id.value) and (ReturnRequestTbl.version eq returnRequest.version) }) {
@@ -149,6 +160,12 @@ class ReturnRequestRepositoryImpl : ReturnRequestRepository {
 
     private companion object {
         val AGGREGATE_NAME = EventAggregateName("RETURN_REQUEST")
+
+        /** ReturnSorts in the database: by when it was asked, the id breaking a tie the same way. */
+        val SORT_ORDERS: SortOrders = mapOf(
+            ReturnSorts.NEWEST to listOf(ReturnRequestTbl.createdOn to SortOrder.DESC, ReturnRequestTbl.returnId to SortOrder.DESC),
+            ReturnSorts.OLDEST to listOf(ReturnRequestTbl.createdOn to SortOrder.ASC, ReturnRequestTbl.returnId to SortOrder.ASC),
+        )
     }
 }
 

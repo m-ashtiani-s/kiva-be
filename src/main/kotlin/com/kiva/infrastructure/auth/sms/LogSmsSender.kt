@@ -6,6 +6,7 @@ import com.kiva.common.valueobject.IranianMobileNumber
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpPurpose
+import com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnCode
 
 /**
  * Development only (`kiva.sms.provider = log`): writes the code to the log instead of sending it, so you can log in
@@ -53,5 +54,21 @@ class LogSmsSender : SmsSender {
 
     override suspend fun sendChangeResolved(to: IranianMobileNumber, orderCode: OrderCode) {
         logger.warn("SMS to ${to.masked()}: the change request of order ${orderCode.value} was resolved")
+    }
+
+    override suspend fun sendReturnApproved(to: IranianMobileNumber, returnCode: ReturnCode) {
+        logger.warn("SMS to ${to.masked()}: return ${returnCode.value} was approved")
+    }
+
+    override suspend fun sendReturnRejected(to: IranianMobileNumber, returnCode: ReturnCode) {
+        logger.warn("SMS to ${to.masked()}: return ${returnCode.value} was turned down")
+    }
+
+    override suspend fun sendReturnPickup(to: IranianMobileNumber, returnCode: ReturnCode, carrierName: String) {
+        logger.warn("SMS to ${to.masked()}: the parcel of return ${returnCode.value} will be collected by $carrierName")
+    }
+
+    override suspend fun sendReturnClosed(to: IranianMobileNumber, returnCode: ReturnCode) {
+        logger.warn("SMS to ${to.masked()}: return ${returnCode.value} was closed")
     }
 }

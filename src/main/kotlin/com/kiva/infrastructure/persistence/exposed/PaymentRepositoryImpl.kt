@@ -22,6 +22,7 @@ import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.lessEq
 import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.core.statements.UpdateBuilder
@@ -83,6 +84,11 @@ class PaymentRepositoryImpl : PaymentRepository {
 
     override fun findAttemptsOf(orderId: OrderId): List<Payment> =
         PaymentTbl.selectAll().where { PaymentTbl.orderId eq orderId.value }.orderBy(PaymentTbl.id).map { it.toPayment() }
+
+    override fun findAttemptsOfOrders(orderIds: Collection<OrderId>): List<Payment> {
+        if (orderIds.isEmpty()) return emptyList()
+        return PaymentTbl.selectAll().where { PaymentTbl.orderId inList orderIds.map { it.value } }.orderBy(PaymentTbl.id).map { it.toPayment() }
+    }
 
     override fun find(publicId: PaymentPublicId): Payment? =
         PaymentTbl.selectAll().where { PaymentTbl.publicId eq publicId.value }.singleOrNull()?.toPayment()

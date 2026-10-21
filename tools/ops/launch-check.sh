@@ -53,7 +53,7 @@ check "payment: merchant id is set" 'has_env KIVA_ZARINPAL_MERCHANT_ID'
 check "payment: callback on $API" '[ "$(env_value KIVA_API_PUBLIC_URL)" = "$API" ] && [[ "$API" == https://* ]]'
 check "payment: result page on $SITE" '[[ "$(env_value KIVA_PAYMENT_RESULT_URL)" == "$SITE/"* ]]'
 check "SMS: Faraz" '[ "$(env_value KIVA_SMS_PROVIDER)" = "faraz" ] && has_env KIVA_FARAZ_API_KEY'
-for pattern in CODE PHONE_CHANGED ORDER_PAID PHOTOS_SENT ORDER_SHIPPED ORDER_DELIVERED ORDER_CANCELLED REFUND_COMPLETED CHANGE_RESOLVED ALERT; do
+for pattern in CODE PHONE_CHANGED ORDER_PAID PHOTOS_SENT ORDER_SHIPPED ORDER_DELIVERED ORDER_CANCELLED REFUND_COMPLETED CHANGE_RESOLVED RETURN_APPROVED RETURN_REJECTED RETURN_PICKUP RETURN_CLOSED ALERT; do
     check "SMS pattern KIVA_FARAZ_${pattern}_PATTERN" "has_env KIVA_FARAZ_${pattern}_PATTERN"
 done
 check "alert phone (KIVA_ALERT_PHONE)" '[[ "$(env_value KIVA_ALERT_PHONE)" =~ ^09[0-9]{9}$ ]]'
