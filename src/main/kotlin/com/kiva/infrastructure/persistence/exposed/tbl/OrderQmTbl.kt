@@ -18,8 +18,8 @@ import org.jetbrains.exposed.v1.json.jsonb
 
 /**
  * One row per order, ready for the customer's lists and pages, the panel's queue and the jobs. Written only by
- * OrderQmProjector. Created by V15__orders.sql and grown by V26__order_admin_read_model.sql and V29__balance_payments.sql
- * (Exposed never creates tables); keep them in step. [lines] are the lines now (after a change request); [totals] the
+ * OrderQmProjector. Created by V15__orders.sql and grown by V26__order_admin_read_model.sql, V29__balance_payments.sql
+ * and V30__admin_settings.sql (Exposed never creates tables); keep them in step. [lines] are the lines now (after a change request); [totals] the
  * placed ones.
  */
 object OrderQmTbl : LongIdTable(name = "orderqm_tbl", columnName = "pId") {
@@ -67,6 +67,12 @@ object OrderQmTbl : LongIdTable(name = "orderqm_tbl", columnName = "pId") {
     val balanceDue = long("balanceDue")
     val balancePaid = long("balancePaid")
     val codeDiscountRemoved = long("codeDiscountRemoved")
+
+    // ---- V30: what the panel's report counts ----
+    /** When the first photos were sent (the first OrderPhotosSent); later batches leave it. */
+    val firstPhotosSentOn = timestampWithTimeZone("firstPhotosSentOn").nullable()
+    /** The customer ever asked for a change, whatever came of it. */
+    val changeRequestedEver = bool("changeRequestedEver")
 }
 
 /**

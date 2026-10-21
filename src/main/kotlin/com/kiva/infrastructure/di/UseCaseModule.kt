@@ -122,6 +122,7 @@ import com.kiva.application.usecase.product.usecase.query.GetProductFacetsUc
 import com.kiva.application.usecase.product.usecase.query.GetProductUc
 import com.kiva.application.usecase.refund.usecase.command.CreateRefundUc
 import com.kiva.application.usecase.refund.usecase.command.UpdateRefundUc
+import com.kiva.application.usecase.report.usecase.query.GetReportOverviewUc
 import com.kiva.application.usecase.reservation.Reservations
 import com.kiva.application.usecase.reservation.usecase.command.ReleaseReservationGroupUc
 import com.kiva.application.usecase.reservation.usecase.query.FindDueReservationGroupsUc
@@ -598,6 +599,9 @@ val useCaseModule = module(createdAtStart = true) {
     single { CreateDiscountCodeUc(transactionManager = get(), discountCodeRepository = get(), references = get(), auditTrail = get(), clock = get()) }
     single { UpdateDiscountCodeUc(transactionManager = get(), discountCodeRepository = get(), references = get(), auditTrail = get(), clock = get()) }
     single { DeactivateDiscountCodeUc(transactionManager = get(), discountCodeRepository = get(), auditTrail = get(), clock = get()) }
+
+    // --- admin: the report (phase 4) ---
+    single { GetReportOverviewUc(transactionManager = get(), reportQmRepository = get()) }
 
     // --- admin: the change log ---
     single { ListAuditLogUc(transactionManager = get(), auditLogQmRepository = get()) }

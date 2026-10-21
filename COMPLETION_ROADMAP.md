@@ -2605,7 +2605,7 @@ Route: 200 با AdminOrder
 | ۴.۱ | تنظیمات فروشگاه | L | ✅ |
 | ۴.۲ | کدهای تخفیف در پنل | M | ✅ |
 | ۴.۳ | جزئیات مشتری، فیلتر نقش و «آخرین ادمین» | M | ✅ |
-| ۴.۴ | گزارش مدیریتی | M | ⬜ |
+| ۴.۴ | گزارش مدیریتی | M | ✅ |
 | ۴.۵ | ریویو | S | ⬜ |
 
 ### ۹.۲ تصمیم‌های این فاز
@@ -2645,6 +2645,11 @@ Route: 200 با AdminOrder
 | 31 | لاگ کد تخفیف (تازه، گام ۴.۲) | `DISCOUNT_CODE_CREATED` بدون `changes` (مثل `PRODUCT_CREATED`)؛ `DISCOUNT_CODE_DEACTIVATED` با `isActive` از `true` به `false`؛ `DISCOUNT_CODE_UPDATED` با هر شرط عوض‌شده (لیست‌ها شناسه‌های مرتب) | |
 | 32 | `requiresLogin` ِ پاسخ (تازه، گام ۴.۲) | همیشه مقدار مؤثر (`DiscountCode.needsCustomer`)، حتی برای کدی که با SQL و بدون این پرچم ساخته شده | پنل باید همونی رو ببینه که سبد اجرا می‌کنه |
 | 33 | «آخرین ADMIN» در عمل (تازه، گام ۴.۳) | با خوندن دوباره‌ی نقش‌های انجام‌دهنده زیر قفل، انجام‌دهنده خودش همیشه یه ADMIN ـه، پس قانون `LAST_ADMIN` با یه درخواست تنها هیچ‌وقت نمی‌رسه؛ دیوار دومه. خرابکاری ِ خوندن دوباره نشونش می‌ده: دو ادمین همزمان ← دومی به‌جای `403` همون `422 LAST_ADMIN` می‌گیره | بدون هر دو، دو ادمین همزمان همه‌ی ADMINها رو برمی‌داشتن |
+| 34 | گزارش: گرد کردن دو نرخ عکس (تازه، گام ۴.۴) | `mediaApprovalRate` به هزارم با نیمه به بالا، و `changeRequestRate` = ۱۰۰۰ منهای اون (بدون چنین سفارشی هر دو ۰) | کانترکت می‌گه جمعشون ۱۰۰ ـه؛ با دو گرد کردن جدا، ۱ از ۱۶ (۶٫۲۵ و ۹۳٫۷۵) می‌شد ۶٫۳ + ۹۳٫۸ = ۱۰۰٫۱ |
+| 35 | گزارش: `discountTotal` بعد از حذف قلم (تازه، گام ۴.۴) | جمع `codeDiscount` ِ **نمایشی** ِ سفارش‌های دوره: ثبت منهای سهم کد ِ قلم‌های حذف‌شده (`OrderTotalsView`) | همون عددی که پنل و مشتری روی خود سفارش می‌بینن؛ سهم قلم حذف‌شده با استردادش برگشته |
+| 36 | گزارش: لغو و دو نرخ عکس (تازه، گام ۴.۴) | مخرج دو نرخ عکس همه‌ی سفارش‌هاییه که اولین عکسشون تو بازه رفته، **لغوشده هم**؛ «سفارش دوره» (تصمیم ۱۷) فقط برای عددهای پولی، تعدادها، رزرو، ارسال، پیام‌رسان و پرفروش‌هاست | تعریف ۹.۳ برای این دو لغو رو کنار نذاشته؛ جواب مشتری به عکس قبل از لغو هم جوابه |
+| 37 | گزارش: `topProducts` (تازه، گام ۴.۴) | اسم، `slug` و `sku` از ردیف **امروز** ِ محصول (`productqm_tbl`)؛ `imageUrl` اولین عکس (نه ویدیو) ِ رنگ پیش‌فرض، در عرض ۴۸۰ (مثل ردیف سفارش)، یا `null`؛ `colorKey` همیشه `null` (ردیف محصوله نه رنگ). `revenue` = جمع قیمت × تعداد ِ ردیف‌ها، قبل از کد تخفیف | پنل به صفحه‌ی امروز محصول لینک می‌ده؛ سهم کد ِ هر ردیف جایی ذخیره نیست |
+| 38 | گزارش: `returnRate` و «۳۶۶ روز» (تازه، گام ۴.۴) | `returnRate` تا فاز ۷ ثابت ۰ و بدون کوئری؛ «حداکثر ۳۶۶ روز» یعنی `to − from + 1 ≤ 366` (هر دو سر شامل). `from`/`to` ِ پاسخ همون روزهای درخواست | سال کبیسه هم یه بازه‌ی کامل سالانه‌ست |
 
 ### ۹.۳ تعریف عددهای گزارش (`GET /admin/reports/overview`)
 
@@ -2840,17 +2845,19 @@ Route: 200 با AdminSettings ِ تازه
 
 ---
 
-#### گام ۴.۴: گزارش مدیریتی · M ⬜
+#### گام ۴.۴: گزارش مدیریتی · M ✅
 
 **می‌سازی:** `V30` (بخش سفارش و backfill)؛ Projector: `firstPhotosSentOn`، `changeRequestedEver`؛ پورت `ReportQmRepository` و پیاده‌سازیش (کوئری‌های جمعی)؛ `GetReportOverviewUc` (ساختن روزهای خالی، درصدها)؛ `webV1AdminReports.kt`.
 
 وابسته به: ۴.۰ (و فاز ۳ برای داده‌ی درخواست تغییر)
 
 **تموم شده یعنی:**
-- [ ] داده‌ی آزمایشی ثابت (۱۲ سفارش با پرداخت، لغو، استرداد، رزرو، عکس و درخواست تغییر در روزهای مختلف) ← هر فیلد جدول ۹.۳ دقیقاً عدد حساب‌شده‌ی دستی.
-- [ ] روز بدون سفارش تو `dailySeries` با صفر هست؛ مرز روز تهران (سفارش ۲۱:۰۰ ِ UTC) درست.
-- [ ] `from > to` و بازه‌ی ۴۰۰ روزه ← ۴۰۰.
-- [ ] `SUPPORT` ← 403.
+- [x] داده‌ی آزمایشی ثابت (۱۲ سفارش با پرداخت، لغو، استرداد، رزرو، عکس و درخواست تغییر در روزهای مختلف) ← هر فیلد جدول ۹.۳ دقیقاً عدد حساب‌شده‌ی دستی.
+- [x] روز بدون سفارش تو `dailySeries` با صفر هست؛ مرز روز تهران (سفارش ۲۱:۰۰ ِ UTC) درست.
+- [x] `from > to` و بازه‌ی ۴۰۰ روزه ← ۴۰۰.
+- [x] `SUPPORT` ← 403.
+
+**یادداشت پیاده‌سازی:** پنج تصمیم تازه (۳۴ تا ۳۸ ِ ۹.۲). `OrderQmTbl` دو ستون V30 رو گرفت و `OrderQmProjector` نگهشون می‌داره (`firstPhotosSentOn` فقط با اولین `OrderPhotosSent`، `changeRequestedEver` با هر `OrderChangeRequested`). پورت `ReportQmRepository` با پنج تابع جمعی (`periodTotals` و دو شمارش ِ روش و پیام‌رسان، `dailyTotals` با `AT TIME ZONE`، `newCustomers`، `photoOutcomes`، `topProducts` با `jsonb_array_elements` و `JOIN` به ردیف امروز ِ محصول، بعد یه کوئری برای عکس ِ رنگ پیش‌فرض)؛ `ReportQmRepositoryImpl` SQL ِ خامه، چون Exposed اینجا فقط پنهانش می‌کرد. `GetReportOverviewUc` اعتبارسنجی (هر دو با هم)، روزهای خالی، کلیدهای صفر و تقسیم‌ها با `perMille`/`averageOf` (عدد صحیح، نیمه به بالا). `webV1AdminReports.kt` با `ProductRefHttpResponse` (اولین استفاده از `ProductRef` ِ کانترکت). `NoFloatingPointMoneyTest` پکیج گزارش رو هم می‌گرده. تست‌ها: ۱۱ تست واحد، ۴ تست دیتابیس ِ گزارش (۱۲ سفارش با دامنه و Projector ِ واقعی، در ۲۰۳۱)، ۲ تست Projector، تست backfill ِ V30 (دو UPDATE از خود فایل migration، دوباره روی ردیف‌های خالی‌شده)، ۴ تست route. خرابکاری: بدون شرط لغو ← `twelve orders` قرمز؛ روز به UTC ← `twelve orders` و `a day further` قرمز؛ هر دسته‌ی عکس روی زمان اول ← تست Projector و `twelve orders` قرمز.
 
 ---
 
@@ -6160,3 +6167,4 @@ kiva {
 | ۲۸ مهر ۱۴۰۵ | ۴.۱ | Phase 4 step 4.1 | `V30` ِ کامل؛ VOهای تنظیمات (`DeliveryDays.makeNew`، `ShippingMethodName`، `IconName`، `TrackingUrlTemplate`، `SupportPhone`، `SupportHours`، `SocialLink`، `SiteStats`/`Satisfaction`، `ShopFeatures`)؛ `ShopSettings.change` و `version`؛ `save` با نسخه؛ `ShopSettingsFields`، `GetAdminSettingsUc`، `UpdateSettingsUc`، `SettingsAudit`؛ `webV1AdminSettings.kt`؛ آستانه‌ی موجودی کم و مهلت عکس از تنظیمات؛ `Problems` و حدهای عمومی در `common`. ۲۵۷۲ تست سبز |
 | ۲۸ مهر ۱۴۰۵ | ۴.۲ | Phase 4 step 4.2 | `DiscountTerms`، `DiscountCode.create`/`change`/`deactivate` با نسخه، `DiscountCodeText.makeNewInPanel`، `DiscountCodeRepository` (`findById`، `lockById`، `nextId`، `list`، `add`، `save`، `usageStatsOf`)، پنج UseCase، `DiscountCodeReferences`، `webV1AdminDiscountCodes.kt`، لاگ `DISCOUNT_CODE_*`. چهار تصمیم تازه (۲۹ تا ۳۲). ۲۵۹۵ تست سبز |
 | ۲۸ مهر ۱۴۰۵ | ۴.۳ | Phase 4 step 4.3 | `GetCustomerDetailUc` و `GET /admin/customers/{customerId}`، `recentOfCustomer`، `AdminOrderItems`، فیلتر `role`، قفل نقش‌ها و خوندن دوباره‌ی انجام‌دهنده و `LAST_ADMIN` در `SetUserRolesUc`، اسکن لاگ ِ صفحه‌ی مشتری، KDoc ِ `AdminCustomer`. تصمیم ۳۳. خرابکاری قرمز. کل مجموعه دوباره اجرا نشد |
+| ۲۹ مهر ۱۴۰۵ | ۴.۴ | Phase 4 step 4.4 | دو ستون V30 در `OrderQmTbl` و Projector، پورت `ReportQmRepository` و `ReportQmRepositoryImpl` (SQL ِ جمعی، روز تهران در خود SQL)، `GetReportOverviewUc` (روزهای خالی، کلیدهای صفر، `perMille`/`averageOf`)، `webV1AdminReports.kt` و `ProductRefHttpResponse`، تست backfill ِ V30. پنج تصمیم تازه (۳۴ تا ۳۸). ۱۲ سفارش با عدد دستی سبز؛ سه خرابکاری قرمز. کل مجموعه: ۲۶۲۴ تست، یکی قرمز (ترتیب بی‌`ORDER BY` در تست فاز ۳، در گام ۴.۵ درست شد) |

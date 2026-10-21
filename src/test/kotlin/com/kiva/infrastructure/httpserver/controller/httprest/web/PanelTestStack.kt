@@ -55,6 +55,7 @@ import com.kiva.application.usecase.product.usecase.query.FindDueScheduledProduc
 import com.kiva.application.usecase.product.usecase.query.GetAdminProductUc
 import com.kiva.application.usecase.refund.usecase.command.CreateRefundUc
 import com.kiva.application.usecase.refund.usecase.command.UpdateRefundUc
+import com.kiva.application.usecase.report.usecase.query.GetReportOverviewUc
 import com.kiva.application.usecase.settings.usecase.command.UpdateSettingsUc
 import com.kiva.application.usecase.settings.usecase.query.GetAdminSettingsUc
 import com.kiva.common.patch.Patch
@@ -105,6 +106,7 @@ import com.kiva.infrastructure.persistence.exposed.ProductIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.ProductQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ProductRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.RefundIdGeneratorImpl
+import com.kiva.infrastructure.persistence.exposed.ReportQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.SecurityEventLogImpl
 import com.kiva.infrastructure.persistence.exposed.ShopSettingsRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.UserRepositoryImpl
@@ -282,6 +284,9 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         DeactivateDiscountCodeUc(transactions, discountCodes, auditTrail, clock),
     )
 
+    // --- the dashboard (phase 4) ---
+    val adminReports = AdminReportUseCases(checkPanelAccess, GetReportOverviewUc(transactions, ReportQmRepositoryImpl()))
+
     // The approve-silent-photos job's two use cases, run by the tests the way PanelJobs runs them.
     val findSilentPhotos = FindSilentPhotoOrdersUc(transactions, purchase.orderQm, clock)
     val approveSilentPhotos = ApproveSilentPhotosUc(transactions, purchase.orders, clock)
@@ -337,6 +342,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
                     webV1AdminRefunds(adminRefunds)
                     webV1AdminSettings(adminSettings)
                     webV1AdminDiscountCodes(adminDiscountCodes)
+                    webV1AdminReports(adminReports, mediaUrls)
                     // The customer's side of an order, for the tests that follow it from the panel to «سفارش‌های من».
                     webV1MyOrders(purchase.myOrderUseCases, mediaUrls)
                     // Back from the gateway and the result page, for paying what a change left owed (phase 3).

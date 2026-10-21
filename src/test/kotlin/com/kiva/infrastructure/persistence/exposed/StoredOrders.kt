@@ -87,7 +87,10 @@ class StoredOrders(val catalog: StoredCatalog = StoredCatalog()) {
         )
     }
 
-    /** Places an order of [lines] by post, priced by OrderPricing with the shop's real settings, and saves it: one request. */
+    /**
+     * Places an order of [lines] by [shippingMethod] (post), its photos to go by [channel] (Telegram), priced by
+     * OrderPricing with the shop's real settings unless [totals] are given, and saves it: one request.
+     */
     fun place(
         lines: List<OrderLine>,
         userId: UserId = sara,
@@ -95,15 +98,18 @@ class StoredOrders(val catalog: StoredCatalog = StoredCatalog()) {
         totals: OrderTotals? = null,
         customerNote: CustomerNote? = null,
         gift: GiftNote? = null,
+        shippingMethod: ShippingMethodCode = ShippingMethodCode.POST,
+        channel: MessengerChannel = MessengerChannel.TELEGRAM,
     ): Order = transaction(db) {
         val id = ids.nextOrderId()
         orderIds += id.value
         val priced = totals ?: OrderPricing.quote(
-            lines.map { PricedLine(it.priceTag, it.quantity, purchasable = true) }, ShopSettingsRepositoryImpl().get(), ShippingMethodCode.POST, at,
+            lines.map { PricedLine(it.priceTag, it.quantity, purchasable = true) }, ShopSettingsRepositoryImpl().get(), shippingMethod, at,
         ).totals
+        val messengerOf = if (channel == messenger.channel) messenger else PreShipmentMessenger.constructFromPersisted(channel, phone, "@sara_m", null)
         val order = Order.place(
-            id, OrderCodePolicy.codeOf(id), userId, lines, lines.associate { it.productId to MaxPerOrder.DEFAULT }, address, messenger,
-            ShippingMethodCode.POST, priced, reserveRequested = false, customerNote, gift, Duration.ofMinutes(15), userId, at,
+            id, OrderCodePolicy.codeOf(id), userId, lines, lines.associate { it.productId to MaxPerOrder.DEFAULT }, address, messengerOf,
+            shippingMethod, priced, reserveRequested = false, customerNote, gift, Duration.ofMinutes(15), userId, at,
         ).getOrNull() ?: fail("the order was refused")
         repository.save(order)
         order

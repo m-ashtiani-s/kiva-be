@@ -9,6 +9,7 @@ import com.kiva.application.repository.InventoryAdjustmentQmRepository
 import com.kiva.application.repository.OfferQmRepository
 import com.kiva.application.repository.OrderQmRepository
 import com.kiva.application.repository.ProductQmRepository
+import com.kiva.application.repository.ReportQmRepository
 import com.kiva.domain.aggregate.address.repository.AddressBookRepository
 import com.kiva.domain.aggregate.address.repository.AddressIdGenerator
 import com.kiva.domain.aggregate.cart.repository.CartIdGenerator
@@ -73,6 +74,7 @@ import com.kiva.infrastructure.persistence.exposed.ProductQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ProductRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.RefundIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.RefundRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.ReportQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ReservationGroupIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.ReservationGroupRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.SecurityEventLogImpl
@@ -122,6 +124,7 @@ val daoModule = module(createdAtStart = true) {
     single<DiscountRedemptionRepository> { DiscountRedemptionRepositoryImpl() }
     single<AuditTrail> { AuditTrailImpl() }
     single<AuditLogQmRepository> { AuditLogQmRepositoryImpl() }
+    single<ReportQmRepository> { ReportQmRepositoryImpl() }
     single<MediaRepository> { MediaRepositoryImpl() }
     single<MediaIdGenerator> { RandomMediaIds() }
 }

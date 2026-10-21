@@ -50,6 +50,7 @@ import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.update
 import java.time.Instant
+import java.time.OffsetDateTime
 import java.time.ZoneOffset
 
 /**
@@ -64,6 +65,9 @@ import java.time.ZoneOffset
  * changes product rows, which other writers lock too (the stock's projector, a product's own); so the repository takes
  * those locks with [lockFor] before it stores anything, in the order every writer uses (roadmap section 4.11: the
  * products' rows, ascending, lock 7, before the order's stream, lock 8).
+ *
+ * For the panel's report (roadmap section 9.3) it also keeps when the order's first photos were sent and whether its
+ * customer ever asked for a change: later batches and a change resolved either way leave both as they are.
  *
  * Runs inside the caller's transaction; it never opens one itself.
  */
@@ -108,6 +112,7 @@ object OrderQmProjector {
                 it[OrderQmTbl.photoStatus] = PhotoStatus.SENT
                 it[OrderQmTbl.photoEverSent] = true
                 it[OrderQmTbl.photosSentOn] = event.occurredOn.utc()
+                if (row.firstPhotosSentOn == null) it[OrderQmTbl.firstPhotosSentOn] = event.occurredOn.utc()
                 it[OrderQmTbl.feedbackDeadline] = event.feedbackDeadline.utc()
                 // New photos wait for a new answer.
                 it[OrderQmTbl.feedback] = null
@@ -149,6 +154,7 @@ object OrderQmProjector {
             }
             is OrderChangeRequested -> moveTo(event, OrderStatus.CHANGE_REQUESTED, OrderTimelineKind.CHANGE_REQUESTED) { _, it ->
                 it[OrderQmTbl.photoStatus] = PhotoStatus.CHANGE_REQUESTED
+                it[OrderQmTbl.changeRequestedEver] = true
                 it[OrderQmTbl.feedback] = OrderFeedbackQm(
                     FeedbackDecision.REQUEST_CHANGE.name, event.changeType.name, event.lineId, event.desiredVariantId?.value, event.note?.value,
                     event.occurredOn.toString(), resolution = null,
@@ -243,6 +249,8 @@ object OrderQmProjector {
             it[balanceDue] = 0
             it[balancePaid] = 0
             it[codeDiscountRemoved] = 0
+            it[firstPhotosSentOn] = null
+            it[changeRequestedEver] = false
         }
     }
 
@@ -257,6 +265,7 @@ object OrderQmProjector {
         val feedback: OrderFeedbackQm?,
         val balancePaid: Long,
         val codeDiscountRemoved: Long,
+        val firstPhotosSentOn: OffsetDateTime?,
     ) {
         /** The customer's change request, resolved: their answer stays, with how it ended. */
         fun resolved(resolution: OrderResolutionQm): OrderFeedbackQm =
@@ -294,14 +303,14 @@ object OrderQmProjector {
         val orderId = event.orderId.value
         val row = OrderQmTbl.select(
             OrderQmTbl.status, OrderQmTbl.timeline, OrderQmTbl.photos, OrderQmTbl.refunded, OrderQmTbl.lines, OrderQmTbl.itemsCount, OrderQmTbl.feedback,
-            OrderQmTbl.balancePaid, OrderQmTbl.codeDiscountRemoved,
+            OrderQmTbl.balancePaid, OrderQmTbl.codeDiscountRemoved, OrderQmTbl.firstPhotosSentOn,
         )
             .where { OrderQmTbl.orderId eq orderId }
             .singleOrNull()
             ?.let {
                 Row(
                     it[OrderQmTbl.status], it[OrderQmTbl.timeline], it[OrderQmTbl.photos], it[OrderQmTbl.refunded], it[OrderQmTbl.lines], it[OrderQmTbl.itemsCount],
-                    it[OrderQmTbl.feedback], it[OrderQmTbl.balancePaid], it[OrderQmTbl.codeDiscountRemoved],
+                    it[OrderQmTbl.feedback], it[OrderQmTbl.balancePaid], it[OrderQmTbl.codeDiscountRemoved], it[OrderQmTbl.firstPhotosSentOn],
                 )
             }
             ?: error("${event.type.value} of order $orderId, which the read model doesn't have")
