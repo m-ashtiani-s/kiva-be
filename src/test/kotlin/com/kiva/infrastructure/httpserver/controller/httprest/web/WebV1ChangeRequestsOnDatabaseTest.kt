@@ -147,7 +147,7 @@ class WebV1ChangeRequestsOnDatabaseTest {
         val again = feedback(code, sara, """{"decision":"REQUEST_CHANGE","changeType":"OTHER","note":"یه چیز دیگه"}""")
         assertEquals(HttpStatusCode.UnprocessableEntity, again.status)
         assertEquals("CHANGE_REQUEST_NOT_ALLOWED", again.json().text("code"))
-        val logged = transaction(db) { AuditLogTbl.selectAll().where { AuditLogTbl.entityId eq code.value }.map { it[AuditLogTbl.action] } }
+        val logged = transaction(db) { AuditLogTbl.selectAll().where { AuditLogTbl.entityId eq code.value }.orderBy(AuditLogTbl.id).map { it[AuditLogTbl.action] } }
         assertEquals(listOf("ORDER_MEDIA_SET", "ORDER_PHOTO_SENT"), logged, "the customer's request is not the panel's")
     }
 

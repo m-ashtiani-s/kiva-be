@@ -2606,7 +2606,7 @@ Route: 200 با AdminOrder
 | ۴.۲ | کدهای تخفیف در پنل | M | ✅ |
 | ۴.۳ | جزئیات مشتری، فیلتر نقش و «آخرین ادمین» | M | ✅ |
 | ۴.۴ | گزارش مدیریتی | M | ✅ |
-| ۴.۵ | ریویو | S | ⬜ |
+| ۴.۵ | ریویو | S | ✅ |
 
 ### ۹.۲ تصمیم‌های این فاز
 
@@ -2861,12 +2861,16 @@ Route: 200 با AdminSettings ِ تازه
 
 ---
 
-#### گام ۴.۵: ریویو · S ⬜
+#### گام ۴.۵: ریویو · S ✅
 
 **می‌سازی:** `PANEL_SETTINGS_REVIEW.md` (ردیف ۲ ِ بخش ۳؛ خرابکاری: نسخه‌ی تنظیمات، قفل نقش‌ها، چک یکتایی کد)؛ `docs/FRONTEND_PANEL_SETTINGS.md`؛ دور با پنل (تنظیمات، ساخت کد و استفاده در kiva-fe، صفحه‌ی مشتری، داشبورد).
 
 **تموم شده یعنی:**
-- [ ] همه‌ی خرابکاری‌ها قرمز می‌کنن؛ merge به `main`.
+- [x] همه‌ی خرابکاری‌ها قرمز می‌کنن.
+- [ ] دور با پنل (پنل و kiva-fe اینجا نبودن؛ مراحلش در `PANEL_SETTINGS_REVIEW.md`).
+- [ ] merge به `main` (منتظر تأیید؛ فازهای ۱ تا ۳ هم هنوز merge نشدن).
+
+**یادداشت پیاده‌سازی:** `PANEL_SETTINGS_REVIEW.md` (ردیف‌های ۱، ۲، ۵، ۱۵ و ۱۹ با تست‌هاشون؛ هشت خرابکاری). تست تازه: دو ساخت همزمان ِ کد با یه متن (۱۰ بار)؛ بدون `catch` ِ قید یکتا دومی `500` می‌گرفت. حذف چک متن تکراری به‌تنهایی چیزی رو قرمز نمی‌کنه، چون قید یکتا دیوار دومه و همون ۴۰۹ رو می‌ده. پیدا شد و درست شد: یه تست فاز ۳ با ترتیب بی‌`ORDER BY`، و هشدار `copy()` ِ `DiscountTerms`. باز: `meta` ِ خطای فیلد در کانترکت هست ولی در `FieldError` نه (سؤال ۱ ِ فایل ریویو). `docs/FRONTEND_PANEL_SETTINGS.md` و README.
 
 ---
 
@@ -6168,3 +6172,4 @@ kiva {
 | ۲۸ مهر ۱۴۰۵ | ۴.۲ | Phase 4 step 4.2 | `DiscountTerms`، `DiscountCode.create`/`change`/`deactivate` با نسخه، `DiscountCodeText.makeNewInPanel`، `DiscountCodeRepository` (`findById`، `lockById`، `nextId`، `list`، `add`، `save`، `usageStatsOf`)، پنج UseCase، `DiscountCodeReferences`، `webV1AdminDiscountCodes.kt`، لاگ `DISCOUNT_CODE_*`. چهار تصمیم تازه (۲۹ تا ۳۲). ۲۵۹۵ تست سبز |
 | ۲۸ مهر ۱۴۰۵ | ۴.۳ | Phase 4 step 4.3 | `GetCustomerDetailUc` و `GET /admin/customers/{customerId}`، `recentOfCustomer`، `AdminOrderItems`، فیلتر `role`، قفل نقش‌ها و خوندن دوباره‌ی انجام‌دهنده و `LAST_ADMIN` در `SetUserRolesUc`، اسکن لاگ ِ صفحه‌ی مشتری، KDoc ِ `AdminCustomer`. تصمیم ۳۳. خرابکاری قرمز. کل مجموعه دوباره اجرا نشد |
 | ۲۹ مهر ۱۴۰۵ | ۴.۴ | Phase 4 step 4.4 | دو ستون V30 در `OrderQmTbl` و Projector، پورت `ReportQmRepository` و `ReportQmRepositoryImpl` (SQL ِ جمعی، روز تهران در خود SQL)، `GetReportOverviewUc` (روزهای خالی، کلیدهای صفر، `perMille`/`averageOf`)، `webV1AdminReports.kt` و `ProductRefHttpResponse`، تست backfill ِ V30. پنج تصمیم تازه (۳۴ تا ۳۸). ۱۲ سفارش با عدد دستی سبز؛ سه خرابکاری قرمز. کل مجموعه: ۲۶۲۴ تست، یکی قرمز (ترتیب بی‌`ORDER BY` در تست فاز ۳، در گام ۴.۵ درست شد) |
+| ۲۹ مهر ۱۴۰۵ | ۴.۵ | Phase 4 step 4.5 | `PANEL_SETTINGS_REVIEW.md` (پنج ردیف، هشت خرابکاری)، تست همزمانی ِ متن تکراری ِ کد، تست فاز ۳ با `ORDER BY`، `@ConsistentCopyVisibility` روی `DiscountTerms`، `docs/FRONTEND_PANEL_SETTINGS.md`، README. ۲۶۲۴ تست در اجرای کامل (+۱ تازه). دور با پنل و merge منتظر تو؛ سؤال باز: `meta` ِ خطای فیلد |

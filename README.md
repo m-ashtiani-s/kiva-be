@@ -142,10 +142,13 @@ A local round with the panel: run kiva-backoffice-fe on `http://localhost:3200` 
 `NEXT_PUBLIC_API_URL` pointing here, and log in with a phone that has CATALOG_MANAGER or ADMIN (the first ADMIN through
 `KIVA_BOOTSTRAP_ADMIN_PHONE`, the others with `PUT /admin/customers/{id}/roles`).
 
-The shop's own rules (shipping costs, free shipping, the payment window, the gateways on offer, reservations) are in
-the database (`shopsettings_tbl`), not in the config. Locally, a shorter payment window shows an order expiring in a
-few minutes: `UPDATE shopsettings_tbl SET "paymentPendingMinutes" = 5` (5 to 60; the default is 15), and back to 15
-afterwards.
+The shop's own rules (shipping costs, free shipping, the payment window, the gateways on offer, reservations, the
+low-stock threshold) are in the database (`shopsettings_tbl`), not in the config, and an ADMIN changes them from the
+panel (`PUT /admin/settings`), as well as discount codes, staff roles, and reads a customer's page and the dashboard
+(`GET /admin/reports/overview`). [docs/FRONTEND_PANEL_SETTINGS.md](docs/FRONTEND_PANEL_SETTINGS.md) is the whole
+behaviour for the panel; [PANEL_SETTINGS_REVIEW.md](PANEL_SETTINGS_REVIEW.md) the risks and the tests that guard them.
+Locally, a shorter payment window shows an order expiring in a few minutes: set it to 5 in the panel (5 to 60; the
+default is 15), and back to 15 afterwards.
 
 A local purchase end to end: start with `KIVA_SEED_ENABLED=true`, run kiva-fe on `http://localhost:3100`, log in with
 the code from the `LogSmsSender` line, place an order, and press «پرداخت موفق» on the pretend bank's page; it sends

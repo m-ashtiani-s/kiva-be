@@ -27,6 +27,7 @@ import java.time.Instant
  * [requiresLogin] is the stored one: asked for, or needed because a guest's uses and orders can't be counted (first
  * order only, a per-customer limit). Whether the categories and products exist is the use case's: it needs to read them.
  */
+@ConsistentCopyVisibility
 data class DiscountTerms private constructor(
     val code: DiscountCodeText,
     val type: DiscountType,

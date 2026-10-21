@@ -1,10 +1,21 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
+import com.kiva.application.usecase.discount.usecase.command.CreateDiscountCodeUc
+import com.kiva.application.usecase.discount.usecase.command.DeactivateDiscountCodeUc
+import com.kiva.application.usecase.discount.usecase.command.UpdateDiscountCodeUc
+import com.kiva.application.usecase.discount.usecase.query.GetDiscountCodeUc
+import com.kiva.application.usecase.discount.usecase.query.ListDiscountCodesUc
+import com.kiva.domain.aggregate.discount.entity.DiscountCode
+import com.kiva.domain.aggregate.discount.model.valueobject.DiscountCodeText
+import com.kiva.domain.aggregate.discount.repository.DiscountCodeRepository
 import com.kiva.domain.aggregate.user.model.valueobject.Role
 import com.kiva.infrastructure.MutableClock
 import com.kiva.infrastructure.TestDatabase
 import com.kiva.infrastructure.httpserver.API_V1
+import com.kiva.infrastructure.httpserver.auth.configureAuthentication
+import com.kiva.infrastructure.httpserver.configureHttp
 import com.kiva.infrastructure.persistence.exposed.CategoryRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.DiscountCodeRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.tbl.AuditLogTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.DiscountCodeTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.ProductQmTbl
@@ -21,7 +32,16 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
+import io.ktor.server.config.MapApplicationConfig
+import io.ktor.server.routing.route
+import io.ktor.server.routing.routing
 import io.ktor.server.testing.ApplicationTestBuilder
+import io.ktor.server.testing.testApplication
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -279,4 +299,42 @@ class WebV1AdminDiscountCodesOnDatabaseTest {
 
     private suspend fun ApplicationTestBuilder.cart(who: PanelTestStack.Caller): JsonObject =
         client.get("$API_V1/cart") { header(HttpHeaders.Authorization, who.bearer) }.json()
+
+    @Test
+    fun `two codes with one text at the same moment, 10 times - one 201, the other 409 DUPLICATE_CODE, never a 500, one row`() {
+        repeat(10) { round ->
+            // Both requests look the text up before either stores it, so the unique key is the one that refuses the second.
+            val bothLooked = CountDownLatch(2)
+            val codes = object : DiscountCodeRepository by DiscountCodeRepositoryImpl() {
+                override fun findByCode(code: DiscountCodeText): DiscountCode? = DiscountCodeRepositoryImpl().findByCode(code).also {
+                    bothLooked.countDown()
+                    bothLooked.await(5, TimeUnit.SECONDS)
+                }
+            }
+            val useCases = AdminDiscountCodeUseCases(
+                panel.checkPanelAccess,
+                ListDiscountCodesUc(panel.transactions, panel.discountCodes),
+                GetDiscountCodeUc(panel.transactions, panel.discountCodes),
+                CreateDiscountCodeUc(panel.transactions, codes, panel.discountReferences, panel.auditTrail, clock),
+                UpdateDiscountCodeUc(panel.transactions, panel.discountCodes, panel.discountReferences, panel.auditTrail, clock),
+                DeactivateDiscountCodeUc(panel.transactions, panel.discountCodes, panel.auditTrail, clock),
+            )
+            testApplication {
+                environment { config = MapApplicationConfig() }
+                application {
+                    configureHttp(trustedProxyHops = 0)
+                    configureAuthentication(panel.accessTokens)
+                    routing { route(API_V1) { webV1AdminDiscountCodes(useCases) } }
+                }
+                val text = "TWIN$round"
+
+                val statuses = coroutineScope {
+                    List(2) { async { create("""{"code":"$text","type":"FIXED","value":10000,"label":"x"}""").status } }.awaitAll()
+                }
+
+                assertEquals(setOf(HttpStatusCode.Created, HttpStatusCode.Conflict), statuses.toSet(), "round $round: $statuses")
+                assertEquals(1L, transaction(db) { DiscountCodeTbl.selectAll().where { DiscountCodeTbl.code eq text }.count() })
+            }
+        }
+    }
 }
