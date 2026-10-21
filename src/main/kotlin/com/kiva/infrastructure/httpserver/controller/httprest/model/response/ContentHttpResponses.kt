@@ -4,6 +4,8 @@ import com.kiva.application.dto.AnnouncementDto
 import com.kiva.application.dto.FaqGroupDto
 import com.kiva.application.dto.FaqPageDto
 import com.kiva.application.dto.StaticPageDto
+import com.kiva.domain.aggregate.settings.entity.ShopSettings
+import com.kiva.infrastructure.common.http.toPersianNumber
 import kotlinx.serialization.Serializable
 
 /** Contract schema `StaticPage`: the page as the site shows it, its search engine fields filled in for the site. */
@@ -98,6 +100,24 @@ data class FaqResponseHttpResponse(val groups: List<FaqGroupHttpResponse>, val t
 /** The Persian texts of the content endpoints. */
 object ContentTexts {
     const val FAQ_EMPTY = "سوالی با این کلمه پیدا نکردیم؛ از پشتیبانی بپرس"
+
+    /**
+     * [text] with the settings it names filled in, in Persian digits (roadmap phase 5, decision 23): `{holdDays}`,
+     * `{returnWindowDays}` and `{freeShippingThreshold}` (toman, with separators).
+     */
+    fun fill(text: String, settings: ShopSettings): String = text
+        .replace("{holdDays}", settings.reservationHoldDays.toLong().toPersianNumber())
+        .replace("{returnWindowDays}", settings.returnWindowDays.toLong().toPersianNumber())
+        .replace("{freeShippingThreshold}", settings.freeShippingThreshold.toman.toPersianNumber())
+
+    /**
+     * A support number as people read it, in Persian digits (decision 16): a landline as its area code and the rest
+     * (`۰۲۱-۹۱۰۰۱۲۳۴`), a mobile in three parts (`۰۹۱۲-۳۴۵-۶۷۸۹`).
+     */
+    fun phoneDisplay(phone: String): String {
+        val parts = if (phone.startsWith("09")) listOf(phone.take(4), phone.substring(4, 7), phone.substring(7)) else listOf(phone.take(3), phone.substring(3))
+        return parts.joinToString("-") { part -> part.map { if (it in '0'..'9') '۰' + (it - '0') else it }.joinToString("") }
+    }
 }
 
 /** Contract schema `Announcement`; `sortOrder` is the place in the list. */

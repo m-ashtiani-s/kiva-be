@@ -2891,7 +2891,7 @@ Route: 200 با AdminSettings ِ تازه
 | ۵.۱ | صفحه‌های ثابت، و لینک نسبی در HTML | M | ✅ |
 | ۵.۲ | سؤالات متداول | M | ✅ |
 | ۵.۳ | نوار اطلاعیه | S | ✅ |
-| ۵.۴ | `GET /config` | M | ⬜ |
+| ۵.۴ | `GET /config` | M | ✅ |
 | ۵.۵ | ریویو | S | ⬜ |
 
 ### ۱۰.۲ تصمیم‌های این فاز
@@ -2922,6 +2922,7 @@ Route: 200 با AdminSettings ِ تازه
 | 22 | `SLUG_IMMUTABLE` (تازه، گام ۵.۰) | متن عمومی شد («آدرس بعد از ساخت عوض نمی‌شه»)، چون صفحه‌ی ثابت هم ازش استفاده می‌کنه | متن قبلی «محصول تازه بساز» می‌گفت |
 | 23 | عددها در متن‌های ثابت (تازه، گام ۵.۱) | متن‌های `sitecontent_tbl` می‌تونن `{holdDays}`، `{returnWindowDays}` و `{freeShippingThreshold}` داشته باشن و `GET /config` با مقدار همون لحظه‌ی تنظیمات (ارقام فارسی) پرشون می‌کنه. `trustBadges` تا داشتن کد اینماد و ساماندهی خالیه (چک‌لیست ۶.۷)؛ مسیرهای برند که با `/` شروع می‌شن با آدرس سایت کامل می‌شن | «رزرو ۴ روزه» و «۷ روز بازگشت» ِ نمونه با عوض شدن تنظیمات دروغ می‌شدن؛ یه منبع برای هر عدد (تصمیم ۲) |
 | 24 | خطای کل آرایه (تازه، گام ۵.۲) | بدنه‌ی `PUT /admin/faq/groups` و `PUT /admin/announcements` آرایه‌ست و اسم نداره: «بیشتر از ۲۰ گروه» روی فیلد `groups` و «بیشتر از ۱۰ پیام» روی فیلد `announcements` میان (کانترکت هم گفت) | `FieldError` بدون `field` معنی نداره و پنل باید جایی نشونش بده |
+| 25 | `SiteContent` (تازه، گام ۵.۴) | به‌جای Aggregate ِ دامنه (بخش ۱۰.۳)، یه read model در application (`SiteContentRepository`/`SiteContentQm`) با چک شکل در infrastructure | هیچ قانونی نداره، فقط خونده می‌شه و فعلاً با SQL عوض می‌شه؛ Aggregate ِ بی‌رفتار فقط لایه‌ی اضافه بود. روزی که فرم پنل بیاد، Aggregate با قانون‌هاش ساخته می‌شه |
 
 ### ۱۰.۳ جدول‌ها
 
@@ -3073,18 +3074,20 @@ CREATE TABLE announcement_tbl (
 
 ---
 
-#### گام ۵.۴: `GET /config` · M ⬜
+#### گام ۵.۴: `GET /config` · M ✅
 
 **می‌سازی:** `V31` (بخش `sitecontent_tbl` با مقدار اولیه)؛ `SiteContent` و repository؛ `GetSiteConfigUc` (ترکیب محتوا، تنظیمات، درگاه‌ها، اطلاعیه‌های در حال نمایش، `isOpenNow`)؛ `SiteConfigHttpResponse`؛ route با `respondResultCacheable`.
 
 وابسته به: ۵.۳ و فاز ۴
 
 **تموم شده یعنی:**
-- [ ] همه‌ی فیلدهای `SiteConfig` با کانترکت مقایسه می‌شن (تست شکل)؛ هیچ فیلدی حذف یا `null` ِ غیرمجاز نیست.
-- [ ] `freeShippingThreshold` و هزینه‌ی روش‌ها دقیقاً همون عددهای سبدن (تست: تنظیمات رو عوض کن، هر دو با هم عوض می‌شن).
-- [ ] `isOpenNow`: شنبه ساعت ۱۰ ِ تهران با ساعت کاری ۹ تا ۲۱ ← `true`؛ ساعت ۲۲ ← `false`؛ جمعه با `messengerOnly` ← `false`.
-- [ ] اطلاعیه‌ی زمان‌بندی‌شده برای فردا نیست، تموم‌شده نیست.
-- [ ] `If-None-Match` ِ درست ← `304`.
+- [x] همه‌ی فیلدهای `SiteConfig` با کانترکت مقایسه می‌شن (تست شکل)؛ هیچ فیلدی حذف یا `null` ِ غیرمجاز نیست.
+- [x] `freeShippingThreshold` و هزینه‌ی روش‌ها دقیقاً همون عددهای سبدن (تست: تنظیمات رو عوض کن، هر دو با هم عوض می‌شن).
+- [x] `isOpenNow`: شنبه ساعت ۱۰ ِ تهران با ساعت کاری ۹ تا ۲۱ ← `true`؛ ساعت ۲۲ ← `false`؛ جمعه با `messengerOnly` ← `false`.
+- [x] اطلاعیه‌ی زمان‌بندی‌شده برای فردا نیست، تموم‌شده نیست.
+- [x] `If-None-Match` ِ درست ← `304`.
+
+**یادداشت پیاده‌سازی:** `SupportHours.isOpenAt(day, time)` در دامنه (تصمیم ۱۵)؛ `SiteContentRepository`/`SiteContentQm` (خوندنی، تصمیم ۲۵) با `SiteContentTbl` که سند JSONB رو سخت‌گیرانه می‌خونه (کلید نیومده یا غلط ← خطا، نه سایت خالی)؛ `GetSiteConfigUc` در یه تراکنش: محتوا، تنظیمات، `checkoutOptions` ِ درگاه‌ها، `showingAt(now)` ِ اطلاعیه‌ها، `isOpenNow` با `ShopCalendar.ZONE`، و ثابت‌های `OtpPolicy`. `SiteConfigHttpResponse` با پر کردن عددهای متن (`ContentTexts.fill`)، `phoneDisplay`، آدرس کامل فایل‌های برند، فقط روش‌های فعال؛ نگاشت روش ارسال، ساعت پشتیبانی، شبکه‌ها، `features` و ترتیب هفته‌ی ایرانی حالا با پاسخ تنظیمات پنل مشترکه. `GET /config` کش‌شونده. تست‌ها: ۲ تست دامنه، ۲ تست متن، ۶ تست route (شکل همه‌ی بخش‌ها با کانترکت؛ تغییر تنظیمات در پنل و برابری با سبد؛ `isOpenNow` در سه لحظه‌ی تهران؛ اطلاعیه‌ها با زمان؛ ۳۰۴). خرابکاری: بدون `showingAt` ← تست اطلاعیه‌ها قرمز؛ بدون چک `messengerOnly` ← تست دامنه و `isOpenNow` قرمز.
 
 ---
 
@@ -6203,3 +6206,4 @@ kiva {
 | ۲۹ مهر ۱۴۰۵ | ۵.۱ | Phase 5 step 5.1 | `V31` ِ کامل با ردیف محتوای سایت، لینک نسبی امن در `JsoupHtmlSanitizer`، `PageDraft`/`StaticPage`، قفل صفحه، سه UseCase، `webV1Content.kt` و `webV1AdminContent.kt`، `PAGE_SAVED`. تصمیم ۲۳. دو خرابکاری قرمز |
 | ۲۹ مهر ۱۴۰۵ | ۵.۲ | Phase 5 step 5.2 | `FaqDraft`/`FaqBook`، قفل `faq`، `FaqSearch` و `JsoupHtmlText` (هایلایت امن)، سه UseCase، `GET /faq` ِ کش‌شونده، `FAQ_SAVED`. تصمیم ۲۴. دو خرابکاری قرمز |
 | ۲۹ مهر ۱۴۰۵ | ۵.۳ | Phase 5 step 5.3 | `SiteLink`، `AnnouncementDraft`/`AnnouncementBar` (`showingAt`)، قفل `announcements`، دو UseCase و دو route، `ANNOUNCEMENTS_SAVED`. دو خرابکاری قرمز |
+| ۲۹ مهر ۱۴۰۵ | ۵.۴ | Phase 5 step 5.4 | `SupportHours.isOpenAt`، `SiteContentRepository`، `GetSiteConfigUc`، `SiteConfigHttpResponse` (متن‌های پرشده، `phoneDisplay`)، `GET /config` ِ کش‌شونده، نگاشت‌های مشترک با پاسخ تنظیمات. تصمیم ۲۵. دو خرابکاری قرمز |

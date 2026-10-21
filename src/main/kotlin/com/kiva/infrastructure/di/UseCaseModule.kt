@@ -66,6 +66,7 @@ import com.kiva.application.usecase.content.usecase.command.SaveFaqUc
 import com.kiva.application.usecase.content.usecase.command.SavePageUc
 import com.kiva.application.usecase.content.usecase.query.GetFaqUc
 import com.kiva.application.usecase.content.usecase.query.GetPageUc
+import com.kiva.application.usecase.content.usecase.query.GetSiteConfigUc
 import com.kiva.application.usecase.content.usecase.query.ListAnnouncementsUc
 import com.kiva.application.usecase.content.usecase.query.ListFaqForEditUc
 import com.kiva.application.usecase.content.usecase.query.ListPagesUc
@@ -624,6 +625,14 @@ val useCaseModule = module(createdAtStart = true) {
     // --- content: the announcement bar (phase 5) ---
     single { ListAnnouncementsUc(transactionManager = get(), announcementBarRepository = get()) }
     single { SaveAnnouncementsUc(transactionManager = get(), announcementBarRepository = get(), auditTrail = get(), clock = get()) }
+
+    // --- content: GET /config (phase 5) ---
+    single {
+        GetSiteConfigUc(
+            transactionManager = get(), siteContentRepository = get(), shopSettingsRepository = get(), paymentGateways = get(),
+            announcementBarRepository = get(), clock = get(),
+        )
+    }
 
     // --- admin: the change log ---
     single { ListAuditLogUc(transactionManager = get(), auditLogQmRepository = get()) }

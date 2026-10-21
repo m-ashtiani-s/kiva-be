@@ -313,7 +313,7 @@ fun Application.configureRouting() {
             webV1Catalog(listColorsUc, listMaterialsUc, listCategoriesUc, getCategoryUc, mediaUrls, config.shop.siteUrl)
             webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, config.shop.siteUrl, mediaUrls)
             webV1Geo(listProvincesUc, listCitiesOfProvinceUc)
-            webV1Content(ContentUseCases(get(), get()), config.shop.siteUrl)
+            webV1Content(ContentUseCases(get(), get(), get()), config.shop.siteUrl)
             webV1Addresses(AddressUseCases(listMyAddressesUc, getMyAddressUc, addAddressUc, updateAddressUc, deleteAddressUc, setDefaultAddressUc))
             webV1Cart(
                 CartUseCases(

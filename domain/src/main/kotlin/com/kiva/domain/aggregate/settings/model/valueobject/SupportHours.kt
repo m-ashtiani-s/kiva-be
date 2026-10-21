@@ -25,6 +25,15 @@ data class SupportHours private constructor(
         require(isValid(label, weekdays, from, to)) { "Invalid SupportHours '$label' $weekdays $from..$to" }
     }
 
+    /**
+     * Someone answers on [day] at [time] (Tehran's: the caller's to make; roadmap phase 5, decision 15): it is one of
+     * [weekdays], from [from] up to (not at) [to]. A line without hours, or for messengers only, never is.
+     */
+    fun isOpenAt(day: DayOfWeek, time: LocalTime): Boolean {
+        if (messengerOnly || from == null || to == null || day !in weekdays) return false
+        return !time.isBefore(from) && time.isBefore(to)
+    }
+
     companion object {
         const val MAX_LABEL_LENGTH = 50
         private val TIME = Regex("([01][0-9]|2[0-3]):[0-5][0-9]")

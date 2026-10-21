@@ -10,6 +10,7 @@ import com.kiva.application.repository.OfferQmRepository
 import com.kiva.application.repository.OrderQmRepository
 import com.kiva.application.repository.ProductQmRepository
 import com.kiva.application.repository.ReportQmRepository
+import com.kiva.application.repository.SiteContentRepository
 import com.kiva.domain.aggregate.address.repository.AddressBookRepository
 import com.kiva.domain.aggregate.address.repository.AddressIdGenerator
 import com.kiva.domain.aggregate.announcement.repository.AnnouncementBarRepository
@@ -84,6 +85,7 @@ import com.kiva.infrastructure.persistence.exposed.ReservationGroupIdGeneratorIm
 import com.kiva.infrastructure.persistence.exposed.ReservationGroupRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.SecurityEventLogImpl
 import com.kiva.infrastructure.persistence.exposed.ShopSettingsRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.SiteContentRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.StaticPageRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.UserRepositoryImpl
 import org.koin.dsl.module
@@ -134,6 +136,7 @@ val daoModule = module(createdAtStart = true) {
     single<StaticPageRepository> { StaticPageRepositoryImpl() }
     single<FaqRepository> { FaqRepositoryImpl() }
     single<AnnouncementBarRepository> { AnnouncementBarRepositoryImpl() }
+    single<SiteContentRepository> { SiteContentRepositoryImpl() }
     single<MediaRepository> { MediaRepositoryImpl() }
     single<MediaIdGenerator> { RandomMediaIds() }
 }

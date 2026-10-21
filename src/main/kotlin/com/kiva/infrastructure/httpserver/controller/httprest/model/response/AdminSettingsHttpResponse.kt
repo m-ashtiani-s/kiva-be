@@ -1,9 +1,13 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.model.response
 
 import com.kiva.application.dto.AdminSettingsDto
+import com.kiva.domain.aggregate.settings.entity.ShippingMethod
 import com.kiva.domain.aggregate.settings.model.valueobject.Satisfaction
 import com.kiva.domain.aggregate.settings.model.valueobject.SatisfactionMetricKey
+import com.kiva.domain.aggregate.settings.model.valueobject.ShopFeatures
 import com.kiva.domain.aggregate.settings.model.valueobject.SiteStats
+import com.kiva.domain.aggregate.settings.model.valueobject.SocialLink
+import com.kiva.domain.aggregate.settings.model.valueobject.SupportHours
 import kotlinx.serialization.Serializable
 import java.time.DayOfWeek
 
@@ -36,19 +40,7 @@ data class AdminSettingsHttpResponse(
         fun from(dto: AdminSettingsDto): AdminSettingsHttpResponse {
             val settings = dto.settings
             return AdminSettingsHttpResponse(
-                shippingMethods = settings.shippingMethods.map {
-                    ShippingMethodSettingHttpResponse(
-                        code = it.code.name,
-                        name = it.name,
-                        description = CartTexts.delivery(it.deliveryDays),
-                        baseCost = it.baseCost.toman,
-                        minDays = it.deliveryDays.min,
-                        maxDays = it.deliveryDays.max,
-                        icon = it.icon,
-                        trackingUrlTemplate = it.trackingUrlTemplate?.value,
-                        isActive = it.isActive,
-                    )
-                },
+                shippingMethods = settings.shippingMethods.map(ShippingMethodSettingHttpResponse::from),
                 defaultShippingMethod = settings.defaultShippingMethod.name,
                 freeShippingThreshold = settings.freeShippingThreshold.toman,
                 freeShippingMethods = settings.freeShippingMethods.sorted().map { it.name },
@@ -58,25 +50,23 @@ data class AdminSettingsHttpResponse(
                 lowStockThreshold = settings.lowStockThreshold,
                 preShipmentFeedbackHours = settings.preShipmentFeedbackHours,
                 paymentPendingMinutes = settings.paymentPendingMinutes,
-                nonShippingWeekdays = settings.nonShippingWeekdays.sortedBy(::weekOrder).map { it.name },
+                nonShippingWeekdays = settings.nonShippingWeekdays.sortedBy(::iranianWeekOrder).map { it.name },
                 supportPhone = settings.supportPhone?.value,
                 supportEmail = settings.supportEmail?.value,
-                supportHours = settings.supportHours.map {
-                    SupportHoursHttpResponse(it.label, it.weekdays.map { day -> day.name }, it.from?.toString(), it.to?.toString(), it.messengerOnly)
-                },
-                social = settings.social.map { SocialLinkHttpResponse(it.channel.name, it.name, it.url, it.handle) },
+                supportHours = settings.supportHours.map(SupportHoursHttpResponse::from),
+                social = settings.social.map(SocialLinkHttpResponse::from),
                 paymentGateways = settings.paymentGateways.map {
                     PaymentGatewaySettingHttpResponse(it.code.name, it.name, it.isActive, it.isDefault, available = it.code in dto.available)
                 },
                 siteStats = SiteStatsHttpResponse.from(settings.siteStats),
-                features = settings.features.let { FeaturesHttpResponse(it.wishlistShare, it.reviewMedia, it.giftWrap) },
+                features = FeaturesHttpResponse.from(settings.features),
             )
         }
-
-        /** The Iranian week: Saturday first. */
-        private fun weekOrder(day: DayOfWeek): Int = (day.value + 1) % 7
     }
 }
+
+/** The Iranian week: Saturday first. */
+fun iranianWeekOrder(day: DayOfWeek): Int = (day.value + 1) % 7
 
 /** Contract schema `ShippingMethod`. */
 @Serializable
@@ -90,15 +80,38 @@ data class ShippingMethodSettingHttpResponse(
     val icon: String,
     val trackingUrlTemplate: String?,
     val isActive: Boolean,
-)
+) {
+    companion object {
+        fun from(method: ShippingMethod) = ShippingMethodSettingHttpResponse(
+            code = method.code.name,
+            name = method.name,
+            description = CartTexts.delivery(method.deliveryDays),
+            baseCost = method.baseCost.toman,
+            minDays = method.deliveryDays.min,
+            maxDays = method.deliveryDays.max,
+            icon = method.icon,
+            trackingUrlTemplate = method.trackingUrlTemplate?.value,
+            isActive = method.isActive,
+        )
+    }
+}
 
 /** Contract schema `SupportHours`. */
 @Serializable
-data class SupportHoursHttpResponse(val label: String, val weekdays: List<String>, val from: String?, val to: String?, val messengerOnly: Boolean)
+data class SupportHoursHttpResponse(val label: String, val weekdays: List<String>, val from: String?, val to: String?, val messengerOnly: Boolean) {
+    companion object {
+        fun from(hours: SupportHours) =
+            SupportHoursHttpResponse(hours.label, hours.weekdays.map { it.name }, hours.from?.toString(), hours.to?.toString(), hours.messengerOnly)
+    }
+}
 
 /** Contract schema `SocialLink`. */
 @Serializable
-data class SocialLinkHttpResponse(val channel: String, val name: String, val url: String, val handle: String?)
+data class SocialLinkHttpResponse(val channel: String, val name: String, val url: String, val handle: String?) {
+    companion object {
+        fun from(link: SocialLink) = SocialLinkHttpResponse(link.channel.name, link.name, link.url, link.handle)
+    }
+}
 
 /** Contract schema `AdminPaymentGatewaySetting`. */
 @Serializable
@@ -148,7 +161,11 @@ data class SatisfactionMetricHttpResponse(val key: String, val label: String, va
 
 /** Contract `AdminSettings.features`. */
 @Serializable
-data class FeaturesHttpResponse(val wishlistShare: Boolean, val reviewMedia: Boolean, val giftWrap: Boolean)
+data class FeaturesHttpResponse(val wishlistShare: Boolean, val reviewMedia: Boolean, val giftWrap: Boolean) {
+    companion object {
+        fun from(features: ShopFeatures) = FeaturesHttpResponse(features.wishlistShare, features.reviewMedia, features.giftWrap)
+    }
+}
 
 /** The settings' Persian words, made here and nowhere else (roadmap section 1, row 16). */
 object SettingsTexts {

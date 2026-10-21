@@ -26,6 +26,7 @@ import com.kiva.application.usecase.content.usecase.command.SaveFaqUc
 import com.kiva.application.usecase.content.usecase.command.SavePageUc
 import com.kiva.application.usecase.content.usecase.query.GetFaqUc
 import com.kiva.application.usecase.content.usecase.query.GetPageUc
+import com.kiva.application.usecase.content.usecase.query.GetSiteConfigUc
 import com.kiva.application.usecase.content.usecase.query.ListAnnouncementsUc
 import com.kiva.application.usecase.content.usecase.query.ListFaqForEditUc
 import com.kiva.application.usecase.content.usecase.query.ListPagesUc
@@ -120,6 +121,7 @@ import com.kiva.infrastructure.persistence.exposed.RefundIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.ReportQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.SecurityEventLogImpl
 import com.kiva.infrastructure.persistence.exposed.ShopSettingsRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.SiteContentRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.StaticPageRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.UserRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.tbl.AuthSessionTbl
@@ -309,7 +311,10 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         ListFaqForEditUc(transactions, faq), SaveFaqUc(transactions, faq, JsoupHtmlSanitizer, auditTrail, clock),
         ListAnnouncementsUc(transactions, announcements), SaveAnnouncementsUc(transactions, announcements, auditTrail, clock),
     )
-    val content = ContentUseCases(getPage, GetFaqUc(transactions, faq, JsoupHtmlText))
+    val content = ContentUseCases(
+        getPage, GetFaqUc(transactions, faq, JsoupHtmlText),
+        GetSiteConfigUc(transactions, SiteContentRepositoryImpl(), purchase.settings, purchase.gateways, announcements, clock),
+    )
 
     // The approve-silent-photos job's two use cases, run by the tests the way PanelJobs runs them.
     val findSilentPhotos = FindSilentPhotoOrdersUc(transactions, purchase.orderQm, clock)
