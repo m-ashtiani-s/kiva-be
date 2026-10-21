@@ -8,7 +8,6 @@ import com.kiva.domain.aggregate.order.model.valueobject.OrderTotalsView
 import com.kiva.infrastructure.common.http.PageMetaHttpResponse
 import com.kiva.infrastructure.media.MediaUrls
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonObject
 
 /** Contract schema `OrderListResponse`: one page of order cards, and the counts of the tabs. */
 @Serializable
@@ -30,9 +29,8 @@ data class OrderListHttpResponse(
 data class OrderCountsHttpResponse(val all: Long, val current: Long, val delivered: Long, val cancelled: Long)
 
 /**
- * Contract schema `OrderDetail`: every field of the card (OrderSummary) and the page's own. In this phase the photos
- * before shipping are still to come ([preShipmentMediaDetail] WAITING, no items), there are no returns and no invoice,
- * and the gift is never wrapped.
+ * Contract schema `OrderDetail`: every field of the card (OrderSummary) and the page's own: its returns newest first
+ * (phase 7). There is no invoice yet (phase 14), and the gift is never wrapped.
  */
 @Serializable
 data class OrderDetailHttpResponse(
@@ -61,8 +59,7 @@ data class OrderDetailHttpResponse(
     val timeline: List<OrderEventHttpResponse>,
     val customerNote: String?,
     val gift: OrderGiftHttpResponse?,
-    // ReturnRequest objects, from the returns phase on.
-    val returns: List<JsonObject>,
+    val returns: List<ReturnRequestHttpResponse>,
     val invoiceUrl: String?,
     val refunds: List<RefundHttpResponse>,
 ) {
@@ -100,7 +97,7 @@ data class OrderDetailHttpResponse(
                 },
                 customerNote = order.customerNote,
                 gift = order.gift?.let { OrderGiftHttpResponse(wrap = false, message = it.message) },
-                returns = emptyList(),
+                returns = order.returns.map { ReturnRequestHttpResponse.from(it, urls) },
                 invoiceUrl = null,
                 refunds = order.refunds.map(RefundHttpResponse::from),
             )

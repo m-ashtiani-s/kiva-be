@@ -131,6 +131,10 @@ import com.kiva.application.usecase.product.usecase.query.GetProductFacetsUc
 import com.kiva.application.usecase.product.usecase.query.GetProductUc
 import com.kiva.application.usecase.refund.usecase.command.CreateRefundUc
 import com.kiva.application.usecase.refund.usecase.command.UpdateRefundUc
+import com.kiva.application.usecase.returnrequest.ReturnRequests
+import com.kiva.application.usecase.returnrequest.usecase.command.CreateReturnUc
+import com.kiva.application.usecase.returnrequest.usecase.query.GetMyReturnUc
+import com.kiva.application.usecase.returnrequest.usecase.query.ListMyReturnsUc
 import com.kiva.application.usecase.report.usecase.query.GetReportOverviewUc
 import com.kiva.application.usecase.reservation.Reservations
 import com.kiva.application.usecase.reservation.usecase.command.ReleaseReservationGroupUc
@@ -309,7 +313,11 @@ val useCaseModule = module(createdAtStart = true) {
         )
     }
     single { OrderByCode(orderQmRepository = get(), orderRepository = get()) }
-    single { OrderDetails(paymentRepository = get(), colorRepository = get(), reservations = get(), mediaRepository = get(), refundRepository = get()) }
+    single {
+        OrderDetails(
+            paymentRepository = get(), colorRepository = get(), reservations = get(), mediaRepository = get(), refundRepository = get(), returnRequests = get(),
+        )
+    }
     single { OrderNotices(smsSender = get()) }
     single {
         OrderCancellation(
@@ -582,6 +590,21 @@ val useCaseModule = module(createdAtStart = true) {
             refundIdGenerator = get(), refundDomainService = get(), userRepository = get(), auditTrail = get(), orderNotices = get(), clock = get(),
         )
     }
+
+    // --- returns (phase 7) ---
+    single {
+        ReturnRequests(
+            returnRequestRepository = get(), orderQmRepository = get(), mediaRepository = get(), refundRepository = get(), colorRepository = get(),
+        )
+    }
+    single {
+        CreateReturnUc(
+            transactionManager = get(), orderByCode = get(), orderQmRepository = get(), orderRepository = get(), mediaRepository = get(),
+            returnDomainService = get(), returnRequestRepository = get(), clock = get(),
+        )
+    }
+    single { ListMyReturnsUc(transactionManager = get(), returnRequestRepository = get(), returnRequests = get(), shopSettingsRepository = get()) }
+    single { GetMyReturnUc(transactionManager = get(), returnRequestRepository = get(), returnRequests = get(), shopSettingsRepository = get()) }
 
     // --- admin: refunds (phase 2) ---
     single {

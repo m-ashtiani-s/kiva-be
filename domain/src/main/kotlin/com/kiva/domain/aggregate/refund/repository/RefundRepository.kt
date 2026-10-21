@@ -3,6 +3,7 @@ package com.kiva.domain.aggregate.refund.repository
 import com.kiva.domain.aggregate.order.model.valueobject.OrderId
 import com.kiva.domain.aggregate.refund.entity.Refund
 import com.kiva.domain.aggregate.refund.model.valueobject.RefundId
+import com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnId
 
 /**
  * Refunds, kept as rows. Opening or changing one runs under the lock of its order's row in the read model (roadmap
@@ -25,6 +26,9 @@ interface RefundRepository {
 
     /** Every refund of [orderId], oldest first, for reading only. */
     fun findAllOf(orderId: OrderId): List<Refund>
+
+    /** Every refund of the returns [returnIds] (phase 7), oldest first, for reading only: a page of returns in one read. */
+    fun findAllOfReturns(returnIds: Collection<ReturnId>): List<Refund>
 
     /**
      * Writes the refund's change, only if its row still has the version it was read with, and raises that version.

@@ -21,6 +21,7 @@ import java.time.Instant
  * @property photos the photos before shipping: the batch sent, and the operator's draft (the panel's only).
  * @property timeline one entry per event the customer sees, oldest first.
  * @property refunds every refund of the order, oldest first, with its status and the note the customer sees.
+ * @property returns every return of the order, newest first, REJECTED ones too (phase 7).
  */
 data class OrderDetailDto(
     val summary: OrderSummaryDto,
@@ -34,6 +35,7 @@ data class OrderDetailDto(
     val customerNote: String?,
     val gift: Gift?,
     val refunds: List<RefundDto>,
+    val returns: List<ReturnRequestDto>,
 ) {
     /**
      * One line, as bought. The color's [Color.isLight] and [Color.sortOrder] are the palette's now; its name and hex

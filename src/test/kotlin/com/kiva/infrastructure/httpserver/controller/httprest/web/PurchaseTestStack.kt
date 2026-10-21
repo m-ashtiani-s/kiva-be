@@ -48,6 +48,7 @@ import com.kiva.application.usecase.payment.PaymentConfirmation
 import com.kiva.application.usecase.payment.usecase.command.ReconcilePaymentUc
 import com.kiva.application.usecase.payment.usecase.query.FindStalePaymentsUc
 import com.kiva.application.usecase.reservation.Reservations
+import com.kiva.application.usecase.returnrequest.ReturnRequests
 import com.kiva.application.usecase.reservation.usecase.command.ReleaseReservationGroupUc
 import com.kiva.application.usecase.reservation.usecase.query.FindDueReservationGroupsUc
 import com.kiva.application.usecase.reservation.usecase.query.GetMyReservationUc
@@ -94,6 +95,7 @@ import com.kiva.infrastructure.persistence.exposed.OrderRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.PaymentRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.RefundIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.RefundRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.ReturnRequestRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ReservationGroupIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.ReservationGroupRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ShopSettingsRepositoryImpl
@@ -103,6 +105,7 @@ import com.kiva.infrastructure.persistence.exposed.tbl.DiscountCodeTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.DiscountRedemptionTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.EventStoreTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.OrderQmTbl
+import com.kiva.infrastructure.persistence.exposed.tbl.ReturnRequestTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.ProductQmTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.ProductVariantQmTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.UserTbl
@@ -203,7 +206,9 @@ class PurchaseTestStack(val clock: MutableClock) {
     // One order named by its code, and its page: the customer's and the panel's (phase 2).
     val orderByCode = OrderByCode(orderQm, orders)
     val refunds = RefundRepositoryImpl()
-    val orderDetails = OrderDetails(payments, ColorRepositoryImpl(), reservations, MediaRepositoryImpl(), refunds)
+    val returns = ReturnRequestRepositoryImpl()
+    val returnRequests = ReturnRequests(returns, orderQm, MediaRepositoryImpl(), refunds, ColorRepositoryImpl())
+    val orderDetails = OrderDetails(payments, ColorRepositoryImpl(), reservations, MediaRepositoryImpl(), refunds, returnRequests)
     val orderNotices = OrderNotices(auth.sms)
     val orderCancellation = OrderCancellation(
         orderQm, orders, payments, redemptions, stock, inventories, refunds, RefundIdGeneratorImpl(), RefundDomainService(RefundIdGeneratorImpl()),
@@ -311,6 +316,7 @@ class PurchaseTestStack(val clock: MutableClock) {
             val orderIds = OrderQmTbl.select(OrderQmTbl.orderId).where { OrderQmTbl.userId inList userIds }.map { it[OrderQmTbl.orderId] }
             EventStoreTbl.deleteWhere { (aggregateName eq "ORDER") and (aggregateId inList orderIds.map { it.toString() }) }
             OrderQmTbl.deleteWhere { orderId inList orderIds }
+            ReturnRequestTbl.deleteWhere { ReturnRequestTbl.orderId inList orderIds }
             CartTbl.deleteWhere { userId.isNull() }
             // A code with uses can't go; the uses go with their test orders, and then every code a test made.
             DiscountRedemptionTbl.deleteWhere { DiscountRedemptionTbl.orderId inList orderIds }

@@ -27,6 +27,9 @@ interface OrderQmRepository {
     /** The order with this code, whoever's it is (the panel); null when none has it. */
     fun findByCode(code: OrderCode): OrderQm?
 
+    /** The orders of [ids] that exist, in no particular order: a page of returns gets its orders' lines in one read. */
+    fun findByIds(ids: Collection<OrderId>): List<OrderQm>
+
     /**
      * Locks the order's row until the transaction ends and reads it (roadmap section 4.11, lock 9): taken by whatever
      * changes a paid order from the panel or the customer (a refund, a cancellation, shipping), before any other count is

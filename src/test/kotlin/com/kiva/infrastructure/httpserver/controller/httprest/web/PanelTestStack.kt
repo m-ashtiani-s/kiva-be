@@ -65,6 +65,9 @@ import com.kiva.application.usecase.product.usecase.query.GetAdminProductUc
 import com.kiva.application.usecase.refund.usecase.command.CreateRefundUc
 import com.kiva.application.usecase.refund.usecase.command.UpdateRefundUc
 import com.kiva.application.usecase.report.usecase.query.GetReportOverviewUc
+import com.kiva.application.usecase.returnrequest.usecase.command.CreateReturnUc
+import com.kiva.application.usecase.returnrequest.usecase.query.GetMyReturnUc
+import com.kiva.application.usecase.returnrequest.usecase.query.ListMyReturnsUc
 import com.kiva.application.usecase.settings.usecase.command.UpdateSettingsUc
 import com.kiva.application.usecase.settings.usecase.query.GetAdminSettingsUc
 import com.kiva.common.patch.Patch
@@ -73,6 +76,7 @@ import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.inventory.InventoryDomainService
 import com.kiva.domain.aggregate.product.ProductDomainService
 import com.kiva.domain.aggregate.refund.RefundDomainService
+import com.kiva.domain.aggregate.returnrequest.ReturnDomainService
 import com.kiva.domain.aggregate.session.entity.AuthSession
 import com.kiva.domain.aggregate.session.model.valueobject.SessionDevice
 import com.kiva.domain.aggregate.user.entity.User
@@ -119,6 +123,7 @@ import com.kiva.infrastructure.persistence.exposed.ProductQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ProductRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.RefundIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.ReportQmRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.ReturnIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.SecurityEventLogImpl
 import com.kiva.infrastructure.persistence.exposed.ShopSettingsRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.SiteContentRepositoryImpl
@@ -134,15 +139,15 @@ import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
+import java.nio.file.Files
+import java.nio.file.Path
+import java.time.ZoneOffset
+import java.util.concurrent.ConcurrentHashMap
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.like
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import java.nio.file.Files
-import java.nio.file.Path
-import java.time.ZoneOffset
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * The panel's routes over kiva_test, wired by hand as the app wires them (with a test clock and fixed secrets), and a
@@ -274,6 +279,14 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
             purchase.orderNotices, clock,
         ),
     )
+    // --- returns (phase 7) ---
+    val returnDomain = ReturnDomainService(ReturnIdGeneratorImpl())
+    val myReturns = MyReturnUseCases(
+        CreateReturnUc(transactions, purchase.orderByCode, purchase.orderQm, purchase.orders, mediaRepository, returnDomain, purchase.returns, clock),
+        ListMyReturnsUc(transactions, purchase.returns, purchase.returnRequests, purchase.settings),
+        GetMyReturnUc(transactions, purchase.returns, purchase.returnRequests, purchase.settings),
+    )
+
     val adminRefunds = AdminRefundUseCases(
         checkPanelAccess,
         UpdateRefundUc(transactions, purchase.refunds, purchase.orderQm, purchase.orders, users, auditTrail, purchase.orderNotices, clock),
@@ -379,6 +392,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
                     webV1MyOrders(purchase.myOrderUseCases, mediaUrls)
                     // A customer's uploads (phase 7): the same use case and media root as the panel's.
                     webV1MyUploads(uploadMedia, mediaStorage::newUploadFile, mediaUrls)
+                    webV1MyReturns(myReturns, mediaUrls)
                     // Back from the gateway and the result page, for paying what a change left owed (phase 3).
                     webV1Payments(purchase.paymentUseCases, PaymentConfig.DEFAULT.resultUrl)
                     webV1Tracking(purchase.trackingUseCases, mediaUrls)

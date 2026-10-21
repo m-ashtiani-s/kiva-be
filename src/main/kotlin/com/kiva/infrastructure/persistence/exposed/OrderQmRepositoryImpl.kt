@@ -74,6 +74,11 @@ class OrderQmRepositoryImpl : OrderQmRepository {
     override fun findByCode(code: OrderCode): OrderQm? =
         OrderQmTbl.selectAll().where { OrderQmTbl.code eq code.value }.singleOrNull()?.toOrderQm()
 
+    override fun findByIds(ids: Collection<OrderId>): List<OrderQm> {
+        if (ids.isEmpty()) return emptyList()
+        return OrderQmTbl.selectAll().where { OrderQmTbl.orderId inList ids.map { it.value }.distinct() }.map { it.toOrderQm() }
+    }
+
     override fun lockOrder(orderId: OrderId): OrderQm? =
         OrderQmTbl.selectAll().where { OrderQmTbl.orderId eq orderId.value }.forUpdate().singleOrNull()?.toOrderQm()
 

@@ -13,11 +13,13 @@ import com.kiva.domain.aggregate.refund.model.valueobject.RefundNote
 import com.kiva.domain.aggregate.refund.model.valueobject.RefundReason
 import com.kiva.domain.aggregate.refund.repository.RefundIdGenerator
 import com.kiva.domain.aggregate.refund.repository.RefundRepository
+import com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnId
 import com.kiva.infrastructure.persistence.exposed.tbl.RefundTbl
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -65,6 +67,11 @@ class RefundRepositoryImpl : RefundRepository {
 
     override fun findAllOf(orderId: OrderId): List<Refund> =
         RefundTbl.selectAll().where { RefundTbl.orderId eq orderId.value }.orderBy(RefundTbl.refundId to SortOrder.ASC).map { it.toRefund() }
+
+    override fun findAllOfReturns(returnIds: Collection<ReturnId>): List<Refund> {
+        if (returnIds.isEmpty()) return emptyList()
+        return RefundTbl.selectAll().where { RefundTbl.returnId inList returnIds.map { it.value } }.orderBy(RefundTbl.refundId to SortOrder.ASC).map { it.toRefund() }
+    }
 
     override fun save(refund: Refund) {
         val updated = RefundTbl.update({ (RefundTbl.refundId eq refund.id.value) and (RefundTbl.version eq refund.version) }) {

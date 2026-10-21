@@ -6,7 +6,6 @@ import com.kiva.application.dto.AdminOrderListDto
 import com.kiva.infrastructure.common.http.PageMetaHttpResponse
 import com.kiva.infrastructure.media.MediaUrls
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonObject
 
 /** Contract schema `AdminOrderListResponse`: one page of the queue, and every status's count with the same filters but the status. */
 @Serializable
@@ -97,7 +96,7 @@ data class AdminOrderHttpResponse(
     val timeline: List<OrderEventHttpResponse>,
     val customerNote: String?,
     val gift: OrderGiftHttpResponse?,
-    val returns: List<JsonObject>,
+    val returns: List<ReturnRequestHttpResponse>,
     val invoiceUrl: String?,
     val refunds: List<RefundHttpResponse>,
     // ---- AdminOrder ----

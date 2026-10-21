@@ -3258,7 +3258,7 @@ CREATE TABLE announcement_tbl (
 | ۷.۰ | کانترکت 1.13.0 | S | ✅ |
 | ۷.۱ | آپلود مشتری (`/me/uploads`) | M | ✅ |
 | ۷.۲ | دامنه‌ی مرجوعی، رویدادهای سفارش و جدول | L | ✅ |
-| ۷.۳ | درخواست مرجوعی و «مرجوعی‌های من» | M | ⬜ |
+| ۷.۳ | درخواست مرجوعی و «مرجوعی‌های من» | M | ✅ |
 | ۷.۴ | صف پنل، تصمیم و جمع‌آوری | M | ⬜ |
 | ۷.۵ | رسیدن به انبار، بستن، و استرداد ِ مرجوعی | L | ⬜ |
 | ۷.۶ | ریویو و دور با پنل | M | ⬜ |
@@ -3306,6 +3306,10 @@ CREATE TABLE announcement_tbl (
 | 37 | `meta.allowed` ِ مرجوعی (تازه، گام ۷.۲) | `ReturnRequest.InvalidTransition` ِ Aggregate `allowed` رو انگار هیچ استردادی باز نیست می‌گه (Aggregate استردادهاش رو نمی‌بینه)؛ `close` اول `RETURN_REFUND_OPEN` رو چک می‌کنه. `allowedTransitions` ِ پاسخ پنل با استرداد واقعی حساب می‌شه | تنها حالت فرق `RECEIVED` با استرداد بازه، که همون `RETURN_REFUND_OPEN` جوابشه |
 | 38 | `by` ِ جمع‌آوری و بستن (تازه، گام ۷.۲) | `schedulePickup(pickup)` و `close(reason, hasOpenRefund, now)` `by` نمی‌گیرن: جدول ستون `pickedBy`/`closedBy` نداره و انجام‌دهنده در لاگ تغییراته | پارامتر بی‌استفاده هشدار کامپایلره |
 | 39 | دیوار ِ `openReturnId` (تازه، گام ۷.۲) | `orderqm_open_return_check`: `openReturnId` پره دقیقاً وقتی سفارش `RETURN_REQUESTED` یا `RETURNED` ـه. کد عمومی ِ `TextInvalid` در `common` (کنار `TextTooLong`) | هر قانون یه `CHECK` ِ هم‌معنی |
+| 40 | پاسخ ِ درخواست (تازه، گام ۷.۳) | `CreateReturnUc` فقط `ReturnId` برمی‌گردونه و route بدنه رو با Query ِ تازه‌ی `GetMyReturnUc` می‌خونه (قانون ۶ ِ ۴.۵)؛ مرجوعی ِ کس دیگه یا ناموجود ← `RETURN_NOT_FOUND` | Command شناسه برمی‌گردونه |
+| 41 | ساختن ِ `ReturnRequest` (تازه، گام ۷.۳) | سرویس مشترک `ReturnRequests` (`ofOrder` برای صفحه‌ی سفارش و پنل، `of` برای لیست): اسم و رنگ از ردیف ِ سفارش، مدیا، تازه‌ترین استرداد. برای «مرجوعی‌های من» بدون N+1: `OrderQmRepository.findByIds` و `RefundRepository.findAllOfReturns`. `pickup.carrierName` از تنظیمات ِ الان | قانون ۱۵: یه ساختن برای سه جا |
+| 42 | برچسب دلیل (تازه، گام ۷.۳) | `ReturnTexts.reasonLabel` ساخته نشد: کانترکت `reasonLabel` نداره و برچسب دلیل‌ها کار فرانت‌ـه. `ReturnTexts` برچسب ۷ وضعیت و دو متن پیش‌فرض دستورالعمل رو داره | کد بی‌مصرف نه |
+| 43 | مدیای پاک‌شده وسط درخواست (تازه، گام ۷.۳) | اگه `markAttached` کمتر از تعداد خواسته‌شده رو علامت بزنه (پاک‌کن ِ ۴۸ ساعته وسط کار) ← کل تراکنش برمی‌گرده و `400 MEDIA_NOT_FOUND` روی `mediaIds` | مثل اینکه از اول نبوده |
 
 ### ۱۲.۳ ماشین وضعیت مرجوعی
 
@@ -3679,19 +3683,21 @@ Route: 200
 
 ---
 
-#### گام ۷.۳: درخواست مرجوعی و «مرجوعی‌های من» · M ⬜
+#### گام ۷.۳: درخواست مرجوعی و «مرجوعی‌های من» · M ✅
 
 **می‌سازی:** `CreateReturnUc`، `ListMyReturnsUc`؛ `webV1MyReturns.kt`؛ `ReturnRequestHttpResponse`، `ReturnTexts`؛ `returns` و `canReturn` در `GetMyOrderUc`، `ListMyOrdersUc` و `GetAdminOrderUc`.
 
 وابسته به: ۷.۱، ۷.۲
 
 **تموم شده یعنی:**
-- [ ] سفارش تحویل‌شده، یه قلم `NOT_AS_PICTURED` با یه عکس ← `201`، `code = RT-…`، `shippingPaidBy = KIVA`؛ سفارش `RETURN_REQUESTED`؛ مدیا `attachedOn` گرفت.
-- [ ] همون بدون عکس ← `400 EVIDENCE_REQUIRED`؛ `OTHER` بدون توضیح ← `400 DESCRIPTION_REQUIRED`؛ `CHANGED_MIND` بدون عکس ← `201` با `CUSTOMER`.
-- [ ] عکس کاربر دیگه ← `400 MEDIA_NOT_FOUND` (همون پاسخ مدیای ناموجود)؛ سفارش کاربر دیگه ← `404`.
-- [ ] درخواست دوم ← `422 ORDER_NOT_RETURNABLE`؛ دو درخواست همزمان ۲۰ بار ← همیشه یه مرجوعی.
-- [ ] روز هشتم ← `422 RETURN_WINDOW_EXPIRED` با `returnableUntil`.
-- [ ] `canReturn` در لیست و جزئیات قبل، حین و بعد از مرجوعی درسته؛ `GET /me/returns` آرایه‌ی ساده.
+- [x] سفارش تحویل‌شده، یه قلم `NOT_AS_PICTURED` با یه عکس ← `201`، `code = RT-…`، `shippingPaidBy = KIVA`؛ سفارش `RETURN_REQUESTED`؛ مدیا `attachedOn` گرفت.
+- [x] همون بدون عکس ← `400 EVIDENCE_REQUIRED`؛ `OTHER` بدون توضیح ← `400 DESCRIPTION_REQUIRED`؛ `CHANGED_MIND` بدون عکس ← `201` با `CUSTOMER`.
+- [x] عکس کاربر دیگه ← `400 MEDIA_NOT_FOUND` (همون پاسخ مدیای ناموجود)؛ سفارش کاربر دیگه ← `404`.
+- [x] درخواست دوم ← `422 ORDER_NOT_RETURNABLE`؛ دو درخواست همزمان ۲۰ بار ← همیشه یه مرجوعی.
+- [x] روز هشتم ← `422 RETURN_WINDOW_EXPIRED` با `returnableUntil`.
+- [x] `canReturn` در لیست و جزئیات قبل، حین و بعد از مرجوعی درسته؛ `GET /me/returns` آرایه‌ی ساده.
+
+**یادداشت پیاده‌سازی:** چهار تصمیم تازه (۴۰ تا ۴۳). `CreateReturnUc` (شکل با همه‌ی خطاها با هم، `iban` ِ کلاینت قدیمی نادیده)، `ListMyReturnsUc`، `GetMyReturnUc`، `ReturnRequests`؛ `ReturnRequestDto` و `OrderDetailDto.returns`؛ `webV1MyReturns.kt`، `ReturnRequestHttpResponse`، `ReturnTexts`؛ `returns` ِ صفحه‌ی سفارش (مشتری و پنل) حالا `ReturnRequest` ِ واقعی. «بعد از مرجوعی» ِ `canReturn` (رد و بستن) با endpointهای ۷.۴ و ۷.۵ در route تست می‌شه؛ در دامنه و Projector از ۷.۲ تست شده. `WebV1MyReturnsOnDatabaseTest` (۱۰ تست، همه با شِمای کانترکت). تست همزمانی هر سفارش رو درست بعد از تحویلش می‌فرسته (ساعت تست با هر تحویل دو روز جلو می‌ره). خرابکاری: بدون `lockOrder` در `CreateReturnUc` ← «two returns of one order asked at the same moment, 20 times…» قرمز (دومی به‌جای `422` با رقابت stream می‌خوره)؛ بدون چک `uploadedBy` ← «someone else's photo is the same MEDIA_NOT_FOUND…» و تست دامنه‌اش قرمز.
 
 ---
 
@@ -6284,3 +6290,4 @@ kiva {
 | ۲۹ مهر ۱۴۰۵ | ۷.۰ | Phase 7 step 7.0 | کانترکت 1.13.0 با هر ۱۵ ردیف ِ ۱۲.۱۰ و سه ردیف تازه (۱۶ تا ۱۸)؛ شش تصمیم تازه (۲۵ تا ۳۰). YAML معتبر، ۱۳۳۱ `$ref`. متن ۱۶ کد تازه. برنچ `returns` از نوک فاز ۶ |
 | ۲۹ مهر ۱۴۰۵ | ۷.۱ | Phase 7 step 7.1 | `POST /me/uploads` با `MediaUploader.Customer`، سقف ۲۰ در ساعت (دو شمارش، قفل ِ آپلودهای کاربر)، `withUpload` ِ مشترک. سه تصمیم تازه (۳۱ تا ۳۳). خرابکاری ِ قفل قرمز. ۲۷۵۰ تست سبز (۵ تست ابزار واقعی skip) |
 | ۲۹ مهر ۱۴۰۵ | ۷.۲ | Phase 7 step 7.2 | Aggregate ِ `ReturnRequest` و VOها و سه سیاست، `ReturnDomainService.open` (به ترتیب کانترکت)، سه رویداد سفارش با payload و JSON ِ طلایی، `Order.returnRefusal`/`requestReturn`/`receiveReturn`/`endReturn`، `canReturn`، `restockForReturn`، `V32` ِ کامل، `ReturnRequestRepositoryImpl`، Projector و پنج ردیف تایم‌لاین. شش تصمیم تازه (۳۴ تا ۳۹). دو خرابکاری قرمز. کل مجموعه: ۲۸۲۱ تست، یکی قرمز (دکمه‌ی `canReturn` ِ سفارش تحویل‌شده در تست سفر فاز ۲، که حالا درست روشنه؛ به‌روز شد)، ۵ skip |
+| ۲۹ مهر ۱۴۰۵ | ۷.۳ | Phase 7 step 7.3 | `POST /me/orders/{orderCode}/returns` و `GET /me/returns`: `CreateReturnUc` (قفل ۹، به ترتیب کانترکت)، `ListMyReturnsUc`، `GetMyReturnUc`، `ReturnRequests` (بدون N+1)، `ReturnRequestHttpResponse`، `ReturnTexts`؛ `returns` در صفحه‌ی سفارش. چهار تصمیم تازه (۴۰ تا ۴۳). دو خرابکاری قرمز |

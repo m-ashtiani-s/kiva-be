@@ -6,6 +6,7 @@ import com.kiva.application.dto.PreShipmentMediaDto
 import com.kiva.application.dto.RefundDto
 import com.kiva.application.repository.OrderQm
 import com.kiva.application.usecase.reservation.Reservations
+import com.kiva.application.usecase.returnrequest.ReturnRequests
 import com.kiva.domain.aggregate.color.repository.ColorRepository
 import com.kiva.domain.aggregate.media.entity.MediaAsset
 import com.kiva.domain.aggregate.media.model.valueobject.MediaId
@@ -28,6 +29,7 @@ class OrderDetails(
     private val reservations: Reservations,
     private val mediaRepository: MediaRepository,
     private val refundRepository: RefundRepository,
+    private val returnRequests: ReturnRequests,
 ) {
 
     /** [order]'s page at [now], with the shop's [settings] of now (the names of its shipping method and gateway). */
@@ -75,6 +77,7 @@ class OrderDetails(
             customerNote = order.customerNote?.value,
             gift = order.gift?.let { OrderDetailDto.Gift(it.message, it.hidePrices) },
             refunds = refundRepository.findAllOf(order.orderId).map(RefundDto::from),
+            returns = returnRequests.ofOrder(order, settings),
         )
     }
 
