@@ -159,3 +159,50 @@ nginx -t && systemctl reload nginx && systemctl restart kiva
 f=$(find /var/lib/kiva/media -name '*.webp' | head -n 1); curl -sI "https://api.kivashop.ir/media/${f#/var/lib/kiva/media/}" | grep -i cache-control
 #   cache-control: public, max-age=31536000, immutable
 ```
+
+---
+
+## گام ۶.۳: بکاپ روزانه و تست بازگردانی
+
+**۱. روشن کردن و اولین اجرا:**
+
+```bash
+systemctl enable --now kiva-backup.timer
+systemctl list-timers kiva-backup.timer          # بعدی: ۰۳:۰۰ ِ تهران
+systemctl start kiva-backup.service && journalctl -u kiva-backup -n 20 --no-pager
+ls -la /root/backups/$(TZ=Asia/Tehran date +%F)  # kiva.dump، media.tgz، SHA256SUMS
+```
+
+`backup.sh` هر شب: `pg_dump -Fc` ِ `kiva` (و یه بار خوندن فهرستش، تا dump ِ خراب بکاپ حساب نشه)، tar ِ پوشه‌ی مدیا، و `SHA256SUMS`. پوشه‌ی روز فقط وقتی پیدا می‌شه که هر سه کامل باشن. روزهای قدیمی‌تر از ۱۴ روز پاک می‌شن. ساعت ۳ قبل از پاک‌سازی‌های شبانه‌ی برنامه‌ست (۳:۳۰ و ۴:۰۰ و ۴:۳۰).
+
+**۲. تست بازگردانی:**
+
+```bash
+/opt/kiva-ops/restore-test.sh
+```
+
+checksumها، `pg_restore` در دیتابیس تازه‌ی `kiva_restore_test`، شمارش سفارش‌ها و پرداخت‌ها و استردادها و محصول‌ها و … کنار دیتابیس زنده، شماره‌ی آخرین migration، و فهرست `media.tgz` در برابر پوشه؛ بعد دیتابیس آزمایشی پاک می‌شه (`--keep` نگهش می‌داره). خط آخرش (`restore-test: OK …`) رو تو گزارش کار ِ نقشه‌ی راه بنویس. دیتابیس زنده فقط خونده می‌شه.
+
+**۳. یه کپی بیرون از سرور** (سؤال باز ۲؛ یکی رو انتخاب کن):
+
+- **الف) فضای ابری آروان** (خودکار، هر شب):
+
+  ```bash
+  apt install -y rclone
+  rclone config        # یه remote ِ s3 با اسم arvan، provider «Arvan»، endpoint ِ همون باکت در پنل آروان؛ کلیدها رو خودت وارد کن
+  install -d -m 700 /etc/kiva
+  echo 'KIVA_BACKUP_RCLONE_REMOTE=arvan:kiva-backups' > /etc/kiva/backup.env && chmod 600 /etc/kiva/backup.env
+  systemctl start kiva-backup.service && rclone ls arvan:kiva-backups | tail -n 3
+  ```
+
+  کپی نشدن ابری بکاپ محلی رو خراب نمی‌کنه، ولی سرویس رو `failed` می‌کنه و هشدار گام ۶.۸ (`BACKUP_OLD`) خبرت می‌کنه.
+
+- **ب) دانلود روی کامپیوتر خودت** (هفته‌ای یه بار، یا با Task Scheduler):
+
+  ```powershell
+  .\tools\ops\pull-backup.ps1 -Destination D:\kiva-backups
+  ```
+
+  آخرین روز رو می‌آره، SHA-256 ِ هر فایل رو چک می‌کنه، و ۸ روز آخر رو نگه می‌داره.
+
+**تموم شده یعنی:** بکاپ دیشب هست، `restore-test.sh` خط `OK` داده و تو گزارش کار اومده، و راه کپی بیرونی انتخاب و یه بار امتحان شده.

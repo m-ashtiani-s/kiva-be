@@ -1,0 +1,10 @@
+# 03:00 Tehran every night; a night the server was off runs at the next boot (Persistent). LAUNCH.md, step 6.3.
+[Unit]
+Description=Kiva nightly backup at 03:00 Tehran
+
+[Timer]
+OnCalendar=*-*-* 03:00:00 Asia/Tehran
+Persistent=true
+
+[Install]
+WantedBy=timers.target
