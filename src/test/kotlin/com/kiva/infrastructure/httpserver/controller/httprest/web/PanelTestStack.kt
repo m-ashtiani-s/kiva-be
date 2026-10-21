@@ -377,6 +377,8 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
                     webV1Content(content, SITE_URL)
                     // The customer's side of an order, for the tests that follow it from the panel to «سفارش‌های من».
                     webV1MyOrders(purchase.myOrderUseCases, mediaUrls)
+                    // A customer's uploads (phase 7): the same use case and media root as the panel's.
+                    webV1MyUploads(uploadMedia, mediaStorage::newUploadFile, mediaUrls)
                     // Back from the gateway and the result page, for paying what a change left owed (phase 3).
                     webV1Payments(purchase.paymentUseCases, PaymentConfig.DEFAULT.resultUrl)
                     webV1Tracking(purchase.trackingUseCases, mediaUrls)

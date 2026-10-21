@@ -9,6 +9,8 @@ import com.kiva.domain.aggregate.media.model.valueobject.MediaPurpose
 import com.kiva.domain.aggregate.media.model.valueobject.MediaType
 import com.kiva.domain.aggregate.media.model.valueobject.VideoCodec
 import com.kiva.domain.aggregate.media.model.valueobject.VideoContainer
+import java.time.Duration
+import java.time.Instant
 
 /**
  * What each purpose takes (contract `POST /admin/media`, roadmap section 5.2), and the sizes a photo is stored in.
@@ -19,6 +21,9 @@ import com.kiva.domain.aggregate.media.model.valueobject.VideoContainer
  * | PRE_SHIPMENT | the same | mp4 or mov (H.264); 200 MB; 180 s |
  * | CATEGORY, BANNER, TESTIMONIAL | the same | none |
  * | RETURN_EVIDENCE, REVIEW_PHOTO | jpeg, png, webp; 8 MB | mp4 (H.264); 50 MB; 60 s |
+ *
+ * A customer uploads at most [CUSTOMER_UPLOADS_PER_WINDOW] files in any [CUSTOMER_UPLOAD_WINDOW] (roadmap section 12.2,
+ * row 23): every upload is seconds of libvips or ffmpeg, so without a cap one account fills the CPU and the disk.
  */
 object MediaLimitsPolicy {
 
@@ -64,6 +69,29 @@ object MediaLimitsPolicy {
 
     /** The largest upload any purpose takes: the cap while the purpose isn't known yet. */
     val MAX_UPLOAD_BYTES: Long = MediaPurpose.entries.maxOf { limitsOf(it).maxUploadBytes }
+
+    /** The largest upload a customer's purpose takes: their cap while the purpose isn't known yet. */
+    val MAX_CUSTOMER_UPLOAD_BYTES: Long = MediaPurpose.entries.filterNot { it.isStaffPurpose }.maxOf { limitsOf(it).maxUploadBytes }
+
+    const val CUSTOMER_UPLOADS_PER_WINDOW = 20
+    val CUSTOMER_UPLOAD_WINDOW: Duration = Duration.ofHours(1)
+
+    /**
+     * Whether a customer whose uploads of the last [CUSTOMER_UPLOAD_WINDOW] were at [recent] may upload one more at [now]:
+     * null if they may; otherwise how long until enough of them are older than the window that one more fits, at
+     * least a second. [recent] are the times of the uploads after `now − window`, in any order: one exactly a window
+     * old has left it, so the wait ends the moment the upload it waits for is a window old.
+     */
+    fun customerUploadRefusal(recent: List<Instant>, now: Instant): UploadRefusal? {
+        if (recent.size < CUSTOMER_UPLOADS_PER_WINDOW) return null
+        // Of the uploads in the window, this one has to leave it for the count to drop below the cap.
+        val leaving = recent.sorted()[recent.size - CUSTOMER_UPLOADS_PER_WINDOW]
+        return UploadRefusal(Duration.between(now, leaving.plus(CUSTOMER_UPLOAD_WINDOW)))
+    }
+
+    /** Too many uploads at once: a 429 with how long to wait, rounded up to a whole second and never less than one. */
+    data class UploadRefusal(val retryAfter: Duration) :
+        ResultFailure("RATE_LIMITED", FailureKind.RATE_LIMITED, meta = mapOf("retryAfterSeconds" to ((retryAfter.toMillis() + 999) / 1000).coerceAtLeast(1)))
 
     /**
      * Whether a file of [bytes] that turned out to be [probe] may be uploaded for [purpose], and as which type. The type

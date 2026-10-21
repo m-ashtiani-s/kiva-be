@@ -44,21 +44,6 @@ class VipsFfmpegMediaProcessorTest {
 
     private fun file(name: String, bytes: ByteArray): Path = dir.resolve(name).also { Files.write(it, bytes) }
 
-    /** A jpeg of [width] x [height] with an EXIF block that holds a GPS position. */
-    private fun jpegWithGps(width: Int, height: Int): ByteArray {
-        val jpeg = FakeMediaProcessor.photo(width, height)
-        // TIFF, little endian: IFD0 with one entry (GPSInfo -> IFD at 26), the GPS IFD with GPSLatitudeRef "N".
-        val tiff = byteArrayOf(
-            0x49, 0x49, 0x2A, 0x00, 0x08, 0x00, 0x00, 0x00,
-            0x01, 0x00, 0x25, 0x88.toByte(), 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x1A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x01, 0x00, 0x01, 0x00, 0x02, 0x00, 0x02, 0x00, 0x00, 0x00, 0x4E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        )
-        val payload = "Exif".toByteArray() + byteArrayOf(0, 0) + tiff
-        val length = payload.size + 2
-        val app1 = byteArrayOf(0xFF.toByte(), 0xE1.toByte(), (length shr 8).toByte(), length.toByte()) + payload
-        return jpeg.copyOfRange(0, 2) + app1 + jpeg.copyOfRange(2, jpeg.size)
-    }
-
     private fun ffmpeg(vararg args: String): Boolean {
         val process = ProcessBuilder(listOf(config.ffmpegBin, "-v", "error", "-y") + args).redirectErrorStream(true).start()
         process.inputStream.readBytes()
@@ -72,7 +57,7 @@ class VipsFfmpegMediaProcessorTest {
 
     @Test
     fun `a 4000 by 3000 jpeg with GPS becomes five webp sizes, 1600 wide at most, a blurhash, and no metadata`() = runBlocking<Unit> {
-        val source = file("upload.bin", jpegWithGps(4000, 3000))
+        val source = file("upload.bin", FakeMediaProcessor.photoWithGps(4000, 3000))
         assertTrue("gps" in vipsHeaderAll(source).lowercase(), "the test photo must carry its GPS block")
 
         val probe = processor.probe(source)

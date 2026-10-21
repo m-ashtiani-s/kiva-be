@@ -9,7 +9,10 @@ import com.kiva.domain.aggregate.media.model.valueobject.MediaType
 import com.kiva.domain.aggregate.media.model.valueobject.VideoCodec
 import com.kiva.domain.aggregate.media.model.valueobject.VideoContainer
 import org.junit.jupiter.api.Test
+import java.time.Duration
+import java.time.Instant
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 /** What each purpose takes, in which order the checks come, and the sizes a photo is stored in. */
 class MediaLimitsPolicyTest {
@@ -117,5 +120,42 @@ class MediaLimitsPolicyTest {
         assertEquals(listOf(160, 400), MediaLimitsPolicy.imageWidthsFor(400))
         assertEquals(listOf(160, 320), MediaLimitsPolicy.imageWidthsFor(320))
         assertEquals(listOf(100), MediaLimitsPolicy.imageWidthsFor(100))
+    }
+
+    @Test
+    fun `a customer's cap while reading is 50 MB, the largest of their purposes`() {
+        assertEquals(50 * mb, MediaLimitsPolicy.MAX_CUSTOMER_UPLOAD_BYTES)
+    }
+
+    private val now = Instant.parse("2036-03-06T09:00:00Z")
+
+    /** [count] uploads, one a minute, the last one [lastAgo] before now. */
+    private fun uploads(count: Int, lastAgo: Duration = Duration.ofMinutes(1)): List<Instant> =
+        (0 until count).map { now.minus(lastAgo).minus(Duration.ofMinutes(it.toLong())) }
+
+    @Test
+    fun `19 uploads in the last hour leave room for one more`() {
+        assertNull(MediaLimitsPolicy.customerUploadRefusal(uploads(19), now))
+        assertNull(MediaLimitsPolicy.customerUploadRefusal(emptyList(), now))
+    }
+
+    @Test
+    fun `the 21st is 429 RATE_LIMITED until the oldest of the 20 is an hour old`() {
+        // One a minute, the last 1 minute ago: the oldest was 20 minutes ago, so 40 minutes to wait.
+        val refusal = MediaLimitsPolicy.customerUploadRefusal(uploads(20), now)
+
+        assertEquals(Duration.ofMinutes(40), refusal?.retryAfter)
+        assertEquals("RATE_LIMITED" to FailureKind.RATE_LIMITED, refusal?.code to refusal?.kind)
+        assertEquals(2400L, refusal?.meta?.get("retryAfterSeconds"))
+    }
+
+    @Test
+    fun `with more than 20 at once, the wait is until enough of them leave the hour - in any order, at least a second`() {
+        // 22 uploads (two got in at once): the third oldest, 20 minutes ago, has to leave too.
+        val refusal = MediaLimitsPolicy.customerUploadRefusal(uploads(22).shuffled(), now)
+        assertEquals(Duration.ofMinutes(40), refusal?.retryAfter)
+
+        val almost = MediaLimitsPolicy.customerUploadRefusal(List(20) { now.minus(Duration.ofMinutes(60)).plusMillis(10) }, now)
+        assertEquals(1L, almost?.meta?.get("retryAfterSeconds"))
     }
 }

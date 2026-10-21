@@ -127,6 +127,10 @@ internal class InMemoryMedia : MediaRepository {
 
     override fun deleteIfUnattached(id: MediaId, before: Instant): Boolean = error("not used here")
 
+    override fun uploadTimesOf(userId: UserId, since: Instant): List<Instant> = error("not used here")
+
+    override fun lockUploadsOf(userId: UserId) = error("not used here")
+
     companion object {
         fun mediaId(n: Int): MediaId = MediaId.constructFromPersisted("med_" + n.toString().padStart(22, '0'))
     }

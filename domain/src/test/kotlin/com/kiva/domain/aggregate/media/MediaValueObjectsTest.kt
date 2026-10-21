@@ -45,6 +45,16 @@ class MediaValueObjectsTest {
     }
 
     @Test
+    fun `customers upload with their two purposes only - a staff purpose or an unknown one is MEDIA_PURPOSE_INVALID on purpose`() {
+        assertEquals(listOf(MediaPurpose.RETURN_EVIDENCE, MediaPurpose.REVIEW_PHOTO), MediaPurpose.entries.filter { MediaPurpose.makeNewForCustomer(it.name).getOrNull() != null })
+        assertEquals(MediaPurpose.RETURN_EVIDENCE, MediaPurpose.makeNewForCustomer(" RETURN_EVIDENCE ").getOrNull())
+        listOf("PRODUCT", "PRE_SHIPMENT", "return_evidence", "", null).forEach { raw ->
+            val failure = MediaPurpose.makeNewForCustomer(raw).failureOrNull()
+            assertEquals("MEDIA_PURPOSE_INVALID" to "purpose", failure?.code to failure?.field, raw)
+        }
+    }
+
+    @Test
     fun `an alt is trimmed, blank is none, over 200 is MEDIA_ALT_TOO_LONG on alt`() {
         assertEquals("کیف یاسی", MediaAlt.makeNew("  کیف یاسی ").getOrNull()?.value)
         assertNull(MediaAlt.makeNew("   ").getOrNull())

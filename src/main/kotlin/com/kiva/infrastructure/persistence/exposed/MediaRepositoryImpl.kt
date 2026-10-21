@@ -17,8 +17,10 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.TextColumnType
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.greater
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.less
@@ -26,6 +28,7 @@ import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
 import org.jetbrains.exposed.v1.jdbc.update
 import java.time.Instant
 import java.time.ZoneOffset
@@ -80,6 +83,17 @@ class MediaRepositoryImpl : MediaRepository {
         MediaTbl.deleteWhere {
             (MediaTbl.mediaId eq id.value) and MediaTbl.attachedOn.isNull() and (MediaTbl.uploadedOn less before.atOffset(ZoneOffset.UTC))
         } == 1
+
+    override fun uploadTimesOf(userId: UserId, since: Instant): List<Instant> =
+        MediaTbl.select(MediaTbl.uploadedOn)
+            .where { (MediaTbl.uploadedBy eq userId.value) and (MediaTbl.uploadedOn greater since.atOffset(ZoneOffset.UTC)) }
+            .orderBy(MediaTbl.uploadedOn to SortOrder.ASC)
+            .map { it[MediaTbl.uploadedOn].toInstant() }
+
+    /** The key is a parameter, never glued into the text, so it stays out of the SQL log. */
+    override fun lockUploadsOf(userId: UserId) {
+        TransactionManager.current().exec("SELECT pg_advisory_xact_lock(hashtextextended(?, 0))", listOf(TextColumnType() to "media-uploads:${userId.value}")) { }
+    }
 
     private fun ResultRow.toAsset() = toMediaAsset()
 }

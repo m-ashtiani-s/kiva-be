@@ -1,5 +1,6 @@
 package com.kiva.domain.aggregate.media.repository
 
+import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.media.entity.MediaAsset
 import com.kiva.domain.aggregate.media.model.valueobject.MediaId
 import java.time.Instant
@@ -28,5 +29,14 @@ interface MediaRepository {
      * in the meantime stays. Returns whether it was removed.
      */
     fun deleteIfUnattached(id: MediaId, before: Instant): Boolean
+
+    /** When [userId]'s uploads after [since] (not at it) were made, oldest first: what the customer's hourly cap counts. */
+    fun uploadTimesOf(userId: UserId, since: Instant): List<Instant>
+
+    /**
+     * Holds [userId]'s uploads until the transaction ends (an advisory lock), so two of their uploads count and insert
+     * one after the other: the cap can't be passed by sending many at once.
+     */
+    fun lockUploadsOf(userId: UserId)
 }
 

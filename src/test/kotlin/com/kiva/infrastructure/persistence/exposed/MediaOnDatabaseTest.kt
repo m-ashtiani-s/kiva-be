@@ -61,13 +61,13 @@ class MediaOnDatabaseTest {
         transaction(db) { MediaTbl.deleteWhere { MediaTbl.mediaId inList made.map { it.value } } }
     }
 
-    private fun photo(uploadedOn: Instant = now, alt: String? = null): MediaAsset {
+    private fun photo(uploadedOn: Instant = now, alt: String? = null, purpose: MediaPurpose = MediaPurpose.PRODUCT, by: Long = 7): MediaAsset {
         val id = ids.next().also { made += it }
         val dir = "2036/03/${id.value}"
         return MediaAsset.upload(
-            id, MediaPurpose.PRODUCT, MediaType.IMAGE, 1600, 1200, null, 150_000, "LKO2?U%2Tw=w]~RBVZRi};RPxuwH",
+            id, purpose, MediaType.IMAGE, 1600, 1200, null, 150_000, "LKO2?U%2Tw=w]~RBVZRi};RPxuwH",
             listOf(160, 800, 1600).map { MediaVariant.of(it, "$dir/w$it.webp") }, null, alt?.let(MediaAlt::constructFromPersisted), dir,
-            UserId.constructFromPersisted(7), uploadedOn,
+            UserId.constructFromPersisted(by), uploadedOn,
         )
     }
 
@@ -120,11 +120,31 @@ class MediaOnDatabaseTest {
     }
 
     @Test
+    fun `a user's upload times are theirs only, from the time asked, oldest first`() {
+        val mine = listOf(30L, 10L, 50L).map { stored(photo(uploadedOn = now.minus(Duration.ofMinutes(it)), purpose = MediaPurpose.RETURN_EVIDENCE, by = 41)) }
+        stored(photo(uploadedOn = now.minus(Duration.ofMinutes(5)), purpose = MediaPurpose.RETURN_EVIDENCE, by = 42))
+        stored(photo(uploadedOn = now.minus(Duration.ofMinutes(70)), purpose = MediaPurpose.RETURN_EVIDENCE, by = 41))
+
+        val times = transaction(db) { repository.uploadTimesOf(UserId.constructFromPersisted(41), now.minus(Duration.ofHours(1))) }
+
+        assertEquals(mine.map { it.uploadedOn }.sorted(), times)
+    }
+
+    @Test
     fun `the clean-up removes an upload of 49 hours with its folder - one of 47 hours and an attached one stay`() = runBlocking<Unit> {
+        cleanUpRemovesOnlyOldUnattached(MediaPurpose.PRODUCT)
+    }
+
+    @Test
+    fun `a customer's return photo nothing used goes the same way after 48 hours`() = runBlocking<Unit> {
+        cleanUpRemovesOnlyOldUnattached(MediaPurpose.RETURN_EVIDENCE)
+    }
+
+    private suspend fun cleanUpRemovesOnlyOldUnattached(purpose: MediaPurpose) {
         val clock = MutableClock(now)
-        val old = stored(photo(uploadedOn = now.minus(Duration.ofHours(49))))
-        val fresh = stored(photo(uploadedOn = now.minus(Duration.ofHours(47))))
-        val attached = stored(photo(uploadedOn = now.minus(Duration.ofHours(100))))
+        val old = stored(photo(uploadedOn = now.minus(Duration.ofHours(49)), purpose = purpose))
+        val fresh = stored(photo(uploadedOn = now.minus(Duration.ofHours(47)), purpose = purpose))
+        val attached = stored(photo(uploadedOn = now.minus(Duration.ofHours(100)), purpose = purpose))
         transaction(db) { repository.markAttached(listOf(attached.id), now.minus(Duration.ofHours(99))) }
         val transactions = ExposedTransactionManager(db)
         val storage = DiskMediaStorage(root)

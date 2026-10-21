@@ -102,6 +102,7 @@ import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Content
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Geo
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Me
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1MyOrders
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1MyUploads
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Payments
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Products
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Tracking
@@ -328,6 +329,7 @@ fun Application.configureRouting() {
                 config.payment.resultUrl,
             )
             webV1MyOrders(MyOrderUseCases(listMyOrdersUc, getMyOrderUc, reorderUc, getCartUc, getMyReservationUc, get(), get(), get(), get()), mediaUrls)
+            webV1MyUploads(uploadMediaUc, mediaStorage::newUploadFile, mediaUrls)
             webV1Tracking(TrackingUseCases(get(), get(), get()), mediaUrls)
         }
     }

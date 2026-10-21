@@ -79,5 +79,20 @@ class FakeMediaProcessor : MediaProcessor {
             graphics.dispose()
             return ByteArrayOutputStream().also { ImageIO.write(image, format, it) }.toByteArray()
         }
+
+        /** A real jpeg of [width] x [height] with an EXIF block that holds a GPS position. */
+        fun photoWithGps(width: Int, height: Int): ByteArray {
+            val jpeg = photo(width, height)
+            // TIFF, little endian: IFD0 with one entry (GPSInfo -> IFD at 26), the GPS IFD with GPSLatitudeRef "N".
+            val tiff = byteArrayOf(
+                0x49, 0x49, 0x2A, 0x00, 0x08, 0x00, 0x00, 0x00,
+                0x01, 0x00, 0x25, 0x88.toByte(), 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x1A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x01, 0x00, 0x01, 0x00, 0x02, 0x00, 0x02, 0x00, 0x00, 0x00, 0x4E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            )
+            val payload = "Exif".toByteArray() + byteArrayOf(0, 0) + tiff
+            val length = payload.size + 2
+            val app1 = byteArrayOf(0xFF.toByte(), 0xE1.toByte(), (length shr 8).toByte(), length.toByte()) + payload
+            return jpeg.copyOfRange(0, 2) + app1 + jpeg.copyOfRange(2, jpeg.size)
+        }
     }
 }

@@ -16,17 +16,22 @@ enum class MediaPurpose(val isStaffPurpose: Boolean) {
     CATEGORY(true),
     TESTIMONIAL(true),
 
-    /** A customer's photo of a return (phase 7). */
+    /** A customer's photo or video of what is wrong with a returned bag (phase 7). */
     RETURN_EVIDENCE(false),
 
-    /** A customer's photo in a review (phase 7). */
+    /** A customer's photo in a review (phase 8; uploaded the customer's way from phase 7). */
     REVIEW_PHOTO(false),
     ;
 
     companion object {
         /** A purpose a member of staff may upload with (`POST /admin/media`); a customer's purpose is refused there. */
-        fun makeNewForStaff(raw: String?): Result<MediaPurpose, Failure> {
-            val purpose = entries.firstOrNull { it.name == raw?.trim() && it.isStaffPurpose }
+        fun makeNewForStaff(raw: String?): Result<MediaPurpose, Failure> = makeNew(raw, staff = true)
+
+        /** A purpose a customer may upload with (`POST /me/uploads`); a staff purpose is refused there. */
+        fun makeNewForCustomer(raw: String?): Result<MediaPurpose, Failure> = makeNew(raw, staff = false)
+
+        private fun makeNew(raw: String?, staff: Boolean): Result<MediaPurpose, Failure> {
+            val purpose = entries.firstOrNull { it.name == raw?.trim() && it.isStaffPurpose == staff }
             return purpose?.let { Result.success(it) } ?: Result.failure(Failure.Invalid)
         }
     }

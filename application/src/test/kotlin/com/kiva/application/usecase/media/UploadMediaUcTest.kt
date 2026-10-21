@@ -6,6 +6,7 @@ import com.kiva.application.port.MediaStorage
 import com.kiva.application.port.ProcessedFile
 import com.kiva.application.port.ProcessedMedia
 import com.kiva.application.usecase.media.usecase.command.UploadMediaUc
+import com.kiva.common.railway.FailureKind
 import com.kiva.application.util.MockTransactionManager
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.media.entity.MediaAsset
@@ -22,6 +23,7 @@ import org.junit.jupiter.api.Test
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Clock
+import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
 import kotlin.test.assertEquals
@@ -29,8 +31,9 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
- * The upload's order: the form first (nothing is read or processed for a bad one), then what the file is, then the
- * processing, the files moved into place, and the row; a failing row leaves no folder behind.
+ * The upload's order: the form first (nothing is read or processed for a bad one), a customer's cap, then what the file
+ * is, then the processing, the files moved into place, and the row (a customer's counted again under their lock); a
+ * failing or refused row leaves no folder behind.
  */
 class UploadMediaUcTest {
 
@@ -70,15 +73,31 @@ class UploadMediaUcTest {
 
     private class Rows(var fail: Boolean = false) : MediaRepository {
         val stored = mutableListOf<MediaAsset>()
+
+        /** Uploads made elsewhere: times of the user's earlier files. */
+        val earlier = mutableListOf<Instant>()
+
+        /** What the second count sees on top of [earlier], as if uploads sent at once were stored meanwhile. */
+        var arrivedMeanwhile = 0
+        val done = mutableListOf<String>()
         override fun find(id: MediaId) = stored.firstOrNull { it.id == id }
         override fun findAll(ids: Collection<MediaId>) = stored.filter { it.id in ids }
         override fun insert(asset: MediaAsset) {
             if (fail) throw IllegalStateException("the database is down")
             stored += asset
+            done += "insert"
         }
         override fun markAttached(ids: Collection<MediaId>, now: Instant) = 0
         override fun findUnattachedBefore(before: Instant, limit: Int) = emptyList<MediaId>()
         override fun deleteIfUnattached(id: MediaId, before: Instant) = false
+        override fun uploadTimesOf(userId: UserId, since: Instant): List<Instant> {
+            val counted = if (done.contains("lock")) earlier + List(arrivedMeanwhile) { since.plusSeconds(1) } else earlier
+            done += "count"
+            return counted.filter { it.isAfter(since) }
+        }
+        override fun lockUploadsOf(userId: UserId) {
+            done += "lock"
+        }
     }
 
     private val processor = FakeProcessor()
@@ -87,7 +106,9 @@ class UploadMediaUcTest {
     private val useCase = UploadMediaUc(transactions, processor, storage, rows, object : MediaIdGenerator { override fun next() = id }, clock)
 
     private fun command(files: List<UploadMediaUc.UploadedFile> = listOf(file), purpose: String? = "PRODUCT", alt: String? = null) =
-        UploadMediaUc.Cmd(files, purpose, alt, by)
+        UploadMediaUc.Cmd(files, purpose, alt, MediaUploader.Staff(by))
+
+    private fun customerCommand(purpose: String? = "RETURN_EVIDENCE") = UploadMediaUc.Cmd(listOf(file), purpose, null, MediaUploader.Customer(by))
 
     @Test
     fun `a photo is processed, moved into its month's folder, stored, and comes back with its sizes`() = runTest {
@@ -172,6 +193,69 @@ class UploadMediaUcTest {
 
         val dir = "2036/03/${id.value}"
         assertEquals(listOf("new", "commit $dir", "delete $dir"), storage.done)
+    }
+
+    @Test
+    fun `staff uploads are never counted nor locked`() = runTest {
+        rows.earlier += List(30) { clock.instant().minusSeconds(60) }
+
+        assertEquals(id.value, useCase.execute(command()).getOrNull()?.id)
+
+        assertEquals(listOf("insert"), rows.done)
+    }
+
+    @Test
+    fun `a customer uploads with their purposes - counted before the processing, then locked and counted again before the row`() = runTest {
+        rows.earlier += List(19) { clock.instant().minusSeconds(60) }
+
+        val media = useCase.execute(customerCommand("REVIEW_PHOTO")).getOrNull()
+
+        assertEquals(id.value, media?.id)
+        assertEquals(listOf("count", "lock", "count", "insert"), rows.done)
+        assertEquals(2, transactions.transactionsOpened)
+    }
+
+    @Test
+    fun `a staff purpose from a customer is 400 MEDIA_PURPOSE_INVALID, before anything is counted`() = runTest {
+        val failure = useCase.execute(customerCommand("PRODUCT")).failureOrNull()
+
+        assertEquals(listOf("purpose" to "MEDIA_PURPOSE_INVALID"), failure?.causes?.map { it.field to it.code })
+        assertEquals(emptyList(), rows.done)
+        assertEquals(0, transactions.transactionsOpened)
+    }
+
+    @Test
+    fun `the 21st upload of the hour is 429 with the wait, and nothing is probed, processed or stored`() = runTest {
+        // 20 in the last hour, the oldest 50 minutes ago: 10 minutes to wait.
+        rows.earlier += List(20) { clock.instant().minus(Duration.ofMinutes(50)).plusSeconds(it.toLong()) }
+
+        val failure = useCase.execute(customerCommand()).failureOrNull()
+
+        assertEquals("RATE_LIMITED" to FailureKind.RATE_LIMITED, failure?.code to failure?.kind)
+        assertEquals(600L, failure?.meta?.get("retryAfterSeconds"))
+        assertEquals(0, processor.probed)
+        assertEquals(emptyList(), storage.done)
+        assertTrue(rows.stored.isEmpty())
+    }
+
+    @Test
+    fun `uploads an hour old don't count`() = runTest {
+        rows.earlier += List(20) { clock.instant().minus(Duration.ofMinutes(61)) }
+
+        assertEquals(id.value, useCase.execute(customerCommand()).getOrNull()?.id)
+    }
+
+    @Test
+    fun `uploads stored meanwhile reach the cap at the second count - 429, and the folder made goes with it`() = runTest {
+        rows.earlier += List(19) { clock.instant().minusSeconds(60) }
+        rows.arrivedMeanwhile = 1
+
+        val failure = useCase.execute(customerCommand()).failureOrNull()
+
+        assertEquals("RATE_LIMITED", failure?.code)
+        val dir = "2036/03/${id.value}"
+        assertEquals(listOf("new", "commit $dir", "delete $dir"), storage.done)
+        assertTrue(rows.stored.isEmpty())
     }
 
     @Test
