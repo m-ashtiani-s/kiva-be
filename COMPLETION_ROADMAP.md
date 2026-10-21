@@ -3118,7 +3118,7 @@ CREATE TABLE announcement_tbl (
 | ۶.۱ | پنل روی سرور (زودهنگام) | بعد از فاز ۱ | 🔧 |
 | ۶.۲ | مدیا روی سرور | با ۶.۱ | 🔧 |
 | ۶.۳ | بکاپ روزانه و تست بازگردانی | قبل از اولین پرداخت واقعی | 🔧 |
-| ۶.۴ | اسکریپت یک‌دستوره‌ی deploy | قبل از ۶.۹ | ⬜ |
+| ۶.۴ | اسکریپت یک‌دستوره‌ی deploy | قبل از ۶.۹ | 🔧 |
 | ۶.۵ | امنیت سرور | قبل از ۶.۹ | ⬜ |
 | ۶.۶ | حساب‌ها و رازها: زرین‌پال و الگوهای پیامک | قبل از ۶.۹ | ⬜ |
 | ۶.۷ | داده و محتوای واقعی | بعد از فاز ۵ | ⬜ |
@@ -3160,12 +3160,14 @@ CREATE TABLE announcement_tbl (
 
 **یادداشت پیاده‌سازی:** `backup.sh` (پوشه‌ی روز فقط وقتی کامله پیدا می‌شه؛ dump یه بار خونده می‌شه؛ ۱۴ روز؛ `rclone` اگه `/etc/kiva/backup.env` بگه)، `restore-test.sh` (checksum، `pg_restore` در `kiva_restore_test`، شمارش‌ها کنار دیتابیس زنده، migration، فهرست مدیا، خط `OK` برای گزارش کار)، `kiva-backup.service`/`.timer` (`OnCalendar=… Asia/Tehran`، با `systemd-analyze` ساعت ۰۳:۰۰ ِ ‎+0330 تأیید شد)، `pull-backup.ps1` (راه ب ِ سؤال باز ۲). بکاپ و بازگردانی ِ واقعی روی سرور با توئه.
 
-#### گام ۶.۴: اسکریپت یک‌دستوره‌ی deploy
+#### گام ۶.۴: اسکریپت یک‌دستوره‌ی deploy · 🔧
 
 - `tools/ops/deploy.ps1` (روی ویندوز): build (`installDist`)، tar، scp، و اجرای `tools/ops/deploy-remote.sh` روی سرور: بکاپ سریع (`pg_dump`)، باز کردن در `/opt/kiva.new`، کپی `conf`، stop، جابه‌جایی به `/opt/kiva.prev`، start، و صبر برای `/health`. اگه `/health` تا ۹۰ ثانیه سبز نشد ← برگردوندن `kiva.prev` و start.
 - همین برای فروشگاه و پنل (`deploy-fe.ps1` با `NEXT_PUBLIC_*` ِ درست).
 
 **تموم شده یعنی:** یه deploy ِ عمداً خراب (جاوای بی‌آرگومان) خودکار برمی‌گرده و سایت پایین نمی‌مونه.
+
+**یادداشت پیاده‌سازی:** `deploy.ps1` و `deploy-remote.sh` (dump ِ سریع با پنج تای آخر، قفل، کد مال root و فقط `conf` کپی، ۹۰ ثانیه صبر برای `UP`، برگشت به `kiva.prev`، نسخه‌ی خراب در `kiva.failed`) و `systemd/kiva.service` ِ مرجع. `-BreakOnPurpose` واقعاً build و بسته‌بندی شد (۸۵ jar، ۳۲ مگ، `bin/kiva-be` با LF) و برگشت خودکار با بسته‌های ساختگی روی لینوکس تست شد.
 
 #### گام ۶.۵: امنیت سرور
 
@@ -3221,6 +3223,7 @@ CREATE TABLE announcement_tbl (
 | ۳ | ۶.۱ | **هر متغیر `kiva.env` فقط با `set-env.sh`:** خط سر جاش عوض می‌شه، فایل `root` و `600` می‌مونه، نسخه‌ی قبلی `kiva.env.previous`، و راز با `--secret` (نمایش داده نمی‌شه و دو بار پرسیده می‌شه). |
 | ۴ | ۶.۲ | **پوشه‌ی مدیا `kiva:www-data` با `2750`، و `UMask=0027`.** «مالک `kiva`، `750`» ِ گام ۶.۲ تنها، nginx (`www-data`) رو بیرون می‌ذاشت؛ گروه `www-data` با setgid یعنی nginx می‌خونه، برنامه می‌نویسه، و کس دیگه‌ای هیچ‌کدوم. |
 | ۵ | ۶.۳ | **بکاپ نیمه‌کاره هیچ‌وقت شبیه بکاپ نیست:** اول در `<روز>.partial`، و فقط وقتی dump خونده شد و tar و checksum تموم شد، اسم روز می‌گیره. در `restore-test.sh` کمتر بودن شمارش زنده از بکاپ فقط هشداره (jobهای شبانه و پاک‌سازی ۶.۷ ردیف کم می‌کنن)؛ checksum، `pg_restore` و migration ِ جلوتر شکست‌ان. |
+| ۶ | ۶.۴ | **کد مال `root`، فقط `conf` کپی می‌شه، و deployها قفل دارن.** برنامه با کاربر `kiva` نمی‌تونه کد خودش رو عوض کنه. برگشت به نسخه‌ی قبلی بعد از یه migration ِ تازه امنه چون Flyway migrationهای آینده رو نادیده می‌گیره؛ برای داده‌ی خراب‌شده، dump ِ قبل از همون deploy. |
 
 ---
 
@@ -6233,3 +6236,4 @@ kiva {
 | ۲۹ مهر ۱۴۰۵ | ۶.۱ | Phase 6 step 6.1 | `tools/ops/` و `LAUNCH.md`: nginx ِ پنل، deploy ِ فرانت با برگشت خودکار، `set-env.sh`، `install-ops.sh`، `.gitattributes`. برنچ `launch` از نوک فاز ۵. کار روی سرور با خودت |
 | ۲۹ مهر ۱۴۰۵ | ۶.۲ | Phase 6 step 6.2 | مرجع nginx ِ API (مدیا با `immutable`، دو آپلود) و `kiva-http.conf`؛ پوشه‌ی مدیا `kiva:www-data` ‏`2750` |
 | ۲۹ مهر ۱۴۰۵ | ۶.۳ | Phase 6 step 6.3 | `backup.sh`، `restore-test.sh`، timer ِ ۰۳:۰۰ ِ تهران، `pull-backup.ps1`. بکاپ و تست بازگردانی ِ واقعی هنوز روی سرور انجام نشده |
+| ۲۹ مهر ۱۴۰۵ | ۶.۴ | Phase 6 step 6.4 | `deploy.ps1`، `deploy-remote.sh` با برگشت خودکار، `kiva.service` ِ مرجع. `-BreakOnPurpose` تا scp امتحان شد |

@@ -1,0 +1,28 @@
+# /etc/systemd/system/kiva.service: the API (LAUNCH.md, step 6.4). The server already has a unit for it; this is the
+# one deploy-remote.sh expects, to compare with: the code in /opt/kiva owned by root, kiva.env read by systemd (as
+# root, so the file stays root 600), the app running as the kiva user, its log in the journal.
+[Unit]
+Description=Kiva API
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+User=kiva
+Group=kiva
+WorkingDirectory=/opt/kiva
+EnvironmentFile=/opt/kiva/conf/kiva.env
+ExecStart=/opt/kiva/bin/kiva-be
+# Media files nginx (www-data, in the folder's group) must read.
+UMask=0027
+Restart=on-failure
+RestartSec=5
+SuccessExitStatus=143
+TimeoutStopSec=30
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=read-only
+PrivateTmp=true
+ReadWritePaths=/var/lib/kiva
+
+[Install]
+WantedBy=multi-user.target

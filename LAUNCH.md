@@ -206,3 +206,49 @@ checksumها، `pg_restore` در دیتابیس تازه‌ی `kiva_restore_test
   آخرین روز رو می‌آره، SHA-256 ِ هر فایل رو چک می‌کنه، و ۸ روز آخر رو نگه می‌داره.
 
 **تموم شده یعنی:** بکاپ دیشب هست، `restore-test.sh` خط `OK` داده و تو گزارش کار اومده، و راه کپی بیرونی انتخاب و یه بار امتحان شده.
+
+---
+
+## گام ۶.۴: deploy با یه دستور
+
+**۱. unit ِ برنامه، یه بار.** `deploy-remote.sh` فرض می‌کنه کد در `/opt/kiva` و مال `root` ـه، `kiva.env` رو systemd می‌خونه (پس `root` و `600` می‌مونه) و برنامه با کاربر `kiva` اجرا می‌شه:
+
+```bash
+diff <(systemctl cat kiva | grep -v '^#') <(grep -v '^#' /opt/kiva-ops/systemd/kiva.service)
+```
+
+فرق مهم (`ExecStart` جای دیگه، `EnvironmentFile` نیست، کاربر دیگه) ← مرجع رو بذار:
+
+```bash
+cp /opt/kiva-ops/systemd/kiva.service /etc/systemd/system/kiva.service
+systemctl daemon-reload && systemctl restart kiva && curl -s http://127.0.0.1:8080/health
+```
+
+مرجع چند خط محافظ هم داره (`ProtectSystem=full`، `ProtectHome=read-only`، `PrivateTmp`، `NoNewPrivileges`). اگه بعدش آپلود پنل ۵۰۰ داد و لاگ `media processing failed` گفت، `ProtectHome` رو بردار و بگو.
+
+**۲. هر deploy ِ بک‌اند** (روی ویندوز، از ریشه‌ی kiva-be؛ تست‌ها رو قبلش روی همون کامیت زده باشی):
+
+```powershell
+.\tools\ops\deploy.ps1
+```
+
+`gradlew installDist`، بسته با `kiva-release.txt` (کامیت و زمان)، و روی سرور: `pg_dump` ِ سریع در `/root/backups/deploy` (پنج تای آخر)، باز کردن در `/opt/kiva.new` با کپی `conf`، stop، `/opt/kiva` ← `/opt/kiva.prev`، start، و صبر تا `/health` بگه `UP`. تا ۹۰ ثانیه نگفت: نسخه‌ی قبلی سر جاش برمی‌گرده و start می‌شه، نسخه‌ی خراب در `/opt/kiva.failed` می‌مونه، و اسکریپت خطا می‌ده. دو deploy همزمان نمی‌شه (قفل).
+
+نسخه‌ی قبلی روی schema ای که نسخه‌ی تازه migrate کرده هم بالا میاد (Flyway migrationهای ناشناخته‌ی آینده رو نادیده می‌گیره). اگه خود migration داده رو خراب کرده بود، راه برگشت همون dump ِ قبل از deploy ـه.
+
+**۳. فروشگاه و پنل:**
+
+```powershell
+.\tools\ops\deploy-fe.ps1 -App shop
+.\tools\ops\deploy-fe.ps1 -App panel
+```
+
+بار اولِ فروشگاه با این اسکریپت: اگه الان در `/opt/kiva-fe/app` با pm2 ِ `kiva-fe` نیست، یا layout ِ فعلی رو با پارامترها بده، یا یه بار جابه‌جاش کن (`app` و `.pm2` زیر `/opt/kiva-fe`) و process ِ قدیمی pm2 رو `pm2 delete` کن. `NEXT_PUBLIC_*` ِ فروشگاه رو قبلش در `tools/ops/fe/shop.build.env` کامل کن.
+
+**تموم شده یعنی:**
+
+```powershell
+.\tools\ops\deploy.ps1 -BreakOnPurpose
+```
+
+(یه نسخه که `bin/kiva-be` اش فقط `java` ِ بی‌آرگومان اجرا می‌کنه) خطا می‌ده با «the previous one is UP again»، و `https://api.kivashop.ir/health` بعدش `UP` ـه. سایت حداکثر همون ۹۰ ثانیه‌ی انتظار پایینه و پایین نمی‌مونه. بعد یه `.\tools\ops\deploy.ps1` ِ معمولی.
