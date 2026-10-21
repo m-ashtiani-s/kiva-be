@@ -61,6 +61,9 @@ import com.kiva.application.usecase.checkout.usecase.command.StartPaymentUc
 import com.kiva.application.usecase.checkout.usecase.query.GetCheckoutContextUc
 import com.kiva.application.usecase.checkout.usecase.query.GetPaymentInitUc
 import com.kiva.application.usecase.checkout.usecase.query.GetPaymentResultUc
+import com.kiva.application.usecase.content.usecase.command.SavePageUc
+import com.kiva.application.usecase.content.usecase.query.GetPageUc
+import com.kiva.application.usecase.content.usecase.query.ListPagesUc
 import com.kiva.application.usecase.discount.DiscountCodeReferences
 import com.kiva.application.usecase.discount.Discounts
 import com.kiva.application.usecase.discount.usecase.command.CreateDiscountCodeUc
@@ -602,6 +605,11 @@ val useCaseModule = module(createdAtStart = true) {
 
     // --- admin: the report (phase 4) ---
     single { GetReportOverviewUc(transactionManager = get(), reportQmRepository = get()) }
+
+    // --- content: static pages (phase 5) ---
+    single { GetPageUc(transactionManager = get(), staticPageRepository = get()) }
+    single { ListPagesUc(transactionManager = get(), staticPageRepository = get()) }
+    single { SavePageUc(transactionManager = get(), staticPageRepository = get(), sanitizer = get(), auditTrail = get(), clock = get()) }
 
     // --- admin: the change log ---
     single { ListAuditLogUc(transactionManager = get(), auditLogQmRepository = get()) }

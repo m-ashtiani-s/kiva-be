@@ -60,6 +60,7 @@ import com.kiva.infrastructure.config.AppConfig
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AddressUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminAuditUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminCatalogUseCases
+import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminContentUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminCustomerUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminDiscountCodeUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminInventoryUseCases
@@ -72,6 +73,7 @@ import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminSettingsU
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AuthUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.CartUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.CheckoutUseCases
+import com.kiva.infrastructure.httpserver.controller.httprest.web.ContentUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.MeUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.MyOrderUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.OTP_SEND_RATE_LIMIT
@@ -82,6 +84,7 @@ import com.kiva.infrastructure.httpserver.controller.httprest.web.devFakeGateway
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Addresses
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminAudit
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminCatalog
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminContent
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminCustomers
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminDiscountCodes
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminInventory
@@ -95,6 +98,7 @@ import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Auth
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Cart
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Catalog
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Checkout
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Content
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Geo
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Me
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1MyOrders
@@ -305,9 +309,11 @@ fun Application.configureRouting() {
             webV1AdminSettings(AdminSettingsUseCases(checkPanelAccessUc, get(), get()))
             webV1AdminDiscountCodes(AdminDiscountCodeUseCases(checkPanelAccessUc, get(), get(), get(), get(), get()))
             webV1AdminReports(AdminReportUseCases(checkPanelAccessUc, get()), mediaUrls)
+            webV1AdminContent(AdminContentUseCases(checkPanelAccessUc, get(), get(), get()), config.shop.siteUrl)
             webV1Catalog(listColorsUc, listMaterialsUc, listCategoriesUc, getCategoryUc, mediaUrls, config.shop.siteUrl)
             webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, config.shop.siteUrl, mediaUrls)
             webV1Geo(listProvincesUc, listCitiesOfProvinceUc)
+            webV1Content(ContentUseCases(get()), config.shop.siteUrl)
             webV1Addresses(AddressUseCases(listMyAddressesUc, getMyAddressUc, addAddressUc, updateAddressUc, deleteAddressUc, setDefaultAddressUc))
             webV1Cart(
                 CartUseCases(

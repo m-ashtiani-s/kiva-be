@@ -2888,7 +2888,7 @@ Route: 200 با AdminSettings ِ تازه
 | گام | عنوان | اندازه | وضعیت |
 |---|---|---|---|
 | ۵.۰ | کانترکت 1.12.0 | S | ✅ |
-| ۵.۱ | صفحه‌های ثابت، و لینک نسبی در HTML | M | ⬜ |
+| ۵.۱ | صفحه‌های ثابت، و لینک نسبی در HTML | M | ✅ |
 | ۵.۲ | سؤالات متداول | M | ⬜ |
 | ۵.۳ | نوار اطلاعیه | S | ⬜ |
 | ۵.۴ | `GET /config` | M | ⬜ |
@@ -2920,6 +2920,7 @@ Route: 200 با AdminSettings ِ تازه
 | 20 | لاگ تغییرات ِ محتوا (تازه، گام ۵.۰) | `PAGE_SAVED` (`entityId` = slug، `entityLabel` = عنوان، `changes` فقط عنوان و سئو، متن صفحه فقط «عوض شد»)؛ `FAQ_SAVED` (`entityId` = `faq`، تعداد گروه و سؤال قبل و بعد)؛ `ANNOUNCEMENTS_SAVED` (`entityId` = `announcements`، تعداد). ذخیره‌ی بی‌تغییر بدون ردیف | متن بلند تو لاگ جا نداره (بخش ۵.۱) |
 | 21 | کش ِ `GET /pages/{slug}` (تازه، گام ۵.۰) | مثل `/faq`: `ETag` و `max-age=300`؛ پنل از `GET /admin/pages` و پاسخ `PUT` می‌خونه، نه از این | صفحه‌های قانونی کم عوض می‌شن و پربازدیدن |
 | 22 | `SLUG_IMMUTABLE` (تازه، گام ۵.۰) | متن عمومی شد («آدرس بعد از ساخت عوض نمی‌شه»)، چون صفحه‌ی ثابت هم ازش استفاده می‌کنه | متن قبلی «محصول تازه بساز» می‌گفت |
+| 23 | عددها در متن‌های ثابت (تازه، گام ۵.۱) | متن‌های `sitecontent_tbl` می‌تونن `{holdDays}`، `{returnWindowDays}` و `{freeShippingThreshold}` داشته باشن و `GET /config` با مقدار همون لحظه‌ی تنظیمات (ارقام فارسی) پرشون می‌کنه. `trustBadges` تا داشتن کد اینماد و ساماندهی خالیه (چک‌لیست ۶.۷)؛ مسیرهای برند که با `/` شروع می‌شن با آدرس سایت کامل می‌شن | «رزرو ۴ روزه» و «۷ روز بازگشت» ِ نمونه با عوض شدن تنظیمات دروغ می‌شدن؛ یه منبع برای هر عدد (تصمیم ۲) |
 
 ### ۱۰.۳ جدول‌ها
 
@@ -3022,18 +3023,20 @@ CREATE TABLE announcement_tbl (
 
 ---
 
-#### گام ۵.۱: صفحه‌های ثابت، و لینک نسبی در HTML · M ⬜
+#### گام ۵.۱: صفحه‌های ثابت، و لینک نسبی در HTML · M ✅
 
 **می‌سازی:** `V31` (بخش صفحه‌ها)؛ تغییر `JsoupHtmlSanitizer` (تصمیم ۶) و تست‌هاش؛ `StaticPage` و repository؛ سه UseCase؛ routeها؛ `StaticPageHttpResponse`.
 
 وابسته به: ۵.۰
 
 **تموم شده یعنی:**
-- [ ] `PUT /admin/pages/terms` ← ساخته می‌شه؛ دوباره ← ویرایش؛ هر دو `200`؛ `GET /pages/terms` محتوای پاک‌شده.
-- [ ] `<script>`، `onclick` و `javascript:` پاک؛ `/faq#return` و `#top` و `https://enamad.ir/...` می‌مونن؛ `//evil.com` پاک.
-- [ ] `slug` ِ بدنه‌ی متفاوت ← `400 SLUG_IMMUTABLE`؛ صفحه‌ی ننوشته ← `404`.
-- [ ] `OPERATOR` ← 403؛ لاگ `PAGE_SAVED` بدون متن صفحه.
-- [ ] توضیح محصولی که لینک `/products?onSale=true` داره دیگه لینکش رو از دست نمی‌ده.
+- [x] `PUT /admin/pages/terms` ← ساخته می‌شه؛ دوباره ← ویرایش؛ هر دو `200`؛ `GET /pages/terms` محتوای پاک‌شده.
+- [x] `<script>`، `onclick` و `javascript:` پاک؛ `/faq#return` و `#top` و `https://enamad.ir/...` می‌مونن؛ `//evil.com` پاک.
+- [x] `slug` ِ بدنه‌ی متفاوت ← `400 SLUG_IMMUTABLE`؛ صفحه‌ی ننوشته ← `404`.
+- [x] `OPERATOR` ← 403؛ لاگ `PAGE_SAVED` بدون متن صفحه.
+- [x] توضیح محصولی که لینک `/products?onSale=true` داره دیگه لینکش رو از دست نمی‌ده.
+
+**یادداشت پیاده‌سازی:** `V31` در همین گام **کامل** نوشته شد (چهار جدول و ردیف `sitecontent_tbl` با متن‌های نمونه‌ی `kiva.js`؛ تصمیم ۲۳)، طبق قانون بخش ۲۱؛ گام‌های بعد فقط ازش استفاده می‌کنن. `JsoupHtmlSanitizer` با `preserveRelativeLinks` و بعدش چک خودش (`isAllowedHref`، تصمیم ۱۹). دامنه: `PageDraft` (فرم، همه‌ی خطاها صاف و با هم، محتوا بعد از پاک‌سازی سنجیده می‌شه) و `StaticPage` (`write`/`rewrite`، بی‌تغییر ← `null`). `StaticPageRepository` با قفل advisory روی slug (برای صفحه‌ای که هنوز ردیف نداره). `GetPageUc`، `ListPagesUc`، `SavePageUc`؛ `webV1Content.kt` (عمومی، کش‌شونده) و `webV1AdminContent.kt`؛ `PAGE_SAVED` با عنوان و سئو و فقط «عوض شد» ِ متن. تست‌ها: ۶ تست دامنه، ۱۷ مورد ِ sanitizer، ۱۰ تست route (با دو اولین‌ذخیره‌ی همزمان، ۱۰ بار)، ۴ تست migration، تست لینک نسبی در توضیح محصول. خرابکاری: بدون قفل صفحه ← `two first saves of one page at the same moment` قرمز (دومی ۵۰۰)؛ بدون چک `//` ← تست sanitizer، صفحه و توضیح محصول قرمز.
 
 ---
 
@@ -6192,3 +6195,4 @@ kiva {
 | ۲۹ مهر ۱۴۰۵ | ۴.۵ | Phase 4 step 4.5 | `PANEL_SETTINGS_REVIEW.md` (پنج ردیف، هشت خرابکاری)، تست همزمانی ِ متن تکراری ِ کد، تست فاز ۳ با `ORDER BY`، `@ConsistentCopyVisibility` روی `DiscountTerms`، `docs/FRONTEND_PANEL_SETTINGS.md`، README. ۲۶۲۴ تست در اجرای کامل (+۱ تازه). دور با پنل و merge منتظر تو؛ سؤال باز: `meta` ِ خطای فیلد |
 | ۲۹ مهر ۱۴۰۵ | ۴.۵ | Contract 1.11.1 | `FieldError.meta` (تصمیم ۳۹، راه الف ِ صاحب پروژه)؛ `FieldErrorHttpResponse.meta` از `meta` ِ همون خطا؛ تست‌های JSON ِ دقیق به‌روز شدن (`maxSize`، `allowed`)، تست تازه در `HttpEdgeTest` |
 | ۲۹ مهر ۱۴۰۵ | ۵.۰ | Phase 5 step 5.0 | کانترکت 1.12.0 با هر ۵ ردیف ِ ۱۰.۵ و سه ردیف تازه (۶ تا ۸)؛ ده تصمیم تازه (۱۳ تا ۲۲). YAML معتبر، ۱۳۲۸ `$ref`. متن ۱۲ کد تازه. برنچ `content-basics` از نوک فاز ۴ |
+| ۲۹ مهر ۱۴۰۵ | ۵.۱ | Phase 5 step 5.1 | `V31` ِ کامل با ردیف محتوای سایت، لینک نسبی امن در `JsoupHtmlSanitizer`، `PageDraft`/`StaticPage`، قفل صفحه، سه UseCase، `webV1Content.kt` و `webV1AdminContent.kt`، `PAGE_SAVED`. تصمیم ۲۳. دو خرابکاری قرمز |

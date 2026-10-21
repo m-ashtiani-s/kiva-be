@@ -21,6 +21,9 @@ import com.kiva.application.usecase.catalog.usecase.query.GetAdminColorUc
 import com.kiva.application.usecase.catalog.usecase.query.GetAdminMaterialUc
 import com.kiva.application.usecase.catalog.usecase.query.ListAdminCategoriesUc
 import com.kiva.application.usecase.catalog.usecase.query.ListAdminMaterialsUc
+import com.kiva.application.usecase.content.usecase.command.SavePageUc
+import com.kiva.application.usecase.content.usecase.query.GetPageUc
+import com.kiva.application.usecase.content.usecase.query.ListPagesUc
 import com.kiva.application.usecase.discount.DiscountCodeReferences
 import com.kiva.application.usecase.discount.usecase.command.CreateDiscountCodeUc
 import com.kiva.application.usecase.discount.usecase.command.DeactivateDiscountCodeUc
@@ -109,6 +112,7 @@ import com.kiva.infrastructure.persistence.exposed.RefundIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.ReportQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.SecurityEventLogImpl
 import com.kiva.infrastructure.persistence.exposed.ShopSettingsRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.StaticPageRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.UserRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.tbl.AuthSessionTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.MediaTbl
@@ -287,6 +291,12 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
     // --- the dashboard (phase 4) ---
     val adminReports = AdminReportUseCases(checkPanelAccess, GetReportOverviewUc(transactions, ReportQmRepositoryImpl()))
 
+    // --- content (phase 5) ---
+    val pages = StaticPageRepositoryImpl()
+    val getPage = GetPageUc(transactions, pages)
+    val adminContent = AdminContentUseCases(checkPanelAccess, ListPagesUc(transactions, pages), getPage, SavePageUc(transactions, pages, JsoupHtmlSanitizer, auditTrail, clock))
+    val content = ContentUseCases(getPage)
+
     // The approve-silent-photos job's two use cases, run by the tests the way PanelJobs runs them.
     val findSilentPhotos = FindSilentPhotoOrdersUc(transactions, purchase.orderQm, clock)
     val approveSilentPhotos = ApproveSilentPhotosUc(transactions, purchase.orders, clock)
@@ -343,6 +353,9 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
                     webV1AdminSettings(adminSettings)
                     webV1AdminDiscountCodes(adminDiscountCodes)
                     webV1AdminReports(adminReports, mediaUrls)
+                    webV1AdminContent(adminContent, SITE_URL)
+                    // The site's own side of the content, as everyone reads it.
+                    webV1Content(content, SITE_URL)
                     // The customer's side of an order, for the tests that follow it from the panel to «سفارش‌های من».
                     webV1MyOrders(purchase.myOrderUseCases, mediaUrls)
                     // Back from the gateway and the result page, for paying what a change left owed (phase 3).

@@ -31,11 +31,35 @@ class JsoupHtmlSanitizerTest {
             "a style tag goes, its rules too | <style>p{display:none}</style><p>کیف</p>     | <p>کیف</p>",
             "a style attribute goes          | <p style=\"color:red\">کیف</p>                 | <p>کیف</p>",
             "a tag not on the list keeps its text | <div><span>کیف</span></div>          | کیف",
-            "a relative link loses its href  | <a href=\"/products\">همه</a>                   | <a>همه</a>",
             "an http link stays              | <a href=\"http://kiva.ir\">کیوا</a>             | <a href=\"http://kiva.ir\">کیوا</a>",
+            "a protocol-relative link loses its href | <a href=\"//evil.com\">x</a>           | <a>x</a>",
+            "a slash-backslash link loses its href   | <a href=\"/\\evil.com\">x</a>         | <a>x</a>",
+            "a link with a tab loses its href        | <a href=\"/fa&#9;q\">x</a>              | <a>x</a>",
+            "a bare relative link loses its href     | <a href=\"faq\">x</a>                   | <a>x</a>",
+            "a parent path loses its href            | <a href=\"../faq\">x</a>                | <a>x</a>",
+            "a mailto link loses its href            | <a href=\"mailto:a@b.ir\">x</a>         | <a>x</a>",
+            "a data link loses its href              | <a href=\"data:text/html,x\">x</a>      | <a>x</a>",
+            "an uppercase javascript link loses its href | <a href=\" JavaScript:alert(1)\">x</a> | <a>x</a>",
         ],
     )
     fun `what could run in the page goes`(case: String, dirty: String, safe: String) {
+        assertEquals(safe, clean(dirty), case)
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @CsvSource(
+        delimiter = '|',
+        value = [
+            "a path of the site          | <a href=\"/products\">همه</a>                     | <a href=\"/products\">همه</a>",
+            "a path with a place         | <a href=\"/faq#return\">بازگشت</a>                | <a href=\"/faq#return\">بازگشت</a>",
+            "a path with a query         | <a href=\"/products?onSale=true\">حراج</a>         | <a href=\"/products?onSale=true\">حراج</a>",
+            "a place on the page         | <a href=\"#top\">بالا</a>                         | <a href=\"#top\">بالا</a>",
+            "the site's root             | <a href=\"/\">خانه</a>                            | <a href=\"/\">خانه</a>",
+            "eNamad's whole address      | <a href=\"https://enamad.ir/x?id=1&amp;code=2\">نماد</a> | <a href=\"https://enamad.ir/x?id=1&amp;code=2\">نماد</a>",
+            "spaces around are trimmed   | <a href=\" /faq \">سوالات</a>                     | <a href=\"/faq\">سوالات</a>",
+        ],
+    )
+    fun `a link of this site, a place on the page and a whole http address keep their href (decisions 6 and 19)`(case: String, dirty: String, safe: String) {
         assertEquals(safe, clean(dirty), case)
     }
 

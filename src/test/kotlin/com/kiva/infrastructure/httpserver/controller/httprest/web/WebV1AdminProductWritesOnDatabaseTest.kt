@@ -261,8 +261,9 @@ class WebV1AdminProductWritesOnDatabaseTest {
     }
 
     @Test
-    fun `a description is kept without script, on-handlers or javascript links - a full https link stays`() = stack.app {
-        val dirty = """<p>کیف<script>alert(1)</script> <b onclick="steal()">پررنگ</b> <a href="javascript:alert(1)">بد</a> <a href="https://kivashop.ir/faq">سؤال‌ها</a></p>"""
+    fun `a description is kept without script, on-handlers or javascript links - a full https link and a path of the site stay`() = stack.app {
+        val dirty = """<p>کیف<script>alert(1)</script> <b onclick="steal()">پررنگ</b> <a href="javascript:alert(1)">بد</a> <a href="https://kivashop.ir/faq">سؤال‌ها</a> """ +
+            """<a href="/products?onSale=true">حراج</a> <a href="//evil.example">بد</a></p>"""
 
         val body = create(form(description = dirty))
 
@@ -270,8 +271,10 @@ class WebV1AdminProductWritesOnDatabaseTest {
         assertFalse("script" in kept || "alert" in kept, kept)
         assertFalse("onclick" in kept || "steal" in kept, kept)
         assertFalse("javascript:" in kept, kept)
-        // Relative links (/faq#reserve) come with step 5.1 (its decision 6); until then only full addresses keep their href.
         assertTrue("href=\"https://kivashop.ir/faq\"" in kept, kept)
+        // A path of the site keeps its link since step 5.1 (decision 6); one a browser reads as another site doesn't.
+        assertTrue("href=\"/products?onSale=true\"" in kept, kept)
+        assertFalse("evil.example" in kept, kept)
     }
 
     // ============ editing ============
