@@ -178,3 +178,10 @@ products) built only from the common pieces. Use it as the template for new feat
 Schema changes are SQL files in `src/main/resources/db/migration`, named `V1__create_product.sql`,
 `V2__...`. Flyway applies the pending ones on startup. Never edit a migration that has already run;
 add a new one instead.
+
+## The server
+
+Everything done on the server (the panel's domain, media, nightly backups, one-command deploys with rollback, SSH and
+firewall, secrets, the seed purge, SMS alerts, the launch checklist) is in [LAUNCH.md](LAUNCH.md), step by step. Its
+scripts are in `tools/ops/` and are tested on Linux with `wsl bash tools/ops/test/ops-test.sh`. A secret is only ever
+typed on the server, with `/opt/kiva-ops/set-env.sh --secret NAME`.

@@ -95,7 +95,7 @@
 | ۳ | ۳.۰ تا ۳.۵ | ⬜ |
 | ۴ | ۴.۰ تا ۴.۵ | ⬜ |
 | ۵ | ۵.۰ تا ۵.۵ | ⬜ |
-| ۶ | ۶.۱ تا ۶.۹ | ⬜ |
+| ۶ | ۶.۱ تا ۶.۹ | 🔧 ریپو آماده؛ اجرای روی سرور با تو (`LAUNCH.md`) |
 | ۷ | ۷.۰ تا ۷.۶ | ⬜ |
 | ۸ | ۸.۰ تا ۸.۶ | ⬜ |
 | ۹ | ۹.۰ تا ۹.۵ | ⬜ |
@@ -3115,7 +3115,7 @@ CREATE TABLE announcement_tbl (
 
 | گام | عنوان | کِی | وضعیت |
 |---|---|---|---|
-| ۶.۱ | پنل روی سرور (زودهنگام) | بعد از فاز ۱ | ⬜ |
+| ۶.۱ | پنل روی سرور (زودهنگام) | بعد از فاز ۱ | 🔧 |
 | ۶.۲ | مدیا روی سرور | با ۶.۱ | ⬜ |
 | ۶.۳ | بکاپ روزانه و تست بازگردانی | قبل از اولین پرداخت واقعی | ⬜ |
 | ۶.۴ | اسکریپت یک‌دستوره‌ی deploy | قبل از ۶.۹ | ⬜ |
@@ -3127,7 +3127,7 @@ CREATE TABLE announcement_tbl (
 
 ### ۱۱.۲ گام‌ها
 
-#### گام ۶.۱: پنل روی سرور (زودهنگام)
+#### گام ۶.۱: پنل روی سرور (زودهنگام) · 🔧
 
 - زیردامنه‌ی پنل: `admin.kivashop.ir` (هم‌سایت با `api.kivashop.ir`، تا کوکی `SameSite=Strict` ِ نشست پنل کار کنه؛ کانترکت بخش ۲). رکورد DNS در آروان با CDN روشن.
 - `kiva-backoffice-fe` روی ویندوز build می‌شه با `NEXT_PUBLIC_API_URL=https://api.kivashop.ir/api/v1/` (متغیر زمان build)، و مثل فروشگاه با tar و scp به `/opt/kiva-bo` (کاربر سیستمی `kivabo`، pm2 با `PM2_HOME` ِ خودش، پورت ۳۲۰۰ روی `127.0.0.1`).
@@ -3136,6 +3136,8 @@ CREATE TABLE announcement_tbl (
 - اولین ادمین: `KIVA_BOOTSTRAP_ADMIN_PHONE` برای یه راه‌اندازی، بعد حذف از `kiva.env`.
 
 **تموم شده یعنی:** صاحب پروژه با موبایل خودش وارد پنل روی سرور می‌شه، `ADMIN` ـه، و می‌تونه دسته و محصول بسازه.
+
+**یادداشت پیاده‌سازی:** `tools/ops/` و `LAUNCH.md` (پیش از گام‌ها و گام ۶.۱). `nginx/admin.kivashop.ir.http.conf` (پورت ۸۰، فقط برای certbot و redirect) و `nginx/admin.kivashop.ir.conf` (۴۴۳، `X-Frame-Options DENY`، `noindex`، بدنه‌ی ۱ مگ)، `nginx/kiva-proxy-params.conf` (یه `X-Forwarded-For` ِ واقعی، نه چیزی که کلاینت نوشته)، `deploy-fe.ps1` و `deploy-fe-remote.sh` (`app`، `app.prev`، `app.failed`، `.pm2`؛ standalone یا npm خودش تشخیص داده می‌شه؛ ۶۰ ثانیه صبر روی `127.0.0.1` و برگشت خودکار)، `fe/*.build.env`، `set-env.sh` (رازها با `read -rsp` و دو بار)، `install-ops.sh`، `.gitattributes` (فایل‌های سرور همیشه LF). بسته‌بندی با یه پروژه‌ی Next ِ ساختگی در هر دو حالت امتحان شد؛ دو باگ ِ PowerShell 5.1 (stderr ِ ابزار با `Stop`، و پوشه‌ی بی‌git) پیدا و درست شد.
 
 #### گام ۶.۲: مدیا روی سرور
 
@@ -3203,6 +3205,16 @@ CREATE TABLE announcement_tbl (
 - چک‌لیست: jobها روشن، seed خاموش، بکاپ دیشب هست، هشدار تست شده، origins بدون localhost، الگوهای پیامک همه تأییدشده، صفحه‌های قانونی، `X-Trace-Id` تو هر خطا، لاگ برنامه بدون داده‌ی شخصی (یه دور `grep` روی `journalctl` برای `09[0-9]{9}`).
 
 **تموم شده یعنی:** همه‌ی چک‌لیست تیک خورده و گزارش کار تاریخ انتشار رو داره.
+
+### ۱۱.۳ تصمیم‌های این فاز
+
+موقع پیاده‌سازی گرفته شدن؛ دستور کار کامل ِ هر گام در [`LAUNCH.md`](LAUNCH.md) ـه.
+
+| # | گام | تصمیم |
+|---|---|---|
+| ۱ | ۶.۱ | **کار روی سرور با صاحب پروژه‌ست.** این برنچ اسکریپت، فایل مرجع و دستور کار (`LAUNCH.md`) می‌سازه و تست می‌کنه؛ به سرور وصل نمی‌شه. وضعیت 🔧 یعنی «از طرف ریپو آماده و تست‌شده، اجرای روی سرور مونده»؛ ✅ بعد از «تموم شده یعنی» ِ روی سرور. |
+| ۲ | ۶.۱ | **فرض‌های layout** (مسیرها، کاربرها، پورت‌ها، webroot) اول `LAUNCH.md` با دستور چکشون اومده؛ هر کدوم با متغیر محیطی ِ اسکریپت یا پارامتر `deploy-fe.ps1` عوض می‌شه. |
+| ۳ | ۶.۱ | **هر متغیر `kiva.env` فقط با `set-env.sh`:** خط سر جاش عوض می‌شه، فایل `root` و `600` می‌مونه، نسخه‌ی قبلی `kiva.env.previous`، و راز با `--secret` (نمایش داده نمی‌شه و دو بار پرسیده می‌شه). |
 
 ---
 
@@ -6212,3 +6224,4 @@ kiva {
 | ۲۹ مهر ۱۴۰۵ | ۵.۳ | Phase 5 step 5.3 | `SiteLink`، `AnnouncementDraft`/`AnnouncementBar` (`showingAt`)، قفل `announcements`، دو UseCase و دو route، `ANNOUNCEMENTS_SAVED`. دو خرابکاری قرمز |
 | ۲۹ مهر ۱۴۰۵ | ۵.۴ | Phase 5 step 5.4 | `SupportHours.isOpenAt`، `SiteContentRepository`، `GetSiteConfigUc`، `SiteConfigHttpResponse` (متن‌های پرشده، `phoneDisplay`)، `GET /config` ِ کش‌شونده، نگاشت‌های مشترک با پاسخ تنظیمات. تصمیم ۲۵. دو خرابکاری قرمز |
 | ۲۹ مهر ۱۴۰۵ | ۵.۵ | Phase 5 step 5.5 | `CONTENT_REVIEW.md` (سه ردیف، دوازده خرابکاری)، `docs/FRONTEND_CONTENT.md`، README، حافظه‌ی daemon ِ Kotlin. ۲۷۲۲ تست سبز. دور با پنل و merge منتظر تو |
+| ۲۹ مهر ۱۴۰۵ | ۶.۱ | Phase 6 step 6.1 | `tools/ops/` و `LAUNCH.md`: nginx ِ پنل، deploy ِ فرانت با برگشت خودکار، `set-env.sh`، `install-ops.sh`، `.gitattributes`. برنچ `launch` از نوک فاز ۵. کار روی سرور با خودت |

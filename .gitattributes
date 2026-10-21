@@ -1,0 +1,4 @@
+# The server's files run on Linux: a CRLF in a shell script, a unit or an nginx file breaks it there,
+# whatever core.autocrlf says on the Windows machine they are copied from.
+tools/ops/** text eol=lf
+tools/ops/**/*.ps1 text eol=crlf
