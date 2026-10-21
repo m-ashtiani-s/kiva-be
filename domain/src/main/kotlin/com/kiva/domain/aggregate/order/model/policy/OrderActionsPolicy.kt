@@ -19,12 +19,15 @@ data class OrderActionFacts(
     val photoEverSent: Boolean,
     val photoStatus: PhotoStatus,
     val balanceDue: Money,
+    val returnableUntil: Instant?,
+    val returnSettled: Boolean,
     val now: Instant,
 ) {
     companion object {
         /** The facts of [order] at [now]. */
-        fun of(order: Order, now: Instant): OrderActionFacts =
-            OrderActionFacts(order.status, order.holdUntil, order.photoEverSent, order.photoStatus, order.balanceDue, now)
+        fun of(order: Order, now: Instant): OrderActionFacts = OrderActionFacts(
+            order.status, order.holdUntil, order.photoEverSent, order.photoStatus, order.balanceDue, order.returnableUntil, order.returnSettled, now,
+        )
     }
 }
 
@@ -35,8 +38,10 @@ data class OrderActionFacts(
  * (PaymentPolicy.canPayBalance); «افزودن محصول» for an order held with «رزرو ۴ روزه», «لغو سفارش» while the customer may
  * still cancel it (OrderTransitionPolicy.customerMayCancel), «همونه!» while photos sent to them wait for an answer, and
  * «درخواست تغییر» after they saw the photos, approved or not, until it ships, one at a time
- * (OrderTransitionPolicy.customerMayRequestChange). Returns (phase 7) and reviews (phase 8) are later, so their buttons
- * stay off: no button without an endpoint behind it.
+ * (OrderTransitionPolicy.customerMayRequestChange), and «مرجوع کردن» while Order.returnRefusal would let a return be asked
+ * for: delivered, within its time to return ([OrderActionFacts.returnableUntil], set only when a line is returnable), and
+ * no return of it closed or refunded. Reviews (phase 8) are later, so their button stays off: no button without an
+ * endpoint behind it.
  */
 object OrderActionsPolicy {
 
@@ -44,7 +49,7 @@ object OrderActionsPolicy {
         canCancel = OrderTransitionPolicy.customerMayCancel(facts.status, facts.photoEverSent),
         canRequestChange = OrderTransitionPolicy.customerMayRequestChange(facts.status, facts.photoStatus),
         canApproveMedia = facts.status == OrderStatus.PHOTO_SENT && facts.photoStatus == PhotoStatus.SENT,
-        canReturn = false,
+        canReturn = facts.status == OrderStatus.DELIVERED && !facts.returnSettled && facts.returnableUntil?.let { !facts.now.isAfter(it) } == true,
         canPay = PaymentPolicy.canStartPayment(facts.status, facts.holdUntil, facts.now) || PaymentPolicy.canPayBalance(facts.status, facts.balanceDue),
         canAddToReservation = facts.status == OrderStatus.RESERVED,
         canReview = false,

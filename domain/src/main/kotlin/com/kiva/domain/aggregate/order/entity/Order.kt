@@ -26,6 +26,9 @@ import com.kiva.domain.aggregate.order.entity.event.OrderPhotosSent
 import com.kiva.domain.aggregate.order.entity.event.OrderPlaced
 import com.kiva.domain.aggregate.order.entity.event.OrderRefunded
 import com.kiva.domain.aggregate.order.entity.event.OrderReleasedFromReservation
+import com.kiva.domain.aggregate.order.entity.event.OrderReturnEnded
+import com.kiva.domain.aggregate.order.entity.event.OrderReturnReceived
+import com.kiva.domain.aggregate.order.entity.event.OrderReturnRequested
 import com.kiva.domain.aggregate.order.entity.event.OrderShipmentCorrected
 import com.kiva.domain.aggregate.order.entity.event.OrderShipped
 import com.kiva.domain.aggregate.order.model.policy.ChangeRequestPolicy
@@ -65,6 +68,10 @@ import com.kiva.domain.aggregate.product.model.valueobject.ProductId
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
 import com.kiva.domain.aggregate.refund.model.valueobject.RefundId
 import com.kiva.domain.aggregate.reservation.model.valueobject.ReservationGroupId
+import com.kiva.domain.aggregate.returnrequest.model.policy.ReturnPolicy
+import com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnId
+import com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnItem
+import com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnOutcome
 import com.kiva.domain.aggregate.settings.model.valueobject.ShippingMethodCode
 import com.kiva.domain.aggregate.user.model.valueobject.MessengerChannel
 import java.time.Duration
@@ -94,11 +101,15 @@ import kotlin.properties.Delegates
  *   the only line); the money of a change is settled once, owed first, refunded only beyond what is owed
  *   (ChangeRequestPolicy.settle); what is owed is paid only exactly, once per attempt; it never ships while something is
  *   owed; and a cancelled order owes nothing.
+ * - a return (phase 7, roadmap section 12.4): asked for only while DELIVERED, within [returnableUntil], never after a
+ *   return of it was closed or refunded ([returnSettled]), so one at a time; of its returnable lines only, each once, never
+ *   more than was bought; RETURNED only when the open return's parcel arrived, REFUNDED only after that.
  *
  * What it can't know: its stock (the Inventory of each color holds it for the order, by its [code]), its payments and
  * refunds (rows of their own: RefundDomainService counts what is refundable), its reservation group's state, whether
  * a photo it is given exists (the use case checks the media), and the catalog: the color a change asks for and its price
- * today come from the use case ([ChangeTarget], a line made with OrderLine.replacedBy).
+ * today come from the use case ([ChangeTarget], a line made with OrderLine.replacedBy). A return is a row of its own
+ * (ReturnRequest): the order only knows which one is open, and records the return's steps that change the order.
  */
 class Order private constructor() : EventSourceEntity<OrderDomainEvent>() {
 
@@ -210,6 +221,16 @@ class Order private constructor() : EventSourceEntity<OrderDomainEvent>() {
     var codeDiscountRemoved: Money = Money.ZERO
         private set
     private val balancePayments = mutableSetOf<PaymentPublicId>()
+
+    // ---- a return after the delivery (phase 7) ----
+
+    /** The return being dealt with: there while RETURN_REQUESTED or RETURNED, null otherwise. */
+    var openReturnId: ReturnId? = null
+        private set
+
+    /** A return of it was closed or refunded: it is never returned again (one that was turned down doesn't count). */
+    var returnSettled: Boolean = false
+        private set
 
     /** What carrying out the open change did to the lines, until it is applied: its money, and the color put in. */
     private var changeWork: ChangeWork? = null
@@ -633,6 +654,66 @@ class Order private constructor() : EventSourceEntity<OrderDomainEvent>() {
         return Result.success(this)
     }
 
+    // ============ a return after the delivery (phase 7) ============
+
+    /**
+     * Why a return may not be asked for at [now], or null when it may: not DELIVERED (a return open already, or never
+     * delivered), returned once already ([returnSettled]) or nothing returnable ([RequestReturnFailure.NotReturnable]),
+     * or after [returnableUntil] ([RequestReturnFailure.WindowExpired]). The time is checked only here, when it is asked
+     * for: the steps after it have none.
+     */
+    fun returnRefusal(now: Instant): RequestReturnFailure? {
+        val until = returnableUntil
+        return when {
+            status != OrderStatus.DELIVERED || returnSettled || until == null -> RequestReturnFailure.NotReturnable(status)
+            now.isAfter(until) -> RequestReturnFailure.WindowExpired(until)
+            else -> null
+        }
+    }
+
+    /**
+     * The customer asks to send [items] back: RETURN_REQUESTED, the return [returnId] open. Only while a return may be
+     * asked for ([returnRefusal]); [items] must be its lines, each once, returnable when bought and no more than bought
+     * (ReturnPolicy.itemProblems: 400, each under its field).
+     */
+    fun requestReturn(returnId: ReturnId, items: List<ReturnItem>, by: UserId, now: Instant): Result<Order, RequestReturnFailure> {
+        require(items.isNotEmpty()) { "Order ${code.value}: a return of nothing" }
+        returnRefusal(now)?.let { return Result.failure(it) }
+        val problems = ReturnPolicy.itemProblems(lineList, items)
+        if (problems.isNotEmpty()) return Result.failure(RequestReturnFailure.ItemsInvalid(problems))
+
+        raiseEvent(OrderReturnRequested(id, nextSequence(), now, by, returnId))
+        return Result.success(this)
+    }
+
+    /**
+     * The open return [returnId]'s parcel reached the warehouse: RETURNED. Only while RETURN_REQUESTED with that return
+     * open; anything else is a bug (the use case checked the return first): it stops loudly.
+     */
+    fun receiveReturn(returnId: ReturnId, by: UserId, now: Instant): Result<Order, Nothing> {
+        check(status == OrderStatus.RETURN_REQUESTED && openReturnId == returnId) {
+            "Order ${code.value} is $status with return ${openReturnId?.value} open: return ${returnId.value} can't arrive"
+        }
+        raiseEvent(OrderReturnReceived(id, nextSequence(), now, by, returnId))
+        return Result.success(this)
+    }
+
+    /**
+     * The open return [returnId] ended with [outcome]: REJECTED or CLOSED bring the order back to DELIVERED, REFUNDED makes
+     * it REFUNDED (only after its parcel arrived). Closed or refunded, it is never returned again. Anything else is a bug
+     * (the use case checked the return first): it stops loudly.
+     */
+    fun endReturn(returnId: ReturnId, outcome: ReturnOutcome, by: UserId, now: Instant): Result<Order, Nothing> {
+        val fits = when (outcome) {
+            ReturnOutcome.REJECTED -> status == OrderStatus.RETURN_REQUESTED
+            ReturnOutcome.CLOSED -> status == OrderStatus.RETURN_REQUESTED || status == OrderStatus.RETURNED
+            ReturnOutcome.REFUNDED -> status == OrderStatus.RETURNED
+        }
+        check(fits && openReturnId == returnId) { "Order ${code.value} is $status with return ${openReturnId?.value} open: return ${returnId.value} can't end $outcome" }
+        raiseEvent(OrderReturnEnded(id, nextSequence(), now, by, returnId, outcome))
+        return Result.success(this)
+    }
+
     /** [variantId] of [productId] fits a [type] change of [line]: another color of its product (COLOR), or of another product (MODEL). */
     private fun fitsChange(type: ChangeType, line: OrderLine, productId: ProductId, variantId: VariantId): Boolean = when (type) {
         ChangeType.COLOR -> productId == line.productId && variantId != line.variantId
@@ -753,6 +834,20 @@ class Order private constructor() : EventSourceEntity<OrderDomainEvent>() {
                 balancePayments += event.paymentId
                 balancePaid += event.amount
                 balanceDue = Money.ZERO
+            }
+            is OrderReturnRequested -> {
+                openReturnId = event.returnId
+                status = OrderStatus.RETURN_REQUESTED
+            }
+            is OrderReturnReceived -> {
+                check(openReturnId == event.returnId) { "Broken stream of order ${event.orderId.value}: return ${event.returnId.value} arrived, ${openReturnId?.value} is open" }
+                status = OrderStatus.RETURNED
+            }
+            is OrderReturnEnded -> {
+                check(openReturnId == event.returnId) { "Broken stream of order ${event.orderId.value}: return ${event.returnId.value} ended, ${openReturnId?.value} is open" }
+                openReturnId = null
+                returnSettled = returnSettled || event.outcome.settlesReturn
+                status = if (event.outcome == ReturnOutcome.REFUNDED) OrderStatus.REFUNDED else OrderStatus.DELIVERED
             }
         }
     }
@@ -911,6 +1006,20 @@ class Order private constructor() : EventSourceEntity<OrderDomainEvent>() {
         /** The new product's colors in the order would be more than its limit per order (422). */
         data class LimitExceeded(val productId: ProductId) :
             ReplaceLineFailure("QUANTITY_EXCEEDS_LIMIT", FailureKind.BUSINESS_RULE, meta = mapOf("productIds" to listOf(productId.value)))
+    }
+
+    sealed class RequestReturnFailure(code: String, kind: FailureKind, causes: List<ResultFailure> = emptyList(), meta: Map<String, Any> = emptyMap()) :
+        ResultFailure(code, kind, causes = causes, meta = meta) {
+        /** Not delivered, a return open already, returned once already, or nothing returnable (422). */
+        data class NotReturnable(val status: OrderStatus) :
+            RequestReturnFailure("ORDER_NOT_RETURNABLE", FailureKind.BUSINESS_RULE, meta = mapOf("status" to status.name))
+
+        /** Its time to return ended at [returnableUntil] (422). */
+        data class WindowExpired(val returnableUntil: Instant) :
+            RequestReturnFailure("RETURN_WINDOW_EXPIRED", FailureKind.BUSINESS_RULE, meta = mapOf("returnableUntil" to returnableUntil.toString()))
+
+        /** Lines it doesn't have, not returnable, named twice or more than bought, each under its field (400). */
+        data class ItemsInvalid(val problems: List<ResultFailure>) : RequestReturnFailure("VALIDATION_ERROR", FailureKind.INVALID, causes = problems)
     }
 
     sealed class PayBalanceFailure(code: String, kind: FailureKind, meta: Map<String, Any> = emptyMap()) : ResultFailure(code, kind, meta = meta) {

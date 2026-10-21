@@ -82,7 +82,9 @@ class PaymentPolicyTest {
         photoEverSent: Boolean = false,
         photoStatus: PhotoStatus = PhotoStatus.WAITING,
         balanceDue: Money = Money.ZERO,
-    ) = OrderActionsPolicy.actionsOf(OrderActionFacts(status, holdUntil, photoEverSent, photoStatus, balanceDue, at))
+        returnableUntil: java.time.Instant? = null,
+        returnSettled: Boolean = false,
+    ) = OrderActionsPolicy.actionsOf(OrderActionFacts(status, holdUntil, photoEverSent, photoStatus, balanceDue, returnableUntil, returnSettled, at))
 
     @Test
     fun `a balance is payable while something is owed and the order is being prepared, its photos sent, or a change asked - never after`() {

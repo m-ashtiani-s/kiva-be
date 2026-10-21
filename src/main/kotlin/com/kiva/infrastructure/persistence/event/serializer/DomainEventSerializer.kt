@@ -24,6 +24,9 @@ import com.kiva.domain.aggregate.order.entity.event.OrderPhotosSent
 import com.kiva.domain.aggregate.order.entity.event.OrderPlaced
 import com.kiva.domain.aggregate.order.entity.event.OrderRefunded
 import com.kiva.domain.aggregate.order.entity.event.OrderReleasedFromReservation
+import com.kiva.domain.aggregate.order.entity.event.OrderReturnEnded
+import com.kiva.domain.aggregate.order.entity.event.OrderReturnReceived
+import com.kiva.domain.aggregate.order.entity.event.OrderReturnRequested
 import com.kiva.domain.aggregate.order.entity.event.OrderShipmentCorrected
 import com.kiva.domain.aggregate.order.entity.event.OrderShipped
 import com.kiva.domain.aggregate.product.entity.event.ProductArchived
@@ -62,6 +65,9 @@ import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderP
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderPlacedPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderRefundedPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderReleasedFromReservationPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderReturnEndedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderReturnReceivedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderReturnRequestedPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderShipmentCorrectedPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderShippedPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.product.ProductArchivedPayload
@@ -181,6 +187,9 @@ object DomainEventSerializer {
         is OrderLineRemoved -> json.encodeToString(OrderLineRemovedPayload(event))
         is OrderChangeApplied -> json.encodeToString(OrderChangeAppliedPayload(event))
         is OrderBalancePaid -> json.encodeToString(OrderBalancePaidPayload(event))
+        is OrderReturnRequested -> json.encodeToString(OrderReturnRequestedPayload(event))
+        is OrderReturnReceived -> json.encodeToString(OrderReturnReceivedPayload(event))
+        is OrderReturnEnded -> json.encodeToString(OrderReturnEndedPayload(event))
     }
 
     fun deserializeOrder(payload: String, payloadVersion: Int, eventType: String): OrderDomainEvent {
@@ -206,6 +215,9 @@ object DomainEventSerializer {
             OrderLineRemoved.TYPE.value -> json.decodeFromString<OrderLineRemovedPayload>(payload)
             OrderChangeApplied.TYPE.value -> json.decodeFromString<OrderChangeAppliedPayload>(payload)
             OrderBalancePaid.TYPE.value -> json.decodeFromString<OrderBalancePaidPayload>(payload)
+            OrderReturnRequested.TYPE.value -> json.decodeFromString<OrderReturnRequestedPayload>(payload)
+            OrderReturnReceived.TYPE.value -> json.decodeFromString<OrderReturnReceivedPayload>(payload)
+            OrderReturnEnded.TYPE.value -> json.decodeFromString<OrderReturnEndedPayload>(payload)
             else -> error("Unknown order event type '$eventType'")
         }
         return eventPayload.toDomainEvent()

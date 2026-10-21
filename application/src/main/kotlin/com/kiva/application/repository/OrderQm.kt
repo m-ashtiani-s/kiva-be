@@ -21,6 +21,7 @@ import com.kiva.domain.aggregate.order.model.valueobject.PreShipmentMessenger
 import com.kiva.domain.aggregate.order.model.valueobject.TrackingCode
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentFailureReason
 import com.kiva.domain.aggregate.reservation.model.valueobject.ReservationGroupId
+import com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnId
 import com.kiva.domain.aggregate.settings.model.valueobject.ShippingMethodCode
 import java.time.Instant
 
@@ -41,6 +42,8 @@ import java.time.Instant
  * @property balanceDue what it still owes after a change to a dearer color; it doesn't ship until this is 0.
  * @property balancePaid what was paid for changes on top of the placed payable.
  * @property codeDiscountRemoved the discount code's share of the lines taken out.
+ * @property returnSettled a return of it was closed or refunded: it is never returned again.
+ * @property openReturnId the return being dealt with, while RETURN_REQUESTED or RETURNED.
  */
 data class OrderQm(
     val orderId: OrderId,
@@ -76,6 +79,8 @@ data class OrderQm(
     val balanceDue: Money,
     val balancePaid: Money,
     val codeDiscountRemoved: Money,
+    val returnSettled: Boolean,
+    val openReturnId: ReturnId?,
 ) {
     /** The totals it shows now (the contract's OrderTotals), after its change requests. */
     val totalsView: OrderTotalsView get() = OrderTotalsView.of(totals, lines, codeDiscountRemoved, balancePaid, balanceDue, refunded)
@@ -128,7 +133,8 @@ data class OrderQm(
     }
 
     /** What its buttons depend on at [now], from what the read model has. */
-    fun actionFactsAt(now: Instant): OrderActionFacts = OrderActionFacts(status, holdUntil, photoEverSent, photoStatus, balanceDue, now)
+    fun actionFactsAt(now: Instant): OrderActionFacts =
+        OrderActionFacts(status, holdUntil, photoEverSent, photoStatus, balanceDue, returnableUntil, returnSettled, now)
 
     override fun toString(): String = "OrderQm(orderId=${orderId.value}, code=${code.value}, status=$status)"
 }
@@ -175,6 +181,19 @@ enum class OrderTimelineKind {
 
     /** What a change left owed was paid; the entry's amount is how much. */
     BALANCE_PAID,
+
+    // ---- a return (phase 7) ----
+    RETURN_REQUESTED,
+
+    /** Its parcel reached the warehouse. */
+    RETURN_RECEIVED,
+    RETURN_REJECTED,
+
+    /** Closed without money back. */
+    RETURN_CLOSED,
+
+    /** Its money was given back. */
+    RETURN_REFUNDED,
 }
 
 /** The customer's answer to the photos sent (`PreShipmentFeedbackRequest.decision`). */

@@ -3257,7 +3257,7 @@ CREATE TABLE announcement_tbl (
 |---|---|---|---|
 | ۷.۰ | کانترکت 1.13.0 | S | ✅ |
 | ۷.۱ | آپلود مشتری (`/me/uploads`) | M | ✅ |
-| ۷.۲ | دامنه‌ی مرجوعی، رویدادهای سفارش و جدول | L | ⬜ |
+| ۷.۲ | دامنه‌ی مرجوعی، رویدادهای سفارش و جدول | L | ✅ |
 | ۷.۳ | درخواست مرجوعی و «مرجوعی‌های من» | M | ⬜ |
 | ۷.۴ | صف پنل، تصمیم و جمع‌آوری | M | ⬜ |
 | ۷.۵ | رسیدن به انبار، بستن، و استرداد ِ مرجوعی | L | ⬜ |
@@ -3300,6 +3300,12 @@ CREATE TABLE announcement_tbl (
 | 31 | `MediaUploader` (تازه، گام ۷.۱) | `MediaUploader.Staff(userId)` و `MediaUploader.Customer(userId)`، بدون نقش‌ها: purposeهای پنل به نقش بستگی ندارن (`x-roles` ِ route دروازه‌ست)، پس `Staff(roles)` ِ گام ۷.۱ داده‌ی بی‌استفاده می‌شد. خوندن multipart برای هر دو route یکیه (`withUpload` در `httpserver/media/UploadForm.kt`) | یه پردازش، یه خوندن |
 | 32 | مرز پنجره‌ی ساعتی (تازه، گام ۷.۱) | آپلودِ **دقیقاً** یه ساعت پیش دیگه شمرده نمی‌شه (`uploadedOn > now − 1h`)، پس `Retry-After` درست همون لحظه‌ای تموم می‌شه که آپلود بعدی پذیرفته می‌شه | با `≥`، کلاینتی که دقیقاً `Retry-After` صبر کرد باز `429` می‌گرفت |
 | 33 | ایندکس ِ شمارش (تازه، گام ۷.۱) | `media_uploader_idx ("uploadedBy", "uploadedOn")` در `V32` (گام ۷.۲) ساخته می‌شه، نه یه migration ِ جدا برای ۷.۱؛ تا اون موقع شمارش روی `media_tbl` بدون ایندکسه (چند هزار ردیف) | یه migration برای فاز، بخش ۲۱ |
+| 34 | ورودی‌های `canReturn` (تازه، گام ۷.۲) | `OrderActionFacts` برخلاف متن ۱۲.۴ `returnableUntil` نداشت؛ حالا `returnableUntil` و `returnSettled` داره. `hasReturnableLine` جدا لازم نیست: `returnableUntil` فقط وقتی پره که موقع تحویل یه ردیف قابل مرجوعی بوده (`markDelivered`)، و بعد از تحویل ردیف‌ها عوض نمی‌شن | لیست «سفارش‌های من» فقط read model رو می‌خونه؛ `orderqm_tbl` هر دو ستون رو داره |
+| 35 | ترتیب خطاهای درخواست (تازه، گام ۷.۲) | `ReturnDomainService.open` به ترتیب «ترتیب قانون‌ها» ِ کانترکت (گام ۷.۰): مدیا (`400 MEDIA_NOT_FOUND`) ← وضعیت سفارش (`422 ORDER_NOT_RETURNABLE`، `RETURN_WINDOW_EXPIRED`، با `Order.returnRefusal`) ← قلم‌ها (`ReturnPolicy.itemProblems`، همون قانونی که `Order.requestReturn` نگه می‌داره)، مدرک و توضیح با هم. هر قدم همه‌ی خطاهای خودش رو با هم می‌ده؛ `Order.requestReturn` همه‌ی خطاهای قلم رو با هم برمی‌گردونه (`ItemsInvalid`) | کانترکت همین ترتیب رو نوشته؛ هیچ پاسخی قبل از چک مالکیت مدیا چیزی درباره‌ی سفارش نمی‌گه |
+| 36 | ردیف‌های تایم‌لاین (تازه، گام ۷.۲) | پنج `OrderTimelineKind` ِ تازه: `RETURN_REQUESTED`، `RETURN_RECEIVED`، `RETURN_REJECTED`، `RETURN_CLOSED`، `RETURN_REFUNDED`. برچسبشون در `OrderTexts.timelineLabel` (همون `when` ِ کامل ِ تایم‌لاین)، نه `ReturnTexts` | یه `when` ِ کامل برای همه‌ی ردیف‌های تایم‌لاین؛ استرداد ِ مرجوعی ردیف `REFUNDED` ِ خودش رو با مبلغ هم داره |
+| 37 | `meta.allowed` ِ مرجوعی (تازه، گام ۷.۲) | `ReturnRequest.InvalidTransition` ِ Aggregate `allowed` رو انگار هیچ استردادی باز نیست می‌گه (Aggregate استردادهاش رو نمی‌بینه)؛ `close` اول `RETURN_REFUND_OPEN` رو چک می‌کنه. `allowedTransitions` ِ پاسخ پنل با استرداد واقعی حساب می‌شه | تنها حالت فرق `RECEIVED` با استرداد بازه، که همون `RETURN_REFUND_OPEN` جوابشه |
+| 38 | `by` ِ جمع‌آوری و بستن (تازه، گام ۷.۲) | `schedulePickup(pickup)` و `close(reason, hasOpenRefund, now)` `by` نمی‌گیرن: جدول ستون `pickedBy`/`closedBy` نداره و انجام‌دهنده در لاگ تغییراته | پارامتر بی‌استفاده هشدار کامپایلره |
+| 39 | دیوار ِ `openReturnId` (تازه، گام ۷.۲) | `orderqm_open_return_check`: `openReturnId` پره دقیقاً وقتی سفارش `RETURN_REQUESTED` یا `RETURNED` ـه. کد عمومی ِ `TextInvalid` در `common` (کنار `TextTooLong`) | هر قانون یه `CHECK` ِ هم‌معنی |
 
 ### ۱۲.۳ ماشین وضعیت مرجوعی
 
@@ -3651,7 +3657,7 @@ Route: 200
 
 ---
 
-#### گام ۷.۲: دامنه‌ی مرجوعی، رویدادهای سفارش و جدول · L ⬜
+#### گام ۷.۲: دامنه‌ی مرجوعی، رویدادهای سفارش و جدول · L ✅
 
 **می‌سازی:** همه‌ی ۱۲.۴: Aggregate و VOها و سیاست‌ها و `ReturnDomainService`؛ سه رویداد سفارش با payload، شاخه‌های serializer، نمونه‌ها و JSON ِ طلایی؛ `Order.requestReturn`/`receiveReturn`/`endReturn`؛ `canReturn`؛ `InventoryDomainService.restockForReturn`؛ `V32__returns.sql`؛ `ReturnRequestRepositoryImpl`، `ReturnIdGeneratorImpl`؛ Projector سفارش برای سه رویداد.
 
@@ -3663,11 +3669,13 @@ Route: 200
 - چرا `returnSettled` و نه شمردن مرجوعی‌ها موقع خوندن؟ `canReturn` در لیست «سفارش‌های من» حساب می‌شه، و لیست فقط read model ِ سفارش رو می‌خونه (قانون `OrderActionsPolicy`).
 
 **تموم شده یعنی:**
-- [ ] تست واحد هر انتقال مجاز و غیرمجاز مرجوعی (۷ × ۷)، و `allowedTransitions` برای هر وضعیت با و بدون استرداد باز.
-- [ ] `requestReturn`: قبل از تحویل، بعد از مهلت (مرز دقیق `returnableUntil`)، ردیف غیرقابل مرجوعی، تعداد بیشتر، قلم تکراری، `returnSettled`.
-- [ ] `ReturnRefundPolicy` تست طلایی با کد تخفیف درصدی و سقفی: سه ردیف، مرجوعی دو تاش، یکی نیمه.
-- [ ] JSON ِ طلایی هر سه رویداد؛ replay ِ سفارش مرجوعی‌شده همون وضعیت.
-- [ ] migration روی دیتابیس با داده‌ی فاز ۲ (استرداد لغو و دستی) بدون خطا؛ هر `CHECK` با یه insert ِ غلط رد می‌شه.
+- [x] تست واحد هر انتقال مجاز و غیرمجاز مرجوعی (۷ × ۷)، و `allowedTransitions` برای هر وضعیت با و بدون استرداد باز.
+- [x] `requestReturn`: قبل از تحویل، بعد از مهلت (مرز دقیق `returnableUntil`)، ردیف غیرقابل مرجوعی، تعداد بیشتر، قلم تکراری، `returnSettled`.
+- [x] `ReturnRefundPolicy` تست طلایی با کد تخفیف درصدی و سقفی: سه ردیف، مرجوعی دو تاش، یکی نیمه.
+- [x] JSON ِ طلایی هر سه رویداد؛ replay ِ سفارش مرجوعی‌شده همون وضعیت.
+- [x] migration روی دیتابیس با داده‌ی فاز ۲ (استرداد لغو و دستی) بدون خطا؛ هر `CHECK` با یه insert ِ غلط رد می‌شه.
+
+**یادداشت پیاده‌سازی:** شش تصمیم تازه (۳۴ تا ۳۹). Aggregate ِ `ReturnRequest` با `ReturnTransitionPolicy`، `ReturnPolicy` (قانون قلم‌ها، مدرک، توضیح، بازه‌ی جمع‌آوری)، `ReturnRefundPolicy`؛ VOها در `ReturnId.kt` (با `ReturnCode.forId`)، `ReturnValues.kt` (چهار enum با `ReturnOutcome`)، `ReturnText.kt` (`makeNew` و `makeReason`)، `ReturnParts.kt` (`ReturnItem`، `ReturnPickup`، `ReceiptLine`، `ReturnReceipt`). `Order.returnRefusal`/`requestReturn`/`receiveReturn`/`endReturn` با `openReturnId` و `returnSettled`؛ سه رویداد با payload و JSON ِ طلایی؛ `canReturn`. `InventoryDomainService.restockForReturn` (یه رنگ روی دو ردیف یه بار، به ترتیب قفل). `V32` ِ کامل با اسم قیدها و `orderqm_open_return_check`؛ `ReturnRequestRepositoryImpl` (بدون `page`: اون با صف پنل در ۷.۴ میاد)، `ReturnIdGeneratorImpl`، Projector. خرابکاری: بدون `returnrequest_one_per_order_idx` ← «a second return of an order that isn't REJECTED is refused…» قرمز؛ بدون چک `returnSettled` در `returnRefusal` ← «after a return was closed or refunded it is never returned again…» قرمز.
 
 ---
 
@@ -6275,3 +6283,4 @@ kiva {
 | ۲۹ مهر ۱۴۰۵ | ۶.۹ | Phase 6 step 6.9 | `launch-check.sh` و `tools/ops/test/ops-test.sh` (۷۷ سبز روی لینوکس). فاز ۶ از طرف ریپو کامله؛ همه‌ی گام‌ها منتظر اجرای تو روی سرورن |
 | ۲۹ مهر ۱۴۰۵ | ۷.۰ | Phase 7 step 7.0 | کانترکت 1.13.0 با هر ۱۵ ردیف ِ ۱۲.۱۰ و سه ردیف تازه (۱۶ تا ۱۸)؛ شش تصمیم تازه (۲۵ تا ۳۰). YAML معتبر، ۱۳۳۱ `$ref`. متن ۱۶ کد تازه. برنچ `returns` از نوک فاز ۶ |
 | ۲۹ مهر ۱۴۰۵ | ۷.۱ | Phase 7 step 7.1 | `POST /me/uploads` با `MediaUploader.Customer`، سقف ۲۰ در ساعت (دو شمارش، قفل ِ آپلودهای کاربر)، `withUpload` ِ مشترک. سه تصمیم تازه (۳۱ تا ۳۳). خرابکاری ِ قفل قرمز. ۲۷۵۰ تست سبز (۵ تست ابزار واقعی skip) |
+| ۲۹ مهر ۱۴۰۵ | ۷.۲ | Phase 7 step 7.2 | Aggregate ِ `ReturnRequest` و VOها و سه سیاست، `ReturnDomainService.open` (به ترتیب کانترکت)، سه رویداد سفارش با payload و JSON ِ طلایی، `Order.returnRefusal`/`requestReturn`/`receiveReturn`/`endReturn`، `canReturn`، `restockForReturn`، `V32` ِ کامل، `ReturnRequestRepositoryImpl`، Projector و پنج ردیف تایم‌لاین. شش تصمیم تازه (۳۴ تا ۳۹). دو خرابکاری قرمز. کل مجموعه: ۲۸۲۱ تست، یکی قرمز (دکمه‌ی `canReturn` ِ سفارش تحویل‌شده در تست سفر فاز ۲، که حالا درست روشنه؛ به‌روز شد)، ۵ skip |

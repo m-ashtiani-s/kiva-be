@@ -366,6 +366,40 @@ class DomainEventSerializerOrderTest {
             }
         """.trimIndent()
 
+        private val orderReturnRequestedJson = """
+            {
+              "id": "5d0f3a2c-8b1e-4c7d-9a6f-000000000030",
+              "orderId": 42,
+              "sequence": 11,
+              "occurredOn": "2026-10-12T08:00:00.123456789Z",
+              "occurredByUserId": 7,
+              "returnId": 12
+            }
+        """.trimIndent()
+
+        private val orderReturnReceivedJson = """
+            {
+              "id": "5d0f3a2c-8b1e-4c7d-9a6f-000000000031",
+              "orderId": 42,
+              "sequence": 12,
+              "occurredOn": "2026-10-12T08:00:00.123456789Z",
+              "occurredByUserId": 900,
+              "returnId": 12
+            }
+        """.trimIndent()
+
+        private val orderReturnEndedJson = """
+            {
+              "id": "5d0f3a2c-8b1e-4c7d-9a6f-000000000032",
+              "orderId": 42,
+              "sequence": 13,
+              "occurredOn": "2026-10-12T08:00:00.123456789Z",
+              "occurredByUserId": 900,
+              "returnId": 12,
+              "outcome": "REFUNDED"
+            }
+        """.trimIndent()
+
         private val stored = listOf(
             OrderEventSamples.orderPlaced to orderPlacedJson,
             OrderEventSamples.orderPaymentFailed to orderPaymentFailedJson,
@@ -386,6 +420,9 @@ class DomainEventSerializerOrderTest {
             OrderEventSamples.orderLineRemoved to orderLineRemovedJson,
             OrderEventSamples.orderChangeApplied to orderChangeAppliedJson,
             OrderEventSamples.orderBalancePaid to orderBalancePaidJson,
+            OrderEventSamples.orderReturnRequested to orderReturnRequestedJson,
+            OrderEventSamples.orderReturnReceived to orderReturnReceivedJson,
+            OrderEventSamples.orderReturnEnded to orderReturnEndedJson,
         )
 
         @Test

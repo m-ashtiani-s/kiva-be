@@ -35,6 +35,7 @@ import com.kiva.infrastructure.TestDatabase
 import com.kiva.infrastructure.persistence.exposed.StoredCatalog.NewColor
 import com.kiva.infrastructure.persistence.exposed.tbl.EventStoreTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.OrderQmTbl
+import com.kiva.infrastructure.persistence.exposed.tbl.ReturnRequestTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.ProductQmTbl
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
@@ -138,6 +139,7 @@ class StoredOrders(val catalog: StoredCatalog = StoredCatalog()) {
         transaction(db) {
             EventStoreTbl.deleteWhere { (aggregateName eq "ORDER") and (aggregateId inList orderIds.map { it.toString() }) }
             OrderQmTbl.deleteWhere { orderId inList orderIds }
+            ReturnRequestTbl.deleteWhere { ReturnRequestTbl.orderId inList orderIds }
         }
         orderIds.clear()
         catalog.deleteAll()

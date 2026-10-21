@@ -14,6 +14,9 @@ data class TooManyItems(val maxItems: Int) : ResultFailure("TOO_MANY_ITEMS", Fai
 
 data object ListItemDuplicate : ResultFailure("LIST_ITEM_DUPLICATE", FailureKind.INVALID)
 
+/** A free text with a control character in it (roadmap phase 7, decision 26). */
+data object TextInvalid : ResultFailure("TEXT_INVALID", FailureKind.INVALID)
+
 /** The number, when it came ([FieldRequired] when it didn't) and is in [range] ([NumberOutOfRange] when it isn't). */
 fun Int?.requiredIn(range: IntRange): Result<Int, ResultFailure> = when {
     this == null -> Result.failure(FieldRequired)

@@ -24,6 +24,7 @@ import com.kiva.domain.aggregate.order.model.valueobject.PhotoStatus
 import com.kiva.domain.aggregate.order.model.valueobject.TrackingCode
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentFailureReason
 import com.kiva.domain.aggregate.reservation.model.valueobject.ReservationGroupId
+import com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnId
 import com.kiva.domain.aggregate.reservation.model.valueobject.ReservationGroupStatus
 import com.kiva.infrastructure.common.persistence.SortOrders
 import com.kiva.infrastructure.common.persistence.paginate
@@ -303,6 +304,8 @@ class OrderQmRepositoryImpl : OrderQmRepository {
         balanceDue = Money.constructFromPersisted(this[OrderQmTbl.balanceDue]),
         balancePaid = Money.constructFromPersisted(this[OrderQmTbl.balancePaid]),
         codeDiscountRemoved = Money.constructFromPersisted(this[OrderQmTbl.codeDiscountRemoved]),
+        returnSettled = this[OrderQmTbl.returnSettled],
+        openReturnId = this[OrderQmTbl.openReturnId]?.let { ReturnId.constructFromPersisted(it) },
     )
 
     private companion object {

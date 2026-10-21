@@ -34,6 +34,9 @@ import com.kiva.domain.aggregate.order.entity.event.OrderPhotosSent
 import com.kiva.domain.aggregate.order.entity.event.OrderPlaced
 import com.kiva.domain.aggregate.order.entity.event.OrderRefunded
 import com.kiva.domain.aggregate.order.entity.event.OrderReleasedFromReservation
+import com.kiva.domain.aggregate.order.entity.event.OrderReturnEnded
+import com.kiva.domain.aggregate.order.entity.event.OrderReturnReceived
+import com.kiva.domain.aggregate.order.entity.event.OrderReturnRequested
 import com.kiva.domain.aggregate.order.entity.event.OrderShipmentCorrected
 import com.kiva.domain.aggregate.order.entity.event.OrderShipped
 import com.kiva.domain.aggregate.order.model.valueobject.AddressSnapshot
@@ -62,6 +65,8 @@ import com.kiva.domain.aggregate.product.model.valueobject.Sku
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
 import com.kiva.domain.aggregate.refund.model.valueobject.RefundId
 import com.kiva.domain.aggregate.reservation.model.valueobject.ReservationGroupId
+import com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnId
+import com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnOutcome
 import com.kiva.domain.aggregate.settings.model.valueobject.ShippingMethodCode
 import com.kiva.domain.aggregate.user.model.valueobject.MessengerChannel
 import java.time.Instant
@@ -227,10 +232,19 @@ object OrderEventSamples {
 
     val orderBalancePaid = OrderBalancePaid(order, sequence(11), at, sara, PaymentPublicId.constructFromPersisted("pay_0000000000C3"), toman(200_000), id = eventId(26))
 
+    private val rt1012 = ReturnId.constructFromPersisted(12)
+
+    /** Sara sends her caramel Aida back (RT-1012); it arrives; its money goes back. */
+    val orderReturnRequested = OrderReturnRequested(order, sequence(11), at, sara, rt1012, id = eventId(30))
+
+    val orderReturnReceived = OrderReturnReceived(order, sequence(12), at, operator, rt1012, id = eventId(31))
+
+    val orderReturnEnded = OrderReturnEnded(order, sequence(13), at, operator, rt1012, ReturnOutcome.REFUNDED, id = eventId(32))
+
     val onePerKind: List<OrderDomainEvent> = listOf(
         orderPlaced, orderPaymentFailed, orderPaid, orderExpired, orderReleasedFromReservation, orderPhotosAttached, orderPhotosSent, orderPhotosApproved,
         orderShipped, orderShipmentCorrected, orderDelivered, orderCancelled, orderRefunded, orderChangeRequested, orderChangeRejected, orderLineReplaced,
-        orderLineRemoved, orderChangeApplied, orderBalancePaid,
+        orderLineRemoved, orderChangeApplied, orderBalancePaid, orderReturnRequested, orderReturnReceived, orderReturnEnded,
     )
 
     /** A new address that wasn't saved, without plaque or unit; no messenger handle or note; no customer note or gift; nothing to pay. */

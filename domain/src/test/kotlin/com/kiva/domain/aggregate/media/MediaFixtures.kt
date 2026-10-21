@@ -15,12 +15,17 @@ object MediaFixtures {
 
     fun id(n: Int = 1): MediaId = MediaId.constructFromPersisted("med_" + n.toString().padStart(22, 'A'))
 
-    fun photo(id: MediaId = id(), purpose: MediaPurpose = MediaPurpose.PRODUCT, widths: List<Int> = listOf(160, 480, 800, 1200, 1600)): MediaAsset {
+    fun photo(
+        id: MediaId = id(),
+        purpose: MediaPurpose = MediaPurpose.PRODUCT,
+        widths: List<Int> = listOf(160, 480, 800, 1200, 1600),
+        uploadedBy: UserId = UserId.constructFromPersisted(7),
+    ): MediaAsset {
         val dir = "2036/03/${id.value}"
         return MediaAsset.upload(
             id = id, purpose = purpose, type = MediaType.IMAGE, width = widths.last(), height = widths.last() * 3 / 4, durationSec = null,
             bytes = 120_000, blurhash = "LKO2?U%2Tw=w]~RBVZRi};RPxuwH", variants = widths.map { MediaVariant.of(it, "$dir/w$it.webp") },
-            posterPath = null, alt = null, storageDir = dir, uploadedBy = UserId.constructFromPersisted(7), now = NOW,
+            posterPath = null, alt = null, storageDir = dir, uploadedBy = uploadedBy, now = NOW,
         )
     }
 

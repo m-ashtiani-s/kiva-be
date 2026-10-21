@@ -9,6 +9,8 @@ import com.kiva.domain.aggregate.inventory.InventoryTestData.staff
 import com.kiva.domain.aggregate.inventory.InventoryTestData.stocked
 import com.kiva.domain.aggregate.inventory.entity.Inventory
 import com.kiva.domain.aggregate.inventory.entity.event.InventoryDomainEvent
+import com.kiva.domain.aggregate.inventory.entity.event.StockAdjusted
+import com.kiva.domain.aggregate.inventory.model.valueobject.AdjustmentReason
 import com.kiva.domain.aggregate.inventory.model.valueobject.AdjustmentReason.DAMAGED
 import com.kiva.domain.aggregate.inventory.model.valueobject.AdjustmentReason.RESTOCK
 import com.kiva.domain.aggregate.inventory.repository.InventoryRepository
@@ -17,6 +19,8 @@ import com.kiva.domain.aggregate.order.entity.OrderLine
 import com.kiva.domain.aggregate.product.model.valueobject.PriceTag
 import com.kiva.domain.aggregate.product.model.valueobject.ProductId
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
+import com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnCode
+import com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnId
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -292,6 +296,40 @@ class InventoryDomainServiceTest {
             val refused = service.rebalanceForOrder(order, before, listOf(line(1, 20, 209, 1)), staff, now)
 
             assertEquals(Result.failure(InventoryDomainService.RebalanceFailure.OutOfStock(VariantId.constructFromPersisted(209), 0)), refused)
+        }
+    }
+
+    @Nested
+    inner class ForReturns {
+        private val code = ReturnCode.forId(ReturnId.constructFromPersisted(12))
+
+        private fun stock(variant: Long, onHand: Int) {
+            val inventory = Inventory.empty(VariantId.constructFromPersisted(variant))
+            inventory.adjust(delta(onHand), RESTOCK, null, staff, now)
+            inventories.save(inventory)
+        }
+
+        private fun restock(product: Long, variant: Long, quantity: Int) =
+            InventoryDomainService.Restock(ProductId.constructFromPersisted(product), VariantId.constructFromPersisted(variant), quantity)
+
+        @Test
+        fun `what came back goes on the shelf - RETURNED noted with the return's code by the operator, in lock order, one color on two lines once`() {
+            stock(301, 1)
+            stock(201, 1)
+
+            val restocked = service.restockForReturn(code, listOf(restock(30, 301, 1), restock(20, 201, 2), restock(30, 301, 1)), staff, now)
+
+            assertEquals(listOf(201L, 301L), restocked.map { it.variantId.value })
+            val adjusted = restocked.map { it.getRecordedEvents().single() as StockAdjusted }
+            assertEquals(listOf(2, 2), adjusted.map { it.delta.value })
+            assertEquals(setOf(AdjustmentReason.RETURNED), adjusted.map { it.reason }.toSet())
+            assertEquals(setOf("RT-1012"), adjusted.map { it.note?.value }.toSet())
+            assertEquals(setOf(staff), adjusted.map { it.occurredByUserId }.toSet())
+        }
+
+        @Test
+        fun `a color that was sold but has no stock is a bug and stops loudly`() {
+            assertThrows<IllegalStateException> { service.restockForReturn(code, listOf(restock(30, 309, 1)), staff, now) }
         }
     }
 }

@@ -23,12 +23,16 @@ import com.kiva.domain.aggregate.order.entity.event.OrderPhotosSent
 import com.kiva.domain.aggregate.order.entity.event.OrderPlaced
 import com.kiva.domain.aggregate.order.entity.event.OrderRefunded
 import com.kiva.domain.aggregate.order.entity.event.OrderReleasedFromReservation
+import com.kiva.domain.aggregate.order.entity.event.OrderReturnEnded
+import com.kiva.domain.aggregate.order.entity.event.OrderReturnReceived
+import com.kiva.domain.aggregate.order.entity.event.OrderReturnRequested
 import com.kiva.domain.aggregate.order.entity.event.OrderShipmentCorrected
 import com.kiva.domain.aggregate.order.entity.event.OrderShipped
 import com.kiva.domain.aggregate.order.model.valueobject.ChangeType
 import com.kiva.domain.aggregate.order.model.valueobject.OrderStatus
 import com.kiva.domain.aggregate.order.model.valueobject.PhotoStatus
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentFailureReason
+import com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnOutcome
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.AddressSnapshotPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.GiftNotePayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderLinePayload
@@ -65,6 +69,9 @@ import java.time.ZoneOffset
  * changes product rows, which other writers lock too (the stock's projector, a product's own); so the repository takes
  * those locks with [lockFor] before it stores anything, in the order every writer uses (roadmap section 4.11: the
  * products' rows, ascending, lock 7, before the order's stream, lock 8).
+ *
+ * A return (phase 7) moves the order and adds its entry, and none of its steps touches `soldCount`: a returned bag was
+ * still bought (decision 13 of section 12.2), unlike a cancelled one, which never left.
  *
  * For the panel's report (roadmap section 9.3) it also keeps when the order's first photos were sent and whether its
  * customer ever asked for a change: later batches and a change resolved either way leave both as they are.
@@ -194,6 +201,21 @@ object OrderQmProjector {
                 it[OrderQmTbl.balanceDue] = 0
                 it[OrderQmTbl.balancePaid] = row.balancePaid + event.amount.toman
             }
+            is OrderReturnRequested -> moveTo(event, OrderStatus.RETURN_REQUESTED, OrderTimelineKind.RETURN_REQUESTED) { _, it ->
+                it[OrderQmTbl.openReturnId] = event.returnId.value
+            }
+            is OrderReturnReceived -> moveTo(event, OrderStatus.RETURNED, OrderTimelineKind.RETURN_RECEIVED)
+            is OrderReturnEnded -> {
+                val (status, kind) = when (event.outcome) {
+                    ReturnOutcome.REJECTED -> OrderStatus.DELIVERED to OrderTimelineKind.RETURN_REJECTED
+                    ReturnOutcome.CLOSED -> OrderStatus.DELIVERED to OrderTimelineKind.RETURN_CLOSED
+                    ReturnOutcome.REFUNDED -> OrderStatus.REFUNDED to OrderTimelineKind.RETURN_REFUNDED
+                }
+                moveTo(event, status, kind) { _, it ->
+                    it[OrderQmTbl.openReturnId] = null
+                    if (event.outcome.settlesReturn) it[OrderQmTbl.returnSettled] = true
+                }
+            }
         }
     }
 
@@ -251,6 +273,8 @@ object OrderQmProjector {
             it[codeDiscountRemoved] = 0
             it[firstPhotosSentOn] = null
             it[changeRequestedEver] = false
+            it[returnSettled] = false
+            it[openReturnId] = null
         }
     }
 

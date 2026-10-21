@@ -159,7 +159,8 @@ class WebV1MyOrderJourneyOnDatabaseTest {
         assertEquals(listOf("DONE" to paidAt, "DONE" to photoAt, "DONE" to shipAt, "CURRENT" to deliveredAt), done.progress())
         assertEquals(deliveredAt, done.obj("shipment").text("deliveredAt"))
         assertEquals(clock.now.plus(Duration.ofDays(7)).toString(), done.objects("items").single().text("returnableUntil"))
-        assertEquals(emptyList(), done.actionsOn())
+        // Returnable for 7 days (phase 7): the one button of a delivered order.
+        assertEquals(listOf("canReturn"), done.actionsOn())
         assertEquals(
             listOf("سفارش ثبت شد", "پرداخت شد", "عکس کیفت فرستاده شد", "عکس رو تأیید کردی", "تحویل ${parcel.text("carrierName")} شد", "تحویل شد"),
             done.objects("timeline").map { it.text("label") },

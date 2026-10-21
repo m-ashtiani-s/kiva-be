@@ -88,6 +88,12 @@ object OrderTexts {
         OrderTimelineKind.ITEM_REMOVED -> "یه قلم حذف شد"
         OrderTimelineKind.CHANGE_APPLIED -> "درخواستت انجام شد"
         OrderTimelineKind.BALANCE_PAID -> amount?.let { "مانده‌ی ${it.toman.toPersianNumber()} تومانی پرداخت شد" } ?: "مانده پرداخت شد"
+        // A return (phase 7); its money given back also has the REFUNDED entry of its refund, with the amount.
+        OrderTimelineKind.RETURN_REQUESTED -> "درخواست مرجوعی ثبت شد"
+        OrderTimelineKind.RETURN_RECEIVED -> "کالای مرجوعی به انبار رسید"
+        OrderTimelineKind.RETURN_REJECTED -> "مرجوعی رد شد"
+        OrderTimelineKind.RETURN_CLOSED -> "مرجوعی بسته شد"
+        OrderTimelineKind.RETURN_REFUNDED -> "وجه مرجوعی برگشت داده شد"
     }
 
     /** The photos before shipping, before there are any (contract example). */

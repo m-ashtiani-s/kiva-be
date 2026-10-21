@@ -14,7 +14,9 @@ import com.kiva.domain.aggregate.inventory.model.valueobject.StockDelta
 import com.kiva.domain.aggregate.inventory.repository.InventoryRepository
 import com.kiva.domain.aggregate.order.entity.OrderLine
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
+import com.kiva.domain.aggregate.product.model.valueobject.ProductId
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
+import com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnCode
 import java.time.Instant
 
 /**
@@ -154,6 +156,36 @@ class InventoryDomainService(
             inventory
         }
         return Result.success(touched.filter { it.getRecordedEvents().isNotEmpty() })
+    }
+
+    /** [quantity] of [variantId] (of [productId]) go back on the shelf. */
+    data class Restock(val productId: ProductId, val variantId: VariantId, val quantity: Int) {
+        init {
+            require(quantity > 0) { "Restocking $quantity of variant ${variantId.value}" }
+        }
+    }
+
+    /**
+     * What a return's parcel brought back in good shape goes back on the shelf (roadmap section 12.2, decision 12): each
+     * color's stock grows by its [lines]' quantities, a change by hand of reason RETURNED noted with [returnCode], so the
+     * stock's history shows it like any other. Even for a color switched off or a product archived: its stock is apart
+     * from the product. **In lock order** like [reserveForOrder]: the stocks come back sorted by (product, color) and must be
+     * saved in that order (lock 7, after the return's row, lock 10). A color that was sold always has a stock: one without
+     * is a bug.
+     */
+    fun restockForReturn(returnCode: ReturnCode, lines: List<Restock>, by: UserId, now: Instant): List<Inventory> {
+        logger.info("restockForReturn returnCode=${returnCode.value} lines=${lines.map { "${it.variantId.value}x${it.quantity}" }}")
+        val note = AdjustmentNote.constructFromPersisted(returnCode.value)
+        return lines.groupBy({ it.productId.value to it.variantId }, { it.quantity }).toList()
+            .sortedWith(compareBy({ it.first.first }, { it.first.second.value }))
+            .map { (key, quantities) ->
+                val variantId = key.second
+                val inventory = inventoryRepository.get(variantId) ?: error("Variant ${variantId.value} comes back from return ${returnCode.value} but has no stock")
+                inventory.adjust(StockDelta.constructFromPersisted(quantities.sum()), AdjustmentReason.RETURNED, note, by, now).failureOrNull()?.let {
+                    error("Return ${returnCode.value} could not restock variant ${variantId.value}: ${it.code}")
+                }
+                inventory
+            }
     }
 
     // ============ failures ============
