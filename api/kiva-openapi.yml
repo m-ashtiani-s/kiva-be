@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: KIVA Store API — کیوا
-  version: 1.11.1
+  version: 1.12.0
   contact:
     name: KIVA Engineering
     email: support@kiva.ir
@@ -311,6 +311,10 @@ paths:
       description: |
         یک‌بار در بارگذاری اپ گرفته و کش می‌شود. همه‌ی عددهای ثابتی که الان در `kiva.js` هاردکد شده‌اند
         (`SHIPPING`، `FREE_POST`، `MSGR`، پیام‌های نوار اطلاعیه، ساعت کاری، آستانه‌ی موجودی کم و ...) از این‌جا می‌آیند.
+        با `ETag` و `Cache-Control: public, max-age=300` کش می‌شود؛ درخواست با `If-None-Match` برابر `304` بدون بدنه می‌گیرد.
+        منبع هر بخش در `SiteConfig`: عددها و لیست‌ها همان تنظیمات `PUT /admin/settings` و همان چیزی‌اند که سبد و تسویه می‌خوانند؛
+        متن‌های برند، فوتر و نشان‌ها محتوای ثابت سایت‌اند (فعلاً بدون endpoint پنل). `support.isOpenNow` و `announcements` به لحظه‌ی
+        ساختن پاسخ وابسته‌اند، پس تا ۵ دقیقه ممکن است کهنه باشند.
       responses:
         '200':
           description: OK
@@ -319,6 +323,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/SiteConfig' }
+        '304':
+          description: تغییری نکرده (`If-None-Match` همان `ETag` فعلی است)؛ بدون بدنه
   /home:
     get:
       tags: [Config & Home]
@@ -460,7 +466,11 @@ paths:
       summary: "سوالات متداول گروه‌بندی‌شده (با جستجو)"
       description: |
         گروه‌ها با `id` برای لینک مستقیم (`faq#reserve`، `faq#return`، `faq#shipping`) استفاده می‌شوند.
-        با `q` فقط سوال‌هایی که در متن سوال یا جواب شامل عبارت هستند برگردانده می‌شوند و `highlight` فعال می‌شود.
+        با `q` فقط سوال‌هایی که در متن سوال یا متن ساده‌ی جواب (بدون تگ) شامل عبارت هستند برگردانده می‌شوند، و فقط گروه‌هایی که
+        سوال جور دارند؛ `questionHighlighted`/`answerHighlighted` با `<mark>` پر می‌شوند. تطابق حرف‌به‌حرف و بی‌حساس به
+        `ي`/`ی`، `ك`/`ک`، رقم فارسی و لاتین و حروف بزرگ و کوچک است؛ فاصله‌های اضافه‌ی `q` حذف می‌شوند. `q` ِ خالی یعنی بی `q`؛
+        بیشتر از ۱۰۰ حرف ← `400 TEXT_TOO_LONG` روی `q`. بی نتیجه: `groups: []` و `emptyMessage`.
+        با `ETag` و `Cache-Control: public, max-age=300` کش می‌شود.
       parameters:
         - name: q
           in: query
@@ -468,9 +478,13 @@ paths:
       responses:
         '200':
           description: OK
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/FaqResponse' }
+        '304':
+          description: تغییری نکرده (`If-None-Match` همان `ETag` فعلی است)؛ بدون بدنه
         '400': { $ref: '#/components/responses/ValidationError' }
   /contact/topics:
     get:
@@ -547,7 +561,10 @@ paths:
     get:
       tags: [Content]
       operationId: getStaticPage
-      summary: "صفحه‌ی ثابت CMS (درباره ما، قوانین، حریم خصوصی، شرایط بازگشت) [پیشنهادی]"
+      summary: "صفحه‌ی ثابت CMS (درباره ما، قوانین، حریم خصوصی، شرایط بازگشت)"
+      description: |
+        صفحه‌هایی که پنل نوشته (`terms`، `privacy`، `returns`، `about`، …). صفحه‌ی ننوشته یا `slug` ِ بدشکل ← `404 NOT_FOUND`
+        (صفحه‌ای پیش‌فرض ساخته نمی‌شود). با `ETag` و `Cache-Control: public, max-age=300` کش می‌شود.
       parameters:
         - name: slug
           in: path
@@ -556,9 +573,13 @@ paths:
       responses:
         '200':
           description: OK
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/StaticPage' }
+        '304':
+          description: تغییری نکرده (`If-None-Match` همان `ETag` فعلی است)؛ بدون بدنه
         '404': { $ref: '#/components/responses/NotFound' }
 
   # ================================================================
@@ -4368,7 +4389,9 @@ paths:
       summary: "پیام‌های نوار اطلاعیه‌ی بالای سایت (جایگزینی کل لیست مرتب)"
       description: |
         پیامی که در لیست نباشد حذف می‌شود؛ پس لیست را از `GET /admin/announcements` بخوانید، نه از `GET /config`.
-        پیام با `id` همان پیام قبلی است و بی `id` پیام تازه.
+        پیام با `id` همان پیام قبلی است و بی `id` پیام تازه. ترتیب = ترتیب آرایه. حداکثر ۱۰ پیام (`400 TOO_MANY_ITEMS` با
+        `meta.maxItems`). قانون‌های هر پیام در `AnnouncementInput`؛ همه‌ی مشکل‌ها با هم و با مسیر (`1.url`). هر ذخیره‌ی
+        تغییردهنده یک ردیف `ANNOUNCEMENTS_SAVED` در لاگ تغییرات.
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -4376,7 +4399,8 @@ paths:
           application/json:
             schema:
               type: array
-              items: { $ref: '#/components/schemas/Announcement' }
+              maxItems: 10
+              items: { $ref: '#/components/schemas/AnnouncementInput' }
       responses:
         '200':
           description: OK
@@ -4608,6 +4632,11 @@ paths:
       x-roles: [ADMIN, CONTENT_EDITOR]
       operationId: adminReplaceFaq
       summary: "ذخیره‌ی کامل گروه‌ها و سوالات متداول (با ترتیب)"
+      description: |
+        **کل درخت** را جایگزین می‌کند: گروه یا سؤالی که در بدنه نیست حذف می‌شود، پس فرم را از `GET /admin/faq/groups` پر کنید.
+        ترتیب = ترتیب آرایه‌ها. حداکثر ۲۰ گروه (`400 FAQ_TOO_MANY` با `meta.maxItems`). قانون‌های هر گروه و سؤال در `FaqGroupInput`
+        و `FaqItemInput`؛ همه‌ی مشکل‌ها با هم و با مسیر (`2.questions.0.answer`). جواب‌ها پاک‌سازی می‌شوند. پاسخ کل درخت ذخیره‌شده است؛
+        هر ذخیره‌ی تغییردهنده یک ردیف `FAQ_SAVED` در لاگ تغییرات.
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -4615,7 +4644,8 @@ paths:
           application/json:
             schema:
               type: array
-              items: { $ref: '#/components/schemas/FaqGroup' }
+              maxItems: 20
+              items: { $ref: '#/components/schemas/FaqGroupInput' }
       responses:
         '200':
           description: OK
@@ -4633,6 +4663,7 @@ paths:
       x-roles: [ADMIN, CONTENT_EDITOR]
       operationId: adminListPages
       summary: "همه‌ی صفحه‌های ثابت (بدون محتوا؛ محتوای هر صفحه از `GET /pages/{slug}`)"
+      description: به ترتیب `slug`. بدون کش.
       security: [{ bearerAuth: [] }]
       responses:
         '200':
@@ -4650,6 +4681,10 @@ paths:
       x-roles: [ADMIN, CONTENT_EDITOR]
       operationId: adminUpsertPage
       summary: "ساخت/ویرایش صفحه‌ی ثابت"
+      description: |
+        صفحه‌ی نبوده را می‌سازد و بوده را ویرایش می‌کند؛ هر دو `200` با صفحه‌ی ذخیره‌شده (همان `GET /pages/{slug}`).
+        `slug` ِ مسیر با الگوی slug (`400 SLUG_INVALID` روی `slug`). قانون‌های بدنه در `StaticPageUpsertRequest`؛ `content`
+        پاک‌سازی می‌شود. حذف ندارد. هر ذخیره‌ی تغییردهنده یک ردیف `PAGE_SAVED` در لاگ تغییرات (بدون متن صفحه).
       security: [{ bearerAuth: [] }]
       parameters:
         - name: slug
@@ -4660,7 +4695,7 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/StaticPage' }
+            schema: { $ref: '#/components/schemas/StaticPageUpsertRequest' }
       responses:
         '200':
           description: OK
@@ -4670,7 +4705,6 @@ paths:
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
   /admin/settings:
     get:
       tags: [Admin · Content]
@@ -5390,7 +5424,10 @@ components:
       example: camera
     HtmlString:
       type: string
-      description: HTML امن و sanitize‌شده در سرور (فقط تگ‌های `p, b, strong, em, a, ul, ol, li, br, mark, h2, h3, blockquote`)
+      description: |
+        HTML امن و sanitize‌شده در سرور (فقط تگ‌های `p, b, strong, em, a, ul, ol, li, br, mark, h2, h3, blockquote`).
+        `a` فقط با `href`، و فقط به آدرس کامل `http://`/`https://` یا مسیر نسبی‌ای که با یک `/` (نه `//` و نه `/\`) یا `#` شروع
+        می‌شود (`/faq#reserve`، `#top`)؛ هر لینک دیگری (`javascript:`، `//evil.com`، `faq`) `href` اش را از دست می‌دهد و متنش می‌ماند.
     Tone:
       type: string
       description: رنگ‌بندی تگ در دیزاین‌سیستم (`tag`, `tag-sale`, `tag-warn`, `tag-success`, `tag-cream`, `tag-dark`, `tag-glass`)
@@ -7450,14 +7487,28 @@ components:
     Announcement:
       type: object
       description: پیام چرخشی نوار بالای سایت
+      required: [id, icon, text, url, sortOrder, startsAt, endsAt]
       properties:
         id: { type: integer, example: 1 }
-        icon: { $ref: '#/components/schemas/IconName' }
+        icon: { type: string, nullable: true, allOf: [{ $ref: '#/components/schemas/IconName' }] }
         text: { type: string, example: هرچی ببینی، همون می‌رسه — قبل از ارسال، عکس کیف خودت رو برات می‌فرستیم }
         url: { type: string, nullable: true }
-        sortOrder: { type: integer }
+        sortOrder: { type: integer, description: 'جای پیام در لیست (۰، ۱، …)؛ از ترتیب آرایه‌ی `PUT` ساخته می‌شود' }
         startsAt: { type: string, format: date-time, nullable: true }
         endsAt: { type: string, format: date-time, nullable: true }
+    AnnouncementInput:
+      type: object
+      description: |
+        یک پیام در بدنه‌ی `PUT /admin/announcements`. با `id` همان پیام قبلی است و بی `id` پیام تازه؛ `id` ِ ناشناخته ←
+        `400 ANNOUNCEMENT_NOT_FOUND` و `id` ِ تکراری ← `400 LIST_ITEM_DUPLICATE`. ترتیب = ترتیب آرایه (`sortOrder` اگر بیاید نادیده).
+      required: [text]
+      properties:
+        id: { type: integer, nullable: true }
+        icon: { type: string, nullable: true, description: 'اسم آیکن (`ICON_INVALID`)' }
+        text: { type: string, minLength: 1, maxLength: 200, description: '`ANNOUNCEMENT_TEXT_REQUIRED` / `TEXT_TOO_LONG`' }
+        url: { type: string, nullable: true, maxLength: 300, description: '`null`، آدرس کامل `https://`، یا مسیر نسبی که با یک `/` شروع می‌شود (نه `//`)؛ وگرنه `URL_INVALID`' }
+        startsAt: { type: string, format: date-time, nullable: true }
+        endsAt: { type: string, format: date-time, nullable: true, description: 'اگر هر دو هست، بعد از `startsAt` (`DATE_RANGE_INVALID`)' }
     SupportHours:
       type: object
       properties:
@@ -7477,9 +7528,18 @@ components:
         handle: { type: string, example: '@kiva_shop' }
     SiteConfig:
       type: object
+      description: |
+        همه‌ی فیلدها همیشه هستند (فیلد بی‌مقدار `null`). منبع هر بخش:
+        - تنظیمات فروشگاه (`PUT /admin/settings`): `shipping`، `reservation.enabled`/`holdDays`، `returns.windowDays`،
+          `inventory.lowStockThreshold`، `paymentGateways`، `support.phone`/`email`/`hours`، `social`، `features`.
+        - محتوای ثابت سایت (فعلاً فقط با به‌روزرسانی سرور): `brand`، `currency.label`، `reservation.description`، `returns.policyUrl`،
+          `preShipmentPhoto.title`/`description`، `support.emailResponseHint`/`responseTimeHint`، `productPerks`، `trustBadges`، `footerLinks`.
+        - ساخته‌ی سرور: `support.phoneDisplay`، `support.isOpenNow`، `auth`، `preShipmentPhoto.channels`/`enabled`/`required`، `currency.code`.
+      required: [brand, currency, announcements, shipping, reservation, returns, preShipmentPhoto, inventory, auth, support, social, paymentGateways, productPerks, trustBadges, footerLinks, features]
       properties:
         brand:
           type: object
+          required: [name, slogan, about, logoUrl, logoWhiteUrl, faviconUrl]
           properties:
             name: { type: string, example: کیوا }
             slogan: { type: string, example: هرچی ببینی، همون می‌رسه. }
@@ -7489,17 +7549,21 @@ components:
             faviconUrl: { type: string, format: uri }
         currency:
           type: object
+          required: [code, label]
           properties:
             code: { $ref: '#/components/schemas/Currency' }
             label: { type: string, example: تومان }
         announcements:
           type: array
+          description: 'فقط پیام‌هایی که **الان** در بازه‌شان هستند (`startsAt ≤ الان < endsAt`؛ `null` یعنی باز)، به ترتیب نمایش'
           items: { $ref: '#/components/schemas/Announcement' }
         shipping:
           type: object
+          required: [methods, freeShippingThreshold, freeShippingMethods, nonShippingWeekdays]
           properties:
             methods:
               type: array
+              description: فقط روش‌های فعال، به ترتیب تنظیمات (همان‌هایی که سبد پیشنهاد می‌دهد)
               items: { $ref: '#/components/schemas/ShippingMethod' }
             freeShippingThreshold: { allOf: [{ $ref: '#/components/schemas/Money' }], example: 3000000 }
             freeShippingMethods:
@@ -7508,55 +7572,72 @@ components:
               example: [POST]
             nonShippingWeekdays:
               type: array
-              items: { type: string }
+              items: { type: string, enum: [SATURDAY, SUNDAY, MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY] }
               example: [FRIDAY]
         reservation:
           type: object
+          required: [enabled, holdDays, description]
           properties:
             enabled: { type: boolean, example: true }
             holdDays: { type: integer, example: 4 }
             description: { type: string, example: الان کامل پرداخت کن، ۴ روز بعد برات ارسال می‌شه. }
         returns:
           type: object
+          required: [windowDays, policyUrl]
           properties:
             windowDays: { type: integer, example: 7 }
             policyUrl: { type: string, example: /faq#return }
         preShipmentPhoto:
           type: object
+          required: [enabled, required, channels, title, description]
           properties:
-            enabled: { type: boolean, example: true }
-            required: { type: boolean, example: true }
+            enabled: { type: boolean, description: همیشه `true` (عکس قبل از ارسال قدم هر سفارش است), example: true }
+            required: { type: boolean, description: همیشه `true`, example: true }
             channels:
               type: array
+              description: همان پیام‌رسان‌های صفحه‌ی تسویه (`CheckoutContext.messengers`)
               items: { $ref: '#/components/schemas/MessengerOption' }
             title: { type: string, example: قبل از ارسال، عکس همین کیف رو می‌بینی }
             description: { type: string }
         inventory:
           type: object
+          required: [lowStockThreshold]
           properties:
             lowStockThreshold: { type: integer, example: 5 }
         auth:
           type: object
+          required: [otpLength, resendCooldownSeconds]
           properties:
             otpLength: { type: integer, example: 5 }
             resendCooldownSeconds: { type: integer, example: 120 }
         support:
           type: object
+          required: [phone, phoneDisplay, email, emailResponseHint, responseTimeHint, hours, isOpenNow]
           properties:
-            phone: { type: string, example: '02191001234' }
-            phoneDisplay: { type: string, example: ۰۲۱-۹۱۰۰۱۲۳۴ }
-            email: { type: string, format: email, example: support@kiva.ir }
+            phone: { type: string, nullable: true, example: '02191001234' }
+            phoneDisplay:
+              type: string
+              nullable: true
+              description: 'ساخته‌ی سرور از `phone` با ارقام فارسی: ثابت `۰۲۱-۹۱۰۰۱۲۳۴`، موبایل `۰۹۱۲-۳۴۵-۶۷۸۹`؛ بی‌شماره `null`'
+              example: ۰۲۱-۹۱۰۰۱۲۳۴
+            email: { type: string, format: email, nullable: true, example: support@kiva.ir }
             emailResponseHint: { type: string, example: پاسخ تا ۲۴ ساعت }
             responseTimeHint: { type: string, example: معمولاً کمتر از یک ساعت جواب می‌دیم }
             hours:
               type: array
               items: { $ref: '#/components/schemas/SupportHours' }
-            isOpenNow: { type: boolean, description: «الان پاسخگوییم» / «خارج از ساعت کاری» (محاسبه با ساعت تهران) }
+            isOpenNow:
+              type: boolean
+              description: |
+                «الان پاسخگوییم» / «خارج از ساعت کاری»، با ساعت تهران: الان در یکی از ردیف‌های `hours` است که روز امروز را دارد،
+                `from ≤ الان < to` و `messengerOnly` ش `false` است. ردیف بی‌ساعت یا «فقط پیام‌رسان» هیچ‌وقت `true` نمی‌دهد.
+                به خاطر کش تا ۵ دقیقه ممکن است کهنه باشد.
         social:
           type: array
           items: { $ref: '#/components/schemas/SocialLink' }
         paymentGateways:
           type: array
+          description: همان درگاه‌های صفحه‌ی تسویه، با همان `available` و `isDefault`
           items: { $ref: '#/components/schemas/PaymentGateway' }
         productPerks:
           type: array
@@ -7565,6 +7646,7 @@ components:
           type: array
           items:
             type: object
+            required: [type, label, imageUrl, linkUrl]
             properties:
               type: { type: string, enum: [ENAMAD, SAMANDEHI] }
               label: { type: string, example: نماد اعتماد الکترونیکی }
@@ -7574,18 +7656,20 @@ components:
           type: array
           items:
             type: object
+            required: [group, links]
             properties:
               group: { type: string, example: راهنمای خرید }
               links:
                 type: array
                 items:
                   type: object
+                  required: [label, url]
                   properties:
                     label: { type: string, example: کدهای رهگیری روزانه }
                     url: { type: string, example: /track#daily }
         features:
           type: object
-          description: feature flagها
+          description: 'feature flagها، همان `features` ِ تنظیمات (`wishlistShare`، `reviewMedia`، `giftWrap`)'
           additionalProperties: { type: boolean }
           example: { wishlistShare: false, reviewMedia: false, giftWrap: false }
 
@@ -7741,32 +7825,64 @@ components:
     # ============ FAQ / CONTACT / PAGES ============
     FaqItem:
       type: object
+      required: [id, question, answer, questionHighlighted, answerHighlighted, sortOrder]
       properties:
         id: { type: integer, example: 7 }
         question: { type: string, example: رزرو ۴ روزه چطور کار می‌کنه؟ }
         answer: { $ref: '#/components/schemas/HtmlString' }
-        questionHighlighted: { type: string, nullable: true, description: با `<mark>` وقتی q داریم }
-        answerHighlighted: { type: string, nullable: true }
-        sortOrder: { type: integer }
+        questionHighlighted:
+          type: string
+          nullable: true
+          description: 'فقط با `q`: متن سؤال، **escape‌شده**، با `<mark>` دور هر تطابق (پس با `innerHTML` امن است)؛ بی `q` `null`'
+        answerHighlighted:
+          type: string
+          nullable: true
+          description: 'فقط با `q`: همان `answer` با `<mark>` دور هر تطابق، فقط داخل متن (نه داخل تگ یا آدرس)؛ بی `q` `null`'
+        sortOrder: { type: integer, description: جای سؤال در گروه (۰، ۱، …) }
     FaqGroup:
       type: object
+      required: [id, name, icon, isSignature, sortOrder, questions]
       properties:
         id: { type: string, description: 'anchor لینک مستقیم — photo / order / reserve / shipping / return / payment / account', example: reserve }
         name: { type: string, example: رزرو ۴ روزه }
-        icon: { $ref: '#/components/schemas/IconName' }
+        icon: { type: string, nullable: true, allOf: [{ $ref: '#/components/schemas/IconName' }] }
         isSignature: { type: boolean, description: تگ «امضای کیوا», example: false }
-        sortOrder: { type: integer }
+        sortOrder: { type: integer, description: جای گروه (۰، ۱، …) }
         questions:
           type: array
           items: { $ref: '#/components/schemas/FaqItem' }
+    FaqItemInput:
+      type: object
+      description: 'یک سؤال در بدنه‌ی `PUT /admin/faq/groups`. با `id` همان سؤال (حتی اگر به گروه دیگری رفته باشد)، بی `id` سؤال تازه'
+      required: [question, answer]
+      properties:
+        id: { type: integer, nullable: true, description: '`id` ِ ناشناخته ← `FAQ_ITEM_NOT_FOUND`؛ تکراری ← `LIST_ITEM_DUPLICATE`' }
+        question: { type: string, minLength: 1, maxLength: 300, description: '`QUESTION_REQUIRED` / `TEXT_TOO_LONG`' }
+        answer: { type: string, description: 'HTML؛ بعد از پاک‌سازی (`HtmlString`) ۱ تا ۵۰۰۰ نویسه (`ANSWER_REQUIRED` / `TEXT_TOO_LONG`)' }
+    FaqGroupInput:
+      type: object
+      description: یک گروه در بدنه‌ی `PUT /admin/faq/groups`؛ ترتیب گروه‌ها و سؤال‌ها = ترتیب آرایه‌ها (`sortOrder` اگر بیاید نادیده)
+      required: [id, name, questions]
+      properties:
+        id: { type: string, pattern: '^[a-z][a-z0-9-]{1,30}$', description: 'anchor، یکتا (`FAQ_ANCHOR_INVALID` / `FAQ_ANCHOR_DUPLICATE`)' }
+        name: { type: string, minLength: 1, maxLength: 60, description: '`FAQ_GROUP_NAME_REQUIRED` / `TEXT_TOO_LONG`' }
+        icon: { type: string, nullable: true, description: 'اسم آیکن (`ICON_INVALID`)' }
+        isSignature: { type: boolean, default: false }
+        questions:
+          type: array
+          maxItems: 50
+          description: 'حداکثر ۵۰ (`FAQ_TOO_MANY` با `meta.maxItems`)'
+          items: { $ref: '#/components/schemas/FaqItemInput' }
     FaqResponse:
       type: object
+      required: [groups, totalMatches, emptyMessage]
       properties:
         groups:
           type: array
+          description: 'با `q` فقط گروه‌هایی که سؤال جور دارند، و در هر گروه فقط سؤال‌های جور'
           items: { $ref: '#/components/schemas/FaqGroup' }
-        totalMatches: { type: integer, example: 3 }
-        emptyMessage: { type: string, nullable: true, example: سوالی با این کلمه پیدا نکردیم؛ از پشتیبانی بپرس }
+        totalMatches: { type: integer, description: 'با `q` تعداد سؤال‌های جور؛ بی `q` تعداد همه‌ی سؤال‌ها', example: 3 }
+        emptyMessage: { type: string, nullable: true, description: 'فقط وقتی `groups` خالی است', example: سوالی با این کلمه پیدا نکردیم؛ از پشتیبانی بپرس }
     ContactTopic:
       type: string
       enum: [ORDER_FOLLOWUP, PRODUCT_QUESTION, RETURN, COLLABORATION, OTHER]
@@ -7811,12 +7927,40 @@ components:
         unsubscribedAt: { type: string, format: date-time, nullable: true }
     StaticPage:
       type: object
+      required: [slug, title, content, updatedAt, seo]
       properties:
         slug: { type: string, example: terms }
         title: { type: string, example: قوانین و حریم خصوصی }
         content: { $ref: '#/components/schemas/HtmlString' }
         updatedAt: { type: string, format: date-time }
-        seo: { $ref: '#/components/schemas/SeoMeta' }
+        seo:
+          type: object
+          required: [title, description, canonicalUrl, ogImageUrl, noIndex]
+          description: '`SeoMeta` ِ صفحه: `title` بی‌مقدار ← «عنوان صفحه | کیوا»؛ `canonicalUrl` همیشه `{سایت}/pages/{slug}`؛ `ogImageUrl` فعلاً `null`'
+          properties:
+            title: { type: string }
+            description: { type: string, nullable: true }
+            canonicalUrl: { type: string, format: uri }
+            ogImageUrl: { type: string, format: uri, nullable: true }
+            noIndex: { type: boolean }
+    StaticPageUpsertRequest:
+      type: object
+      description: |
+        بدنه‌ی `PUT /admin/pages/{slug}`. `slug` یا نیاید یا همان مسیر باشد (`400 SLUG_IMMUTABLE`). `title` ۱ تا ۱۲۰
+        (`PAGE_TITLE_REQUIRED` / `TEXT_TOO_LONG`)؛ `content` HTML که بعد از پاک‌سازی (`HtmlString`) ۱ تا ۵۰٬۰۰۰ نویسه است
+        (`PAGE_CONTENT_REQUIRED` / `TEXT_TOO_LONG`). `seo`: `title` ≤ ۷۰، `description` ≤ ۱۷۰، `noIndex`؛ بقیه‌ی `SeoMeta` نادیده.
+      required: [title, content]
+      properties:
+        slug: { type: string, nullable: true }
+        title: { type: string, minLength: 1, maxLength: 120 }
+        content: { type: string }
+        seo:
+          type: object
+          nullable: true
+          properties:
+            title: { type: string, nullable: true, maxLength: 70 }
+            description: { type: string, nullable: true, maxLength: 170 }
+            noIndex: { type: boolean, default: false }
     AdminStaticPageSummary:
       type: object
       description: یک ردیف لیست صفحه‌های ثابت در پنل

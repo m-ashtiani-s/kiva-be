@@ -226,7 +226,7 @@ object ErrorMessages {
         "OTP_PURPOSE_INVALID" to "از اینجا فقط کد ورود (LOGIN) فرستاده می‌شه",
         // --- panel: catalog, media and the change log (roadmap phase 1) ---
         "FIELD_REQUIRED" to "این فیلد رو باید پر کنی",
-        "SLUG_IMMUTABLE" to "آدرس (slug) بعد از ساخت عوض نمی‌شه؛ برای آدرس دیگه، محصول تازه بساز",
+        "SLUG_IMMUTABLE" to "آدرس (slug) بعد از ساخت عوض نمی‌شه",
         "SKU_IMMUTABLE" to "کد کالا (SKU) بعد از ساخت عوض نمی‌شه",
         "COLOR_KEY_IMMUTABLE" to "کلید رنگ عوض نمی‌شه؛ برای رنگ دیگه، رنگ تازه اضافه کن",
         "IF_MATCH_INVALID" to "نسخه‌ی فرستاده‌شده (If-Match) درست نیست؛ صفحه رو تازه کن",
@@ -349,6 +349,19 @@ object ErrorMessages {
         "RATING_INVALID" to "امتیاز باید عددی بین ۰ و ۵ با حداکثر یه رقم اعشار باشه، مثل 4.9",
         "SATISFACTION_METRIC_INVALID" to "معیار رضایت باید یکی از PHOTO_MATCH، QUALITY، SHIPPING_SPEED، PACKAGING یا SUPPORT باشه",
         "SOCIAL_CHANNEL_INVALID" to "شبکه باید یکی از RUBIKA، TELEGRAM، BALE یا INSTAGRAM باشه",
+        // --- static pages, FAQ and the announcement bar (phase 5) ---
+        "PAGE_TITLE_REQUIRED" to "عنوان صفحه رو بنویس",
+        "PAGE_CONTENT_REQUIRED" to "متن صفحه خالیه (یا بعد از پاک‌سازی چیزی ازش نموند)",
+        "FAQ_ANCHOR_INVALID" to "شناسه‌ی گروه باید ۲ تا ۳۱ حرف کوچک انگلیسی، رقم یا خط تیره باشه و با حرف شروع بشه، مثل reserve",
+        "FAQ_ANCHOR_DUPLICATE" to "دو گروه نمی‌تونن یه شناسه داشته باشن",
+        "FAQ_GROUP_NAME_REQUIRED" to "اسم گروه رو بنویس",
+        "FAQ_ITEM_NOT_FOUND" to "این سؤال پیدا نشد؛ صفحه رو دوباره باز کن",
+        "FAQ_TOO_MANY" to "حداکثر {maxItems} مورد می‌شه گذاشت",
+        "QUESTION_REQUIRED" to "متن سؤال رو بنویس",
+        "ANSWER_REQUIRED" to "جواب خالیه (یا بعد از پاک‌سازی چیزی ازش نموند)",
+        "ANNOUNCEMENT_TEXT_REQUIRED" to "متن اطلاعیه رو بنویس",
+        "ANNOUNCEMENT_NOT_FOUND" to "این اطلاعیه پیدا نشد؛ صفحه رو دوباره باز کن",
+        "URL_INVALID" to "لینک باید با https:// یا با یه / (مثل /faq#reserve) شروع بشه و حداکثر ۳۰۰ حرف باشه",
     )
 
     // Used when a code has no text of its own (or its placeholders can't be filled).

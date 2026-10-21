@@ -2887,7 +2887,7 @@ Route: 200 با AdminSettings ِ تازه
 
 | گام | عنوان | اندازه | وضعیت |
 |---|---|---|---|
-| ۵.۰ | کانترکت 1.12.0 | S | ⬜ |
+| ۵.۰ | کانترکت 1.12.0 | S | ✅ |
 | ۵.۱ | صفحه‌های ثابت، و لینک نسبی در HTML | M | ⬜ |
 | ۵.۲ | سؤالات متداول | M | ⬜ |
 | ۵.۳ | نوار اطلاعیه | S | ⬜ |
@@ -2910,6 +2910,16 @@ Route: 200 با AdminSettings ِ تازه
 | 10 | جستجوی سؤالات | `q` (≤ ۱۰۰) بعد از `normalizePersian`، شامل‌بودن در متن سؤال یا متن ساده‌ی جواب (HTML بدون تگ، نرمال‌شده). با `q`: فقط گروه‌هایی که سؤال جور دارن، `totalMatches` = تعداد سؤال‌های جور، و `questionHighlighted`/`answerHighlighted` با `<mark>` دور هر تطابق (فقط در متن، نه داخل تگ). بدون `q`: همه، `totalMatches` = همه‌ی سؤال‌ها، هایلایت‌ها `null`. بدون نتیجه: `emptyMessage` | کانترکت این‌ها رو مبهم گذاشته بود |
 | 11 | نوار اطلاعیه | `PUT` کل لیست، حداکثر ۱۰. `text` ۱ تا ۲۰۰، `url` `null` یا `https://` ِ کامل یا مسیر نسبی (`/…`)، `icon` ≤ ۳۰، `endsAt > startsAt` اگه هر دو هست. `id` مثل سؤالات (`400 ANNOUNCEMENT_NOT_FOUND` برای ناشناخته). ترتیب = ترتیب آرایه | کانترکت |
 | 12 | محتوای سؤالات و قانون لغو | متن سؤالات متداول **داده‌ست** و چک‌لیست انتشار باید چک کنه با قانون‌های این سند جوره (مثلاً «لغو تا قبل از تغییر وضعیت»، «استرداد با تماس تلفنی») | کانترکت یه جمله از FAQ رو نقل کرده که دیگه درست نیست |
+| 13 | شِمای ورودی جدا (تازه، گام ۵.۰) | `StaticPageUpsertRequest`، `FaqGroupInput`/`FaqItemInput` و `AnnouncementInput` فقط فیلدهایی‌ان که پنل می‌فرسته (`id` ِ اختیاری)؛ شِماهای پاسخ (`StaticPage`، `FaqGroup`، `FaqItem`، `Announcement`، `FaqResponse`، `SiteConfig`) `required` روی همه‌ی فیلدها | `id` ِ اختیاری ِ ورودی و «همیشه هست» ِ پاسخ تو یه شِما جا نمی‌شن |
+| 14 | `preShipmentPhoto.enabled`/`required` و `currency.code` (تازه، گام ۵.۰) | هر دو همیشه `true` و `IRT`، ثابت کد | عکس قبل از ارسال قدم ِ هر سفارشه (فاز ۲)؛ خاموش کردنش ماشین وضعیت دیگه‌ای می‌خواد، نه یه پرچم |
+| 15 | `isOpenNow` (تازه، گام ۵.۰) | الان (تهران) در یکی از ردیف‌های `supportHours` که روز امروز رو داره، `from ≤ الان < to` و `messengerOnly = false`. ردیف بی‌ساعت یا «فقط پیام‌رسان» هیچ‌وقت `true` نمی‌ده | «فقط پیام‌رسان» یعنی کسی پشت تلفن نیست |
+| 16 | پشتیبانی بی‌مقدار و `phoneDisplay` (تازه، گام ۵.۰) | `phone`/`phoneDisplay`/`email` بی‌مقدار ← `null` (تنظیمات فاز ۴ nullable ـه). `phoneDisplay` با ارقام فارسی: ثابت `۰۲۱-۹۱۰۰۱۲۳۴` (سه رقم اول، خط تیره، بقیه)، موبایل `۰۹۱۲-۳۴۵-۶۷۸۹` | کانترکت فقط مثال ثابت رو داشت |
+| 17 | تطابق و هایلایت سؤالات (تازه، گام ۵.۰؛ جایگزین بخشی از تصمیم ۱۰) | تطابق **حرف‌به‌حرف**: `ي`/`ى` ← `ی`، `ك` ← `ک`، رقم فارسی و عربی ← لاتین، حرف لاتین کوچک (طول متن عوض نمی‌شه)؛ `q` قبلش `normalizePersian` (فاصله‌های اضافه حذف). در متن سؤال و متن ساده‌ی جواب. `questionHighlighted` = متن سؤال **escape‌شده** با `<mark>`؛ `answerHighlighted` = HTML ِ جواب با `<mark>` فقط داخل text nodeها | `normalizePersian` فاصله و نیم‌فاصله رو فشرده می‌کنه و جای `<mark>` تو متن اصلی گم می‌شد؛ سؤال متن ساده‌ست و بدون escape، هایلایتش HTML ِ نوشته‌ی ادیتور رو اجرا می‌کرد |
+| 18 | `id` ِ تکراری و جابه‌جایی (تازه، گام ۵.۰) | `id` ِ سؤال یا اطلاعیه دو بار در یه بدنه ← `400 LIST_ITEM_DUPLICATE` روی دومی. سؤال با `id` ـش می‌تونه به گروه دیگه بره | جابه‌جایی بین گروه‌ها کار عادی ِ ادیتوره |
+| 19 | لینک نسبی امن (تازه، گام ۵.۰؛ دقیق‌تر ِ تصمیم ۶) | `href` اول trim؛ نویسه‌ی کنترلی ← حذف. می‌مونه: `http://`/`https://` (بی‌حساس به حروف)، `/` یا `/…` به‌جز `//` و `/\`، و `#…`. هر چیز دیگه (`faq`، `../x`، `mailto:`) `href` ـش رو از دست می‌ده | مرورگر `//evil.com` و `/\evil.com` رو هر دو آدرس خارجی می‌خونه |
+| 20 | لاگ تغییرات ِ محتوا (تازه، گام ۵.۰) | `PAGE_SAVED` (`entityId` = slug، `entityLabel` = عنوان، `changes` فقط عنوان و سئو، متن صفحه فقط «عوض شد»)؛ `FAQ_SAVED` (`entityId` = `faq`، تعداد گروه و سؤال قبل و بعد)؛ `ANNOUNCEMENTS_SAVED` (`entityId` = `announcements`، تعداد). ذخیره‌ی بی‌تغییر بدون ردیف | متن بلند تو لاگ جا نداره (بخش ۵.۱) |
+| 21 | کش ِ `GET /pages/{slug}` (تازه، گام ۵.۰) | مثل `/faq`: `ETag` و `max-age=300`؛ پنل از `GET /admin/pages` و پاسخ `PUT` می‌خونه، نه از این | صفحه‌های قانونی کم عوض می‌شن و پربازدیدن |
+| 22 | `SLUG_IMMUTABLE` (تازه، گام ۵.۰) | متن عمومی شد («آدرس بعد از ساخت عوض نمی‌شه»)، چون صفحه‌ی ثابت هم ازش استفاده می‌کنه | متن قبلی «محصول تازه بساز» می‌گفت |
 
 ### ۱۰.۳ جدول‌ها
 
@@ -2995,15 +3005,20 @@ CREATE TABLE announcement_tbl (
 | 3 | `GET /pages/{slug}`، `PUT /admin/pages/{slug}` | تصمیم ۷؛ حذف `404` از `PUT`؛ «`slug` ِ بدنه یا نیامده یا همان مسیر»؛ «`updatedAt` و `seo.canonicalUrl` فقط خواندنی» |
 | 4 | `GET /faq`، `PUT /admin/faq/groups` | تصمیم‌های ۹ و ۱۰ |
 | 5 | `PUT /admin/announcements` | تصمیم ۱۱ |
+| 6 | شِماهای ورودی (تازه، گام ۵.۰) | `StaticPageUpsertRequest`، `FaqGroupInput`، `FaqItemInput`، `AnnouncementInput` (تصمیم ۱۳)؛ `required` روی پاسخ‌ها |
+| 7 | `HtmlString` (تازه، گام ۵.۰) | قانون دقیق لینک (تصمیم ۱۹) |
+| 8 | `GET /pages/{slug}` و `GET /faq` (تازه، گام ۵.۰) | `ETag`، `304` (تصمیم ۲۱)؛ هایلایت امن و تطابق حرف‌به‌حرف (تصمیم ۱۷) |
 
 ### ۱۰.۶ گام‌ها
 
-#### گام ۵.۰: کانترکت 1.12.0 · S ⬜
+#### گام ۵.۰: کانترکت 1.12.0 · S ✅
 
 برنچ `content-basics`؛ ردیف‌های ۱۰.۵؛ متن کدهای فیلدی (`PAGE_TITLE_*`، `PAGE_CONTENT_*`، `FAQ_ANCHOR_INVALID`، `FAQ_ANCHOR_DUPLICATE`، `FAQ_ITEM_NOT_FOUND`، `FAQ_TOO_MANY`، `QUESTION_*`، `ANSWER_*`، `ANNOUNCEMENT_*`، `URL_INVALID`).
 
 **تموم شده یعنی:**
-- [ ] کانترکت معتبر، `ErrorMessagesTest` سبز.
+- [x] کانترکت معتبر، `ErrorMessagesTest` سبز.
+
+**یادداشت پیاده‌سازی:** برنچ `content-basics` از نوک فاز ۴ (`panel-settings`) ساخته شد، چون فازهای ۱ تا ۴ هنوز منتظر merge به `main` ـن. ده تصمیم تازه (۱۳ تا ۲۲ ِ ۱۰.۲) و سه ردیف تازه‌ی ۱۰.۵ (۶ تا ۸). `SiteConfig` با منبع هر بخش و `required` در هر سطح، `support.*` ِ nullable، `nonShippingWeekdays` با enum؛ چهار شِمای ورودی تازه؛ `PUT /admin/pages/{slug}` بدون `404`. YAML با PyYAML معتبره و هر ۱۳۲۸ `$ref` پیدا می‌شن. متن ۱۲ کد فیلدی تازه؛ بقیه‌ی خطاها کدهای عمومی ِ فاز ۴ان (`TEXT_TOO_LONG`، `TOO_MANY_ITEMS`، `LIST_ITEM_DUPLICATE`، `ICON_INVALID`، `DATE_RANGE_INVALID`، `DATE_TIME_INVALID`، `SLUG_INVALID`).
 
 ---
 
@@ -6176,3 +6191,4 @@ kiva {
 | ۲۹ مهر ۱۴۰۵ | ۴.۴ | Phase 4 step 4.4 | دو ستون V30 در `OrderQmTbl` و Projector، پورت `ReportQmRepository` و `ReportQmRepositoryImpl` (SQL ِ جمعی، روز تهران در خود SQL)، `GetReportOverviewUc` (روزهای خالی، کلیدهای صفر، `perMille`/`averageOf`)، `webV1AdminReports.kt` و `ProductRefHttpResponse`، تست backfill ِ V30. پنج تصمیم تازه (۳۴ تا ۳۸). ۱۲ سفارش با عدد دستی سبز؛ سه خرابکاری قرمز. کل مجموعه: ۲۶۲۴ تست، یکی قرمز (ترتیب بی‌`ORDER BY` در تست فاز ۳، در گام ۴.۵ درست شد) |
 | ۲۹ مهر ۱۴۰۵ | ۴.۵ | Phase 4 step 4.5 | `PANEL_SETTINGS_REVIEW.md` (پنج ردیف، هشت خرابکاری)، تست همزمانی ِ متن تکراری ِ کد، تست فاز ۳ با `ORDER BY`، `@ConsistentCopyVisibility` روی `DiscountTerms`، `docs/FRONTEND_PANEL_SETTINGS.md`، README. ۲۶۲۴ تست در اجرای کامل (+۱ تازه). دور با پنل و merge منتظر تو؛ سؤال باز: `meta` ِ خطای فیلد |
 | ۲۹ مهر ۱۴۰۵ | ۴.۵ | Contract 1.11.1 | `FieldError.meta` (تصمیم ۳۹، راه الف ِ صاحب پروژه)؛ `FieldErrorHttpResponse.meta` از `meta` ِ همون خطا؛ تست‌های JSON ِ دقیق به‌روز شدن (`maxSize`، `allowed`)، تست تازه در `HttpEdgeTest` |
+| ۲۹ مهر ۱۴۰۵ | ۵.۰ | Phase 5 step 5.0 | کانترکت 1.12.0 با هر ۵ ردیف ِ ۱۰.۵ و سه ردیف تازه (۶ تا ۸)؛ ده تصمیم تازه (۱۳ تا ۲۲). YAML معتبر، ۱۳۲۸ `$ref`. متن ۱۲ کد تازه. برنچ `content-basics` از نوک فاز ۴ |
