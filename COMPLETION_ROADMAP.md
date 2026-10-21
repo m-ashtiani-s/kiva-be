@@ -3116,7 +3116,7 @@ CREATE TABLE announcement_tbl (
 | گام | عنوان | کِی | وضعیت |
 |---|---|---|---|
 | ۶.۱ | پنل روی سرور (زودهنگام) | بعد از فاز ۱ | 🔧 |
-| ۶.۲ | مدیا روی سرور | با ۶.۱ | ⬜ |
+| ۶.۲ | مدیا روی سرور | با ۶.۱ | 🔧 |
 | ۶.۳ | بکاپ روزانه و تست بازگردانی | قبل از اولین پرداخت واقعی | ⬜ |
 | ۶.۴ | اسکریپت یک‌دستوره‌ی deploy | قبل از ۶.۹ | ⬜ |
 | ۶.۵ | امنیت سرور | قبل از ۶.۹ | ⬜ |
@@ -3139,7 +3139,7 @@ CREATE TABLE announcement_tbl (
 
 **یادداشت پیاده‌سازی:** `tools/ops/` و `LAUNCH.md` (پیش از گام‌ها و گام ۶.۱). `nginx/admin.kivashop.ir.http.conf` (پورت ۸۰، فقط برای certbot و redirect) و `nginx/admin.kivashop.ir.conf` (۴۴۳، `X-Frame-Options DENY`، `noindex`، بدنه‌ی ۱ مگ)، `nginx/kiva-proxy-params.conf` (یه `X-Forwarded-For` ِ واقعی، نه چیزی که کلاینت نوشته)، `deploy-fe.ps1` و `deploy-fe-remote.sh` (`app`، `app.prev`، `app.failed`، `.pm2`؛ standalone یا npm خودش تشخیص داده می‌شه؛ ۶۰ ثانیه صبر روی `127.0.0.1` و برگشت خودکار)، `fe/*.build.env`، `set-env.sh` (رازها با `read -rsp` و دو بار)، `install-ops.sh`، `.gitattributes` (فایل‌های سرور همیشه LF). بسته‌بندی با یه پروژه‌ی Next ِ ساختگی در هر دو حالت امتحان شد؛ دو باگ ِ PowerShell 5.1 (stderr ِ ابزار با `Stop`، و پوشه‌ی بی‌git) پیدا و درست شد.
 
-#### گام ۶.۲: مدیا روی سرور
+#### گام ۶.۲: مدیا روی سرور · 🔧
 
 - `apt install libvips-tools ffmpeg` (از mirror ِ آروان).
 - پوشه: `/var/lib/kiva/media` (مالک `kiva`، `750`)؛ `KIVA_MEDIA_ROOT=/var/lib/kiva/media`، `KIVA_MEDIA_PUBLIC_URL=https://api.kivashop.ir/media`، `KIVA_MEDIA_SERVE_LOCALLY=false`.
@@ -3147,6 +3147,8 @@ CREATE TABLE announcement_tbl (
 - **حد آپلود CDN آروان** رو تو پنلش چک کن؛ اگه کمتر از ۲۰۰ مگه، سقف ویدیوی `MediaLimitsPolicy` باید پایین بیاد.
 
 **تموم شده یعنی:** آپلود یه عکس و یه ویدیو از پنل روی سرور کار می‌کنه و فایل‌ها از `https://api.kivashop.ir/media/...` با هدر `immutable` باز می‌شن.
+
+**یادداشت پیاده‌سازی:** `nginx/kiva-http.conf` (zoneها و `map` ِ CORS ِ ۴۲۹، در http context) و `nginx/api.kivashop.ir.conf` (مرجع کامل بلوک API: `/media/` با `immutable` و `nosniff`، `admin/media` با `210m` و `proxy_request_buffering off`، `me/uploads` با `55m`). پوشه‌ی مدیا `kiva:www-data` با `2750` و `UMask=0027` در unit (تصمیم ۴). سقف آپلود CDN با خودت (سؤال باز ۴).
 
 #### گام ۶.۳: بکاپ روزانه و تست بازگردانی
 
@@ -3215,6 +3217,7 @@ CREATE TABLE announcement_tbl (
 | ۱ | ۶.۱ | **کار روی سرور با صاحب پروژه‌ست.** این برنچ اسکریپت، فایل مرجع و دستور کار (`LAUNCH.md`) می‌سازه و تست می‌کنه؛ به سرور وصل نمی‌شه. وضعیت 🔧 یعنی «از طرف ریپو آماده و تست‌شده، اجرای روی سرور مونده»؛ ✅ بعد از «تموم شده یعنی» ِ روی سرور. |
 | ۲ | ۶.۱ | **فرض‌های layout** (مسیرها، کاربرها، پورت‌ها، webroot) اول `LAUNCH.md` با دستور چکشون اومده؛ هر کدوم با متغیر محیطی ِ اسکریپت یا پارامتر `deploy-fe.ps1` عوض می‌شه. |
 | ۳ | ۶.۱ | **هر متغیر `kiva.env` فقط با `set-env.sh`:** خط سر جاش عوض می‌شه، فایل `root` و `600` می‌مونه، نسخه‌ی قبلی `kiva.env.previous`، و راز با `--secret` (نمایش داده نمی‌شه و دو بار پرسیده می‌شه). |
+| ۴ | ۶.۲ | **پوشه‌ی مدیا `kiva:www-data` با `2750`، و `UMask=0027`.** «مالک `kiva`، `750`» ِ گام ۶.۲ تنها، nginx (`www-data`) رو بیرون می‌ذاشت؛ گروه `www-data` با setgid یعنی nginx می‌خونه، برنامه می‌نویسه، و کس دیگه‌ای هیچ‌کدوم. |
 
 ---
 
@@ -6225,3 +6228,4 @@ kiva {
 | ۲۹ مهر ۱۴۰۵ | ۵.۴ | Phase 5 step 5.4 | `SupportHours.isOpenAt`، `SiteContentRepository`، `GetSiteConfigUc`، `SiteConfigHttpResponse` (متن‌های پرشده، `phoneDisplay`)، `GET /config` ِ کش‌شونده، نگاشت‌های مشترک با پاسخ تنظیمات. تصمیم ۲۵. دو خرابکاری قرمز |
 | ۲۹ مهر ۱۴۰۵ | ۵.۵ | Phase 5 step 5.5 | `CONTENT_REVIEW.md` (سه ردیف، دوازده خرابکاری)، `docs/FRONTEND_CONTENT.md`، README، حافظه‌ی daemon ِ Kotlin. ۲۷۲۲ تست سبز. دور با پنل و merge منتظر تو |
 | ۲۹ مهر ۱۴۰۵ | ۶.۱ | Phase 6 step 6.1 | `tools/ops/` و `LAUNCH.md`: nginx ِ پنل، deploy ِ فرانت با برگشت خودکار، `set-env.sh`، `install-ops.sh`، `.gitattributes`. برنچ `launch` از نوک فاز ۵. کار روی سرور با خودت |
+| ۲۹ مهر ۱۴۰۵ | ۶.۲ | Phase 6 step 6.2 | مرجع nginx ِ API (مدیا با `immutable`، دو آپلود) و `kiva-http.conf`؛ پوشه‌ی مدیا `kiva:www-data` ‏`2750` |

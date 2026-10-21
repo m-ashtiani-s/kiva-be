@@ -110,3 +110,52 @@ pm2 startup systemd -u kivabo --hp /opt/kiva-bo     # pm2-kivabo.service، با 
 ```
 
 **تموم شده یعنی:** با موبایلت در `https://admin.kivashop.ir` وارد می‌شی، نقشت `ADMIN` ـه، و یه دسته و یه محصول می‌سازی.
+
+---
+
+## گام ۶.۲: مدیا روی سرور
+
+**۱. ابزارها** (از mirror ِ آروان):
+
+```bash
+apt install -y libvips-tools ffmpeg
+vips --version && ffmpeg -version | head -n 1
+```
+
+**۲. پوشه.** مالک `kiva`، گروه `www-data` تا nginx بخونه و هیچ‌کس دیگه نه؛ `2` (setgid) یعنی هر پوشه‌ی تازه‌ای که برنامه می‌سازه هم گروه `www-data` می‌گیره:
+
+```bash
+install -d -o kiva -g www-data -m 750  /var/lib/kiva
+install -d -o kiva -g www-data -m 2750 /var/lib/kiva/media
+/opt/kiva-ops/set-env.sh KIVA_MEDIA_ROOT            # /var/lib/kiva/media
+/opt/kiva-ops/set-env.sh KIVA_MEDIA_PUBLIC_URL      # https://api.kivashop.ir/media
+/opt/kiva-ops/set-env.sh KIVA_MEDIA_SERVE_LOCALLY   # false
+```
+
+فایل‌ها باید برای گروه خوندنی باشن: unit ِ `kiva` باید `UMask=0027` داشته باشه (مرجعش `/opt/kiva-ops/systemd/kiva.service`). اگه نداره و هنوز به گام ۶.۴ نرسیدی: `systemctl edit kiva` و
+
+```ini
+[Service]
+UMask=0027
+```
+
+**۳. nginx ِ API.** فایل http-context (zoneهای محدودیت گام ۶.۵ هم توشن و تا اون موقع بی‌اثرن) و از مرجع، فقط `location /media/` و دو `location = …` ِ آپلود رو به بلوک ۴۴۳ ِ فعلی ِ `api.kivashop.ir` اضافه کن:
+
+```bash
+cp /opt/kiva-ops/nginx/kiva-http.conf /etc/nginx/conf.d/
+cp /opt/kiva-ops/nginx/kiva-proxy-params.conf /etc/nginx/snippets/     # اگه در ۶.۱ نکردی
+diff <(nginx -T 2>/dev/null | sed -n '/server_name api.kivashop.ir/,/^}/p') /opt/kiva-ops/nginx/api.kivashop.ir.conf
+nano /etc/nginx/sites-available/api.kivashop.ir
+nginx -t && systemctl reload nginx && systemctl restart kiva
+```
+
+بقیه‌ی API همون `client_max_body_size 1m` می‌مونه؛ آپلود پنل `210m` با `proxy_read_timeout 120s`، آپلود مشتری (فاز ۷) `55m`.
+
+**۴. سقف آپلود CDN ِ آروان.** در پنل آروان، تنظیمات CDN ِ `kivashop.ir`، حداکثر حجم درخواست رو ببین. کمتر از ۲۰۰ مگ بود؟ سقف ویدیوی `MediaLimitsPolicy` باید پایین بیاد (یه تغییر کد و یه ردیف کانترکت؛ خبرم کن). عددش رو تو گزارش کار بنویس (سؤال باز ۴).
+
+**تموم شده یعنی:** یه عکس و یه ویدیو از پنل آپلود می‌شن، و:
+
+```bash
+f=$(find /var/lib/kiva/media -name '*.webp' | head -n 1); curl -sI "https://api.kivashop.ir/media/${f#/var/lib/kiva/media/}" | grep -i cache-control
+#   cache-control: public, max-age=31536000, immutable
+```
