@@ -56,6 +56,7 @@ object AuditTexts {
             AuditAction.DISCOUNT_CODE_DEACTIVATED -> "کد تخفیف $name غیرفعال شد"
             AuditAction.PAGE_SAVED -> "صفحه‌ی $name ذخیره شد"
             AuditAction.FAQ_SAVED -> "سؤالات متداول ذخیره شد"
+            AuditAction.ANNOUNCEMENTS_SAVED -> "نوار اطلاعیه ذخیره شد"
         }
     }
 

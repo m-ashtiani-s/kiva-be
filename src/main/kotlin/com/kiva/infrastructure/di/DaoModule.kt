@@ -12,6 +12,7 @@ import com.kiva.application.repository.ProductQmRepository
 import com.kiva.application.repository.ReportQmRepository
 import com.kiva.domain.aggregate.address.repository.AddressBookRepository
 import com.kiva.domain.aggregate.address.repository.AddressIdGenerator
+import com.kiva.domain.aggregate.announcement.repository.AnnouncementBarRepository
 import com.kiva.domain.aggregate.cart.repository.CartIdGenerator
 import com.kiva.domain.aggregate.cart.repository.CartRepository
 import com.kiva.domain.aggregate.category.repository.CategoryIdGenerator
@@ -48,6 +49,7 @@ import com.kiva.infrastructure.payment.RandomPaymentIds
 import com.kiva.infrastructure.persistence.exposed.AddressBookRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.AddressIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.AdminCustomerRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.AnnouncementBarRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.AuditLogQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.AuditTrailImpl
 import com.kiva.infrastructure.persistence.exposed.AuthSessionRepositoryImpl
@@ -131,6 +133,7 @@ val daoModule = module(createdAtStart = true) {
     single<ReportQmRepository> { ReportQmRepositoryImpl() }
     single<StaticPageRepository> { StaticPageRepositoryImpl() }
     single<FaqRepository> { FaqRepositoryImpl() }
+    single<AnnouncementBarRepository> { AnnouncementBarRepositoryImpl() }
     single<MediaRepository> { MediaRepositoryImpl() }
     single<MediaIdGenerator> { RandomMediaIds() }
 }

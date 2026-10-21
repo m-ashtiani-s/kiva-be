@@ -21,10 +21,12 @@ import com.kiva.application.usecase.catalog.usecase.query.GetAdminColorUc
 import com.kiva.application.usecase.catalog.usecase.query.GetAdminMaterialUc
 import com.kiva.application.usecase.catalog.usecase.query.ListAdminCategoriesUc
 import com.kiva.application.usecase.catalog.usecase.query.ListAdminMaterialsUc
+import com.kiva.application.usecase.content.usecase.command.SaveAnnouncementsUc
 import com.kiva.application.usecase.content.usecase.command.SaveFaqUc
 import com.kiva.application.usecase.content.usecase.command.SavePageUc
 import com.kiva.application.usecase.content.usecase.query.GetFaqUc
 import com.kiva.application.usecase.content.usecase.query.GetPageUc
+import com.kiva.application.usecase.content.usecase.query.ListAnnouncementsUc
 import com.kiva.application.usecase.content.usecase.query.ListFaqForEditUc
 import com.kiva.application.usecase.content.usecase.query.ListPagesUc
 import com.kiva.application.usecase.discount.DiscountCodeReferences
@@ -93,6 +95,7 @@ import com.kiva.infrastructure.media.RandomMediaIds
 import com.kiva.infrastructure.payment.PaymentConfig
 import com.kiva.infrastructure.persistence.exposed.AddressBookRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.AdminCustomerRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.AnnouncementBarRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.AuditLogQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.AuditTrailImpl
 import com.kiva.infrastructure.persistence.exposed.AuthSessionRepositoryImpl
@@ -300,9 +303,11 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
     val pages = StaticPageRepositoryImpl()
     val getPage = GetPageUc(transactions, pages)
     val faq = FaqRepositoryImpl()
+    val announcements = AnnouncementBarRepositoryImpl()
     val adminContent = AdminContentUseCases(
         checkPanelAccess, ListPagesUc(transactions, pages), getPage, SavePageUc(transactions, pages, JsoupHtmlSanitizer, auditTrail, clock),
         ListFaqForEditUc(transactions, faq), SaveFaqUc(transactions, faq, JsoupHtmlSanitizer, auditTrail, clock),
+        ListAnnouncementsUc(transactions, announcements), SaveAnnouncementsUc(transactions, announcements, auditTrail, clock),
     )
     val content = ContentUseCases(getPage, GetFaqUc(transactions, faq, JsoupHtmlText))
 

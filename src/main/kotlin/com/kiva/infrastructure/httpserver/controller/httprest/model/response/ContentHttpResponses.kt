@@ -1,5 +1,6 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.model.response
 
+import com.kiva.application.dto.AnnouncementDto
 import com.kiva.application.dto.FaqGroupDto
 import com.kiva.application.dto.FaqPageDto
 import com.kiva.application.dto.StaticPageDto
@@ -97,4 +98,22 @@ data class FaqResponseHttpResponse(val groups: List<FaqGroupHttpResponse>, val t
 /** The Persian texts of the content endpoints. */
 object ContentTexts {
     const val FAQ_EMPTY = "سوالی با این کلمه پیدا نکردیم؛ از پشتیبانی بپرس"
+}
+
+/** Contract schema `Announcement`; `sortOrder` is the place in the list. */
+@Serializable
+data class AnnouncementHttpResponse(
+    val id: Long,
+    val icon: String?,
+    val text: String,
+    val url: String?,
+    val sortOrder: Int,
+    val startsAt: String?,
+    val endsAt: String?,
+) {
+    companion object {
+        fun listOf(items: List<AnnouncementDto>): List<AnnouncementHttpResponse> = items.mapIndexed { i, it ->
+            AnnouncementHttpResponse(it.id, it.icon, it.text, it.url, i, it.startsAt?.toString(), it.endsAt?.toString())
+        }
+    }
 }

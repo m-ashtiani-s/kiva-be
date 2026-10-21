@@ -61,10 +61,12 @@ import com.kiva.application.usecase.checkout.usecase.command.StartPaymentUc
 import com.kiva.application.usecase.checkout.usecase.query.GetCheckoutContextUc
 import com.kiva.application.usecase.checkout.usecase.query.GetPaymentInitUc
 import com.kiva.application.usecase.checkout.usecase.query.GetPaymentResultUc
+import com.kiva.application.usecase.content.usecase.command.SaveAnnouncementsUc
 import com.kiva.application.usecase.content.usecase.command.SaveFaqUc
 import com.kiva.application.usecase.content.usecase.command.SavePageUc
 import com.kiva.application.usecase.content.usecase.query.GetFaqUc
 import com.kiva.application.usecase.content.usecase.query.GetPageUc
+import com.kiva.application.usecase.content.usecase.query.ListAnnouncementsUc
 import com.kiva.application.usecase.content.usecase.query.ListFaqForEditUc
 import com.kiva.application.usecase.content.usecase.query.ListPagesUc
 import com.kiva.application.usecase.discount.DiscountCodeReferences
@@ -618,6 +620,10 @@ val useCaseModule = module(createdAtStart = true) {
     single { GetFaqUc(transactionManager = get(), faqRepository = get(), htmlText = get()) }
     single { ListFaqForEditUc(transactionManager = get(), faqRepository = get()) }
     single { SaveFaqUc(transactionManager = get(), faqRepository = get(), sanitizer = get(), auditTrail = get(), clock = get()) }
+
+    // --- content: the announcement bar (phase 5) ---
+    single { ListAnnouncementsUc(transactionManager = get(), announcementBarRepository = get()) }
+    single { SaveAnnouncementsUc(transactionManager = get(), announcementBarRepository = get(), auditTrail = get(), clock = get()) }
 
     // --- admin: the change log ---
     single { ListAuditLogUc(transactionManager = get(), auditLogQmRepository = get()) }

@@ -1,5 +1,6 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.model.request
 
+import com.kiva.application.usecase.content.usecase.command.SaveAnnouncementsUc
 import com.kiva.application.usecase.content.usecase.command.SavePageUc
 import com.kiva.domain.aggregate.faq.model.FaqDraft
 import kotlinx.serialization.Serializable
@@ -39,3 +40,19 @@ data class FaqGroupInputHttpRequest(
 /** Contract schema `FaqItemInput`: a question with its id (the same question) or without (a new one). */
 @Serializable
 data class FaqItemInputHttpRequest(val id: Long? = null, val question: String? = null, val answer: String? = null)
+
+/**
+ * Contract schema `AnnouncementInput`, one announcement of the `PUT /admin/announcements` body (an array of these). The
+ * times are read as text, so a malformed one is 400 DATE_TIME_INVALID on its path; a `sortOrder` sent along is ignored.
+ */
+@Serializable
+data class AnnouncementInputHttpRequest(
+    val id: Long? = null,
+    val icon: String? = null,
+    val text: String? = null,
+    val url: String? = null,
+    val startsAt: String? = null,
+    val endsAt: String? = null,
+) {
+    fun toFields() = SaveAnnouncementsUc.Fields(id, icon, text, url, startsAt, endsAt)
+}

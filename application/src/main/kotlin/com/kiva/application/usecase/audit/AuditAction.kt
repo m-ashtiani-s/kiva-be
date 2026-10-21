@@ -55,6 +55,7 @@ enum class AuditAction {
 
     PAGE_SAVED,
     FAQ_SAVED,
+    ANNOUNCEMENTS_SAVED,
 }
 
 /** The kind of thing a panel write changed: the contract's AuditEntityType, value for value. */

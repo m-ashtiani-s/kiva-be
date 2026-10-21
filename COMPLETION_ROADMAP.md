@@ -2890,7 +2890,7 @@ Route: 200 با AdminSettings ِ تازه
 | ۵.۰ | کانترکت 1.12.0 | S | ✅ |
 | ۵.۱ | صفحه‌های ثابت، و لینک نسبی در HTML | M | ✅ |
 | ۵.۲ | سؤالات متداول | M | ✅ |
-| ۵.۳ | نوار اطلاعیه | S | ⬜ |
+| ۵.۳ | نوار اطلاعیه | S | ✅ |
 | ۵.۴ | `GET /config` | M | ⬜ |
 | ۵.۵ | ریویو | S | ⬜ |
 
@@ -3058,16 +3058,18 @@ CREATE TABLE announcement_tbl (
 
 ---
 
-#### گام ۵.۳: نوار اطلاعیه · S ⬜
+#### گام ۵.۳: نوار اطلاعیه · S ✅
 
 **می‌سازی:** `V31` (بخش اطلاعیه)؛ `AnnouncementBar`؛ دو UseCase؛ routeها.
 
 وابسته به: ۵.۰
 
 **تموم شده یعنی:**
-- [ ] ذخیره، ویرایش با `id`، حذف با نیاوردن؛ ترتیب از آرایه.
-- [ ] ۱۱ اطلاعیه ← ۴۰۰؛ `url = javascript:alert(1)` ← ۴۰۰.
-- [ ] لیست پنل اطلاعیه‌ی تموم‌شده و زمان‌بندی‌شده رو هم داره.
+- [x] ذخیره، ویرایش با `id`، حذف با نیاوردن؛ ترتیب از آرایه.
+- [x] ۱۱ اطلاعیه ← ۴۰۰؛ `url = javascript:alert(1)` ← ۴۰۰.
+- [x] لیست پنل اطلاعیه‌ی تموم‌شده و زمان‌بندی‌شده رو هم داره.
+
+**یادداشت پیاده‌سازی:** `SiteLink` (VO ِ مشترک در `common`: `https://` ِ کامل یا مسیر سایت، نه `//` و `/\`، بی فاصله، ≤ ۳۰۰؛ بنرهای فاز ۱۱ هم ازش استفاده می‌کنن)؛ دامنه: `AnnouncementId`، `AnnouncementDraft` (شکل فرم با همه‌ی خطاها و مسیرها، زمان‌ها از `MomentField` ِ صدازننده)، `AnnouncementBar` با `showingAt(now)` (برای `/config` ِ گام ۵.۴)؛ `AnnouncementBarRepository` با قفل advisory ِ `announcements` و جایگزینی کل لیست. `ListAnnouncementsUc`، `SaveAnnouncementsUc`، دو route در `webV1AdminContent.kt`؛ `ANNOUNCEMENTS_SAVED` با تعداد. تست‌ها: ۱۶ مورد ِ `SiteLink`، ۶ تست دامنه (با «الان نمایش داده می‌شه»: باز، شروع‌شده، فردا، تمام‌شده، دقیقاً الان تمام)، ۶ تست route (با دو ذخیره‌ی همزمان، ۱۰ بار). خرابکاری: بدون قفل ← `two saves at the same moment` قرمز؛ `SiteLink` بی‌قانون ← تست‌های `SiteLink` و `a javascript link … 400` قرمز.
 
 ---
 
@@ -6200,3 +6202,4 @@ kiva {
 | ۲۹ مهر ۱۴۰۵ | ۵.۰ | Phase 5 step 5.0 | کانترکت 1.12.0 با هر ۵ ردیف ِ ۱۰.۵ و سه ردیف تازه (۶ تا ۸)؛ ده تصمیم تازه (۱۳ تا ۲۲). YAML معتبر، ۱۳۲۸ `$ref`. متن ۱۲ کد تازه. برنچ `content-basics` از نوک فاز ۴ |
 | ۲۹ مهر ۱۴۰۵ | ۵.۱ | Phase 5 step 5.1 | `V31` ِ کامل با ردیف محتوای سایت، لینک نسبی امن در `JsoupHtmlSanitizer`، `PageDraft`/`StaticPage`، قفل صفحه، سه UseCase، `webV1Content.kt` و `webV1AdminContent.kt`، `PAGE_SAVED`. تصمیم ۲۳. دو خرابکاری قرمز |
 | ۲۹ مهر ۱۴۰۵ | ۵.۲ | Phase 5 step 5.2 | `FaqDraft`/`FaqBook`، قفل `faq`، `FaqSearch` و `JsoupHtmlText` (هایلایت امن)، سه UseCase، `GET /faq` ِ کش‌شونده، `FAQ_SAVED`. تصمیم ۲۴. دو خرابکاری قرمز |
+| ۲۹ مهر ۱۴۰۵ | ۵.۳ | Phase 5 step 5.3 | `SiteLink`، `AnnouncementDraft`/`AnnouncementBar` (`showingAt`)، قفل `announcements`، دو UseCase و دو route، `ANNOUNCEMENTS_SAVED`. دو خرابکاری قرمز |

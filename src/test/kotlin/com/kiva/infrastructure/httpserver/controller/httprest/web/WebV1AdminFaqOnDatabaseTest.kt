@@ -256,7 +256,7 @@ class WebV1AdminFaqOnDatabaseTest {
         val content = panel.adminContent
         val useCases = AdminContentUseCases(
             panel.checkPanelAccess, content.listPages, content.getPage, content.savePage, content.listFaq,
-            SaveFaqUc(panel.transactions, faq, JsoupHtmlSanitizer, panel.auditTrail, clock),
+            SaveFaqUc(panel.transactions, faq, JsoupHtmlSanitizer, panel.auditTrail, clock), content.listAnnouncements, content.saveAnnouncements,
         )
         testApplication {
             environment { config = MapApplicationConfig() }
