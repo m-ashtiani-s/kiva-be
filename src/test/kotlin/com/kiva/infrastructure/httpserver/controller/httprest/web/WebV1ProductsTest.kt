@@ -201,7 +201,7 @@ class WebV1ProductsTest {
         val problem = response.json().jsonObject
         assertEquals("VALIDATION_ERROR", problem["code"]!!.jsonPrimitive.content)
         assertEquals(
-            json("""[{"field":"maxPrice","code":"PRICE_RANGE_INVALID","message":"حداقل قیمت نمی‌تونه از حداکثر قیمت بیشتر باشه"}]"""),
+            json("""[{"field":"maxPrice","code":"PRICE_RANGE_INVALID","message":"حداقل قیمت نمی‌تونه از حداکثر قیمت بیشتر باشه","meta":null}]"""),
             problem["errors"],
         )
     }

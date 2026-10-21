@@ -101,8 +101,9 @@ class WebV1AdminReportsOnDatabaseTest {
         val tooLong = overview("?from=2031-05-07&to=2032-06-10")
         assertEquals(HttpStatusCode.BadRequest, tooLong.status)
         assertEquals(listOf("to DATE_RANGE_TOO_LONG"), tooLong.fieldErrors())
-        // A field's error carries no meta: the longest range is in its sentence.
-        assertEquals("بازه حداکثر ۳۶۶ روزه", tooLong.json().getValue("errors").jsonArray.single().jsonObject.text("message"))
+        val error = tooLong.json().getValue("errors").jsonArray.single().jsonObject
+        assertEquals("بازه حداکثر ۳۶۶ روزه", error.text("message"))
+        assertEquals("366", error.getValue("meta").jsonObject.text("maxDays"))
     }
 
     @Test

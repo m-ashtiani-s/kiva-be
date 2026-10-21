@@ -2650,6 +2650,7 @@ Route: 200 با AdminOrder
 | 36 | گزارش: لغو و دو نرخ عکس (تازه، گام ۴.۴) | مخرج دو نرخ عکس همه‌ی سفارش‌هاییه که اولین عکسشون تو بازه رفته، **لغوشده هم**؛ «سفارش دوره» (تصمیم ۱۷) فقط برای عددهای پولی، تعدادها، رزرو، ارسال، پیام‌رسان و پرفروش‌هاست | تعریف ۹.۳ برای این دو لغو رو کنار نذاشته؛ جواب مشتری به عکس قبل از لغو هم جوابه |
 | 37 | گزارش: `topProducts` (تازه، گام ۴.۴) | اسم، `slug` و `sku` از ردیف **امروز** ِ محصول (`productqm_tbl`)؛ `imageUrl` اولین عکس (نه ویدیو) ِ رنگ پیش‌فرض، در عرض ۴۸۰ (مثل ردیف سفارش)، یا `null`؛ `colorKey` همیشه `null` (ردیف محصوله نه رنگ). `revenue` = جمع قیمت × تعداد ِ ردیف‌ها، قبل از کد تخفیف | پنل به صفحه‌ی امروز محصول لینک می‌ده؛ سهم کد ِ هر ردیف جایی ذخیره نیست |
 | 38 | گزارش: `returnRate` و «۳۶۶ روز» (تازه، گام ۴.۴) | `returnRate` تا فاز ۷ ثابت ۰ و بدون کوئری؛ «حداکثر ۳۶۶ روز» یعنی `to − from + 1 ≤ 366` (هر دو سر شامل). `from`/`to` ِ پاسخ همون روزهای درخواست | سال کبیسه هم یه بازه‌ی کامل سالانه‌ست |
+| 39 | `meta` ِ خطای فیلد (تازه، بعد از گام ۴.۵؛ کانترکت 1.11.1) | `FieldError.meta` ِ اختیاری و nullable: همون مقدارهایی که `message` ازشون ساخته شده (`min`، `max`، `maxLength`، `maxItems`، `maxDays`، `maxSize`، `allowed`، …)؛ سرور همیشه می‌فرستدش، بی‌داده `null` | کانترکت 1.11.0 این `meta`ها رو قول داده بود ولی شِمای `FieldError` نداشتشون؛ پنل سقف رو کنار input لازم داره (انتخاب صاحب پروژه، راه الف) |
 
 ### ۹.۳ تعریف عددهای گزارش (`GET /admin/reports/overview`)
 
@@ -2772,6 +2773,7 @@ Route: 200 با AdminSettings ِ تازه
 | 8 | `DiscountCode` (تازه، گام ۴.۰) | `updatedAt` (تازه) و `required` روی فیلدهای خودش؛ سقف‌های تصمیم ۲۲؛ `409` ِ `POST`/`PUT` و توضیح `DELETE` |
 | 9 | `AdminSettings.supportPhone`/`supportEmail` (تازه، گام ۴.۰) | لازم و nullable (تصمیم ۱۹) |
 | 10 | `AdminSettings.siteStats`، `supportEmail` (تازه، گام ۴.۱) | کدهای تصمیم ۲۶؛ «خالی یعنی پاک» (تصمیم ۲۷) |
+| 11 | `FieldError` (تازه، 1.11.1) | `meta` ِ اختیاری و nullable (تصمیم ۳۹)؛ `info.version` 1.11.1 |
 
 **کدهای فیلدی تازه** (فقط متن فارسی، تو `ErrorCode` نمی‌رن): همه‌ی کدهای گام ۴.۰ و تصمیم ۲۱. `DUPLICATE_CODE`، `CHANGED_BY_SOMEONE_ELSE` و `ROLE_CHANGE_NOT_ALLOWED` از قبل تو `ErrorCode` هستن.
 
@@ -2870,7 +2872,7 @@ Route: 200 با AdminSettings ِ تازه
 - [ ] دور با پنل (پنل و kiva-fe اینجا نبودن؛ مراحلش در `PANEL_SETTINGS_REVIEW.md`).
 - [ ] merge به `main` (منتظر تأیید؛ فازهای ۱ تا ۳ هم هنوز merge نشدن).
 
-**یادداشت پیاده‌سازی:** `PANEL_SETTINGS_REVIEW.md` (ردیف‌های ۱، ۲، ۵، ۱۵ و ۱۹ با تست‌هاشون؛ هشت خرابکاری). تست تازه: دو ساخت همزمان ِ کد با یه متن (۱۰ بار)؛ بدون `catch` ِ قید یکتا دومی `500` می‌گرفت. حذف چک متن تکراری به‌تنهایی چیزی رو قرمز نمی‌کنه، چون قید یکتا دیوار دومه و همون ۴۰۹ رو می‌ده. پیدا شد و درست شد: یه تست فاز ۳ با ترتیب بی‌`ORDER BY`، و هشدار `copy()` ِ `DiscountTerms`. باز: `meta` ِ خطای فیلد در کانترکت هست ولی در `FieldError` نه (سؤال ۱ ِ فایل ریویو). `docs/FRONTEND_PANEL_SETTINGS.md` و README.
+**یادداشت پیاده‌سازی:** `PANEL_SETTINGS_REVIEW.md` (ردیف‌های ۱، ۲، ۵، ۱۵ و ۱۹ با تست‌هاشون؛ هشت خرابکاری). تست تازه: دو ساخت همزمان ِ کد با یه متن (۱۰ بار)؛ بدون `catch` ِ قید یکتا دومی `500` می‌گرفت. حذف چک متن تکراری به‌تنهایی چیزی رو قرمز نمی‌کنه، چون قید یکتا دیوار دومه و همون ۴۰۹ رو می‌ده. پیدا شد و درست شد: یه تست فاز ۳ با ترتیب بی‌`ORDER BY`، و هشدار `copy()` ِ `DiscountTerms`. `meta` ِ خطای فیلد که کانترکت قول داده بود و `FieldError` نداشت، بعد از ریویو با 1.11.1 اضافه شد (تصمیم ۳۹). `docs/FRONTEND_PANEL_SETTINGS.md` و README.
 
 ---
 
@@ -6173,3 +6175,4 @@ kiva {
 | ۲۸ مهر ۱۴۰۵ | ۴.۳ | Phase 4 step 4.3 | `GetCustomerDetailUc` و `GET /admin/customers/{customerId}`، `recentOfCustomer`، `AdminOrderItems`، فیلتر `role`، قفل نقش‌ها و خوندن دوباره‌ی انجام‌دهنده و `LAST_ADMIN` در `SetUserRolesUc`، اسکن لاگ ِ صفحه‌ی مشتری، KDoc ِ `AdminCustomer`. تصمیم ۳۳. خرابکاری قرمز. کل مجموعه دوباره اجرا نشد |
 | ۲۹ مهر ۱۴۰۵ | ۴.۴ | Phase 4 step 4.4 | دو ستون V30 در `OrderQmTbl` و Projector، پورت `ReportQmRepository` و `ReportQmRepositoryImpl` (SQL ِ جمعی، روز تهران در خود SQL)، `GetReportOverviewUc` (روزهای خالی، کلیدهای صفر، `perMille`/`averageOf`)، `webV1AdminReports.kt` و `ProductRefHttpResponse`، تست backfill ِ V30. پنج تصمیم تازه (۳۴ تا ۳۸). ۱۲ سفارش با عدد دستی سبز؛ سه خرابکاری قرمز. کل مجموعه: ۲۶۲۴ تست، یکی قرمز (ترتیب بی‌`ORDER BY` در تست فاز ۳، در گام ۴.۵ درست شد) |
 | ۲۹ مهر ۱۴۰۵ | ۴.۵ | Phase 4 step 4.5 | `PANEL_SETTINGS_REVIEW.md` (پنج ردیف، هشت خرابکاری)، تست همزمانی ِ متن تکراری ِ کد، تست فاز ۳ با `ORDER BY`، `@ConsistentCopyVisibility` روی `DiscountTerms`، `docs/FRONTEND_PANEL_SETTINGS.md`، README. ۲۶۲۴ تست در اجرای کامل (+۱ تازه). دور با پنل و merge منتظر تو؛ سؤال باز: `meta` ِ خطای فیلد |
+| ۲۹ مهر ۱۴۰۵ | ۴.۵ | Contract 1.11.1 | `FieldError.meta` (تصمیم ۳۹، راه الف ِ صاحب پروژه)؛ `FieldErrorHttpResponse.meta` از `meta` ِ همون خطا؛ تست‌های JSON ِ دقیق به‌روز شدن (`maxSize`، `allowed`)، تست تازه در `HttpEdgeTest` |

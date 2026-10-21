@@ -81,7 +81,7 @@ class PageableParamsTest {
         assertEquals(
             json(
                 """{"status":400,"code":"VALIDATION_ERROR","message":"چند تا از فیلدها رو باید درست کنی",
-                    "errors":[{"field":"page","code":"PAGE_INVALID","message":"شماره‌ی صفحه درست نیست"}],"meta":null}""",
+                    "errors":[{"field":"page","code":"PAGE_INVALID","message":"شماره‌ی صفحه درست نیست","meta":null}],"meta":null}""",
             ),
             response.problem(),
         )
@@ -92,7 +92,7 @@ class PageableParamsTest {
         val response = client.get("/products?size=61")
         assertEquals(HttpStatusCode.BadRequest, response.status)
         assertEquals(
-            json("""[{"field":"size","code":"PAGE_SIZE_INVALID","message":"تعداد آیتم‌های هر صفحه حداکثر ۶۰ تاست"}]"""),
+            json("""[{"field":"size","code":"PAGE_SIZE_INVALID","message":"تعداد آیتم‌های هر صفحه حداکثر ۶۰ تاست","meta":{"maxSize":60}}]"""),
             response.json().jsonObject.getValue("errors"),
         )
     }
@@ -101,7 +101,7 @@ class PageableParamsTest {
     fun `a sort that is not one of the options is rejected`() = withApp {
         val errors = client.get("/products?sort=password").json().jsonObject.getValue("errors")
         assertEquals(
-            json("""[{"field":"sort","code":"SORT_NOT_ALLOWED","message":"این نوع مرتب‌سازی پشتیبانی نمی‌شه"}]"""),
+            json("""[{"field":"sort","code":"SORT_NOT_ALLOWED","message":"این نوع مرتب‌سازی پشتیبانی نمی‌شه","meta":{"allowed":["bestselling","discount_desc","newest","price_asc","price_desc","rating_desc"]}}]"""),
             errors,
         )
     }

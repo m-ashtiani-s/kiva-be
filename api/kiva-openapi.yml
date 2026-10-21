@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: KIVA Store API — کیوا
-  version: 1.11.0
+  version: 1.11.1
   contact:
     name: KIVA Engineering
     email: support@kiva.ir
@@ -5423,6 +5423,14 @@ components:
             برای نمایش، `field` و `message` کافی است.
           example: PATTERN
         message: { type: string, example: کد پستی باید ۱۰ رقم باشه }
+        meta:
+          type: object
+          nullable: true
+          description: >-
+            داده‌ی کمکی همین خطا، همون عددهایی که `message` ازشون ساخته شده (`min`، `max`، `maxLength`، `maxItems`، `maxDays`، …)؛
+            خطای بی‌داده `null`. برای نمایش لازم نیست؛ برای کنار input گذاشتن سقف (از 1.11.1).
+          additionalProperties: true
+          example: { min: 0, max: 30 }
     Problem:
       type: object
       description: RFC 7807 Problem Details + کد ماشینی کیوا

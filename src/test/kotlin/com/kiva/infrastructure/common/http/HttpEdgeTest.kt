@@ -96,6 +96,13 @@ class HttpEdgeTest {
                     )
                     call.respondResult(Result.failure(failure))
                 }
+                get("/out-of-range") {
+                    val failure = TestFailure(
+                        "INVALID_SETTINGS", FailureKind.INVALID,
+                        causes = listOf(TestFailure("NUMBER_OUT_OF_RANGE", FailureKind.INVALID, field = "shippingMethods.1.maxDays", meta = mapOf("min" to 0, "max" to 30))),
+                    )
+                    call.respondResult(Result.failure(failure))
+                }
                 get("/invalid-without-field") {
                     call.respondResult(Result.failure(TestFailure("DISCOUNT_CODE_INVALID", FailureKind.INVALID)))
                 }
@@ -204,10 +211,22 @@ class HttpEdgeTest {
             assertEquals(
                 json(
                     """{"status":400,"code":"VALIDATION_ERROR","message":"چند تا از فیلدها رو باید درست کنی","errors":[
-                         {"field":"newAddress.postalCode","code":"POSTAL_CODE_INVALID","message":"کد پستی باید ۱۰ رقم باشه"},
-                         {"field":"newAddress.recipientPhone","code":"PHONE_INVALID","message":"موبایل معتبر وارد کن"}],"meta":null}""",
+                         {"field":"newAddress.postalCode","code":"POSTAL_CODE_INVALID","message":"کد پستی باید ۱۰ رقم باشه","meta":null},
+                         {"field":"newAddress.recipientPhone","code":"PHONE_INVALID","message":"موبایل معتبر وارد کن","meta":null}],"meta":null}""",
                 ),
                 response.problem(),
+            )
+        }
+
+        @Test
+        fun `a field problem carries its own meta - the limits its message was filled from (contract 1_11_1)`() = withApp {
+            assertEquals(
+                json(
+                    """{"status":400,"code":"VALIDATION_ERROR","message":"چند تا از فیلدها رو باید درست کنی","errors":[
+                         {"field":"shippingMethods.1.maxDays","code":"NUMBER_OUT_OF_RANGE","message":"این عدد باید بین ۰ و ۳۰ باشه","meta":{"min":0,"max":30}}],
+                       "meta":null}""",
+                ),
+                client.get("/out-of-range").problem(),
             )
         }
 
