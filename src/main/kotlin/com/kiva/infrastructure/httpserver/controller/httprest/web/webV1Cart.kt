@@ -1,5 +1,7 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
+import com.kiva.infrastructure.httpserver.controller.httprest.model.response.WishlistTexts
+import com.kiva.application.usecase.wishlist.usecase.command.MoveCartItemToWishlistUc
 import com.kiva.application.dto.CartChange
 import com.kiva.application.dto.CartDto
 import com.kiva.application.usecase.cart.usecase.command.AddCartItemUc
@@ -56,6 +58,7 @@ class CartUseCases(
     val mergeGuestCart: MergeGuestCartUc,
     val applyDiscountCode: ApplyDiscountCodeUc,
     val removeDiscountCode: RemoveDiscountCodeUc,
+    val moveToWishlist: MoveCartItemToWishlistUc,
 )
 
 /** The path parameter every line route names its line by. */
@@ -120,7 +123,13 @@ fun Route.webV1Cart(useCases: CartUseCases, mediaUrls: MediaUrls) {
     }
 
     // The same merge as a login with guestCartToken; a token that reaches no guest cart is 200 with the customer's cart.
+    // Moving a line to the wishlist is the customer's own cart only: a guest has no wishlist (401).
     authenticate(ACCESS) {
+        post("/cart/items/{$ITEM_ID}/move-to-wishlist") {
+            val result = useCases.moveToWishlist.execute(MoveCartItemToWishlistUc.Cmd(call.accessPrincipal().userId, call.itemIdSegment()))
+            call.respondCartMutation(useCases, mediaUrls, result) { _, _ -> WishlistTexts.MOVED }
+        }
+
         post("/cart/merge") {
             val request = call.receive<MergeCartHttpRequest>()
             val command = MergeGuestCartUc.Cmd(call.accessPrincipal().userId, request.guestCartToken)

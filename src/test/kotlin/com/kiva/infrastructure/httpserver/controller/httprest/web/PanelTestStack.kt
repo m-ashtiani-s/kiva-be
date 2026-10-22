@@ -1,5 +1,6 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
+import com.kiva.application.usecase.wishlist.usecase.command.AddWishlistToCartUc
 import com.kiva.application.usecase.wishlist.WishlistCards
 import com.kiva.application.usecase.wishlist.usecase.command.AddToWishlistUc
 import com.kiva.application.usecase.wishlist.usecase.command.ClearMyWishlistUc
@@ -381,6 +382,8 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         ClearMyWishlistUc(transactions, wishlists),
         AddToWishlistUc(transactions, wishlists, wishlistCards, clock),
         RemoveFromWishlistUc(transactions, wishlists, productQm),
+        AddWishlistToCartUc(transactions, wishlists, wishlistCards, purchase.cartBulkAdd, clock),
+        purchase.getCart,
     )
 
     val adminReviews = AdminReviewUseCases(

@@ -23,6 +23,7 @@ import com.kiva.application.usecase.auth.usecase.command.LogoutUc
 import com.kiva.application.usecase.auth.usecase.command.RefreshSessionUc
 import com.kiva.application.usecase.auth.usecase.command.SendLoginCodeUc
 import com.kiva.application.usecase.auth.usecase.command.VerifyLoginCodeUc
+import com.kiva.application.usecase.cart.CartBulkAdd
 import com.kiva.application.usecase.cart.CartCommands
 import com.kiva.application.usecase.cart.usecase.command.AddCartItemUc
 import com.kiva.application.usecase.cart.usecase.command.ApplyDiscountCodeUc
@@ -136,6 +137,8 @@ import com.kiva.application.usecase.review.RatingBook
 import com.kiva.application.usecase.review.ReviewMarks
 import com.kiva.application.usecase.wishlist.WishlistCards
 import com.kiva.application.usecase.wishlist.usecase.command.AddToWishlistUc
+import com.kiva.application.usecase.wishlist.usecase.command.AddWishlistToCartUc
+import com.kiva.application.usecase.wishlist.usecase.command.MoveCartItemToWishlistUc
 import com.kiva.application.usecase.wishlist.usecase.command.ClearMyWishlistUc
 import com.kiva.application.usecase.wishlist.usecase.command.RemoveFromWishlistUc
 import com.kiva.application.usecase.wishlist.usecase.query.GetMyWishlistIdsUc
@@ -383,7 +386,8 @@ val useCaseModule = module(createdAtStart = true) {
     single { FindSilentPhotoOrdersUc(transactionManager = get(), orderQmRepository = get(), clock = get()) }
     single { ApproveSilentPhotosUc(transactionManager = get(), orderRepository = get(), clock = get()) }
     single { GetMyOrderUc(transactionManager = get(), orderByCode = get(), orderDetails = get(), reviewMarks = get(), shopSettingsRepository = get(), clock = get()) }
-    single { ReorderUc(transactionManager = get(), orderQmRepository = get(), cartCommands = get(), cartDomainService = get()) }
+    single { CartBulkAdd(cartCommands = get(), cartDomainService = get()) }
+    single { ReorderUc(transactionManager = get(), orderQmRepository = get(), cartBulkAdd = get()) }
     single { GetOrderSummaryUc(transactionManager = get(), orderQmRepository = get(), shopSettingsRepository = get(), reservations = get(), clock = get()) }
 
     // --- geo: queries ---
@@ -693,6 +697,10 @@ val useCaseModule = module(createdAtStart = true) {
     single { ClearMyWishlistUc(transactionManager = get(), wishlistRepository = get()) }
     single { AddToWishlistUc(transactionManager = get(), wishlistRepository = get(), wishlistCards = get(), clock = get()) }
     single { RemoveFromWishlistUc(transactionManager = get(), wishlistRepository = get(), productQmRepository = get()) }
+    single {
+        AddWishlistToCartUc(transactionManager = get(), wishlistRepository = get(), wishlistCards = get(), cartBulkAdd = get(), clock = get())
+    }
+    single { MoveCartItemToWishlistUc(cartCommands = get(), cartDomainService = get(), wishlistRepository = get(), productQmRepository = get()) }
     single {
         CreateReviewUc(
             transactionManager = get(), productQmRepository = get(), reviewRepository = get(), reviewDomainService = get(), reviewPurchases = get(),

@@ -1,5 +1,8 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
+import com.kiva.infrastructure.persistence.exposed.ProductQmRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.WishlistRepositoryImpl
+import com.kiva.application.usecase.wishlist.usecase.command.MoveCartItemToWishlistUc
 import com.kiva.application.repository.OfferQmRepository
 import com.kiva.application.usecase.cart.CartCaller
 import com.kiva.application.usecase.cart.CartCommands
@@ -128,6 +131,7 @@ class WebV1CartOnDatabaseTest {
             MergeGuestCartUc(c, domain),
             ApplyDiscountCodeUc(c, domain, stack.discounts),
             RemoveDiscountCodeUc(c, domain),
+            MoveCartItemToWishlistUc(c, domain, WishlistRepositoryImpl(), ProductQmRepositoryImpl()),
         )
     }
 

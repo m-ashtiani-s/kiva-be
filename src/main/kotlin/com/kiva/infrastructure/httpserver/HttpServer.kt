@@ -333,7 +333,7 @@ fun Application.configureRouting() {
             webV1Cart(
                 CartUseCases(
                     openCartUc, getCartUc, addCartItemUc, changeCartItemUc, removeCartItemUc, clearCartUc, chooseShippingMethodUc,
-                    setCartReservationUc, mergeGuestCartUc, applyDiscountCodeUc, removeDiscountCodeUc,
+                    setCartReservationUc, mergeGuestCartUc, applyDiscountCodeUc, removeDiscountCodeUc, get(),
                 ),
                 mediaUrls,
             )
@@ -347,7 +347,7 @@ fun Application.configureRouting() {
             webV1MyReturns(MyReturnUseCases(get(), get(), get()), mediaUrls)
             webV1Reviews(ReviewUseCases(get(), get(), get(), get(), get()), mediaUrls)
             webV1MyReviews(MyReviewUseCases(get(), get(), get(), get(), get()), mediaUrls)
-            webV1Wishlist(WishlistUseCases(get(), get(), get(), get(), get()), mediaUrls, config.shop.siteUrl)
+            webV1Wishlist(WishlistUseCases(get(), get(), get(), get(), get(), get(), getCartUc), mediaUrls, config.shop.siteUrl)
             webV1Tracking(TrackingUseCases(get(), get(), get()), mediaUrls)
         }
     }

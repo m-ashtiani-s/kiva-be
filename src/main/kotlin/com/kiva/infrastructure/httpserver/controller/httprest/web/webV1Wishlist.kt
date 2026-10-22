@@ -1,5 +1,12 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
+import io.ktor.server.routing.post
+import io.ktor.server.response.respond
+import com.kiva.infrastructure.httpserver.controller.httprest.model.response.CartHttpResponse
+import com.kiva.infrastructure.httpserver.controller.httprest.model.response.WishlistAddToCartHttpResponse
+import com.kiva.infrastructure.httpserver.controller.httprest.model.request.WishlistToCartHttpRequest
+import com.kiva.application.usecase.cart.usecase.query.GetCartUc
+import com.kiva.application.usecase.wishlist.usecase.command.AddWishlistToCartUc
 import com.kiva.application.usecase.wishlist.usecase.command.AddToWishlistUc
 import com.kiva.application.usecase.wishlist.usecase.command.ClearMyWishlistUc
 import com.kiva.application.usecase.wishlist.usecase.command.RemoveFromWishlistUc
@@ -35,6 +42,8 @@ class WishlistUseCases(
     val clear: ClearMyWishlistUc,
     val add: AddToWishlistUc,
     val remove: RemoveFromWishlistUc,
+    val toCart: AddWishlistToCartUc,
+    val getCart: GetCartUc,
 )
 
 /** The path parameter of a saved product. */
@@ -73,6 +82,15 @@ fun Route.webV1Wishlist(useCases: WishlistUseCases, mediaUrls: MediaUrls, siteUr
             val request = call.optionalBody(WishlistAddHttpRequest.serializer()) ?: WishlistAddHttpRequest()
             val command = AddToWishlistUc.Cmd(call.accessPrincipal().userId, call.parameters[PRODUCT_ID].orEmpty(), request.colorKey)
             call.respondResult(useCases.add.execute(command)) { WishlistToggleHttpResponse.from(it) }
+        }
+
+        // The customer's cart after it: never refused for want of stock; what couldn't go is in `skipped`.
+        post("/me/wishlist/add-to-cart") {
+            val request = call.optionalBody(WishlistToCartHttpRequest.serializer()) ?: WishlistToCartHttpRequest()
+            val added = useCases.toCart.execute(AddWishlistToCartUc.Cmd(call.accessPrincipal().userId, request.productIds))
+                .unwrapOr { return@post call.respondFailure(it) }
+            val cart = useCases.getCart.execute(GetCartUc.Qry(added.change.cartId.value)).unwrapOr { return@post call.respondFailure(it) }
+            call.respond(WishlistAddToCartHttpResponse.from(CartHttpResponse.from(cart, added.change.issues, mediaUrls), added))
         }
 
         delete("/me/wishlist/items/{$PRODUCT_ID}") {

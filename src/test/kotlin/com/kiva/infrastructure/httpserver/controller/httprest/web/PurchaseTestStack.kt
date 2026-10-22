@@ -1,5 +1,7 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
+import com.kiva.infrastructure.persistence.exposed.WishlistRepositoryImpl
+import com.kiva.application.usecase.wishlist.usecase.command.MoveCartItemToWishlistUc
 import com.kiva.application.usecase.review.ReviewMarks
 import com.kiva.infrastructure.persistence.exposed.ProductQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ReviewRepositoryImpl
@@ -11,6 +13,7 @@ import com.kiva.application.usecase.address.usecase.command.SetDefaultAddressUc
 import com.kiva.application.usecase.address.usecase.command.UpdateAddressUc
 import com.kiva.application.usecase.address.usecase.query.GetMyAddressUc
 import com.kiva.application.usecase.address.usecase.query.ListMyAddressesUc
+import com.kiva.application.usecase.cart.CartBulkAdd
 import com.kiva.application.usecase.cart.CartCommands
 import com.kiva.application.usecase.cart.usecase.command.AddCartItemUc
 import com.kiva.application.usecase.cart.usecase.command.ApplyDiscountCodeUc
@@ -155,14 +158,15 @@ class PurchaseTestStack(val clock: MutableClock) {
     val payments = PaymentRepositoryImpl()
     val inventories = InventoryRepositoryImpl()
     val gateways = PaymentGateways(listOf(gateway))
-    private val cartDomain = CartDomainService(RandomCartIds())
+    val cartDomain = CartDomainService(RandomCartIds())
     val groups = ReservationGroupRepositoryImpl()
     val reservationDomain = ReservationDomainService(ReservationGroupIdGeneratorImpl())
     private val reservations = Reservations(groups, books, geo, orderQm, reservationDomain)
     val discountCodes = DiscountCodeRepositoryImpl()
     val redemptions = DiscountRedemptionRepositoryImpl()
     val discounts = Discounts(discountCodes, redemptions, orderQm, DiscountDomainService())
-    private val cartCommands = CartCommands(transactions, carts, cartDomain, offers, settings, reservations, discounts, clock)
+    val cartCommands = CartCommands(transactions, carts, cartDomain, offers, settings, reservations, discounts, clock)
+    val cartBulkAdd = CartBulkAdd(cartCommands, cartDomain)
     private val addressService = AddressBookDomainService(geo, AddressIdGeneratorImpl())
 
     val openCart = OpenCartUc(cartCommands, cartDomain)
@@ -221,7 +225,7 @@ class PurchaseTestStack(val clock: MutableClock) {
     val myOrderUseCases = MyOrderUseCases(
         ListMyOrdersUc(transactions, orderQm, settings, reservations, orderDetails, reviewMarks, clock),
         GetMyOrderUc(transactions, orderByCode, orderDetails, reviewMarks, settings, clock),
-        ReorderUc(transactions, orderQm, cartCommands, cartDomain),
+        ReorderUc(transactions, orderQm, cartBulkAdd),
         getCart,
         GetMyReservationUc(transactions, reservations, clock),
         GetMyOrderMediaUc(transactions, orderByCode, orderDetails),
@@ -248,6 +252,7 @@ class PurchaseTestStack(val clock: MutableClock) {
         MergeGuestCartUc(cartCommands, cartDomain),
         ApplyDiscountCodeUc(cartCommands, cartDomain, discounts),
         RemoveDiscountCodeUc(cartCommands, cartDomain),
+        MoveCartItemToWishlistUc(cartCommands, cartDomain, WishlistRepositoryImpl(), ProductQmRepositoryImpl()),
     )
 
     val addressUseCases = AddressUseCases(

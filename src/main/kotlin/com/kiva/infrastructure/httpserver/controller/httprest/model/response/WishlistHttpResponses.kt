@@ -1,5 +1,6 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.model.response
 
+import com.kiva.application.usecase.wishlist.usecase.command.AddWishlistToCartUc
 import com.kiva.application.dto.WishlistDto
 import com.kiva.application.dto.WishlistItemDto
 import com.kiva.application.dto.WishlistShareDto
@@ -97,3 +98,16 @@ data class WishlistToggleHttpResponse(val productId: Long, val wishlisted: Boole
 /** The answer of `GET /me/wishlist/ids`. */
 @Serializable
 data class WishlistIdsHttpResponse(val productIds: List<Long>, val count: Int)
+
+/** Contract schema `WishlistAddToCartResponse`: the cart after it, how many bags went in, and each product that couldn't. */
+@Serializable
+data class WishlistAddToCartHttpResponse(val cart: CartHttpResponse, val addedCount: Int, val skipped: List<ReorderSkippedHttpResponse>, val message: String) {
+    companion object {
+        fun from(cart: CartHttpResponse, added: AddWishlistToCartUc.ToCart) = WishlistAddToCartHttpResponse(
+            cart = cart,
+            addedCount = added.addedCount,
+            skipped = added.skipped.map { ReorderSkippedHttpResponse(it.productId, it.name, it.reason.name) },
+            message = WishlistTexts.addedToCart(added.addedCount),
+        )
+    }
+}
