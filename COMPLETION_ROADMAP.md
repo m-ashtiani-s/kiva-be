@@ -3261,7 +3261,7 @@ CREATE TABLE announcement_tbl (
 | ۷.۳ | درخواست مرجوعی و «مرجوعی‌های من» | M | ✅ |
 | ۷.۴ | صف پنل، تصمیم و جمع‌آوری | M | ✅ |
 | ۷.۵ | رسیدن به انبار، بستن، و استرداد ِ مرجوعی | L | ✅ |
-| ۷.۶ | ریویو و دور با پنل | M | ⬜ |
+| ۷.۶ | ریویو و دور با پنل | M | ✅ |
 
 ### ۱۲.۲ تصمیم‌های این فاز
 
@@ -3751,16 +3751,18 @@ Route: 200
 
 ---
 
-#### گام ۷.۶: ریویو و دور با پنل · M ⬜
+#### گام ۷.۶: ریویو و دور با پنل · M ✅
 
 **می‌سازی:** `RETURNS_REVIEW.md` (ردیف ۳ ِ بخش ۳ برای آپلود مشتری، و خطرهای این فاز: مدیای کاربر دیگه، دو مرجوعی، استرداد دوباره، موجودی دوباره؛ خرابکاری: چک `uploadedBy`، ایندکس یکتای «یک مرجوعی»، چک `RETURN_REFUND_EXISTS` و ایندکسش، چک مهلت، سقف ساعتی آپلود)؛ `ReturnsLogScanOnDatabaseTest` (کل مسیر؛ هیچ موبایل، متن توضیح مشتری یا شماره‌ی پیگیری بانکی تو لاگ برنامه)؛ `docs/FRONTEND_RETURNS.md` (kiva-fe: آپلود، فرم مرجوعی، «مرجوعی‌های من»؛ پنل: صف و قدم‌ها و مبلغ پیشنهادی)؛ README (چهار الگوی پیامک)؛ دور واقعی روی سرور: یه مرجوعی کامل تا استرداد، و یکی تا بستن.
 
 وابسته به: ۷.۵
 
 **تموم شده یعنی:**
-- [ ] همه‌ی خرابکاری‌ها قرمز می‌کنن و برگردونده می‌شن.
+- [x] همه‌ی خرابکاری‌ها قرمز می‌کنن و برگردونده می‌شن.
 - [ ] الگوهای پیامک در فراز تأیید و `kiva.env` به‌روز (چک‌لیست ۶.۶).
 - [ ] merge به `main` و deploy.
+
+**یادداشت پیاده‌سازی:** `RETURNS_REVIEW.md` (ردیف‌های ۱، ۳، ۶، ۹ و ۱۵ و خطرهای این فاز با تست‌هاشون؛ نه خرابکاری، همه قرمز)، `ReturnsLogScanOnDatabaseTest` (کل مسیر سه مرجوعی: استرداد، رد، بستن؛ و تست همراه)، `docs/FRONTEND_RETURNS.md`. README و چهار الگوی پیامک با ۷.۴ اومدن. کل مجموعه: ۲۸۵۴ تست سبز، ۵ skip. **مونده برای تو:** الگوهای فراز و `kiva.env`، دور واقعی روی سرور (چک‌لیست آخر `RETURNS_REVIEW.md`)، merge به `main` و deploy.
 
 ---
 
@@ -6306,3 +6308,4 @@ kiva {
 | ۲۹ مهر ۱۴۰۵ | ۷.۳ | Phase 7 step 7.3 | `POST /me/orders/{orderCode}/returns` و `GET /me/returns`: `CreateReturnUc` (قفل ۹، به ترتیب کانترکت)، `ListMyReturnsUc`، `GetMyReturnUc`، `ReturnRequests` (بدون N+1)، `ReturnRequestHttpResponse`، `ReturnTexts`؛ `returns` در صفحه‌ی سفارش. چهار تصمیم تازه (۴۰ تا ۴۳). دو خرابکاری قرمز |
 | ۳۰ مهر ۱۴۰۵ | ۷.۴ | Phase 7 step 7.4 | صف پنل (`GET /admin/returns` با `status` و `sort`)، تصمیم (تأیید/رد با `OrderReturnEnded(REJECTED)`) و جمع‌آوری؛ `ReturnByIdForPanel` (قفل‌های ۹ و ۱۰)، `AdminReturnRequests` (بدون N+1، با `suggestedRefund`)، چهار پیامک مرجوعی با مسیر کامل، چهار `AuditAction`. چهار تصمیم تازه (۴۴ تا ۴۷). خرابکاری قرمز. کل مجموعه: ۲۸۴۲ تست سبز، ۵ skip (روی Postgres ِ موقت ِ پورت ۵۴۳۳) |
 | ۳۰ مهر ۱۴۰۵ | ۷.۵ | Phase 7 step 7.5 | رسید (`ReceiveReturnUc`، برگشت به موجودی با `RETURNED`، سفارش `RETURNED`)، بستن (`CloseReturnUc`، `RETURN_REFUND_OPEN`)، استرداد ِ مرجوعی با `returnId` (`RETURN_REFUND_EXISTS`، روش ِ مرجوعی) و `COMPLETED` ← مرجوعی و سفارش `REFUNDED`. پنج تصمیم تازه (۴۸ تا ۵۲). خرابکاری قرمز. کل مجموعه: ۲۸۵۲ تست سبز، ۵ skip |
+| ۳۰ مهر ۱۴۰۵ | ۷.۶ | Phase 7 step 7.6 | `RETURNS_REVIEW.md` (نه خرابکاری، همه قرمز)، `ReturnsLogScanOnDatabaseTest`، `docs/FRONTEND_RETURNS.md`. ۲۸۵۴ تست سبز، ۵ skip. فاز ۷ از طرف ریپو کامله؛ الگوهای فراز، دور واقعی و merge منتظر تو |
