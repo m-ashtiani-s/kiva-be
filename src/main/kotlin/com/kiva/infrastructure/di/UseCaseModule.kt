@@ -1,5 +1,9 @@
 package com.kiva.infrastructure.di
 
+import com.kiva.application.usecase.stockalert.StockAlertCounts
+import com.kiva.application.usecase.stockalert.usecase.command.DeleteOldStockAlertsUc
+import com.kiva.application.usecase.stockalert.usecase.command.NotifyStockAlertUc
+import com.kiva.application.usecase.stockalert.usecase.query.FindDueStockAlertsUc
 import com.kiva.application.usecase.stockalert.usecase.query.ListMyStockAlertsUc
 import com.kiva.application.usecase.stockalert.usecase.command.CancelMyStockAlertUc
 import com.kiva.application.usecase.stockalert.usecase.command.CreateStockAlertUc
@@ -461,6 +465,7 @@ val useCaseModule = module(createdAtStart = true) {
         GetAdminProductUc(
             transactionManager = get(), productQmRepository = get(), categoryRepository = get(), materialRepository = get(), colorRepository = get(),
             userRepository = get(), shopSettingsRepository = get(), clock = get(),
+            stockAlertCounts = get(),
         )
     }
 
@@ -712,6 +717,7 @@ val useCaseModule = module(createdAtStart = true) {
     single { StockAlertDomainService(ids = get()) }
     single { StockAlerts(productQmRepository = get(), colorRepository = get(), userRepository = get()) }
     single { StockAlertFlags.of(get()) }
+    single { StockAlertCounts.of(get()) }
     single {
         CreateStockAlertUc(
             transactionManager = get(), productQmRepository = get(), stockAlertRepository = get(), stockAlertDomainService = get(), stockAlerts = get(),
@@ -720,6 +726,14 @@ val useCaseModule = module(createdAtStart = true) {
     }
     single { ListMyStockAlertsUc(transactionManager = get(), stockAlertRepository = get(), stockAlerts = get(), clock = get()) }
     single { CancelMyStockAlertUc(transactionManager = get(), stockAlertRepository = get(), clock = get()) }
+    single { FindDueStockAlertsUc(transactionManager = get(), stockAlertRepository = get()) }
+    single {
+        NotifyStockAlertUc(
+            transactionManager = get(), stockAlertRepository = get(), productQmRepository = get(), userRepository = get(), smsSender = get(),
+            siteUrl = get<AppConfig>().shop.siteUrl, clock = get(),
+        )
+    }
+    single { DeleteOldStockAlertsUc(transactionManager = get(), stockAlertRepository = get(), clock = get()) }
 
     // --- wishlist (phase 9) ---
     single { WishlistHearts.of(get()) }

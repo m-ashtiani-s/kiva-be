@@ -1,5 +1,6 @@
 package com.kiva.application.usecase.product.usecase.query
 
+import com.kiva.application.usecase.stockalert.StockAlertCounts
 import com.kiva.application.dto.ActorNameDto
 import com.kiva.application.dto.AdminProductDto
 import com.kiva.application.dto.AdminVariantDto
@@ -39,6 +40,7 @@ class GetAdminProductUc(
     private val userRepository: UserRepository,
     private val shopSettingsRepository: ShopSettingsRepository,
     private val clock: Clock,
+    private val stockAlertCounts: StockAlertCounts = StockAlertCounts.NONE,
 ) : QueryUseCase<GetAdminProductUc.Qry, AdminProductDto, GetAdminProductUc.Failure> {
 
     private val logger = getLogger()
@@ -83,6 +85,7 @@ class GetAdminProductUc(
                 publishedAt = detail.publishedOn,
                 updatedAt = detail.updatedOn,
             )
+            val waiting = stockAlertCounts.of(product.variants.map { it.variantId })
             Result.success(
                 AdminProductDto(
                     detail = shopPart,
@@ -97,8 +100,7 @@ class GetAdminProductUc(
                             stockOnHand = it.onHand,
                             stockReserved = it.reserved,
                             soldCount = it.soldCount,
-                            // Stock alerts come in phase 10.
-                            stockAlertSubscribers = 0,
+                            stockAlertSubscribers = waiting[it.variantId] ?: 0,
                         )
                     },
                     newUntil = detail.card.newUntil,

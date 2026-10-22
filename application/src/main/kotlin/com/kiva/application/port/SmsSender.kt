@@ -96,4 +96,20 @@ interface SmsSender {
      * [sendCode].
      */
     suspend fun sendReturnClosed(to: IranianMobileNumber, returnCode: ReturnCode)
+
+    /**
+     * «موجود شد» (phase 10): [productName] (at most 30 characters) is back, [link] its page in the color that came back.
+     * Sent by the job after the subscription is marked NOTIFIED and committed; when it fails, only the log knows (it is
+     * never sent twice). Throws like [sendCode].
+     */
+    suspend fun sendBackInStock(to: IranianMobileNumber, productName: String, link: String)
+
+    /**
+     * Whether an SMS of [kind] can go at all: an optional one whose pattern isn't set can't. A job that would use up
+     * what it tells (the subscriptions of «موجود شد») asks first (phase 10, decision 11). Every kind can, unless said.
+     */
+    fun canSend(kind: SmsKind): Boolean = true
 }
+
+/** The SMS a job asks [SmsSender.canSend] about before it starts. */
+enum class SmsKind { BACK_IN_STOCK }

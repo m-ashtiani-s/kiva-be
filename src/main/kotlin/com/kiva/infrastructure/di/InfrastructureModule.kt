@@ -1,5 +1,6 @@
 package com.kiva.infrastructure.di
 
+import com.kiva.infrastructure.job.EngagementJobs
 import com.kiva.application.port.AccessTokens
 import com.kiva.application.port.HtmlText
 import com.kiva.application.port.MediaProcessor
@@ -72,7 +73,8 @@ fun infrastructureModule(config: AppConfig, database: Database) = module {
             findDueScheduledProducts = get(), publishScheduledProduct = get(), findSilentPhotoOrders = get(), approveSilentPhoto = get(),
         )
     }
-    single { JobScheduler(get<PurchaseJobs>().all() + get<PanelJobs>().all(), clock = get()) }
+    single { EngagementJobs(findDueStockAlerts = get(), notifyStockAlert = get(), deleteOldStockAlerts = get(), smsSender = get(), clock = get()) }
+    single { JobScheduler(get<PurchaseJobs>().all() + get<PanelJobs>().all() + get<EngagementJobs>().all(), clock = get()) }
     // The adapters behind the gateways. A gateway without one here is never available, whatever the settings say.
     when (config.payment.provider) {
         PaymentProvider.FAKE -> {

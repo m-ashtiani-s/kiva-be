@@ -71,4 +71,8 @@ class LogSmsSender : SmsSender {
     override suspend fun sendReturnClosed(to: IranianMobileNumber, returnCode: ReturnCode) {
         logger.warn("SMS to ${to.masked()}: return ${returnCode.value} was closed")
     }
+
+    override suspend fun sendBackInStock(to: IranianMobileNumber, productName: String, link: String) {
+        logger.warn("SMS to ${to.masked()}: «$productName» is back, $link")
+    }
 }

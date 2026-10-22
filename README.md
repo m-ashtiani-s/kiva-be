@@ -77,6 +77,7 @@ whose pattern isn't set is not sent, and a `WARN` says so.
 | `KIVA_FARAZ_RETURN_REJECTED_PATTERN` | Optional: «مرجوعی رد شد», when staff turn a return down; the reason is on the return's page, never in the SMS. Its variable is `code`. Suggested text: «وضعیت مرجوعی %code% عوض شد؛ جزئیات تو حسابت.» |
 | `KIVA_FARAZ_RETURN_PICKUP_PATTERN` | Optional: «جمع‌آوری مرجوعی», when staff schedule the pickup with `notifyCustomer`. Its variables are `code` and `carrier` (its name). Suggested text: «بسته‌ی مرجوعی %code% رو %carrier% ازت تحویل می‌گیره؛ زمانش تو حسابت.» |
 | `KIVA_FARAZ_RETURN_CLOSED_PATTERN` | Optional: «مرجوعی بسته شد», when staff close a return with `notifyCustomer`; the reason is on its page. Its variable is `code`. Suggested text: «مرجوعی %code% بسته شد؛ جزئیات تو حسابت.» |
+| `KIVA_FARAZ_BACK_IN_STOCK_PATTERN` | Optional: «موجود شد», sent by the job `notify-back-in-stock` (every 5 minutes, not 22:00 to 08:00 Tehran) to customers waiting for a bag that is back. Its variables are `product` (at most 30 characters) and `link` (its page in that color). Without it the job tells nobody and the subscriptions wait (a warning each hour). Suggested text: «%product% موجود شد! %link%». |
 | `KIVA_FARAZ_BASE_URL` | The web service's address, default `https://api.iranpayamak.com`. |
 
 A code that can't be sent makes `POST /auth/otp/send` answer 500, and the log says why (the provider's own words, with

@@ -1,5 +1,6 @@
 package com.kiva.infrastructure.auth.sms
 
+import com.kiva.application.port.SmsKind
 import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.read.ListAppender
@@ -194,6 +195,23 @@ class FarazSmsSenderTest {
                 """{"code":"rtClosed01","attributes":{"code":"RT-1012"}}""",
             ),
             sent.map { (_, body) -> JsonObject(body.filterKeys { it == "code" || it == "attributes" }).toString() },
+        )
+    }
+
+    @Test
+    fun `«موجود شد» - without its pattern it can't be sent and the job asks first - with it the product and the link go as its variables`() {
+        val without = sender()
+        assertFalse(without.canSend(SmsKind.BACK_IN_STOCK))
+        runBlocking { without.sendBackInStock(sara, "کیف دوشی ماهک", "https://kivashop.ir/product/mahak-shoulder-bag?color=lilac") }
+        assertTrue(sent.isEmpty())
+
+        val with = sender(FarazSmsConfig("https://api.iranpayamak.com", key, "90008361", "vdXmsAfAQs", backInStockPattern = "b4ckIn5tck"))
+        assertTrue(with.canSend(SmsKind.BACK_IN_STOCK))
+        runBlocking { with.sendBackInStock(sara, "کیف دوشی ماهک", "https://kivashop.ir/product/mahak-shoulder-bag?color=lilac") }
+
+        assertEquals(
+            Json.parseToJsonElement("""{"code":"b4ckIn5tck","attributes":{"product":"کیف دوشی ماهک","link":"https://kivashop.ir/product/mahak-shoulder-bag?color=lilac"}}"""),
+            sent.single().second.let { body -> JsonObject(body.filterKeys { it == "code" || it == "attributes" }) },
         )
     }
 

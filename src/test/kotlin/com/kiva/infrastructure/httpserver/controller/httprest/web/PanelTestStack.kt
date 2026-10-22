@@ -1,5 +1,6 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
+import com.kiva.application.usecase.stockalert.StockAlertCounts
 import com.kiva.infrastructure.persistence.exposed.tbl.StockAlertTbl
 import com.kiva.infrastructure.persistence.exposed.StockAlertIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.StockAlertRepositoryImpl
@@ -284,7 +285,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
     val adminProducts = AdminProductUseCases(
         checkPanelAccess = checkPanelAccess,
         findProducts = FindAdminProductsUc(transactions, productQm, categories, ShopSettingsRepositoryImpl()),
-        getProduct = GetAdminProductUc(transactions, productQm, categories, materials, colors, users, ShopSettingsRepositoryImpl(), clock),
+        getProduct = GetAdminProductUc(transactions, productQm, categories, materials, colors, users, ShopSettingsRepositoryImpl(), clock, StockAlertCounts.of(StockAlertRepositoryImpl())),
         createProduct = CreateProductUc(
             transactions, productDomainService, products, productQm, productInput, mediaAttachments, InventoryDomainService(inventories), inventories,
             auditTrail, clock,

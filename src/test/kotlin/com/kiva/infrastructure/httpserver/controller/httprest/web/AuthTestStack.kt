@@ -270,4 +270,12 @@ class RecordingSmsSender : SmsSender {
         check(!down) { "the SMS provider is down" }
         returnsClosed += to to returnCode
     }
+
+    /** «موجود شد» SMS: to whom, the product's name and the link. */
+    val backInStock = mutableListOf<Triple<IranianMobileNumber, String, String>>()
+
+    override suspend fun sendBackInStock(to: IranianMobileNumber, productName: String, link: String) {
+        check(!down) { "the SMS provider is down" }
+        backInStock += Triple(to, productName, link)
+    }
 }
