@@ -1,5 +1,6 @@
 package com.kiva.application.usecase.product.usecase.query
 
+import com.kiva.application.usecase.stockalert.StockAlertFlags
 import com.kiva.common.valueobject.UserId
 import com.kiva.application.usecase.wishlist.WishlistHearts
 import com.kiva.application.dto.ProductDetailDto
@@ -41,6 +42,7 @@ class GetProductUc(
     private val clock: Clock,
     private val shopSettingsRepository: ShopSettingsRepository,
     private val wishlistHearts: WishlistHearts = WishlistHearts.NONE,
+    private val stockAlertFlags: StockAlertFlags = StockAlertFlags.NONE,
 ) : QueryUseCase<GetProductUc.Qry, ProductDetailDto, GetProductUc.Failure> {
 
     private val logger = getLogger()
@@ -69,8 +71,7 @@ class GetProductUc(
             val settings = shopSettingsRepository.get()
             val card = wishlistHearts.mark(listOf(ProductCards.cardOf(product.card, category, palette, now, settings.freeShippingThreshold, settings.lowStockThreshold)), query.viewer).single()
 
-            Result.success(
-                ProductDetailDto(
+            val page = ProductDetailDto(
                     card = card,
                     selectedColorKey = asked?.takeIf { key -> product.variants.any { it.colorKey == key } }?.value ?: card.defaultColorKey,
                     shortDescription = product.shortDescription?.value,
@@ -90,8 +91,8 @@ class GetProductUc(
                     maxPerOrder = product.card.maxPerOrder.value,
                     publishedAt = product.publishedOn,
                     updatedAt = product.updatedOn,
-                ),
-            )
+                )
+            Result.success(stockAlertFlags.mark(page, query.viewer))
         }
     }
 

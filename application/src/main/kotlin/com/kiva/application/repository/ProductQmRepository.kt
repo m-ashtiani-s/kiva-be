@@ -62,6 +62,9 @@ interface ProductQmRepository {
     /** One color of any product, whatever its status, or null when no product has it. */
     fun findVariant(variantId: VariantId): VariantQm?
 
+    /** Several colors at once (any status): «اشتراک‌های من» and the panel's queue. */
+    fun findVariants(variantIds: Collection<VariantId>): Map<VariantId, VariantQm>
+
     /** Drafts whose scheduled publication is due ([now] or before), earliest first, at most [limit]. */
     fun findDueScheduled(now: Instant, limit: Int): List<ProductId>
 

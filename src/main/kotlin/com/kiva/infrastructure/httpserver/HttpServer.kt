@@ -1,5 +1,7 @@
 package com.kiva.infrastructure.httpserver
 
+import com.kiva.infrastructure.httpserver.controller.httprest.web.StockAlertUseCases
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1StockAlerts
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1MyDashboard
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1SharedWishlist
 import com.kiva.application.usecase.account.usecase.command.ConfirmPhoneChangeUc
@@ -314,6 +316,7 @@ fun Application.configureRouting() {
             )
             webV1Me(MeUseCases(getMeUc, updateMyProfileUc, requestPhoneChangeUc, confirmPhoneChangeUc))
             webV1MyDashboard(get())
+            webV1StockAlerts(StockAlertUseCases(get(), get(), get()), mediaUrls)
             webV1AdminCustomers(AdminCustomerUseCases(checkPanelAccessUc, findCustomersUc, getCustomerUc, get(), setUserRolesUc))
             webV1AdminAudit(AdminAuditUseCases(checkPanelAccessUc, listAuditLogUc))
             webV1AdminMedia(AdminMediaUseCases(checkPanelAccessUc, uploadMediaUc), mediaStorage::newUploadFile, mediaUrls)

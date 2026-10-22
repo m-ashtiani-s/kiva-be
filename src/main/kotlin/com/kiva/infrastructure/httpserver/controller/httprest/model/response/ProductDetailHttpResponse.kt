@@ -12,7 +12,7 @@ import kotlinx.serialization.Serializable
 /**
  * Contract schema `ProductDetail`: every field of the card (ProductSummary), then the page's own.
  *
- * Not sent yet: `tags`, `perks`, `campaign` and `stockAlert` (nothing keeps them yet), and the media `id`s (they come
+ * Not sent yet: `tags`, `perks` and `campaign` (nothing keeps them yet), and the media `id`s (they come
  * with uploads). `ratingSummary` is required, so it goes out empty until reviews exist.
  */
 @Serializable
@@ -50,6 +50,7 @@ data class ProductDetailHttpResponse(
     val variants: List<ProductVariantHttpResponse>,
     val breadcrumbs: List<BreadcrumbHttpResponse>,
     val ratingSummary: RatingSummaryHttpResponse,
+    val stockAlert: ProductStockAlertHttpResponse?,
     val policies: ProductPoliciesHttpResponse,
     val shareUrl: String,
     val seo: SeoMetaHttpResponse,
@@ -103,6 +104,7 @@ data class ProductDetailHttpResponse(
                     BreadcrumbHttpResponse(detail.card.name, url = null),
                 ),
                 ratingSummary = RatingSummaryHttpResponse.from(detail.card.rating),
+                stockAlert = detail.stockAlert?.let { ProductStockAlertHttpResponse(it.subscribed, it.alertId) },
                 policies = ProductPoliciesHttpResponse(returnable = detail.returnable, reservable = detail.reservable, maxPerOrder = detail.maxPerOrder),
                 shareUrl = pageUrl,
                 seo = SeoMetaHttpResponse(title = "${detail.card.name} | کیوا", description = detail.shortDescription, canonicalUrl = pageUrl),
@@ -245,7 +247,7 @@ data class SpecRowHttpResponse(
     val tone: String? = null,
 )
 
-/** Contract schema `ProductVariant`. Not sent yet: `stockAlertSubscribed` (no accounts yet). */
+/** Contract schema `ProductVariant`. [stockAlertSubscribed]: the viewer waits for this color (a guest false; phase 10). */
 @Serializable
 data class ProductVariantHttpResponse(
     val id: Long,
@@ -256,6 +258,7 @@ data class ProductVariantHttpResponse(
     val stock: StockInfoHttpResponse,
     val media: List<ProductMediaHttpResponse>,
     val hasVideo: Boolean,
+    val stockAlertSubscribed: Boolean?,
 ) {
     companion object {
         fun from(variant: ProductDetailDto.Variant, urls: MediaUrls) = ProductVariantHttpResponse(
@@ -267,6 +270,7 @@ data class ProductVariantHttpResponse(
             stock = StockInfoHttpResponse.from(variant.stock),
             media = variant.media.mapIndexed { index, item -> ProductMediaHttpResponse.from(index, item, urls) },
             hasVideo = variant.hasVideo,
+            stockAlertSubscribed = variant.stockAlertSubscribed,
         )
     }
 }

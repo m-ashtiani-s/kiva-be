@@ -166,11 +166,12 @@ class GetProductUcTest {
                 ProductDetailDto.Variant(
                     101, "KV-1001-LILAC", ProductDetailDto.Swatch("lilac", "یاسی", "#C8B6E2", true, 4), isDefault = true,
                     PriceDto(1_450_000, 1_750_000, 17, 300_000), StockInfo(StockStatus.IN_STOCK, null, 5), listOf(photo, video), hasVideo = true,
+                    stockAlertSubscribed = false, // a guest waits for nothing (phase 10)
                 ),
                 // Two left of black: only now is the number shown.
                 ProductDetailDto.Variant(
                     102, "KV-1001-BLACK", ProductDetailDto.Swatch("black", "مشکی", "#2B2930", false, 1), isDefault = false,
-                    PriceDto(1_890_000, null, 0, 0), StockInfo(StockStatus.LOW_STOCK, 2, 2), emptyList(), hasVideo = false,
+                    PriceDto(1_890_000, null, 0, 0), StockInfo(StockStatus.LOW_STOCK, 2, 2), emptyList(), hasVideo = false, stockAlertSubscribed = false,
                 ),
             ),
             page.variants,

@@ -1,5 +1,14 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
+import com.kiva.infrastructure.persistence.exposed.tbl.StockAlertTbl
+import com.kiva.infrastructure.persistence.exposed.StockAlertIdGeneratorImpl
+import com.kiva.infrastructure.persistence.exposed.StockAlertRepositoryImpl
+import com.kiva.domain.aggregate.stockalert.StockAlertDomainService
+import com.kiva.application.usecase.stockalert.usecase.query.ListMyStockAlertsUc
+import com.kiva.application.usecase.stockalert.usecase.command.CancelMyStockAlertUc
+import com.kiva.application.usecase.stockalert.usecase.command.CreateStockAlertUc
+import com.kiva.application.usecase.stockalert.StockAlerts
+import com.kiva.application.usecase.stockalert.StockAlertFlags
 import com.kiva.application.usecase.account.usecase.query.GetMyDashboardUc
 import com.kiva.application.usecase.wishlist.WishlistHearts
 import com.kiva.application.usecase.review.ReviewsAwaiting
@@ -380,6 +389,15 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         DeleteMyReviewUc(transactions, reviewRepository, ratingBook, clock),
         ListProductsAwaitingMyReviewUc(transactions, reviewsAwaiting, colors),
     )
+    // --- stock alerts (phase 10) ---
+    val stockAlertRepository = StockAlertRepositoryImpl()
+    val stockAlertsView = StockAlerts(productQm, colors, users)
+    val stockAlertUseCases = StockAlertUseCases(
+        CreateStockAlertUc(transactions, productQm, stockAlertRepository, StockAlertDomainService(StockAlertIdGeneratorImpl()), stockAlertsView, clock),
+        ListMyStockAlertsUc(transactions, stockAlertRepository, stockAlertsView, clock),
+        CancelMyStockAlertUc(transactions, stockAlertRepository, clock),
+    )
+
     // --- wishlist (phase 9) ---
     val wishlists = WishlistRepositoryImpl()
     val wishlistShares = WishlistShareRepositoryImpl()
@@ -415,7 +433,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         val find = FindProductsUc(transactions, productQm, categories, colors, materials, clock, purchase.settings, WishlistHearts.of(wishlists))
         val facets = GetProductFacetsUc(transactions, productQm, categories, colors, materials, clock)
         val related = FindRelatedProductsUc(transactions, productQm, categories, colors, clock, purchase.settings, WishlistHearts.of(wishlists))
-        val get = GetProductUc(transactions, productQm, categories, materials, colors, clock, purchase.settings, WishlistHearts.of(wishlists))
+        val get = GetProductUc(transactions, productQm, categories, materials, colors, clock, purchase.settings, WishlistHearts.of(wishlists), StockAlertFlags.of(stockAlertRepository))
     }
     val shopProducts = ShopProducts()
 
@@ -533,6 +551,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
                     webV1MyReviews(myReviews, mediaUrls)
                     webV1Wishlist(wishlist, mediaUrls, SITE_URL)
                     webV1MyDashboard(dashboard)
+                    webV1StockAlerts(stockAlertUseCases, mediaUrls)
                     webV1Addresses(purchase.addressUseCases)
                     webV1SharedWishlist(wishlist.getShared, mediaUrls)
                     // Back from the gateway and the result page, for paying what a change left owed (phase 3).
@@ -558,6 +577,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
             ReviewTbl.deleteWhere { ReviewTbl.userId inList userIds }
             WishlistItemTbl.deleteWhere { WishlistItemTbl.userId inList userIds }
             WishlistShareTbl.deleteWhere { WishlistShareTbl.userId inList userIds }
+            StockAlertTbl.deleteWhere { StockAlertTbl.userId inList userIds }
             ProductRatingTbl.deleteWhere { ProductRatingTbl.productId inList reviewed }
             MediaTbl.deleteWhere { MediaTbl.uploadedBy inList userIds }
         }

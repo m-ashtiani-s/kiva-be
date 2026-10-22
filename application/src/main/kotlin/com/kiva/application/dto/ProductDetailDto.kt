@@ -28,7 +28,12 @@ data class ProductDetailDto(
     val maxPerOrder: Int,
     val publishedAt: Instant?,
     val updatedAt: Instant,
+    /** The viewer's «any color» subscription (phase 10); a guest: not subscribed. Null only where nobody asked (the panel). */
+    val stockAlert: StockAlertFlag? = null,
 ) {
+    /** `ProductDetail.stockAlert`: the viewer waits for any color of the product, with that subscription's id. */
+    data class StockAlertFlag(val subscribed: Boolean, val alertId: Long?)
+
     data class MaterialRef(val id: Long, val slug: String, val name: String, val family: MaterialFamily)
 
     data class Swatch(val key: String, val name: String, val hex: String, val isLight: Boolean, val sortOrder: Int)
@@ -43,5 +48,7 @@ data class ProductDetailDto(
         val stock: StockInfo,
         val media: List<GalleryItemDto>,
         val hasVideo: Boolean,
+        /** The viewer waits for this very color (phase 10); a guest false; null only where nobody asked. */
+        val stockAlertSubscribed: Boolean? = null,
     )
 }

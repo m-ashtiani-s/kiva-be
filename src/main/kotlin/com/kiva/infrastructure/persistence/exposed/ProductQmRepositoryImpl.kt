@@ -375,6 +375,19 @@ class ProductQmRepositoryImpl : ProductQmRepository {
 
     // ============ one color, slugs and codes in use ============
 
+    override fun findVariants(variantIds: Collection<VariantId>): Map<VariantId, VariantQm> {
+        if (variantIds.isEmpty()) return emptyMap()
+        return ProductVariantQmTbl.selectAll().where { ProductVariantQmTbl.variantId inList variantIds.map { it.value } }.associate { row ->
+            VariantId.constructFromPersisted(row[ProductVariantQmTbl.variantId]) to VariantQm(
+                variantId = VariantId.constructFromPersisted(row[ProductVariantQmTbl.variantId]),
+                productId = ProductId.constructFromPersisted(row[ProductVariantQmTbl.productId]),
+                colorKey = ColorKey.constructFromPersisted(row[ProductVariantQmTbl.colorKey]),
+                sku = Sku.constructFromPersisted(row[ProductVariantQmTbl.sku]),
+                isActive = row[ProductVariantQmTbl.isActive],
+            )
+        }
+    }
+
     override fun findVariant(variantId: VariantId): VariantQm? =
         ProductVariantQmTbl.selectAll()
             .where { ProductVariantQmTbl.variantId eq variantId.value }

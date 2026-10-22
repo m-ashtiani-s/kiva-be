@@ -362,7 +362,7 @@ class WebV1ProductsTest {
                            "srcSet":[{"width":320,"url":"https://api.kivashop.test/media/p/2/black/320.webp"},{"width":1600,"url":"https://api.kivashop.test/media/p/2/black/1600.webp"}],
                            "posterUrl":null,"width":1600,"height":1200,"durationSec":null,"mimeType":"image/webp","alt":"نمای جلو","blurhash":null,
                            "view":"FRONT","viewLabel":"نمای جلو","sortOrder":0,"isPrimary":true,"isUnedited":true}],
-                 "hasVideo":false}
+                 "hasVideo":false,"stockAlertSubscribed":null}
                 """,
             ),
             body["variants"]!!.jsonArray[0],

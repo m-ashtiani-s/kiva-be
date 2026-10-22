@@ -1,5 +1,11 @@
 package com.kiva.infrastructure.di
 
+import com.kiva.application.usecase.stockalert.usecase.query.ListMyStockAlertsUc
+import com.kiva.application.usecase.stockalert.usecase.command.CancelMyStockAlertUc
+import com.kiva.application.usecase.stockalert.usecase.command.CreateStockAlertUc
+import com.kiva.application.usecase.stockalert.StockAlertFlags
+import com.kiva.application.usecase.stockalert.StockAlerts
+import com.kiva.domain.aggregate.stockalert.StockAlertDomainService
 import com.kiva.application.usecase.account.usecase.query.GetMyDashboardUc
 import com.kiva.application.usecase.review.ReviewsAwaiting
 import com.kiva.application.usecase.wishlist.WishlistHearts
@@ -445,6 +451,7 @@ val useCaseModule = module(createdAtStart = true) {
             clock = get(),
             shopSettingsRepository = get(),
             wishlistHearts = get(),
+            stockAlertFlags = get(),
         )
     }
 
@@ -700,6 +707,19 @@ val useCaseModule = module(createdAtStart = true) {
             reviewRepository = get(), reviewsAwaiting = get(), reservations = get(), clock = get(),
         )
     }
+
+    // --- stock alerts (phase 10) ---
+    single { StockAlertDomainService(ids = get()) }
+    single { StockAlerts(productQmRepository = get(), colorRepository = get(), userRepository = get()) }
+    single { StockAlertFlags.of(get()) }
+    single {
+        CreateStockAlertUc(
+            transactionManager = get(), productQmRepository = get(), stockAlertRepository = get(), stockAlertDomainService = get(), stockAlerts = get(),
+            clock = get(),
+        )
+    }
+    single { ListMyStockAlertsUc(transactionManager = get(), stockAlertRepository = get(), stockAlerts = get(), clock = get()) }
+    single { CancelMyStockAlertUc(transactionManager = get(), stockAlertRepository = get(), clock = get()) }
 
     // --- wishlist (phase 9) ---
     single { WishlistHearts.of(get()) }
