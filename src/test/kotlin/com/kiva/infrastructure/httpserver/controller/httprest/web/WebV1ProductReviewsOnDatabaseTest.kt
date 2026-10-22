@@ -1,6 +1,7 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
 import com.kiva.application.usecase.review.RatingBook
+import com.kiva.application.usecase.review.Reviews
 import com.kiva.application.usecase.review.usecase.command.VoteReviewHelpfulUc
 import com.kiva.common.railway.Result
 import com.kiva.common.valueobject.UserId
@@ -147,6 +148,24 @@ class WebV1ProductReviewsOnDatabaseTest {
 
         assertTrue("دلیلی که فقط نویسنده" !in asOther)
         assertEquals(listOf(kept), asAuthor.ids(), "a REJECTED one only in «نظرات من»")
+    }
+
+    @Test
+    fun `a turned-down review built for anyone but its author and the panel carries no reason - the wall behind the public list`() = panel.app {
+        val turnedDown = written(2, 1)
+        moderate(turnedDown, approve = false, reason = "دلیلی که فقط نویسنده می‌بینه")
+        val review = transaction(db) { panel.reviewRepository.find(ReviewId.constructFromPersisted(turnedDown.toLong()))!! }
+
+        val reasons = transaction(db) {
+            listOf(
+                Reviews.Viewer(viewer = customer(3).user.id),
+                Reviews.Viewer(viewer = null),
+                Reviews.Viewer(viewer = customer(2).user.id),
+                Reviews.Viewer(viewer = null, panel = true),
+            ).map { panel.reviews.of(review, it).rejectionReason }
+        }
+
+        assertEquals(listOf(null, null, "دلیلی که فقط نویسنده می‌بینه", "دلیلی که فقط نویسنده می‌بینه"), reasons)
     }
 
     @Test
