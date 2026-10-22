@@ -1,5 +1,6 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.model.response
 
+import com.kiva.application.dto.RatingSummaryDto
 import com.kiva.application.dto.GalleryItemDto
 import com.kiva.application.dto.ProductDetailDto
 import com.kiva.domain.aggregate.product.model.valueobject.PocketInfo
@@ -321,10 +322,14 @@ data class BreadcrumbHttpResponse(val label: String, val url: String? = null)
 
 /** Contract schema `RatingSummary`. */
 @Serializable
-data class RatingSummaryHttpResponse(val average: Double, val count: Int, val distribution: List<RatingShareHttpResponse>) {
+data class RatingSummaryHttpResponse(val average: Double, val count: Int, val distribution: List<RatingShareHttpResponse>, val verifiedBuyerPercent: Int?) {
     companion object {
         /** No reviews yet: nothing counted, every star from 5 down to 1. */
-        val NONE = RatingSummaryHttpResponse(0.0, 0, (5 downTo 1).map { RatingShareHttpResponse(it, 0, 0.0) })
+        val NONE = RatingSummaryHttpResponse(0.0, 0, (5 downTo 1).map { RatingShareHttpResponse(it, 0, 0.0) }, null)
+
+        fun from(summary: RatingSummaryDto) = RatingSummaryHttpResponse(
+            summary.average, summary.count, summary.distribution.map { RatingShareHttpResponse(it.stars, it.count, it.percent) }, summary.verifiedBuyerPercent,
+        )
     }
 }
 

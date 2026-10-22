@@ -83,6 +83,9 @@ import com.kiva.application.usecase.review.Reviews
 import com.kiva.application.usecase.review.usecase.command.CreateReviewUc
 import com.kiva.application.usecase.review.usecase.command.DeleteMyReviewUc
 import com.kiva.application.usecase.review.usecase.command.UpdateMyReviewUc
+import com.kiva.application.usecase.review.usecase.command.VoteReviewHelpfulUc
+import com.kiva.application.usecase.review.usecase.query.GetReviewSummaryUc
+import com.kiva.application.usecase.review.usecase.query.ListProductReviewsUc
 import com.kiva.application.usecase.review.usecase.query.GetMyReviewUc
 import com.kiva.application.usecase.review.usecase.query.ListMyReviewsUc
 import com.kiva.application.usecase.review.usecase.query.ListProductsAwaitingMyReviewUc
@@ -338,6 +341,9 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
     val reviewUseCases = ReviewUseCases(
         CreateReviewUc(transactions, productQm, reviewRepository, reviewDomain, reviewPurchases, purchase.orderByCode, mediaRepository, purchase.settings, clock),
         getMyReview,
+        ListProductReviewsUc(transactions, productQm, reviewRepository, productRatings, reviews),
+        GetReviewSummaryUc(transactions, productQm, productRatings),
+        VoteReviewHelpfulUc(transactions, reviewRepository, ReviewVoteRepositoryImpl(), clock),
     )
     val myReviews = MyReviewUseCases(
         ListMyReviewsUc(transactions, reviewRepository, reviews),

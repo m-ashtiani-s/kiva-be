@@ -385,7 +385,7 @@ class WebV1ProductsTest {
         )
         assertEquals("https://kiva.ir/product/nila-crossbody-bag", body["shareUrl"]!!.jsonPrimitive.content)
         assertEquals(
-            json("""{"average":0.0,"count":0,"distribution":[${(5 downTo 1).joinToString(",") { """{"stars":$it,"count":0,"percent":0.0}""" }}]}"""),
+            json("""{"average":0.0,"count":0,"distribution":[${(5 downTo 1).joinToString(",") { """{"stars":$it,"count":0,"percent":0.0}""" }}],"verifiedBuyerPercent":null}"""),
             body["ratingSummary"],
         )
         assertEquals(json("""{"id":5,"slug":"faux-leather-soft","name":"چرم مصنوعی سافت","family":"FAUX_LEATHER"}"""), body["material"])

@@ -1,5 +1,6 @@
 package com.kiva.infrastructure.persistence.exposed
 
+import com.kiva.application.usecase.review.usecase.query.ReviewSorts
 import com.kiva.common.event.ConcurrentChangeException
 import com.kiva.common.event.valueobject.EventAggregateId
 import com.kiva.common.event.valueobject.EventAggregateName
@@ -32,6 +33,8 @@ import com.kiva.infrastructure.common.persistence.refusedConstraint
 import com.kiva.infrastructure.persistence.exposed.tbl.ProductRatingTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.ReviewTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.ReviewVoteTbl
+import org.jetbrains.exposed.v1.core.Op
+import org.jetbrains.exposed.v1.core.QueryBuilder
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.count
@@ -39,6 +42,7 @@ import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greater
 import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.isNotNull
 import org.jetbrains.exposed.v1.core.statements.UpdateBuilder
 import org.jetbrains.exposed.v1.exceptions.ExposedSQLException
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
@@ -98,6 +102,21 @@ class ReviewRepositoryImpl : ReviewRepository {
         ReviewTbl.selectAll().where { ReviewTbl.userId eq userId.value }
             .paginate(pageable, NEWEST_FIRST, tiebreaker = ReviewTbl.reviewId, tiebreakerOrder = SortOrder.DESC) { it.toReview() }
 
+    override fun pagePublic(productId: ProductId, filter: ReviewRepository.PublicFilter, pageable: Pageable): Page<Review> {
+        var condition = (ReviewTbl.productId eq productId.value) and (ReviewTbl.status eq ReviewStatus.APPROVED)
+        filter.rating?.let { condition = condition and (ReviewTbl.rating eq it.value.toShort()) }
+        if (filter.withMedia) condition = condition and HasMedia
+        if (filter.verifiedOnly) condition = condition and ReviewTbl.orderId.isNotNull()
+        return ReviewTbl.selectAll().where { condition }
+            .paginate(pageable, PUBLIC_ORDERS, tiebreaker = ReviewTbl.reviewId, tiebreakerOrder = SortOrder.DESC) { it.toReview() }
+    }
+
+    override fun pendingOf(userId: UserId, productId: ProductId): List<Review> =
+        ReviewTbl.selectAll()
+            .where { (ReviewTbl.userId eq userId.value) and (ReviewTbl.productId eq productId.value) and (ReviewTbl.status eq ReviewStatus.PENDING) }
+            .orderBy(ReviewTbl.createdOn to SortOrder.DESC, ReviewTbl.reviewId to SortOrder.DESC)
+            .map { it.toReview() }
+
     override fun countsOfUser(userId: UserId): Map<ReviewStatus, Int> {
         val count = ReviewTbl.reviewId.count()
         return ReviewTbl.select(ReviewTbl.status, count).where { ReviewTbl.userId eq userId.value }.groupBy(ReviewTbl.status)
@@ -149,6 +168,21 @@ class ReviewRepositoryImpl : ReviewRepository {
         val NEWEST_FIRST: SortOrders = mapOf(MINE to listOf(ReviewTbl.createdOn to SortOrder.DESC))
 
         const val MINE = "newest"
+
+        /** ReviewSorts in the database; paginate adds the review's id, newest first, last. */
+        val PUBLIC_ORDERS: SortOrders = mapOf(
+            ReviewSorts.NEWEST to listOf(ReviewTbl.createdOn to SortOrder.DESC),
+            ReviewSorts.HIGHEST to listOf(ReviewTbl.rating to SortOrder.DESC, ReviewTbl.createdOn to SortOrder.DESC),
+            ReviewSorts.LOWEST to listOf(ReviewTbl.rating to SortOrder.ASC, ReviewTbl.createdOn to SortOrder.DESC),
+            ReviewSorts.HELPFUL to listOf(ReviewTbl.helpfulCount to SortOrder.DESC, ReviewTbl.createdOn to SortOrder.DESC),
+        )
+    }
+}
+
+/** A review with at least one photo or video. */
+private object HasMedia : Op<Boolean>() {
+    override fun toQueryBuilder(queryBuilder: QueryBuilder) {
+        queryBuilder.append("jsonb_array_length(review_tbl.\"mediaIds\") > 0")
     }
 }
 

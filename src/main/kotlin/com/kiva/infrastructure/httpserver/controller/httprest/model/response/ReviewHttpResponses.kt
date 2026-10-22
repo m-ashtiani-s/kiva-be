@@ -4,6 +4,7 @@ import com.kiva.application.dto.AdminReviewDto
 import com.kiva.application.dto.ReviewDto
 import com.kiva.application.repository.ProductBriefQm
 import com.kiva.application.usecase.review.usecase.query.ListMyReviewsUc
+import com.kiva.application.usecase.review.usecase.query.ListProductReviewsUc
 import com.kiva.application.usecase.review.usecase.query.ListProductsAwaitingMyReviewUc
 import com.kiva.domain.aggregate.review.model.valueobject.ReviewStatus
 import com.kiva.infrastructure.common.http.PageMetaHttpResponse
@@ -170,3 +171,19 @@ data class AdminReviewHttpResponse(
         }
     }
 }
+
+/** Contract schema `ReviewListResponse`: the summary over every approved review, and the page. */
+@Serializable
+data class ReviewListHttpResponse(val summary: RatingSummaryHttpResponse, val items: List<ReviewHttpResponse>, val meta: PageMetaHttpResponse) {
+    companion object {
+        fun from(reviews: ListProductReviewsUc.ProductReviews, urls: MediaUrls) = ReviewListHttpResponse(
+            summary = RatingSummaryHttpResponse.from(reviews.summary),
+            items = reviews.page.items.map { ReviewHttpResponse.from(it, urls) },
+            meta = reviews.page.let { PageMetaHttpResponse(it.page, it.size, it.totalItems, it.totalPages, it.hasNext) },
+        )
+    }
+}
+
+/** The answer of the helpful vote: how many found it helpful, and the voter's vote (true or null). */
+@Serializable
+data class ReviewVoteHttpResponse(val helpfulCount: Int, val myVote: Boolean?)

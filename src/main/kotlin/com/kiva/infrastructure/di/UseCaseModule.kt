@@ -138,6 +138,9 @@ import com.kiva.application.usecase.review.Reviews
 import com.kiva.application.usecase.review.usecase.command.CreateReviewUc
 import com.kiva.application.usecase.review.usecase.command.DeleteMyReviewUc
 import com.kiva.application.usecase.review.usecase.command.UpdateMyReviewUc
+import com.kiva.application.usecase.review.usecase.command.VoteReviewHelpfulUc
+import com.kiva.application.usecase.review.usecase.query.GetReviewSummaryUc
+import com.kiva.application.usecase.review.usecase.query.ListProductReviewsUc
 import com.kiva.application.usecase.review.usecase.query.GetMyReviewUc
 import com.kiva.application.usecase.review.usecase.query.ListMyReviewsUc
 import com.kiva.application.usecase.review.usecase.query.ListProductsAwaitingMyReviewUc
@@ -670,6 +673,13 @@ val useCaseModule = module(createdAtStart = true) {
         )
     }
     single { GetMyReviewUc(transactionManager = get(), reviewRepository = get(), reviews = get()) }
+    single {
+        ListProductReviewsUc(
+            transactionManager = get(), productQmRepository = get(), reviewRepository = get(), productRatingRepository = get(), reviews = get(),
+        )
+    }
+    single { GetReviewSummaryUc(transactionManager = get(), productQmRepository = get(), productRatingRepository = get()) }
+    single { VoteReviewHelpfulUc(transactionManager = get(), reviewRepository = get(), reviewVoteRepository = get(), clock = get()) }
     single { UpdateMyReviewUc(transactionManager = get(), reviewRepository = get(), clock = get()) }
     single { DeleteMyReviewUc(transactionManager = get(), reviewRepository = get(), ratingBook = get(), clock = get()) }
     single { ListMyReviewsUc(transactionManager = get(), reviewRepository = get(), reviews = get()) }

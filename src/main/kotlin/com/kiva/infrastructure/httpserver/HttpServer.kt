@@ -340,7 +340,7 @@ fun Application.configureRouting() {
             webV1MyOrders(MyOrderUseCases(listMyOrdersUc, getMyOrderUc, reorderUc, getCartUc, getMyReservationUc, get(), get(), get(), get()), mediaUrls)
             webV1MyUploads(uploadMediaUc, mediaStorage::newUploadFile, mediaUrls)
             webV1MyReturns(MyReturnUseCases(get(), get(), get()), mediaUrls)
-            webV1Reviews(ReviewUseCases(get(), get()), mediaUrls)
+            webV1Reviews(ReviewUseCases(get(), get(), get(), get(), get()), mediaUrls)
             webV1MyReviews(MyReviewUseCases(get(), get(), get(), get(), get()), mediaUrls)
             webV1Tracking(TrackingUseCases(get(), get(), get()), mediaUrls)
         }

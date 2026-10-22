@@ -7,6 +7,7 @@ import com.kiva.domain.aggregate.product.model.valueobject.ProductId
 import com.kiva.domain.aggregate.review.entity.Review
 import com.kiva.domain.aggregate.review.model.valueobject.ReviewId
 import com.kiva.domain.aggregate.review.model.valueobject.ReviewStatus
+import com.kiva.domain.aggregate.review.model.valueobject.StarRating
 import java.time.Instant
 
 /**
@@ -38,6 +39,15 @@ interface ReviewRepository {
     /** «نظرات من»: [userId]'s reviews in any status, newest first (ties to the newer id), for reading only. */
     fun pageOfUser(userId: UserId, pageable: Pageable): Page<Review>
 
+    /**
+     * A product's public reviews: only APPROVED ones, [filter]ed, in the pageable's order (newest, highest, lowest,
+     * helpful; the newer review breaks every tie), for reading only.
+     */
+    fun pagePublic(productId: ProductId, filter: PublicFilter, pageable: Pageable): Page<Review>
+
+    /** [userId]'s PENDING reviews of [productId], newest first: shown to them first on the product's page 1. */
+    fun pendingOf(userId: UserId, productId: ProductId): List<Review>
+
     /** How many reviews [userId] has in each status; a status with none is missing. */
     fun countsOfUser(userId: UserId): Map<ReviewStatus, Int>
 
@@ -50,6 +60,9 @@ interface ReviewRepository {
      * again while another of its author and product is.
      */
     fun save(review: Review)
+
+    /** The public list's filters: [rating] stars only, only with photos, only by verified buyers. */
+    data class PublicFilter(val rating: StarRating? = null, val withMedia: Boolean = false, val verifiedOnly: Boolean = false)
 }
 
 /** Hands out the ids of new reviews, each only once, from the `reviewid_seq` database sequence. */
