@@ -1,5 +1,6 @@
 package com.kiva.infrastructure.httpserver
 
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1MyDashboard
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1SharedWishlist
 import com.kiva.application.usecase.account.usecase.command.ConfirmPhoneChangeUc
 import com.kiva.application.usecase.account.usecase.command.RequestPhoneChangeUc
@@ -312,6 +313,7 @@ fun Application.configureRouting() {
                 mediaUrls,
             )
             webV1Me(MeUseCases(getMeUc, updateMyProfileUc, requestPhoneChangeUc, confirmPhoneChangeUc))
+            webV1MyDashboard(get())
             webV1AdminCustomers(AdminCustomerUseCases(checkPanelAccessUc, findCustomersUc, getCustomerUc, get(), setUserRolesUc))
             webV1AdminAudit(AdminAuditUseCases(checkPanelAccessUc, listAuditLogUc))
             webV1AdminMedia(AdminMediaUseCases(checkPanelAccessUc, uploadMediaUc), mediaStorage::newUploadFile, mediaUrls)

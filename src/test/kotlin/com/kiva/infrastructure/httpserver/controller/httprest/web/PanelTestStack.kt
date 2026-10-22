@@ -1,5 +1,8 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
+import com.kiva.application.usecase.account.usecase.query.GetMyDashboardUc
+import com.kiva.application.usecase.wishlist.WishlistHearts
+import com.kiva.application.usecase.review.ReviewsAwaiting
 import com.kiva.infrastructure.persistence.exposed.RandomWishlistShareTokens
 import com.kiva.application.usecase.wishlist.usecase.query.GetSharedWishlistUc
 import com.kiva.application.usecase.wishlist.usecase.command.RevokeWishlistShareUc
@@ -362,6 +365,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
     val reviews = Reviews(mediaRepository, ReviewVoteRepositoryImpl(), productQm, colors)
     val reviewPurchases = ReviewPurchases(purchase.orderQm)
     val getMyReview = GetMyReviewUc(transactions, reviewRepository, reviews)
+    val reviewsAwaiting = ReviewsAwaiting(reviewPurchases, reviewRepository, productQm)
     val reviewUseCases = ReviewUseCases(
         CreateReviewUc(transactions, productQm, reviewRepository, reviewDomain, reviewPurchases, purchase.orderByCode, mediaRepository, purchase.settings, clock),
         getMyReview,
@@ -374,7 +378,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         getMyReview,
         UpdateMyReviewUc(transactions, reviewRepository, clock),
         DeleteMyReviewUc(transactions, reviewRepository, ratingBook, clock),
-        ListProductsAwaitingMyReviewUc(transactions, reviewPurchases, reviewRepository, productQm, colors),
+        ListProductsAwaitingMyReviewUc(transactions, reviewsAwaiting, colors),
     )
     // --- wishlist (phase 9) ---
     val wishlists = WishlistRepositoryImpl()
@@ -402,12 +406,16 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         DeleteReviewReplyUc(transactions, reviewRepository, productQm, auditTrail, clock),
     )
 
+    val dashboard = GetMyDashboardUc(
+        transactions, users, purchase.orderQm, wishlists, AddressBookRepositoryImpl(), reviewRepository, reviewsAwaiting, purchase.reservations, clock,
+    )
+
     /** The shop's own product use cases, as the app wires them. */
     inner class ShopProducts {
-        val find = FindProductsUc(transactions, productQm, categories, colors, materials, clock, purchase.settings)
+        val find = FindProductsUc(transactions, productQm, categories, colors, materials, clock, purchase.settings, WishlistHearts.of(wishlists))
         val facets = GetProductFacetsUc(transactions, productQm, categories, colors, materials, clock)
-        val related = FindRelatedProductsUc(transactions, productQm, categories, colors, clock, purchase.settings)
-        val get = GetProductUc(transactions, productQm, categories, materials, colors, clock, purchase.settings)
+        val related = FindRelatedProductsUc(transactions, productQm, categories, colors, clock, purchase.settings, WishlistHearts.of(wishlists))
+        val get = GetProductUc(transactions, productQm, categories, materials, colors, clock, purchase.settings, WishlistHearts.of(wishlists))
     }
     val shopProducts = ShopProducts()
 
@@ -524,6 +532,8 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
                     webV1Products(shopProducts.find, shopProducts.facets, shopProducts.get, shopProducts.related, SITE_URL, mediaUrls)
                     webV1MyReviews(myReviews, mediaUrls)
                     webV1Wishlist(wishlist, mediaUrls, SITE_URL)
+                    webV1MyDashboard(dashboard)
+                    webV1Addresses(purchase.addressUseCases)
                     webV1SharedWishlist(wishlist.getShared, mediaUrls)
                     // Back from the gateway and the result page, for paying what a change left owed (phase 3).
                     webV1Payments(purchase.paymentUseCases, PaymentConfig.DEFAULT.resultUrl)

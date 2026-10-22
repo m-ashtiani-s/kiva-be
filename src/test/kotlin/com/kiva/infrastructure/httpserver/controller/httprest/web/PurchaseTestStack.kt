@@ -1,5 +1,6 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
+import com.kiva.application.usecase.wishlist.WishlistHearts
 import com.kiva.infrastructure.persistence.exposed.WishlistRepositoryImpl
 import com.kiva.application.usecase.wishlist.usecase.command.MoveCartItemToWishlistUc
 import com.kiva.application.usecase.review.ReviewMarks
@@ -161,7 +162,7 @@ class PurchaseTestStack(val clock: MutableClock) {
     val cartDomain = CartDomainService(RandomCartIds())
     val groups = ReservationGroupRepositoryImpl()
     val reservationDomain = ReservationDomainService(ReservationGroupIdGeneratorImpl())
-    private val reservations = Reservations(groups, books, geo, orderQm, reservationDomain)
+    val reservations = Reservations(groups, books, geo, orderQm, reservationDomain)
     val discountCodes = DiscountCodeRepositoryImpl()
     val redemptions = DiscountRedemptionRepositoryImpl()
     val discounts = Discounts(discountCodes, redemptions, orderQm, DiscountDomainService())
@@ -208,7 +209,7 @@ class PurchaseTestStack(val clock: MutableClock) {
         GetPaymentInitUc(transactions, payments, orderQm),
     )
 
-    val getCart = GetCartUc(transactions, carts, offers, settings, reservations, discounts, clock)
+    val getCart = GetCartUc(transactions, carts, offers, settings, reservations, discounts, clock, WishlistHearts.of(WishlistRepositoryImpl()))
 
     // One order named by its code, and its page: the customer's and the panel's (phase 2).
     val orderByCode = OrderByCode(orderQm, orders)
@@ -266,7 +267,7 @@ class PurchaseTestStack(val clock: MutableClock) {
 
     val checkoutUseCases = CheckoutUseCases(
         openCart,
-        GetCheckoutContextUc(transactions, carts, offers, settings, books, geo, users, gateways, reservations, discounts, clock),
+        GetCheckoutContextUc(transactions, carts, offers, settings, books, geo, users, gateways, reservations, discounts, clock, WishlistHearts.of(WishlistRepositoryImpl())),
         placeOrder,
         startPayment,
         GetOrderSummaryUc(transactions, orderQm, settings, reservations, clock),

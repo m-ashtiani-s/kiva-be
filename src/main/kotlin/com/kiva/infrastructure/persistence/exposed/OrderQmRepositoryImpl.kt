@@ -1,5 +1,7 @@
 package com.kiva.infrastructure.persistence.exposed
 
+import org.jetbrains.exposed.v1.core.LongColumnType
+import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
 import com.kiva.application.repository.AdminOrderFilter
 import com.kiva.application.repository.AdminOrderQm
 import com.kiva.application.repository.AdminOrderSearch
@@ -115,6 +117,15 @@ class OrderQmRepositoryImpl : OrderQmRepository {
             .offset(pageable.offset)
             .map { it.toOrderQm() }
         return Page(items, pageable.page, pageable.size, total)
+    }
+
+    override fun sentMediaCountOf(userId: UserId): Int {
+        var total = 0
+        TransactionManager.current().exec(
+            "SELECT COALESCE(SUM(jsonb_array_length(photos -> 'sent')), 0) FROM orderqm_tbl WHERE \"userId\" = ?",
+            listOf(LongColumnType() to userId.value),
+        ) { rs -> if (rs.next()) total = rs.getInt(1) }
+        return total
     }
 
     override fun countByStatusOfCustomer(userId: UserId): Map<OrderStatus, Long> {

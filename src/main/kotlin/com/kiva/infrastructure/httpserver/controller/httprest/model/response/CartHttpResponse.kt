@@ -70,7 +70,7 @@ data class CartHttpResponse(
 
 /**
  * Contract schema `CartItem`. [image] is the color's first photo, `null` while it has none (as on the product card);
- * [isWishlisted] is `null` until the wishlist exists.
+ * [isWishlisted]: true or false on a customer's cart, null on a guest's (phase 9, decision 15).
  */
 @Serializable
 data class CartItemHttpResponse(
@@ -116,7 +116,7 @@ data class CartItemHttpResponse(
             lineCompareAtTotal = item.lineTotals.compareAtTotal?.toman,
             lineDiscount = item.lineTotals.discount.toman,
             stock = StockInfoHttpResponse.from(item.stock),
-            isWishlisted = null,
+            isWishlisted = item.isWishlisted,
             addedAt = item.addedAt.toString(),
         )
     }

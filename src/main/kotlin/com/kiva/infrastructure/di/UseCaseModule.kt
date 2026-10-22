@@ -1,5 +1,8 @@
 package com.kiva.infrastructure.di
 
+import com.kiva.application.usecase.account.usecase.query.GetMyDashboardUc
+import com.kiva.application.usecase.review.ReviewsAwaiting
+import com.kiva.application.usecase.wishlist.WishlistHearts
 import com.kiva.application.usecase.wishlist.usecase.query.GetSharedWishlistUc
 import com.kiva.application.usecase.wishlist.usecase.command.RevokeWishlistShareUc
 import com.kiva.application.usecase.wishlist.usecase.command.ShareMyWishlistUc
@@ -268,7 +271,7 @@ val useCaseModule = module(createdAtStart = true) {
     single {
         GetCartUc(
             transactionManager = get(), cartRepository = get(), offerQmRepository = get(), shopSettingsRepository = get(), reservations = get(),
-            discounts = get(), clock = get(),
+            discounts = get(), clock = get(), wishlistHearts = get(),
         )
     }
 
@@ -277,7 +280,7 @@ val useCaseModule = module(createdAtStart = true) {
         GetCheckoutContextUc(
             transactionManager = get(), cartRepository = get(), offerQmRepository = get(), shopSettingsRepository = get(),
             addressBookRepository = get(), geoRepository = get(), userRepository = get(), paymentGateways = get(), reservations = get(),
-            discounts = get(), clock = get(),
+            discounts = get(), clock = get(), wishlistHearts = get(),
         )
     }
     single {
@@ -407,6 +410,7 @@ val useCaseModule = module(createdAtStart = true) {
             materialRepository = get(),
             clock = get(),
             shopSettingsRepository = get(),
+            wishlistHearts = get(),
         )
     }
     single {
@@ -427,6 +431,7 @@ val useCaseModule = module(createdAtStart = true) {
             colorRepository = get(),
             clock = get(),
             shopSettingsRepository = get(),
+            wishlistHearts = get(),
         )
     }
 
@@ -439,6 +444,7 @@ val useCaseModule = module(createdAtStart = true) {
             colorRepository = get(),
             clock = get(),
             shopSettingsRepository = get(),
+            wishlistHearts = get(),
         )
     }
 
@@ -687,8 +693,16 @@ val useCaseModule = module(createdAtStart = true) {
     single { Reviews(mediaRepository = get(), reviewVoteRepository = get(), productQmRepository = get(), colorRepository = get()) }
     single { ReviewPurchases(orderQmRepository = get()) }
     single { ReviewMarks(reviewRepository = get(), productQmRepository = get()) }
+    single { ReviewsAwaiting(reviewPurchases = get(), reviewRepository = get(), productQmRepository = get()) }
+    single {
+        GetMyDashboardUc(
+            transactionManager = get(), userRepository = get(), orderQmRepository = get(), wishlistRepository = get(), addressBookRepository = get(),
+            reviewRepository = get(), reviewsAwaiting = get(), reservations = get(), clock = get(),
+        )
+    }
 
     // --- wishlist (phase 9) ---
+    single { WishlistHearts.of(get()) }
     single { WishlistCards(productQmRepository = get(), categoryRepository = get(), colorRepository = get(), shopSettingsRepository = get()) }
     single {
         GetMyWishlistUc(
@@ -744,9 +758,7 @@ val useCaseModule = module(createdAtStart = true) {
     single { ReplyToReviewUc(transactionManager = get(), reviewRepository = get(), productQmRepository = get(), auditTrail = get(), clock = get()) }
     single { DeleteReviewReplyUc(transactionManager = get(), reviewRepository = get(), productQmRepository = get(), auditTrail = get(), clock = get()) }
     single {
-        ListProductsAwaitingMyReviewUc(
-            transactionManager = get(), reviewPurchases = get(), reviewRepository = get(), productQmRepository = get(), colorRepository = get(),
-        )
+        ListProductsAwaitingMyReviewUc(transactionManager = get(), reviewsAwaiting = get(), colorRepository = get())
     }
 
     // --- admin: refunds (phase 2) ---

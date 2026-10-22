@@ -1,5 +1,7 @@
 package com.kiva.application.usecase.product.usecase.query
 
+import com.kiva.common.valueobject.UserId
+import com.kiva.application.usecase.wishlist.WishlistHearts
 import com.kiva.application.dto.ProductDetailDto
 import com.kiva.application.repository.ProductQmRepository
 import com.kiva.application.repository.ProductRef
@@ -38,12 +40,13 @@ class GetProductUc(
     private val colorRepository: ColorRepository,
     private val clock: Clock,
     private val shopSettingsRepository: ShopSettingsRepository,
+    private val wishlistHearts: WishlistHearts = WishlistHearts.NONE,
 ) : QueryUseCase<GetProductUc.Qry, ProductDetailDto, GetProductUc.Failure> {
 
     private val logger = getLogger()
 
-    /** The path segment and `?color=` as they arrived. */
-    data class Qry(val idOrSlug: String, val color: String? = null)
+    /** The path segment and `?color=` as they arrived; [viewer] the logged-in customer, for the heart (none: a guest). */
+    data class Qry(val idOrSlug: String, val color: String? = null, val viewer: UserId? = null)
 
     override suspend fun execute(query: Qry): Result<ProductDetailDto, Failure> {
         logger.info("GetProductUc.execute idOrSlug=${query.idOrSlug} color=${query.color}")
@@ -64,7 +67,7 @@ class GetProductUc(
             val material = materialRepository.findAll().first { it.slug == product.materialSlug }
             val palette = colorRepository.findAll().associateBy { it.key }
             val settings = shopSettingsRepository.get()
-            val card = ProductCards.cardOf(product.card, category, palette, now, settings.freeShippingThreshold, settings.lowStockThreshold)
+            val card = wishlistHearts.mark(listOf(ProductCards.cardOf(product.card, category, palette, now, settings.freeShippingThreshold, settings.lowStockThreshold)), query.viewer).single()
 
             Result.success(
                 ProductDetailDto(

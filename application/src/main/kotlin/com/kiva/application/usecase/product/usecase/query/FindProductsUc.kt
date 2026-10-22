@@ -1,5 +1,7 @@
 package com.kiva.application.usecase.product.usecase.query
 
+import com.kiva.common.valueobject.UserId
+import com.kiva.application.usecase.wishlist.WishlistHearts
 import com.kiva.application.dto.ProductCardDto
 import com.kiva.application.dto.ProductListDto
 import com.kiva.application.repository.ProductFilter
@@ -8,6 +10,7 @@ import com.kiva.application.usecase.product.ProductCards
 import com.kiva.application.usecase.product.ProductFilterQuery
 import com.kiva.application.usecase.product.ProductFilters
 import com.kiva.common.logging.getLogger
+import com.kiva.common.pagination.Page
 import com.kiva.common.pagination.Pageable
 import com.kiva.common.railway.FailureKind
 import com.kiva.common.railway.Result
@@ -41,12 +44,16 @@ class FindProductsUc(
     private val materialRepository: MaterialRepository,
     private val clock: Clock,
     private val shopSettingsRepository: ShopSettingsRepository,
+    private val wishlistHearts: WishlistHearts = WishlistHearts.NONE,
 ) : QueryUseCase<FindProductsUc.Qry, ProductListDto, FindProductsUc.Failure> {
 
     private val logger = getLogger()
 
-    /** [pageable] is checked by the route, with ProductSorts as the sorts it allows; [filters] as they arrived. */
-    data class Qry(val pageable: Pageable, val filters: ProductFilterQuery = ProductFilterQuery())
+    /**
+     * [pageable] is checked by the route, with ProductSorts as the sorts it allows; [filters] as they arrived; [viewer]
+     * the logged-in customer, for the hearts (none: a guest).
+     */
+    data class Qry(val pageable: Pageable, val filters: ProductFilterQuery = ProductFilterQuery(), val viewer: UserId? = null)
 
     override suspend fun execute(query: Qry): Result<ProductListDto, Failure> {
         logger.info(
@@ -67,9 +74,10 @@ class FindProductsUc(
             // Read on every request, so a change in the settings shows at once.
             val settings = shopSettingsRepository.get()
 
+            val cards = page.map { ProductCards.cardOf(it, categories.getValue(it.categorySlug), palette, now, settings.freeShippingThreshold, settings.lowStockThreshold) }
             Result.success(
                 ProductListDto(
-                    page = page.map { ProductCards.cardOf(it, categories.getValue(it.categorySlug), palette, now, settings.freeShippingThreshold, settings.lowStockThreshold) },
+                    page = Page(wishlistHearts.mark(cards.items, query.viewer), cards.page, cards.size, cards.totalItems),
                     applied = appliedOf(query.filters, filter, categories, palette, materials),
                 ),
             )

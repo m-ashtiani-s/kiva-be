@@ -62,6 +62,9 @@ interface OrderQmRepository {
     /** How many orders the customer has in each status, for the tabs' counts. A status they have none in is left out. */
     fun countByStatusOfCustomer(userId: UserId): Map<OrderStatus, Long>
 
+    /** The photos and videos of the last batch sent of each of the customer's orders, added up: the account's header. */
+    fun sentMediaCountOf(userId: UserId): Int
+
     /**
      * What each of [userIds] bought, for the panel's customers: their orders the money came in for (OrderStatus.isPaid,
      * cancelled ones too), the money they kept (paid minus given back), and when the latest was placed. A customer who

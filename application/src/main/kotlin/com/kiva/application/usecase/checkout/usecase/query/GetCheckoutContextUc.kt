@@ -1,5 +1,7 @@
 package com.kiva.application.usecase.checkout.usecase.query
 
+import com.kiva.application.usecase.cart.withHearts
+import com.kiva.application.usecase.wishlist.WishlistHearts
 import com.kiva.application.dto.CheckoutContextDto
 import com.kiva.application.port.PaymentGateways
 import com.kiva.application.repository.OfferQmRepository
@@ -51,6 +53,7 @@ class GetCheckoutContextUc(
     private val reservations: Reservations,
     private val discounts: Discounts,
     private val clock: Clock,
+    private val wishlistHearts: WishlistHearts = WishlistHearts.NONE,
 ) : QueryUseCase<GetCheckoutContextUc.Qry, CheckoutContextDto, GetCheckoutContextUc.Failure> {
 
     private val logger = getLogger()
@@ -87,7 +90,7 @@ class GetCheckoutContextUc(
             val discount = discounts.appliedTo(cart, offers.mapValues { it.value.offer }, now)
             Result.success(
                 CheckoutContextDto(
-                    cart = cartDtoOf(cart, offers, settings, now, standing, discount),
+                    cart = withHearts(cartDtoOf(cart, offers, settings, now, standing, discount), cart, wishlistHearts),
                     addresses = geoRepository.addressDtosOf(addresses),
                     selectedAddressId = selected?.id?.value,
                     selectedMessenger = user.defaultMessenger,

@@ -1,5 +1,7 @@
 package com.kiva.application.usecase.cart.usecase.query
 
+import com.kiva.application.usecase.cart.withHearts
+import com.kiva.application.usecase.wishlist.WishlistHearts
 import com.kiva.application.dto.CartDto
 import com.kiva.application.repository.OfferQmRepository
 import com.kiva.application.usecase.cart.cartDtoOf
@@ -22,6 +24,7 @@ import java.time.Clock
  * it (see cartDtoOf, which the checkout shares).
  *
  * The cart is asked for by the id the command just returned, never by the shopper: there is no owner to check here.
+ * A customer's lines carry their hearts (phase 9); a guest's are null.
  */
 class GetCartUc(
     private val transactionManager: TransactionManager,
@@ -31,6 +34,7 @@ class GetCartUc(
     private val reservations: Reservations,
     private val discounts: Discounts,
     private val clock: Clock,
+    private val wishlistHearts: WishlistHearts = WishlistHearts.NONE,
 ) : QueryUseCase<GetCartUc.Qry, CartDto, GetCartUc.Failure> {
 
     private val logger = getLogger()
@@ -48,7 +52,7 @@ class GetCartUc(
             // A customer's order from the cart goes to their default address until checkout picks another.
             val standing = (cart.owner as? CartOwner.User)?.let { reservations.standingOf(it.userId, addressId = null, now) } ?: Reservations.Standing.NONE
             val discount = discounts.appliedTo(cart, offers.mapValues { it.value.offer }, now)
-            Result.success(cartDtoOf(cart, offers, shopSettingsRepository.get(), now, standing, discount))
+            Result.success(withHearts(cartDtoOf(cart, offers, shopSettingsRepository.get(), now, standing, discount), cart, wishlistHearts))
         }
     }
 

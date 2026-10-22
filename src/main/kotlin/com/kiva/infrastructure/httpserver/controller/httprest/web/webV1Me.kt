@@ -1,5 +1,7 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
+import com.kiva.infrastructure.httpserver.controller.httprest.model.response.AccountDashboardHttpResponse
+import com.kiva.application.usecase.account.usecase.query.GetMyDashboardUc
 import com.kiva.application.usecase.account.usecase.command.ConfirmPhoneChangeUc
 import com.kiva.application.usecase.account.usecase.command.RequestPhoneChangeUc
 import com.kiva.application.usecase.account.usecase.command.UpdateMyProfileUc
@@ -93,6 +95,18 @@ fun Route.webV1Me(useCases: MeUseCases) {
 
             session.refreshToken?.let { call.response.setRefreshCookie(it, session.refreshTokenMaxAge) }
             call.respond(PhoneChangeHttpResponse.of(session, user))
+        }
+    }
+}
+
+/**
+ * The account's header (`GET /me/dashboard`): the greeting, the four stat cards and the side menu's counts, each the
+ * same number as the page it links to (roadmap section 14.2, decision 16). A login is needed.
+ */
+fun Route.webV1MyDashboard(getMyDashboard: GetMyDashboardUc) {
+    authenticate(ACCESS) {
+        get("/me/dashboard") {
+            call.respondResult(getMyDashboard.execute(GetMyDashboardUc.Qry(call.accessPrincipal().userId))) { AccountDashboardHttpResponse.from(it) }
         }
     }
 }

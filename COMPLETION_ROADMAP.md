@@ -4216,7 +4216,7 @@ Route: 200 با Review
 | ۹.۱ | علاقه‌مندی‌ها: جدول، دامنه، افزودن، حذف، لیست و شناسه‌ها | M | ✅ |
 | ۹.۲ | علاقه‌مندی به سبد، و سبد به علاقه‌مندی | M | ✅ |
 | ۹.۳ | لینک اشتراک و لیست عمومی | M | ✅ |
-| ۹.۴ | قلب روی کارت‌ها و داشبورد حساب | M | ⬜ |
+| ۹.۴ | قلب روی کارت‌ها و داشبورد حساب | M | ✅ |
 | ۹.۵ | ریویو و دور با kiva-fe | S | ⬜ |
 
 ### ۱۴.۲ تصمیم‌های این فاز
@@ -4251,6 +4251,9 @@ Route: 200 با Review
 | 26 | «انتقال» (تازه، گام ۹.۲) | route در `webV1Cart.kt` زیر `authenticate` ِ اجباری؛ رنگ ِ قلم از read model (`findVariant`)، قیمت ِ offer ِ همون لحظه؛ اول افزودن به علاقه‌مندی (پر ← شکست و برگشت کل تراکنش)، بعد حذف از سبد | تصمیم ۱۱: نیمه‌کاره نمی‌مونه |
 | 27 | قفل ِ اشتراک (تازه، گام ۹.۳) | ساخت و باطل کردن لینک زیر همون قفل لیست (۱۳)؛ دو کلیک همزمان یه لینک می‌سازن. بررسی پرچم داخل تراکنش، با خوندن تنظیمات ِ همون لحظه | یه قفل برای همه‌ی کارهای لیست یه کاربر |
 | 28 | route ِ عمومی ِ لیست اشتراکی (تازه، گام ۹.۳) | `webV1SharedWishlist` جدا از `webV1Wishlist` (بدون `authenticate`)، با `Cache-Control: no-store`؛ ۴۰۴ یکسان با کد `NOT_FOUND` برای همه‌ی حالت‌ها. nginx: zone ِ `kiva_wishlist_shared` با ۳۰ در دقیقه و `burst=10` (`kiva-http.conf`، `api.kivashop.ir.conf`، جدول `LAUNCH.md`) | تصمیم ۱۴ |
+| 29 | `WishlistHearts` (تازه، گام ۹.۴) | یه `fun interface` در لایه‌ی application (`savedAmong` روی `WishlistRepository.idsAmong`، `mark` برای یه صفحه کارت با یه خوندن). `FindProductsUc`، `GetProductUc`، `FindRelatedProductsUc` و `GetCartUc` با پیش‌فرض `NONE` (برای تست‌هایی که قلب نمی‌خوان)؛ DI و پشته‌ی تست ِ واقعی رو می‌دن. سبد: قلب ِ صاحب سبد، سبد مهمان `null` | یه کوئری بیشتر برای هر صفحه (تموم شده‌ی ۹.۴) |
+| 30 | ورود اختیاری روی routeهای محصول (تازه، گام ۹.۴) | `/products`، `/products/{idOrSlug}` و `/related` زیر `authenticate(ACCESS, optional = true)`: توکن خراب ← `401` (نه مهمان)، مثل لیست نظرها. `ProductDetail.isWishlisted` به پاسخ صفحه‌ی محصول اضافه شد | کانترکت «در صورت ورود کاربر: `isWishlisted` پر می‌شود» |
+| 31 | داشبورد (تازه، گام ۹.۴) | `GetMyDashboardUc` با همون خوندن‌های صفحه‌ها: `countByStatusOfCustomer` (همه و تب جاری)، `OrderQmRepository.sentMediaCountOf` (جمع `jsonb_array_length(photos -> 'sent')` در دیتابیس)، `countVisible`، دفترچه‌ی آدرس، `countsOfUser`، `Reservations.activeInfoOf`، و سرویس مشترک تازه‌ی `ReviewsAwaiting` که «منتظر نظر تو» هم حالا ازش می‌خونه. route ِ `webV1MyDashboard` در `webV1Me.kt` (تابع جدا، `MeUseCases` دست نخورد) | قانون ۱۵: یه تعریف برای «منتظر نظر تو» |
 
 ### ۱۴.۳ تغییرات دامنه
 
@@ -4474,16 +4477,18 @@ Route: 200 با Cache-Control: no-store
 
 ---
 
-#### گام ۹.۴: قلب روی کارت‌ها و داشبورد حساب · M ⬜
+#### گام ۹.۴: قلب روی کارت‌ها و داشبورد حساب · M ✅
 
 **می‌سازی:** `viewer: UserId?` در Queryهای لیست محصولات، صفحه‌ی محصول، مرتبط و سبد؛ `ProductCards` یه `wishlisted: Set<ProductId>?` می‌گیره (`null` = مهمان)؛ `GetMyDashboardUc` و `AccountDashboardHttpResponse`.
 
 وابسته به: ۹.۱ و فاز ۸
 
 **تموم شده یعنی:**
-- [ ] مهمان ← `isWishlisted = null` همه‌جا؛ کاربر ← `true` برای محصول ذخیره‌شده و `false` برای بقیه، در لیست، صفحه، مرتبط و سبد.
-- [ ] تعداد کوئری لیست محصولات برای کاربر واردشده فقط یکی بیشتر.
-- [ ] داشبورد: هر عدد با `GET /me/orders` (`counts`)، `/me/addresses`، `/me/wishlist` (`count`)، `/me/reviews` (`counts.total`)، `/me/reservation` و `pending-products` مقایسه می‌شه.
+- [x] مهمان ← `isWishlisted = null` همه‌جا؛ کاربر ← `true` برای محصول ذخیره‌شده و `false` برای بقیه، در لیست، صفحه، مرتبط و سبد.
+- [x] تعداد کوئری لیست محصولات برای کاربر واردشده فقط یکی بیشتر.
+- [x] داشبورد: هر عدد با `GET /me/orders` (`counts`)، `/me/addresses`، `/me/wishlist` (`count`)، `/me/reviews` (`counts.total`)، `/me/reservation` و `pending-products` مقایسه می‌شه.
+
+**یادداشت پیاده‌سازی:** سه تصمیم تازه (۲۹ تا ۳۱). `WishlistHearts`؛ `viewer` در Queryهای لیست، صفحه و مرتبط؛ قلب روی ردیف‌های سبد (`CartItemDto.isWishlisted`)؛ `isWishlisted` در `ProductDetailHttpResponse`؛ ورود اختیاری روی routeهای محصول (سه تست route ِ محصول حالا `configureAuthentication` رو نصب می‌کنن)؛ `GetMyDashboardUc`، `ReviewsAwaiting`، `OrderQmRepository.sentMediaCountOf`، `AccountDashboardHttpResponse` و `AccountTexts.greeting`. تست: `WebV1WishlistHeartsOnDatabaseTest` (۳: قلب همه‌جا برای مهمان و کاربر، یه statement برای ۲۴ کارت، داشبورد در برابر هر صفحه). خرابکاری: بدون قلب در `GetCartUc` ← «a guest sees no heart anywhere …» قرمز؛ بدون `mark` در لیست ← همون تست قرمز؛ `ordersActive` = همه‌ی سفارش‌ها ← «the dashboard - every number the same as the page it links to …» قرمز. کل مجموعه یه قرمزی پیدا کرد: سبد صفحه‌ی پرداخت (`GetCheckoutContextUc`) قلب نداشت و دیگه با `GET /cart` یکی نبود؛ قلب به `withHearts` ِ مشترک در `CartView` رفت و هر دو ازش می‌خونن. کل مجموعه: ۲۹۴۳ تست سبز، ۵ skip.
 
 ---
 
@@ -6380,3 +6385,4 @@ kiva {
 | ۳۰ مهر ۱۴۰۵ | ۹.۱ | Phase 9 step 9.1 | علاقه‌مندی‌ها: `V34`، Aggregate ِ `Wishlist` (سقف ۲۰۰ زیر قفل ۱۳)، افت قیمت، `findCards` و قیمت هر رنگ، پنج endpoint، بایگانی ← پاک از لیست‌ها. پنج تصمیم تازه (۱۸ تا ۲۲). سه خرابکاری قرمز. ۲۹۳۳ تست سبز |
 | ۳۰ مهر ۱۴۰۵ | ۹.۲ | Phase 9 step 9.2 | «همه به سبد» (انتخاب رنگ موجود، `skipped` برای هر محصول، لیست دست نمی‌خوره) و «انتقال از سبد» (همه یا هیچ، قفل ۲ بعد ۱۳)؛ `CartBulkAdd` و `ReorderUc` روش. چهار تصمیم تازه (۲۳ تا ۲۶). دو خرابکاری قرمز. ۲۹۳۶ تست سبز |
 | ۳۰ مهر ۱۴۰۵ | ۹.۳ | Phase 9 step 9.3 | لینک اشتراک (یه لینک، باطل‌شدن فوری، توکن تازه) و لیست عمومی (اسم کوچک، فقط منتشرشده‌ها، `no-store`، ۴۰۴ یکسان)؛ محدودیت nginx. دو تصمیم تازه (۲۷ و ۲۸). سه خرابکاری قرمز. ۲۹۴۰ تست سبز |
+| ۳۰ مهر ۱۴۰۵ | ۹.۴ | Phase 9 step 9.4 | قلب روی کارت‌های لیست، صفحه، مرتبط و سبد (و سبد صفحه‌ی پرداخت) با یه خوندن؛ ورود اختیاری روی routeهای محصول؛ داشبورد حساب با `ReviewsAwaiting` ِ مشترک. سه تصمیم تازه (۲۹ تا ۳۱). سه خرابکاری قرمز. ۲۹۴۳ تست سبز |
