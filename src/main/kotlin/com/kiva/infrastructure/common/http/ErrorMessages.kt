@@ -92,7 +92,7 @@ object ErrorMessages {
         "REFUND_NOT_FOUND" to "این استرداد پیدا نشد",
         "PAYMENT_IN_PROGRESS" to "یه پرداخت این سفارش همین الان در حال تأییده؛ چند دقیقه‌ی دیگه دوباره امتحان کن",
         // --- reviews, alerts, wishlist, uploads, admin ---
-        "REVIEW_ALREADY_EXISTS" to "برای این محصول یه نظر در انتظار تأیید داری",
+        "REVIEW_ALREADY_EXISTS" to "برای این محصول یه نظر ثبت‌شده داری؛ برای عوض کردنش ویرایشش کن یا پاکش کن",
         "REVIEW_NOT_EDITABLE" to "این نظر دیگه قابل ویرایش نیست",
         "STOCK_ALERT_EXISTS" to "قبلاً برای موجود شدن این کالا عضو شدی",
         "PRODUCT_IN_STOCK" to "این کالا الان موجوده",
@@ -379,6 +379,17 @@ object ErrorMessages {
         "RESTOCK_EXCEEDS_RECEIVED" to "تعداد برگشتی به موجودی نمی‌تونه از تعداد رسیده بیشتر باشه",
         "RETURN_STATUS_INVALID" to "وضعیت مرجوعی از مقدارهای مجاز نیست",
         "TEXT_INVALID" to "این متن علامت نامعتبر داره",
+        // --- reviews (phase 8) ---
+        "REVIEW_NOT_FOUND" to "این نظر پیدا نشد",
+        "REVIEW_PURCHASE_NOT_DELIVERED" to "این سفارش هنوز تحویل نشده؛ بعد از تحویل می‌تونی نظرت رو به خریدت وصل کنی",
+        "OWN_REVIEW_VOTE" to "به نظر خودت نمی‌تونی رأی بدی",
+        "ORDER_ITEM_PRODUCT_MISMATCH" to "این ردیف سفارش مال این محصول نیست",
+        "CONTACT_INVALID" to "یه شماره موبایل (مثل ۰۹۱۲۱۲۳۴۵۶۷) یا یه ایمیل درست بنویس",
+        "REVIEW_MEDIA_DISABLED" to "فعلاً نمی‌شه به نظر عکس اضافه کرد",
+        "REPLY_REQUIRES_APPROVAL" to "پاسخ فقط زیر نظری که تأیید می‌شه ثبت می‌شه",
+        "TEXT_TOO_SHORT" to "این متن حداقل {minLength} حرف باشه",
+        "REVIEW_STATUS_INVALID" to "وضعیت نظر از مقدارهای مجاز نیست",
+        "MODERATION_ACTION_INVALID" to "کار روی نظر فقط تأیید یا رده",
     )
 
     // Used when a code has no text of its own (or its placeholders can't be filled).

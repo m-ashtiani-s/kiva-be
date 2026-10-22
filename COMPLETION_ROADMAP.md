@@ -3779,7 +3779,7 @@ Route: 200
 
 | گام | عنوان | اندازه | وضعیت |
 |---|---|---|---|
-| ۸.۰ | کانترکت 1.14.0 | S | ⬜ |
+| ۸.۰ | کانترکت 1.14.0 | S | ✅ |
 | ۸.۱ | دامنه‌ی نظر، جدول‌ها و امتیاز محصول | L | ⬜ |
 | ۸.۲ | ثبت، ویرایش و حذف نظر؛ «نظرهای من» و «منتظر نظر تو» | L | ⬜ |
 | ۸.۳ | لیست عمومی، خلاصه‌ی امتیاز و رأی «مفید بود» | M | ⬜ |
@@ -3818,6 +3818,10 @@ Route: 200
 | 25 | صف پنل | فیلترهای کانترکت؛ بدون `status` همه، تازه‌ترین اول؛ `pendingCount` = کل `PENDING`، مستقل از فیلترها. هر ردیف به‌علاوه‌ی `customerId` و `contact` (ردیف ۶) | کانترکت |
 | 26 | محصول غیرفعال | نظرها می‌مونن. لیست و خلاصه‌ی عمومی ِ محصول منتشرنشده ← `404` (مثل صفحه‌ی محصول). پنل همه رو می‌بینه | — |
 | 27 | لاگ تغییرات | `REVIEW_MODERATED` (`status`)، `REVIEW_REPLIED`، `REVIEW_REPLY_DELETED` (بخش ۵.۱). کارهای مشتری ثبت نمی‌شن | قانون لاگ: فقط پنل |
+| 28 | کدها در `ErrorCode` (تازه، گام ۸.۰) | مثل تصمیم ۲۵ ِ فاز ۷ فقط کدهایی که `code` ِ اصلی پاسخ می‌شن: `REVIEW_NOT_FOUND`، `REVIEW_PURCHASE_NOT_DELIVERED`، `OWN_REVIEW_VOTE`. کدهای فیلدی (`ORDER_ITEM_PRODUCT_MISMATCH`، `CONTACT_INVALID`، `REVIEW_MEDIA_DISABLED`، `REPLY_REQUIRES_APPROVAL`، `REJECTION_REASON_REQUIRED`) فقط در `errors[].code` و توضیح همون فیلد | کانترکت: `ErrorCode` کد اصلی ِ پاسخه |
+| 29 | کدهای فیلدی ِ عمومی (تازه، گام ۸.۰) | متن کوتاه‌تر از حداقل ← کد عمومی ِ تازه‌ی `TEXT_TOO_SHORT` (`meta.minLength`)، کنار `TEXT_TOO_LONG` و `TEXT_INVALID`؛ امتیاز بیرون ۱ تا ۵ ← `RATING_INVALID` ِ موجود؛ فیلتر صف ← `REVIEW_STATUS_INVALID`؛ `action` ِ ناشناخته ← `MODERATION_ACTION_INVALID`؛ فقط یکی از `orderCode`/`orderItemId` ← `FIELD_REQUIRED` روی اون یکی | یه کد عمومی با `meta` به‌جای کدهای هم‌معنی |
+| 30 | `required` ِ پاسخ‌ها (تازه، گام ۸.۰) | `Review` (همه‌ی فیلدها)، `ReviewablePurchase`، `MyReviewListResponse.counts`، پاسخ رأی، `AdminReviewListResponse.items` (`customerId`، `contact`) و `RatingSummary.verifiedBuyerPercent` `required` شدن | همه‌ی فیلدها همیشه فرستاده می‌شن (بخش ۱ ِ کانترکت) |
+| 31 | پاسخ‌های خطای ثبت (تازه، گام ۸.۰) | `404` ِ ثبت هر دو کد رو داره (`PRODUCT_NOT_FOUND`، `ORDER_NOT_FOUND`)؛ `429` همون `TooManyRequests` ِ مشترک (با `Retry-After`)؛ `401` به لیست عمومی، و `404`/`422` به رأی و `409` به ویرایش اضافه شدن | کانترکت هر کدی که ممکنه بیاد رو می‌گه |
 
 ### ۱۳.۳ تغییرات دامنه
 
@@ -4055,15 +4059,19 @@ Route: 200 با Review
 | 14 | `GET /admin/reviews` | ترتیب؛ «`pendingCount` مستقل از فیلترها»؛ `contact` نیومده = موبایل حساب | تصمیم‌های ۶، ۲۵ |
 | 15 | `OrderItem.reviewed`، `OrderSummary.actions.canReview` | تعریف ردیف ۲۲ | — |
 | 16 | `ErrorCode` | `ORDER_ITEM_PRODUCT_MISMATCH`، `REVIEW_PURCHASE_NOT_DELIVERED`، `CONTACT_INVALID`، `REVIEW_MEDIA_DISABLED`، `REJECTION_REASON_REQUIRED` (اگه فاز ۷ اضافه نکرده)، `REPLY_REQUIRES_APPROVAL`، `OWN_REVIEW_VOTE`، `REVIEW_NOT_FOUND` | — |
+| 17 | `ErrorCode` (تازه، گام ۸.۰؛ جایگزین ردیف ۱۶) | فقط `REVIEW_NOT_FOUND`، `REVIEW_PURCHASE_NOT_DELIVERED`، `OWN_REVIEW_VOTE`؛ کدهای فیلدی در توضیح هر endpoint و فیلد | تصمیم ۲۸ |
+| 18 | `Review`، `ReviewablePurchase`، `counts`، رأی، صف (تازه، گام ۸.۰) | `required`؛ کدهای فیلدی ِ `TEXT_TOO_SHORT`، `RATING_INVALID`، `REVIEW_STATUS_INVALID`، `MODERATION_ACTION_INVALID`؛ `401`/`404`/`409`/`422`/`429` ِ جاافتاده | تصمیم‌های ۲۹ تا ۳۱ |
 
 ### ۱۳.۹ گام‌ها
 
-#### گام ۸.۰: کانترکت 1.14.0 · S ⬜
+#### گام ۸.۰: کانترکت 1.14.0 · S ✅
 
 **می‌سازی:** برنچ `reviews`؛ ردیف‌های ۱۳.۸؛ متن کدهای تازه.
 
 **تموم شده یعنی:**
-- [ ] کانترکت معتبر؛ `ErrorMessagesTest` و `RouteGuardsTest` سبز (`x-roles` ِ چهار route ِ پنل `[ADMIN, SUPPORT]`).
+- [x] کانترکت معتبر؛ `ErrorMessagesTest` و `RouteGuardsTest` سبز (`x-roles` ِ چهار route ِ پنل `[ADMIN, SUPPORT]`).
+
+**یادداشت پیاده‌سازی:** برنچ `reviews` از نوک فاز ۷ (`returns`)، چون فازهای قبل هنوز منتظر merge به `main` ـن. چهار تصمیم تازه (۲۸ تا ۳۱ ِ ۱۳.۲) و دو ردیف تازه‌ی ۱۳.۸ (۱۷ و ۱۸؛ ۱۷ جای ردیف ۱۶ رو می‌گیره). ترتیب قانون‌ها و همه‌ی کدهای ثبت، ویرایش، حذف، لیست عمومی (نظرهای `PENDING` ِ خود کاربر فقط صفحه‌ی ۱، ترتیب هر sort)، رأی، صف و رسیدگی و پاسخ؛ `RatingSummary.verifiedBuyerPercent` و گرد کردن‌ها؛ تساوی ِ `rating_desc`؛ `reviewed` و `canReview`. YAML معتبره و هر ۱۳۳۸ `$ref` پیدا می‌شن. متن ۱۰ کد تازه، و متن `REVIEW_ALREADY_EXISTS` حالا «نظر ثبت‌شده» (زنده) رو می‌گه.
 
 ---
 
@@ -6309,3 +6317,4 @@ kiva {
 | ۳۰ مهر ۱۴۰۵ | ۷.۴ | Phase 7 step 7.4 | صف پنل (`GET /admin/returns` با `status` و `sort`)، تصمیم (تأیید/رد با `OrderReturnEnded(REJECTED)`) و جمع‌آوری؛ `ReturnByIdForPanel` (قفل‌های ۹ و ۱۰)، `AdminReturnRequests` (بدون N+1، با `suggestedRefund`)، چهار پیامک مرجوعی با مسیر کامل، چهار `AuditAction`. چهار تصمیم تازه (۴۴ تا ۴۷). خرابکاری قرمز. کل مجموعه: ۲۸۴۲ تست سبز، ۵ skip (روی Postgres ِ موقت ِ پورت ۵۴۳۳) |
 | ۳۰ مهر ۱۴۰۵ | ۷.۵ | Phase 7 step 7.5 | رسید (`ReceiveReturnUc`، برگشت به موجودی با `RETURNED`، سفارش `RETURNED`)، بستن (`CloseReturnUc`، `RETURN_REFUND_OPEN`)، استرداد ِ مرجوعی با `returnId` (`RETURN_REFUND_EXISTS`، روش ِ مرجوعی) و `COMPLETED` ← مرجوعی و سفارش `REFUNDED`. پنج تصمیم تازه (۴۸ تا ۵۲). خرابکاری قرمز. کل مجموعه: ۲۸۵۲ تست سبز، ۵ skip |
 | ۳۰ مهر ۱۴۰۵ | ۷.۶ | Phase 7 step 7.6 | `RETURNS_REVIEW.md` (نه خرابکاری، همه قرمز)، `ReturnsLogScanOnDatabaseTest`، `docs/FRONTEND_RETURNS.md`. ۲۸۵۴ تست سبز، ۵ skip. فاز ۷ از طرف ریپو کامله؛ الگوهای فراز، دور واقعی و merge منتظر تو |
+| ۳۰ مهر ۱۴۰۵ | ۸.۰ | Phase 8 step 8.0 | کانترکت 1.14.0 با هر ۱۶ ردیف ِ ۱۳.۸ و دو ردیف تازه (۱۷ و ۱۸)؛ چهار تصمیم تازه (۲۸ تا ۳۱). YAML معتبر، ۱۳۳۸ `$ref`. متن ۱۰ کد تازه. برنچ `reviews` از نوک فاز ۷ |

@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: KIVA Store API — کیوا
-  version: 1.13.0
+  version: 1.14.0
   contact:
     name: KIVA Engineering
     email: support@kiva.ir
@@ -941,7 +941,14 @@ paths:
       tags: [Reviews]
       operationId: listProductReviews
       summary: "نظرات تأییدشده‌ی محصول + خلاصه‌ی امتیاز (میانگین و توزیع ستاره‌ها)"
-      description: اگر کاربر وارد شده باشد، نظرات «در انتظار تأیید» خودش هم با `isMine=true` در ابتدای لیست می‌آید.
+      description: |
+        فقط نظرهای `APPROVED`، برای محصول منتشرشده (وگرنه `404 PRODUCT_NOT_FOUND`). اگر کاربر وارد شده باشد، نظرهای `PENDING` ِ خودش برای همین محصول
+        با `isMine = true` **فقط در صفحه‌ی ۱ و اول لیست** می‌آیند: بیرون از فیلترها و بیرون از `meta` (شمرده نمی‌شوند). نظر `REJECTED` ِ خودش فقط در «نظرات من».
+        `isMine` برای نظر تأییدشده‌ی خودش هم `true` است.
+
+        ترتیب‌ها: `newest` زمان ثبت نزولی؛ `highest` امتیاز نزولی، بعد تازه‌ترین؛ `lowest` امتیاز صعودی، بعد تازه‌ترین؛ `helpful` `helpfulCount` نزولی،
+        بعد تازه‌ترین؛ در همه آخرین کلید شناسه‌ی نظر نزولی (صفحه‌بندی پایدار). `summary` همیشه روی **همه‌ی** نظرهای تأییدشده است، مستقل از فیلترها.
+        ورود اختیاری است، ولی توکن نامعتبر یا منقضی `401` است (نه مهمان).
       security: [{}, { bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/ProductId'
@@ -967,11 +974,18 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ReviewListResponse' }
         '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
     post:
       tags: [Reviews]
       operationId: createProductReview
       summary: "ثبت نظر (نیازمند ورود) — بعد از تأیید ادمین نمایش داده می‌شود"
+      description: |
+        هر کاربر واردشده، برای محصول منتشرشده (وگرنه `404 PRODUCT_NOT_FOUND`)؛ خرید شرط نیست. ترتیب قانون‌ها: شکل (همه‌ی خطاها با هم، `400`)؛
+        محصول؛ نظر «زنده» (`PENDING` یا `APPROVED`) ِ همین کاربر برای همین محصول ← `409 REVIEW_ALREADY_EXISTS` (بعد از `REJECTED` نظر تازه مجاز است)؛
+        بیشتر از ۵ نظر در ۲۴ ساعت گذشته ← `429 RATE_LIMITED` با `Retry-After`؛ مدیا (پرچم `reviewMedia` خاموش و `mediaIds` ناخالی ← `400 REVIEW_MEDIA_DISABLED`
+        روی `mediaIds`؛ هر کدام فقط `REVIEW_PHOTO` ِ خود کاربر، وگرنه `400 MEDIA_NOT_FOUND` روی `mediaIds.{i}`)؛ وصل خرید (`CreateReviewRequest`).
+        همیشه `PENDING`؛ بعد از تأیید پشتیبانی دیده می‌شود. پیامکی نمی‌رود.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/ProductId'
@@ -989,16 +1003,27 @@ paths:
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '409':
-          description: "`REVIEW_ALREADY_EXISTS` — کاربر برای این محصول نظر در انتظار دارد"
+          description: "`REVIEW_ALREADY_EXISTS` — کاربر برای این محصول نظر «زنده» (`PENDING` یا `APPROVED`) دارد"
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '422':
+          description: "`REVIEW_PURCHASE_NOT_DELIVERED` — سفارشی که نظر به آن وصل شده هنوز تحویل نشده یا لغو شده"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '404':
+          description: "`PRODUCT_NOT_FOUND`، یا `ORDER_NOT_FOUND` (سفارش ِ `orderCode` نیست یا مال کاربر دیگری است)"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
   /products/{productId}/reviews/summary:
     get:
       tags: [Reviews]
       operationId: getReviewSummary
       summary: "فقط خلاصه‌ی امتیاز (برای meta-row بالای صفحه)"
+      description: همان `summary` ِ `GET /products/{productId}/reviews`؛ محصول منتشرنشده ← `404`. کش نمی‌شود (با هر تأیید عوض می‌شود).
       parameters:
         - $ref: '#/components/parameters/ProductId'
       responses:
@@ -1013,6 +1038,9 @@ paths:
       tags: [Reviews]
       operationId: voteReviewHelpful
       summary: "رأی «این نظر مفید بود» [پیشنهادی]"
+      description: |
+        `helpful: true` = رأی می‌دهم، `false` = رأیم را پس می‌گیرم («مفید نبود» شمرده نمی‌شود). تکرار بی‌اثر است. فقط روی نظر `APPROVED`
+        (وگرنه `404 REVIEW_NOT_FOUND`)؛ روی نظر خودش ← `422 OWN_REVIEW_VOTE`. `myVote` بعد از کار `true` یا `null` (هیچ‌وقت `false`).
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/ReviewId'
@@ -1034,10 +1062,16 @@ paths:
                 type: object
                 properties:
                   helpfulCount: { type: integer, example: 12 }
-                  myVote: { type: boolean, nullable: true }
-
+                  myVote: { type: boolean, nullable: true, description: '`true` یا `null`' }
+                required: [helpfulCount, myVote]
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422':
+          description: "`OWN_REVIEW_VOTE` — رأی به نظر خود"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '404': { $ref: '#/components/responses/NotFound' }
   # ================================================================
   #  SEARCH
@@ -2529,6 +2563,7 @@ paths:
       tags: [Reviews]
       operationId: listMyReviews
       summary: "نظرات من با وضعیت (منتشر شده / در انتظار تأیید) و پاسخ ادمین"
+      description: همه‌ی وضعیت‌ها (رد شده‌ها با `rejectionReason`)، تازه‌ترین اول، هر کدام با `product` (محصول بایگانی‌شده هم). `counts` روی همه‌ی نظرهای کاربر.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/Page'
@@ -2546,6 +2581,10 @@ paths:
       tags: [Reviews]
       operationId: updateMyReview
       summary: "ویرایش نظر در انتظار تأیید [پیشنهادی]"
+      description: |
+        فقط نظر خود (وگرنه `404 REVIEW_NOT_FOUND`) و فقط `PENDING` یا `REJECTED` (`APPROVED` ← `422 REVIEW_NOT_EDITABLE`؛ برای عوض کردنش حذف و ثبت دوباره).
+        ویرایش ِ `REJECTED` آن را دوباره `PENDING` می‌کند و `rejectionReason` پاک می‌شود؛ اگر کاربر همین الان نظر زنده‌ی دیگری برای همین محصول دارد ←
+        `409 REVIEW_ALREADY_EXISTS`. هر فیلد نیامده عوض نمی‌شود؛ `{}` ← `200` بی‌تغییر؛ `authorName: ""` ← «کاربر کیوا». `createdAt` عوض نمی‌شود.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/ReviewId'
@@ -2565,6 +2604,11 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '409':
+          description: "`REVIEW_ALREADY_EXISTS` — ویرایش نظر ردشده وقتی نظر زنده‌ی دیگری برای همین محصول هست"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -2572,6 +2616,7 @@ paths:
       tags: [Reviews]
       operationId: deleteMyReview
       summary: "حذف نظر [پیشنهادی]"
+      description: نظر خود، در هر وضعیتی (وگرنه `404 REVIEW_NOT_FOUND`)؛ نظر و رأی‌هایش پاک می‌شوند (عکس‌ها می‌مانند). نظر تأییدشده از امتیاز محصول کم می‌شود.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/ReviewId'
@@ -2584,6 +2629,9 @@ paths:
       tags: [Reviews]
       operationId: listProductsAwaitingMyReview
       summary: "کالاهای خریداری‌شده‌ای که هنوز نظر نداده‌ام [پیشنهادی]"
+      description: |
+        ردیف‌های سفارش‌های تحویل‌شده‌ی کاربر (تحویل شده و لغو نشده) که محصولشان منتشرشده است و کاربر برایش نظر زنده (`PENDING` یا `APPROVED`) ندارد؛
+        **یک ردیف برای هر محصول** (آخرین تحویل)، تازه‌ترین تحویل اول، حداکثر ۵۰. `color` از snapshot ِ ردیف.
       security: [{ bearerAuth: [] }]
       responses:
         '200':
@@ -4830,6 +4878,9 @@ paths:
       x-roles: [ADMIN, SUPPORT]
       operationId: adminListReviews
       summary: "صف بررسی نظرات"
+      description: |
+        بدون `status` همه‌ی نظرها؛ تازه‌ترین ثبت اول. `pendingCount` = کل نظرهای `PENDING`، مستقل از فیلترها. هر ردیف `Review` ِ کامل (با `rejectionReason`)
+        به‌اضافه‌ی `customerId` و `contact` (اگر کاربر راه تماس نداده، موبایل فعلی حسابش). وضعیت ناشناخته ← `400 REVIEW_STATUS_INVALID`.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: status
@@ -4858,6 +4909,10 @@ paths:
       x-roles: [ADMIN, SUPPORT]
       operationId: adminModerateReview
       summary: "تأیید یا رد نظر"
+      description: |
+        `PENDING` ← `APPROVED` یا `REJECTED`؛ `APPROVED` ← `REJECTED` (برداشتن از سایت)؛ `REJECTED` ← `APPROVED`. همان وضعیت دوباره ← `422 INVALID_STATUS_TRANSITION`.
+        رد: `rejectionReason` ۳ تا ۳۰۰ لازم (`400 REJECTION_REASON_REQUIRED`)؛ فقط صاحب نظر آن را می‌بیند. `reply` (۲ تا ۱۰۰۰) فقط با `APPROVE`؛ با `REJECT` ←
+        `400 REPLY_REQUIRES_APPROVAL` روی `reply`. امتیاز محصول با هر ورود یا خروج از `APPROVED` به‌روز می‌شود. پیامکی نمی‌رود. یک ردیف `REVIEW_MODERATED` در لاگ تغییرات.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/ReviewId'
@@ -4876,12 +4931,20 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422':
+          description: "`INVALID_STATUS_TRANSITION`"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
   /admin/reviews/{reviewId}/reply:
     put:
       tags: [Admin · Support]
       x-roles: [ADMIN, SUPPORT]
       operationId: adminReplyReview
       summary: "ثبت/ویرایش «پاسخ کیوا» زیر نظر"
+      description: |
+        فقط روی نظر `APPROVED` (وگرنه `422 INVALID_STATUS_TRANSITION`). متن ساده ۲ تا ۱۰۰۰ (همان قانون متن نظر). `reply.authorName` همیشه «کیوا» و
+        `reply.createdAt` آخرین ذخیره. یک ردیف `REVIEW_REPLIED` در لاگ تغییرات. رد کردن بعدی نظر، پاسخ را نگه می‌دارد ولی دیده نمی‌شود.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/ReviewId'
@@ -4904,11 +4967,17 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422':
+          description: "`INVALID_STATUS_TRANSITION` — نظر تأییدشده نیست"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
     delete:
       tags: [Admin · Support]
       x-roles: [ADMIN, SUPPORT]
       operationId: adminDeleteReviewReply
       summary: "حذف پاسخ"
+      description: همیشه `204`، بدون پاسخ هم (نظر ناموجود ← `404 REVIEW_NOT_FOUND`)؛ ردیف `REVIEW_REPLY_DELETED` ِ لاگ تغییرات فقط وقتی واقعاً پاسخی پاک شد.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/ReviewId'
@@ -5303,7 +5372,8 @@ components:
       in: query
       description: |
         `newest` جدیدترین (پیش‌فرض) · `bestselling` پرفروش‌ترین · `price_asc` ارزان‌ترین · `price_desc` گران‌ترین ·
-        `discount_desc` بیشترین تخفیف · `rating_desc` بیشترین امتیاز
+        `discount_desc` بیشترین تخفیف · `rating_desc` بیشترین امتیاز (میانگین نزولی، بعد تعداد نظر نزولی، بعد تازه‌ترین؛ بی‌نظرها بعد از نظردارها،
+        و ناموجودها مثل بقیه‌ی ترتیب‌ها ته لیست)
       schema:
         type: string
         enum: [newest, bestselling, price_asc, price_desc, discount_desc, rating_desc]
@@ -5664,6 +5734,10 @@ components:
         - RETURN_NOT_FOUND
         - RETURN_REFUND_EXISTS
         - RETURN_REFUND_OPEN
+        # --- نظرها (فاز ۸) ---
+        - REVIEW_NOT_FOUND
+        - REVIEW_PURCHASE_NOT_DELIVERED
+        - OWN_REVIEW_VOTE
       example: DISCOUNT_MIN_SUBTOTAL_NOT_MET
 
     # ============ MEDIA ============
@@ -5832,13 +5906,17 @@ components:
         icon: { type: string, allOf: [{ $ref: '#/components/schemas/IconName' }], nullable: true, example: play }
     RatingBrief:
       type: object
+      description: 'فقط نظرهای `APPROVED`. `average` = جمع ÷ تعداد، گرد به یک رقم اعشار (نیم رو به بالا)؛ محصول بی‌نظر `{average: 0, count: 0}`'
       required: [average, count]
       properties:
         average: { type: number, format: float, minimum: 0, maximum: 5, example: 4.6 }
         count: { type: integer, example: 21 }
     RatingSummary:
       type: object
-      required: [average, count, distribution]
+      description: |
+        فقط نظرهای `APPROVED`. `average` یک رقم اعشار (نیم رو به بالا)؛ `percent` ِ هر ستاره یک رقم اعشار (جمعشان ممکن است دقیقاً ۱۰۰ نشود)؛
+        `verifiedBuyerPercent` = گرد ِ «نظرهای خریدار × ۱۰۰ ÷ تعداد». محصول بی‌نظر: `average = 0`، `count = 0`، پنج ردیف صفر و `verifiedBuyerPercent = null`.
+      required: [average, count, distribution, verifiedBuyerPercent]
       properties:
         average: { type: number, format: float, example: 4.6 }
         count: { type: integer, description: تعداد نظرات تأییدشده, example: 21 }
@@ -5916,7 +5994,7 @@ components:
         stock: { $ref: '#/components/schemas/StockInfo' }
         isNew: { type: boolean, example: true }
         hasVideo: { type: boolean, example: true }
-        rating: { $ref: '#/components/schemas/RatingBrief' }
+        rating: { allOf: [{ $ref: '#/components/schemas/RatingBrief' }], description: 'همیشه فرستاده می‌شود (بی‌نظر: صفر)' }
         soldCount: { type: integer, description: «۱۸۴ فروش موفق», example: 184 }
         freeShippingEligible: { type: boolean, description: قیمت ≥ آستانه‌ی ارسال رایگان, example: false }
         isWishlisted: { type: boolean, nullable: true, description: null برای کاربر مهمان }
@@ -6270,31 +6348,32 @@ components:
       type: object
       properties:
         text: { type: string, example: سمیرا جان ممنون از انرژی خوبت، مبارکت باشه. }
-        authorName: { type: string, example: کیوا }
-        createdAt: { type: string, format: date-time }
+        authorName: { type: string, description: همیشه «کیوا», example: کیوا }
+        createdAt: { type: string, format: date-time, description: آخرین ذخیره }
     Review:
       type: object
-      required: [id, productId, authorName, rating, text, createdAt, status]
+      required: [id, productId, product, authorName, authorInitial, rating, title, text, createdAt, status, statusLabel, rejectionReason, isVerifiedBuyer, purchasedColor, reply, helpfulCount, myHelpfulVote, media, isMine]
       properties:
         id: { type: integer, example: 5531 }
         productId: { type: integer, example: 1 }
         product:
           allOf: [{ $ref: '#/components/schemas/ProductRef' }]
-          description: فقط در «نظرات من»
-        authorName: { type: string, example: سمیرا }
+          nullable: true
+          description: فقط در «نظرات من»؛ بقیه‌جا `null`
+        authorName: { type: string, description: 'اسمی که نویسنده داد؛ نداد ← «کاربر کیوا». اسم حساب خودکار گذاشته نمی‌شود', example: سمیرا }
         authorInitial: { type: string, example: س }
         rating: { type: integer, minimum: 1, maximum: 5, example: 5 }
-        title: { type: string, nullable: true, description: '[پیشنهادی]' }
-        text: { type: string, example: کیفیت دوخت و چرمش عالیه. عکسی که قبل از ارسال فرستادن دقیقاً همونی بود که رسید. }
+        title: { type: string, nullable: true, description: '[پیشنهادی] همیشه `null` (ورودی ندارد)' }
+        text: { type: string, description: 'متن ساده (نه HTML): به‌صورت متن نمایش بده، نه `innerHTML`؛ خط تازه نگه داشته می‌شود', example: کیفیت دوخت و چرمش عالیه. عکسی که قبل از ارسال فرستادن دقیقاً همونی بود که رسید. }
         createdAt: { type: string, format: date-time }
         status: { $ref: '#/components/schemas/ReviewStatus' }
         statusLabel: { type: string, example: در انتظار تأیید }
-        rejectionReason: { type: string, nullable: true }
-        isVerifiedBuyer: { type: boolean, description: تگ «خریدار», example: true }
+        rejectionReason: { type: string, nullable: true, description: 'فقط برای صاحب نظر (و پنل)؛ بقیه‌جا `null`' }
+        isVerifiedBuyer: { type: boolean, description: 'تگ «خریدار»: نظر به ردیف تحویل‌شده‌ای از سفارش خود نویسنده وصل است', example: true }
         purchasedColor: { type: object, allOf: [{ $ref: '#/components/schemas/Color' }], nullable: true }
-        reply: { type: object, allOf: [{ $ref: '#/components/schemas/ReviewReply' }], nullable: true }
+        reply: { type: object, allOf: [{ $ref: '#/components/schemas/ReviewReply' }], nullable: true, description: 'فقط وقتی نظر `APPROVED` است' }
         helpfulCount: { type: integer, example: 4 }
-        myHelpfulVote: { type: boolean, nullable: true }
+        myHelpfulVote: { type: boolean, nullable: true, description: '`true` یا `null` (مهمان همیشه `null`)' }
         media:
           type: array
           description: '[پیشنهادی] عکس‌های مشتری'
@@ -6302,24 +6381,30 @@ components:
         isMine: { type: boolean, example: false }
     CreateReviewRequest:
       type: object
+      description: |
+        همه‌ی خطاهای شکل با هم (`400`، روی همان فیلد). **وصل خرید:** اگر `orderCode` و `orderItemId` آمدند: سفارش مال خود کاربر (`404 ORDER_NOT_FOUND`)،
+        ردیف در سفارش (`400 ORDER_ITEM_NOT_FOUND` روی `orderItemId`)، محصول ردیف همین محصول (`400 ORDER_ITEM_PRODUCT_MISMATCH`)، سفارش تحویل‌شده و لغونشده
+        (`422 REVIEW_PURCHASE_NOT_DELIVERED`). فقط یکی آمد ← `400 FIELD_REQUIRED` روی دیگری. **هیچ‌کدام نیامد:** سرور آخرین ردیف تحویل‌شده‌ی همین محصول از
+        سفارش‌های همین کاربر را خودش پیدا و وصل می‌کند. وصل‌شده ← `isVerifiedBuyer = true` و `purchasedColor` از snapshot ِ همان ردیف.
       required: [rating, text]
       properties:
-        rating: { type: integer, minimum: 1, maximum: 5, default: 5 }
-        authorName: { type: string, maxLength: 40, description: 'خالی = «کاربر کیوا»', example: سارا }
+        rating: { type: integer, minimum: 1, maximum: 5, description: 'نیامده ← `FIELD_REQUIRED`؛ بیرون ۱ تا ۵ ← `RATING_INVALID`' }
+        authorName: { type: string, maxLength: 40, description: 'خالی = «کاربر کیوا» (`TEXT_TOO_LONG`)', example: سارا }
         contact:
           type: string
-          description: موبایل یا ایمیل (در طرح فرم هست؛ برای کاربر واردشده پیش‌فرض موبایل حساب)
+          description: 'موبایل (`09…` بعد از نرمال‌سازی ارقام) یا ایمیل، وگرنه `CONTACT_INVALID`؛ فقط پنل می‌بیند. نیامده: پنل موبایل حساب را نشان می‌دهد'
           example: '09123456789'
-        text: { type: string, minLength: 10, maxLength: 1000, example: از کیفیت، رنگ و اندازه‌اش خیلی راضی‌ام. }
+        text: { type: string, minLength: 10, maxLength: 1000, description: 'متن ساده ۱۰ تا ۱۰۰۰ نویسه بعد از trim (`TEXT_TOO_SHORT` / `TEXT_TOO_LONG`)؛ خط تازه نگه داشته می‌شود، بیشتر از دو خط خالی پشت‌سرهم یکی؛ نویسه‌ی کنترلی ← `TEXT_INVALID`', example: از کیفیت، رنگ و اندازه‌اش خیلی راضی‌ام. }
         orderCode: { type: string, allOf: [{ $ref: '#/components/schemas/OrderCode' }], nullable: true, description: 'همراه `orderItemId`؛ شماره‌ی ردیف فقط داخل سفارش خودش یکتاست' }
         orderItemId: { type: integer, nullable: true, description: 'اتصال به خرید → تگ «خریدار» (همراه `orderCode`؛ مثل `ReviewablePurchase`)' }
         mediaIds:
           type: array
           maxItems: 5
-          description: '[پیشنهادی] از `POST /me/uploads`'
+          description: '[پیشنهادی] از `POST /me/uploads` با `REVIEW_PHOTO`، فقط آپلودهای خود کاربر (وگرنه `MEDIA_NOT_FOUND`)؛ عکس و ویدیو. پرچم `reviewMedia` خاموش و ناخالی ← `REVIEW_MEDIA_DISABLED`. بیشتر از ۵ ← `TOO_MANY_ITEMS`؛ تکراری ← `LIST_ITEM_DUPLICATE`؛ بعد از ثبت عوض نمی‌شود'
           items: { type: string }
     UpdateReviewRequest:
       type: object
+      description: هر فیلد نیامده عوض نمی‌شود؛ همان قانون‌های `CreateReviewRequest`
       properties:
         rating: { type: integer, minimum: 1, maximum: 5 }
         authorName: { type: string, maxLength: 40 }
@@ -6342,12 +6427,15 @@ components:
         meta: { $ref: '#/components/schemas/PageMeta' }
         counts:
           type: object
+          required: [total, pending, approved, rejected]
           properties:
             total: { type: integer, example: 3 }
             pending: { type: integer, example: 1 }
             approved: { type: integer, example: 2 }
+            rejected: { type: integer, example: 0 }
     ReviewablePurchase:
       type: object
+      required: [orderCode, orderItemId, product, color, deliveredAt]
       properties:
         orderCode: { $ref: '#/components/schemas/OrderCode' }
         orderItemId: { type: integer }
@@ -6934,7 +7022,7 @@ components:
             canReturn: { type: boolean, example: false }
             canPay: { type: boolean, description: 'دکمه‌ی «پرداخت» ← `POST /me/orders/{code}/payments` (سفارش پرداخت‌نشده، یا `balanceDue > 0`)', example: false }
             canAddToReservation: { type: boolean, example: false }
-            canReview: { type: boolean, example: false }
+            canReview: { type: boolean, description: 'سفارش `DELIVERED` و دست‌کم یک ردیف با `reviewed = false` که محصولش منتشرشده است', example: false }
     OrderItem:
       type: object
       required: [id, productId, variantId, name, color, quantity, unitPrice, lineTotal]
@@ -6951,7 +7039,7 @@ components:
         unitPrice: { allOf: [{ $ref: '#/components/schemas/Money' }], example: 2790000 }
         unitCompareAtPrice: { type: integer, allOf: [{ $ref: '#/components/schemas/Money' }], nullable: true, example: 3290000 }
         lineTotal: { allOf: [{ $ref: '#/components/schemas/Money' }], example: 2790000 }
-        reviewed: { type: boolean, example: false }
+        reviewed: { type: boolean, description: 'کاربر برای **محصول** این ردیف نظر زنده (`PENDING` یا `APPROVED`) دارد', example: false }
         returnableUntil: { type: string, format: date-time, nullable: true }
     OrderTotals:
       type: object
@@ -8355,7 +8443,7 @@ components:
         variantsCount: { type: integer, description: 'همه‌ی رنگ‌ها (فعال و غیرفعال)', example: 4 }
         lowStockVariants: { type: integer, description: 'رنگ‌های فعال با موجودی بین صفر و آستانه', example: 1 }
         soldCount: { type: integer, example: 184 }
-        rating: { $ref: '#/components/schemas/RatingBrief' }
+        rating: { allOf: [{ $ref: '#/components/schemas/RatingBrief' }], description: 'همیشه فرستاده می‌شود (بی‌نظر: صفر)' }
         updatedAt: { type: string, format: date-time }
     AdminProductListResponse:
       type: object
@@ -8972,18 +9060,19 @@ components:
             allOf:
               - $ref: '#/components/schemas/Review'
               - type: object
+                required: [customerId, contact]
                 properties:
                   customerId: { type: integer }
-                  contact: { type: string }
+                  contact: { type: string, nullable: true, description: 'راه تماسی که نویسنده داد، وگرنه موبایل فعلی حساب' }
         meta: { $ref: '#/components/schemas/PageMeta' }
-        pendingCount: { type: integer, example: 4 }
+        pendingCount: { type: integer, description: کل نظرهای `PENDING`، مستقل از فیلترها, example: 4 }
     ReviewModerationRequest:
       type: object
       required: [action]
       properties:
-        action: { type: string, enum: [APPROVE, REJECT] }
-        rejectionReason: { type: string, nullable: true, maxLength: 300 }
-        reply: { type: string, nullable: true, maxLength: 1000, description: ثبت هم‌زمان پاسخ کیوا }
+        action: { type: string, enum: [APPROVE, REJECT], description: 'نیامده ← `FIELD_REQUIRED`؛ ناشناخته ← `MODERATION_ACTION_INVALID`' }
+        rejectionReason: { type: string, nullable: true, minLength: 3, maxLength: 300, description: 'برای `REJECT` لازم (`REJECTION_REASON_REQUIRED`)؛ در `APPROVE` نادیده' }
+        reply: { type: string, nullable: true, minLength: 2, maxLength: 1000, description: 'ثبت هم‌زمان پاسخ کیوا؛ فقط با `APPROVE` (با `REJECT` ← `REPLY_REQUIRES_APPROVAL`)' }
     AdminContactMessage:
       type: object
       properties:
