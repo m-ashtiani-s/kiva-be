@@ -4212,7 +4212,7 @@ Route: 200 با Review
 
 | گام | عنوان | اندازه | وضعیت |
 |---|---|---|---|
-| ۹.۰ | کانترکت 1.15.0 | S | ⬜ |
+| ۹.۰ | کانترکت 1.15.0 | S | ✅ |
 | ۹.۱ | علاقه‌مندی‌ها: جدول، دامنه، افزودن، حذف، لیست و شناسه‌ها | M | ⬜ |
 | ۹.۲ | علاقه‌مندی به سبد، و سبد به علاقه‌مندی | M | ⬜ |
 | ۹.۳ | لینک اشتراک و لیست عمومی | M | ⬜ |
@@ -4400,12 +4400,14 @@ Route: 200 با Cache-Control: no-store
 
 ### ۱۴.۸ گام‌ها
 
-#### گام ۹.۰: کانترکت 1.15.0 · S ⬜
+#### گام ۹.۰: کانترکت 1.15.0 · S ✅
 
 **می‌سازی:** برنچ `wishlist`؛ ردیف‌های ۱۴.۷؛ متن کدهای تازه. آدرس لینک‌ها از `kiva.shop.siteUrl` ِ موجود (`KIVA_SITE_URL`) ساخته می‌شه؛ پیکربندی تازه‌ای لازم نیست.
 
 **تموم شده یعنی:**
-- [ ] کانترکت معتبر؛ `ErrorMessagesTest` سبز.
+- [x] کانترکت معتبر؛ `ErrorMessagesTest` سبز.
+
+**یادداشت پیاده‌سازی:** برنچ `wishlist` از نوک فاز ۸ (`da75320`). کانترکت 1.15.0 با هر ۱۲ ردیف ِ ۱۴.۷؛ به‌علاوه‌ی `required` ِ همه‌ی شِماهای علاقه‌مندی (`WishlistItem`، `Wishlist`، `WishlistToggleResponse`، `WishlistAddToCartResponse`، `WishlistShare`، `SharedWishlist`)، الگوی توکن، `productIds.maxItems = 200` (`400 TOO_MANY_ITEMS`)، و `422` ِ `PUT` و «انتقال» با `meta.limit`. فقط `WISHLIST_SHARE_DISABLED` به `ErrorCode` رفت (`COLOR_NOT_FOUND` کد فیلدیه، تصمیم ۲۸ ِ فاز ۸) با متن فارسی. YAML معتبر، ۱۳۴۴ `$ref`؛ `ErrorMessagesTest` و `RouteGuardsTest` سبز.
 
 ---
 
@@ -6357,3 +6359,4 @@ kiva {
 | ۳۰ مهر ۱۴۰۵ | ۸.۴ | Phase 8 step 8.4 | امتیاز روی کارت لیست، جستجو، صفحه و پنل (یه خوندن برای کل صفحه)، `ratingSummary` ِ واقعی؛ `canReview` و `reviewed` در سفارش‌ها با `ReviewMarks`. دو تصمیم تازه (۴۶ و ۴۷). دو خرابکاری قرمز. ۲۹۱۲ تست سبز |
 | ۳۰ مهر ۱۴۰۵ | ۸.۵ | Phase 8 step 8.5 | صف پنل (فیلترها، `pendingCount`، راه تماس)، تأیید و رد با `RatingBook`، «پاسخ کیوا» و حذفش، سه `AuditAction`؛ `409` ِ moderation در کانترکت. چهار تصمیم تازه (۴۸ تا ۵۱). دو خرابکاری قرمز. ۲۹۱۹ تست سبز |
 | ۳۰ مهر ۱۴۰۵ | ۸.۶ | Phase 8 step 8.6 | `REVIEWS_REVIEW.md` (ده خرابکاری، همه قرمز؛ یکی بعد از یه تست تازه)، `ReviewsConsistencyOnDatabaseTest`، `docs/FRONTEND_REVIEWS.md`. ۲۹۲۱ تست سبز، ۵ skip. فاز ۸ از طرف ریپو کامله؛ دور واقعی و merge منتظر تو |
+| ۳۰ مهر ۱۴۰۵ | ۹.۰ | Phase 9 step 9.0 | کانترکت 1.15.0 با هر ۱۲ ردیف ِ ۱۴.۷ و `required` ِ شِماهای علاقه‌مندی؛ متن `WISHLIST_SHARE_DISABLED`. برنچ `wishlist` از نوک فاز ۸ |

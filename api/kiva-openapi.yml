@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: KIVA Store API — کیوا
-  version: 1.14.0
+  version: 1.15.0
   contact:
     name: KIVA Engineering
     email: support@kiva.ir
@@ -235,13 +235,12 @@ info:
     | مرجوعی بسته شد | SMS | کد مرجوعی + «جزئیات تو حسابت»؛ با `notifyCustomer`. **بدون** دلیل بستن |
     | درخواست تغییر بررسی شد | SMS | کد سفارش + «جزئیات در صفحه‌ی سفارش»؛ با `notifyCustomer`. **بدون `note`**: متن آزاد پیامک نداریم، `note` در `feedback.resolution` و تایم‌لاین دیده می‌شود |
     | موجود شد | SMS | لینک محصول (اشتراک «موجود شد خبرم کن») |
-    | افت قیمت علاقه‌مندی | SMS | فقط با رضایت بازاریابی [پیشنهادی] |
 
     ## ۶. نگاشت صفحه‌ها به endpointها
 
     | صفحه | endpointها |
     |---|---|
-    | همه صفحات (هدر/فوتر/منو/جستجو/سبد کشویی) | `GET /config`، `GET /categories`، `GET /search/suggest`، `GET /search/hints`، `GET /cart`، `GET /me/wishlist/ids`، `POST /newsletter/subscriptions` |
+    | همه صفحات (هدر/فوتر/منو/جستجو/سبد کشویی) | `GET /config`، `GET /categories`، `GET /search/suggest`، `GET /search/hints`، `GET /cart`، `GET /me/wishlist/ids` (فقط کاربر واردشده؛ مهمان قلب‌ها را در مرورگر نگه می‌دارد)، `POST /newsletter/subscriptions` |
     | خانه `index` | `GET /home` (یا جداگانه: `/campaigns/active`، `/banners`، `/testimonials`، `/products?sort=newest`) |
     | فروشگاه `products` | `GET /products` (+`includeFacets`)، `GET /products/facets`، `GET /colors` |
     | جزئیات محصول `product` | `GET /products/{idOrSlug}`، `GET /products/{id}/reviews`، `POST /products/{id}/reviews`، `GET /products/{id}/related`، `POST /products/{id}/stock-alerts`، `GET /products/{id}/inquiry`، `POST /cart/items`، `PUT /me/wishlist/items/{id}` |
@@ -1273,6 +1272,11 @@ paths:
       tags: [Cart]
       operationId: moveCartItemToWishlist
       summary: "انتقال از سبد به علاقه‌مندی‌ها (نیازمند ورود)"
+      description: |
+        فقط سبد خود کاربر (نه سبد مهمان). یک تراکنش: قلم از سبد می‌رود و محصول با **رنگ همان قلم** به علاقه‌مندی می‌رود (اگر از قبل در لیست است فقط
+        رنگش عوض می‌شود؛ `priceAtAdd` و `addedAt` از اولین بار). لیست پر (۲۰۰) و محصول در آن نیست ← `422 WISHLIST_LIMIT_REACHED` و **هیچ‌چیز عوض
+        نمی‌شود** (قلم در سبد می‌ماند). `removedItem` همان قلمِ رفته است: دکمه‌ی «برگردون» با `POST /cart/items` ِ معمولی برش می‌گرداند و به علاقه‌مندی
+        دست نمی‌زند.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/CartItemId'
@@ -1283,7 +1287,16 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/CartMutationResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '404':
+          description: "`CART_ITEM_NOT_FOUND` — این ردیف در سبد این کاربر نیست"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422':
+          description: "`WISHLIST_LIMIT_REACHED` (`meta.limit = 200`) — سبد عوض نشد"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
   /cart/shipping-method:
     put:
       tags: [Cart]
@@ -2071,6 +2084,10 @@ paths:
       tags: [Wishlist]
       operationId: getMyWishlist
       summary: "علاقه‌مندی‌ها با کارت محصول، تاریخ افزودن و افت قیمت از زمان ذخیره"
+      description: |
+        تازه‌ترین افزوده اول (بعد `productId`). محصولی که از سایت برداشته شده (`DRAFT`) دیده نمی‌شود و در `count` نیست، ولی ردیفش می‌ماند و با انتشار
+        دوباره برمی‌گردد (و در سقف ۲۰۰ شمرده می‌شود)؛ بایگانی محصول ردیفش را پاک می‌کند. `count` و `inStockCount` روی همه‌ی قلم‌های دیده‌شده است، نه فقط این
+        صفحه. هر `product.isWishlisted = true`. پرچم `wishlistShare` خاموش ← `share = null`.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/Page'
@@ -2089,6 +2106,7 @@ paths:
       tags: [Wishlist]
       operationId: clearMyWishlist
       summary: "پاک کردن کل لیست علاقه‌مندی‌ها"
+      description: لینک اشتراک دست نمی‌خورد (همان لینک، لیست خالی).
       security: [{ bearerAuth: [] }]
       responses:
         '204': { $ref: '#/components/responses/NoContent' }
@@ -2098,6 +2116,7 @@ paths:
       tags: [Wishlist]
       operationId: getMyWishlistIds
       summary: "فقط شناسه‌ها — برای روشن کردن قلب‌ها روی کارت‌ها و بج هدر"
+      description: همان ترتیب و همان قلم‌های دیده‌شده‌ی `GET /me/wishlist`، بدون صفحه‌بندی (حداکثر ۲۰۰). فقط برای کاربر واردشده.
       security: [{ bearerAuth: [] }]
       responses:
         '200':
@@ -2119,6 +2138,11 @@ paths:
       tags: [Wishlist]
       operationId: addToWishlist
       summary: "افزودن به علاقه‌مندی‌ها (idempotent)"
+      description: |
+        محصول منتشرشده لازم است (وگرنه `404 PRODUCT_NOT_FOUND`). `colorKey` اختیاری؛ اگر هست باید رنگ فعال همین محصول باشد (`400 COLOR_NOT_FOUND` روی
+        `colorKey`). دوباره ← `200` و فقط رنگ عوض می‌شود (`colorKey` نیامد ← دست نمی‌خورد)؛ `priceAtAdd` و `addedAt` از اولین بار. `priceAtAdd` = قیمت فروش
+        همان رنگ در همان لحظه (بدون رنگ: قیمت کارت). سقف ۲۰۰ قلم: قلم تازه در لیست پر ← `422 WISHLIST_LIMIT_REACHED` با `meta.limit = 200`. بعد از ورود،
+        فرانت برای هر قلب محلی مهمان یک `PUT` می‌زند (endpoint ِ ادغام نداریم).
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/ProductId'
@@ -2140,10 +2164,16 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
         '400': { $ref: '#/components/responses/ValidationError' }
+        '422':
+          description: "`WISHLIST_LIMIT_REACHED` (`meta.limit = 200`)"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
     delete:
       tags: [Wishlist]
       operationId: removeFromWishlist
       summary: "حذف از علاقه‌مندی‌ها (idempotent)"
+      description: همیشه `200` با `wishlisted = false`، حتی اگر در لیست نبود (محصول برداشته‌شده هم حذف می‌شود). `404 PRODUCT_NOT_FOUND` فقط برای شناسه‌ای که هیچ‌وقت محصول نبوده.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/ProductId'
@@ -2160,6 +2190,10 @@ paths:
       tags: [Wishlist]
       operationId: addWishlistToCart
       summary: "افزودن همه‌ی موجودها به سبد (هر کدام ۱ عدد، با رنگ ذخیره‌شده یا اولین رنگ موجود)"
+      description: |
+        به ترتیب لیست، هر قلم ۱ عدد در یک تراکنش: رنگ ذخیره‌شده اگر فعال و موجود است، وگرنه اولین رنگ موجود به ترتیب نمایش. هیچ رنگ موجود ←
+        `skipped OUT_OF_STOCK`؛ محصول منتشرنشده ← `UNAVAILABLE`؛ سبد همین الان سقف خرید محصول یا موجودی رنگ را دارد ← `ALREADY_AT_MAX` (یک ردیف برای هر
+        محصول). **قلم‌ها از علاقه‌مندی پاک نمی‌شوند.** هیچ‌وقت به‌خاطر ناموجودی خطا نمی‌دهد: لیست خالی یا همه ناموجود ← `200` با `addedCount = 0`.
       security: [{ bearerAuth: [] }]
       requestBody:
         content:
@@ -2169,8 +2203,9 @@ paths:
               properties:
                 productIds:
                   type: array
-                  description: اگر خالی باشد همه‌ی موارد موجود
-                  items: { type: integer }
+                  maxItems: 200
+                  description: 'نیامد یا خالی ← همه‌ی قلم‌های دیده‌شده؛ شناسه‌ای که در لیست نیست نادیده گرفته می‌شود. بیشتر از ۲۰۰ ← `400 TOO_MANY_ITEMS`'
+                  items: { type: integer, minimum: 1 }
       responses:
         '200':
           description: OK
@@ -2184,6 +2219,9 @@ paths:
       tags: [Wishlist]
       operationId: shareMyWishlist
       summary: "ساخت لینک عمومی لیست علاقه‌مندی (برای هدیه گرفتن) [پیشنهادی]"
+      description: |
+        لینک فعال هست ← همان را برمی‌گرداند؛ نیست ← می‌سازد؛ هر دو `200`. توکن `wl_` + ۳۲ نویسه‌ی تصادفی (`0-9A-Za-z`). `url` از دامنه‌ی پیکربندی‌شده‌ی
+        فروشگاه ساخته می‌شود. پرچم `wishlistShare` خاموش ← `422 WISHLIST_SHARE_DISABLED`.
       security: [{ bearerAuth: [] }]
       responses:
         '200':
@@ -2192,10 +2230,16 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/WishlistShare' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '422':
+          description: "`WISHLIST_SHARE_DISABLED` — اشتراک‌گذاری لیست خاموش است"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
     delete:
       tags: [Wishlist]
       operationId: revokeWishlistShare
       summary: "غیرفعال کردن لینک اشتراک [پیشنهادی]"
+      description: همیشه `204`، بدون لینک هم، و با پرچم خاموش هم. لینک قبلی بلافاصله `404` می‌شود و `POST` ِ بعدی توکن تازه می‌دهد.
       security: [{ bearerAuth: [] }]
       responses:
         '204': { $ref: '#/components/responses/NoContent' }
@@ -2205,12 +2249,15 @@ paths:
       tags: [Wishlist]
       operationId: getSharedWishlist
       summary: "مشاهده‌ی لیست اشتراکی دیگران (عمومی) [پیشنهادی]"
-      description: داده‌ی صفحه‌ی فرانت `https://kiva.ir/wishlist/shared/{token}` (همان `WishlistShare.url`).
+      description: |
+        داده‌ی صفحه‌ی فرانت `https://kiva.ir/wishlist/shared/{token}` (همان `WishlistShare.url`). توکن بدشکل، ناموجود، باطل‌شده یا پرچم `wishlistShare`
+        خاموش ← همه یک `404 NOT_FOUND`. فقط محصولات منتشرشده (حداکثر ۲۰۰، به ترتیب لیست، `isWishlisted = null`). `ownerDisplayName` فقط اسم کوچک صاحب
+        لیست، وگرنه «یکی از دوستان کیوا»؛ نه فامیلی، نه موبایل. هدر `Cache-Control: no-store`. حداکثر ۳۰ درخواست در دقیقه برای هر IP (`429`).
       parameters:
         - name: token
           in: path
           required: true
-          schema: { type: string, example: 'wl_9Kq2Xz' }
+          schema: { type: string, pattern: '^wl_[0-9A-Za-z]{32}$', example: 'wl_9Kq2XzA7bC4dE1fG8hJ3kL6mN0pQ5rS2' }
       responses:
         '200':
           description: OK
@@ -2218,6 +2265,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/SharedWishlist' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   # ================================================================
   #  MY ORDERS
@@ -5701,6 +5749,7 @@ components:
         - STOCK_ALERT_EXISTS
         - PRODUCT_IN_STOCK
         - WISHLIST_LIMIT_REACHED
+        - WISHLIST_SHARE_DISABLED
         - UPLOAD_TOO_LARGE
         - UPLOAD_TYPE_NOT_ALLOWED
         - DUPLICATE_SLUG
@@ -6002,7 +6051,7 @@ components:
         rating: { allOf: [{ $ref: '#/components/schemas/RatingBrief' }], description: 'همیشه فرستاده می‌شود (بی‌نظر: صفر)' }
         soldCount: { type: integer, description: «۱۸۴ فروش موفق», example: 184 }
         freeShippingEligible: { type: boolean, description: قیمت ≥ آستانه‌ی ارسال رایگان, example: false }
-        isWishlisted: { type: boolean, nullable: true, description: null برای کاربر مهمان }
+        isWishlisted: { type: boolean, nullable: true, description: 'کاربر واردشده روی endpoint ِ بدون کش: `true`/`false`؛ مهمان، و پاسخ‌های کش‌شده‌ی عمومی (`/home`) همیشه: `null` (فرانت از `GET /me/wishlist/ids` استفاده می‌کند)' }
     ProductMedia:
       allOf:
         - $ref: '#/components/schemas/MediaAsset'
@@ -6589,7 +6638,7 @@ components:
         lineCompareAtTotal: { type: integer, allOf: [{ $ref: '#/components/schemas/Money' }], nullable: true, example: 1750000 }
         lineDiscount: { allOf: [{ $ref: '#/components/schemas/Money' }], example: 300000 }
         stock: { $ref: '#/components/schemas/StockInfo' }
-        isWishlisted: { type: boolean, nullable: true }
+        isWishlisted: { type: boolean, nullable: true, description: کاربر واردشده `true`/`false`؛ مهمان `null` }
         addedAt: { type: string, format: date-time }
     CartIssue:
       type: object
@@ -7523,27 +7572,31 @@ components:
         marketingSmsOptIn: { type: boolean }
     AccountDashboard:
       type: object
+      description: هر عدد دقیقاً همان عدد صفحه‌ای است که به آن لینک می‌دهد.
+      required: [greeting, user, stats, navCounts, activeReservation, pendingReviewCount]
       properties:
-        greeting: { type: string, example: سلام سارا }
+        greeting: { type: string, description: '«سلام {اسم کوچک}» یا «سلام دوست عزیز»', example: سلام سارا }
         user: { $ref: '#/components/schemas/User' }
         stats:
           type: object
           description: چهار کارت آمار بالای حساب
+          required: [ordersTotal, ordersActive, mediaReceived, wishlistCount]
           properties:
-            ordersTotal: { type: integer, description: کل سفارش‌ها, example: 4 }
-            ordersActive: { type: integer, description: سفارش جاری, example: 3 }
-            mediaReceived: { type: integer, description: عکس و ویدیوی دریافتی, example: 12 }
-            wishlistCount: { type: integer, description: علاقه‌مندی, example: 3 }
+            ordersTotal: { type: integer, description: 'کل سفارش‌ها = `counts.all` ِ `GET /me/orders`', example: 4 }
+            ordersActive: { type: integer, description: 'سفارش جاری = `counts.current` ِ `GET /me/orders` (با پرداخت‌نشده‌ها)', example: 3 }
+            mediaReceived: { type: integer, description: 'عکس و ویدیوی دریافتی: جمع `preShipmentMedia.count` ِ آخرین دسته‌ی فرستاده‌شده‌ی هر سفارش', example: 12 }
+            wishlistCount: { type: integer, description: '`count` ِ `GET /me/wishlist`', example: 3 }
         navCounts:
           type: object
           description: شمارنده‌های منوی کناری
+          required: [orders, addresses, wishlist, reviews]
           properties:
-            orders: { type: integer, example: 4 }
-            addresses: { type: integer, example: 1 }
-            wishlist: { type: integer, example: 3 }
-            reviews: { type: integer, example: 2 }
-        activeReservation: { type: object, allOf: [{ $ref: '#/components/schemas/ReservationInfo' }], nullable: true }
-        pendingReviewCount: { type: integer, description: '[پیشنهادی] کالاهای تحویل‌شده بدون نظر', example: 1 }
+            orders: { type: integer, description: '`counts.all` ِ `GET /me/orders`', example: 4 }
+            addresses: { type: integer, description: 'تعداد `GET /me/addresses`', example: 1 }
+            wishlist: { type: integer, description: '`count` ِ `GET /me/wishlist`', example: 3 }
+            reviews: { type: integer, description: '`counts.total` ِ `GET /me/reviews` (ردشده‌ها هم)', example: 2 }
+        activeReservation: { type: object, allOf: [{ $ref: '#/components/schemas/ReservationInfo' }], nullable: true, description: 'همان `GET /me/reservation`؛ نبود ← `null`' }
+        pendingReviewCount: { type: integer, description: 'تعداد ردیف‌های `GET /me/reviews/pending-products`', example: 1 }
 
     # ============ ADDRESS / GEO ============
     City:
@@ -7594,7 +7647,7 @@ components:
     # ============ WISHLIST ============
     WishlistItem:
       type: object
-      required: [product, addedAt]
+      required: [product, addedAt, preferredColorKey, priceAtAdd, priceDrop]
       properties:
         product: { $ref: '#/components/schemas/ProductSummary' }
         addedAt: { type: string, format: date-time }
@@ -7603,30 +7656,36 @@ components:
         priceDrop:
           type: object
           nullable: true
-          description: «از وقتی ذخیره کردی ۱۵٪ ارزون‌تر شده»
+          description: |
+            قیمت فعلی ِ همان رنگ (بدون رنگ: قیمت کارت) کمتر از `priceAtAdd`: `amount` = تفاوت، `percent` = `floor(amount × 100 ÷ priceAtAdd)`، فقط وقتی
+            `percent ≥ 1`. گران‌تر یا کمتر از ۱٪ ← `null`. پیامک افت قیمت نداریم.
+          required: [amount, percent, label]
           properties:
             amount: { allOf: [{ $ref: '#/components/schemas/Money' }], example: 300000 }
             percent: { type: integer, example: 15 }
             label: { type: string, example: از وقتی ذخیره کردی ۱۵٪ ارزون‌تر شده }
     Wishlist:
       type: object
+      required: [items, meta, count, inStockCount, share]
       properties:
         items:
           type: array
           items: { $ref: '#/components/schemas/WishlistItem' }
         meta: { $ref: '#/components/schemas/PageMeta' }
-        count: { type: integer, example: 3 }
-        inStockCount: { type: integer, description: برای دکمه‌ی «افزودن همه موجودها به سبد (۲)», example: 2 }
-        share: { type: object, allOf: [{ $ref: '#/components/schemas/WishlistShare' }], nullable: true }
+        count: { type: integer, description: 'قلم‌های دیده‌شده (منتشرشده)، همه‌ی صفحه‌ها', example: 3 }
+        inStockCount: { type: integer, description: 'قلم‌های دیده‌شده با حداقل یک رنگ موجود: همان‌هایی که «همه به سبد» می‌برد. برای دکمه‌ی «افزودن همه موجودها به سبد (۲)»', example: 2 }
+        share: { type: object, allOf: [{ $ref: '#/components/schemas/WishlistShare' }], nullable: true, description: 'لینک فعال؛ نساخته یا پرچم `wishlistShare` خاموش ← `null`' }
     WishlistToggleResponse:
       type: object
+      required: [productId, wishlisted, count, message]
       properties:
         productId: { type: integer, example: 7 }
         wishlisted: { type: boolean, example: true }
-        count: { type: integer, description: برای بج قلب هدر, example: 4 }
+        count: { type: integer, description: 'برای بج قلب هدر: قلم‌های دیده‌شده', example: 4 }
         message: { type: string, example: به علاقه‌مندی‌ها اضافه شد }
     WishlistAddToCartResponse:
       type: object
+      required: [cart, addedCount, skipped, message]
       properties:
         cart: { $ref: '#/components/schemas/Cart' }
         addedCount: { type: integer, example: 2 }
@@ -7641,14 +7700,16 @@ components:
         message: { type: string, example: ۲ کیف به سبد اضافه شد }
     WishlistShare:
       type: object
+      required: [token, url, createdAt]
       properties:
-        token: { type: string, example: 'wl_9Kq2Xz' }
-        url: { type: string, format: uri, description: 'سرور با الگوی `https://kiva.ir/wishlist/shared/{token}` می‌سازد (مسیر صفحه‌ی فرانت)', example: 'https://kiva.ir/wishlist/shared/wl_9Kq2Xz' }
+        token: { type: string, pattern: '^wl_[0-9A-Za-z]{32}$', example: 'wl_9Kq2XzA7bC4dE1fG8hJ3kL6mN0pQ5rS2' }
+        url: { type: string, format: uri, description: 'سرور با الگوی `{دامنه‌ی فروشگاه}/wishlist/shared/{token}` می‌سازد (مسیر صفحه‌ی فرانت)', example: 'https://kivashop.ir/wishlist/shared/wl_9Kq2XzA7bC4dE1fG8hJ3kL6mN0pQ5rS2' }
         createdAt: { type: string, format: date-time }
     SharedWishlist:
       type: object
+      required: [ownerDisplayName, items]
       properties:
-        ownerDisplayName: { type: string, example: سارا }
+        ownerDisplayName: { type: string, description: 'اسم کوچک صاحب لیست، وگرنه «یکی از دوستان کیوا»', example: سارا }
         items:
           type: array
           items: { $ref: '#/components/schemas/ProductSummary' }

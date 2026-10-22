@@ -97,6 +97,7 @@ object ErrorMessages {
         "STOCK_ALERT_EXISTS" to "قبلاً برای موجود شدن این کالا عضو شدی",
         "PRODUCT_IN_STOCK" to "این کالا الان موجوده",
         "WISHLIST_LIMIT_REACHED" to "لیست علاقه‌مندی‌هات پر شده",
+        "WISHLIST_SHARE_DISABLED" to "فعلاً امکان اشتراک‌گذاری لیست علاقه‌مندی‌ها نیست",
         "UPLOAD_TOO_LARGE" to "حجم فایل زیاده",
         "UPLOAD_TYPE_NOT_ALLOWED" to "این نوع فایل پذیرفته نمی‌شه",
         "DUPLICATE_SLUG" to "این آدرس (slug) قبلاً استفاده شده",
