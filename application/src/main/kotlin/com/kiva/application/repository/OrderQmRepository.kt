@@ -93,6 +93,9 @@ interface OrderQmRepository {
      */
     fun findInDailyList(from: Instant, until: Instant): List<OrderQm>
 
+    /** The customer's delivered orders that weren't cancelled since, the latest delivered first: what a review may be linked to. */
+    fun findDeliveredOfCustomer(userId: UserId): List<OrderQm>
+
     /** The customer's shipped orders that weren't cancelled, the latest shipped first, at most [limit]. */
     fun findShippedOfCustomer(userId: UserId, limit: Int): List<OrderQm>
 

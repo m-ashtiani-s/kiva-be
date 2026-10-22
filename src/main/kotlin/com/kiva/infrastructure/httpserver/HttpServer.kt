@@ -78,6 +78,8 @@ import com.kiva.infrastructure.httpserver.controller.httprest.web.ContentUseCase
 import com.kiva.infrastructure.httpserver.controller.httprest.web.MeUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.MyOrderUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.MyReturnUseCases
+import com.kiva.infrastructure.httpserver.controller.httprest.web.MyReviewUseCases
+import com.kiva.infrastructure.httpserver.controller.httprest.web.ReviewUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.OTP_SEND_RATE_LIMIT
 import com.kiva.infrastructure.httpserver.controller.httprest.web.PaymentUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.TRACKING_LOOKUP_RATE_LIMIT
@@ -106,6 +108,8 @@ import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Geo
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Me
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1MyOrders
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1MyReturns
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1MyReviews
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Reviews
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1MyUploads
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Payments
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Products
@@ -336,6 +340,8 @@ fun Application.configureRouting() {
             webV1MyOrders(MyOrderUseCases(listMyOrdersUc, getMyOrderUc, reorderUc, getCartUc, getMyReservationUc, get(), get(), get(), get()), mediaUrls)
             webV1MyUploads(uploadMediaUc, mediaStorage::newUploadFile, mediaUrls)
             webV1MyReturns(MyReturnUseCases(get(), get(), get()), mediaUrls)
+            webV1Reviews(ReviewUseCases(get(), get()), mediaUrls)
+            webV1MyReviews(MyReviewUseCases(get(), get(), get(), get(), get()), mediaUrls)
             webV1Tracking(TrackingUseCases(get(), get(), get()), mediaUrls)
         }
     }

@@ -4,6 +4,8 @@ import com.kiva.common.event.ConcurrentChangeException
 import com.kiva.common.event.valueobject.EventAggregateId
 import com.kiva.common.event.valueobject.EventAggregateName
 import com.kiva.common.repository.UniqueTakenException
+import com.kiva.common.pagination.Page
+import com.kiva.common.pagination.Pageable
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
 import com.kiva.domain.aggregate.media.model.valueobject.MediaId
@@ -24,11 +26,15 @@ import com.kiva.domain.aggregate.review.repository.ProductRatingRepository
 import com.kiva.domain.aggregate.review.repository.ReviewIdGenerator
 import com.kiva.domain.aggregate.review.repository.ReviewRepository
 import com.kiva.domain.aggregate.review.repository.ReviewVoteRepository
+import com.kiva.infrastructure.common.persistence.SortOrders
+import com.kiva.infrastructure.common.persistence.paginate
 import com.kiva.infrastructure.common.persistence.refusedConstraint
 import com.kiva.infrastructure.persistence.exposed.tbl.ProductRatingTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.ReviewTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.ReviewVoteTbl
 import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.count
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greater
@@ -88,6 +94,16 @@ class ReviewRepositoryImpl : ReviewRepository {
         ReviewTbl.select(ReviewTbl.createdOn).where { (ReviewTbl.userId eq userId.value) and (ReviewTbl.createdOn greater since.utc()) }
             .map { it[ReviewTbl.createdOn].toInstant() }
 
+    override fun pageOfUser(userId: UserId, pageable: Pageable): Page<Review> =
+        ReviewTbl.selectAll().where { ReviewTbl.userId eq userId.value }
+            .paginate(pageable, NEWEST_FIRST, tiebreaker = ReviewTbl.reviewId, tiebreakerOrder = SortOrder.DESC) { it.toReview() }
+
+    override fun countsOfUser(userId: UserId): Map<ReviewStatus, Int> {
+        val count = ReviewTbl.reviewId.count()
+        return ReviewTbl.select(ReviewTbl.status, count).where { ReviewTbl.userId eq userId.value }.groupBy(ReviewTbl.status)
+            .associate { it[ReviewTbl.status] to it[count].toInt() }
+    }
+
     override fun liveProductIdsOf(userId: UserId): Set<ProductId> =
         ReviewTbl.select(ReviewTbl.productId).where { (ReviewTbl.userId eq userId.value) and (ReviewTbl.status inList LIVE) }
             .map { ProductId.constructFromPersisted(it[ReviewTbl.productId]) }.toSet()
@@ -128,6 +144,11 @@ class ReviewRepositoryImpl : ReviewRepository {
     private companion object {
         val AGGREGATE_NAME = EventAggregateName("REVIEW")
         val LIVE = listOf(ReviewStatus.PENDING, ReviewStatus.APPROVED)
+
+        /** The one order of a customer's own list; the pageable's sort is ignored. */
+        val NEWEST_FIRST: SortOrders = mapOf(MINE to listOf(ReviewTbl.createdOn to SortOrder.DESC))
+
+        const val MINE = "newest"
     }
 }
 

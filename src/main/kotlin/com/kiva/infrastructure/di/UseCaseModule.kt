@@ -133,6 +133,14 @@ import com.kiva.application.usecase.refund.usecase.command.CreateRefundUc
 import com.kiva.application.usecase.refund.usecase.command.UpdateRefundUc
 import com.kiva.application.usecase.returnrequest.AdminReturnRequests
 import com.kiva.application.usecase.review.RatingBook
+import com.kiva.application.usecase.review.ReviewPurchases
+import com.kiva.application.usecase.review.Reviews
+import com.kiva.application.usecase.review.usecase.command.CreateReviewUc
+import com.kiva.application.usecase.review.usecase.command.DeleteMyReviewUc
+import com.kiva.application.usecase.review.usecase.command.UpdateMyReviewUc
+import com.kiva.application.usecase.review.usecase.query.GetMyReviewUc
+import com.kiva.application.usecase.review.usecase.query.ListMyReviewsUc
+import com.kiva.application.usecase.review.usecase.query.ListProductsAwaitingMyReviewUc
 import com.kiva.application.usecase.returnrequest.ReturnByIdForPanel
 import com.kiva.application.usecase.returnrequest.ReturnNotices
 import com.kiva.application.usecase.returnrequest.ReturnRequests
@@ -653,6 +661,23 @@ val useCaseModule = module(createdAtStart = true) {
 
     // --- reviews (phase 8) ---
     single { RatingBook(productRatingRepository = get()) }
+    single { Reviews(mediaRepository = get(), reviewVoteRepository = get(), productQmRepository = get(), colorRepository = get()) }
+    single { ReviewPurchases(orderQmRepository = get()) }
+    single {
+        CreateReviewUc(
+            transactionManager = get(), productQmRepository = get(), reviewRepository = get(), reviewDomainService = get(), reviewPurchases = get(),
+            orderByCode = get(), mediaRepository = get(), shopSettingsRepository = get(), clock = get(),
+        )
+    }
+    single { GetMyReviewUc(transactionManager = get(), reviewRepository = get(), reviews = get()) }
+    single { UpdateMyReviewUc(transactionManager = get(), reviewRepository = get(), clock = get()) }
+    single { DeleteMyReviewUc(transactionManager = get(), reviewRepository = get(), ratingBook = get(), clock = get()) }
+    single { ListMyReviewsUc(transactionManager = get(), reviewRepository = get(), reviews = get()) }
+    single {
+        ListProductsAwaitingMyReviewUc(
+            transactionManager = get(), reviewPurchases = get(), reviewRepository = get(), productQmRepository = get(), colorRepository = get(),
+        )
+    }
 
     // --- admin: refunds (phase 2) ---
     single {

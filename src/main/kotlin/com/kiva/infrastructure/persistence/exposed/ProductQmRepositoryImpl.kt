@@ -5,6 +5,7 @@ import com.kiva.application.dto.UploadedMediaDto
 import com.kiva.application.repository.AdminProductDetailQm
 import com.kiva.application.repository.AdminProductFilter
 import com.kiva.application.repository.AdminProductQm
+import com.kiva.application.repository.ProductBriefQm
 import com.kiva.application.repository.ProductCardQm
 import com.kiva.application.repository.PriceRange
 import com.kiva.application.repository.ProductDetailQm
@@ -390,6 +391,24 @@ class ProductQmRepositoryImpl : ProductQmRepository {
         !ProductQmTbl.select(ProductQmTbl.id).where { ProductQmTbl.slug eq slug.value }.empty()
 
     // A code is unique across products and their colors: KV-1001 can't be one product's and another's color's.
+    override fun findBriefs(ids: Collection<ProductId>): Map<ProductId, ProductBriefQm> {
+        if (ids.isEmpty()) return emptyMap()
+        val wanted = ids.map { it.value }
+        val photos = ProductVariantQmTbl.select(ProductVariantQmTbl.productId, ProductVariantQmTbl.media)
+            .where { (ProductVariantQmTbl.productId inList wanted) and (ProductVariantQmTbl.isDefault eq true) }
+            .mapNotNull { row -> row[ProductVariantQmTbl.media].firstOrNull { !it.isVideo }?.let { row[ProductVariantQmTbl.productId] to it.toDto().media } }
+            .toMap()
+        return ProductQmTbl.select(ProductQmTbl.productId, ProductQmTbl.slug, ProductQmTbl.sku, ProductQmTbl.name, ProductQmTbl.status)
+            .where { ProductQmTbl.productId inList wanted }
+            .associate { row ->
+                val id = row[ProductQmTbl.productId]
+                ProductId.constructFromPersisted(id) to ProductBriefQm(
+                    ProductId.constructFromPersisted(id), Slug.constructFromPersisted(row[ProductQmTbl.slug]), Sku.constructFromPersisted(row[ProductQmTbl.sku]),
+                    ProductName.constructFromPersisted(row[ProductQmTbl.name]), row[ProductQmTbl.status], photos[id],
+                )
+            }
+    }
+
     override fun findExistingIds(ids: Collection<ProductId>): Set<ProductId> {
         if (ids.isEmpty()) return emptySet()
         return ProductQmTbl.select(ProductQmTbl.productId).where { ProductQmTbl.productId inList ids.map { it.value } }

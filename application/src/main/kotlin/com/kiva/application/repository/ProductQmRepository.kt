@@ -65,6 +65,9 @@ interface ProductQmRepository {
     /** Those of [skus] that a product or a color of one, whatever its status, already has. */
     fun findTakenSkus(skus: Collection<Sku>): Set<Sku>
 
+    /** The products of [ids] there are, in any status, each with its default color's first photo: a page of reviews' products in one read. */
+    fun findBriefs(ids: Collection<ProductId>): Map<ProductId, ProductBriefQm>
+
     /** Those of [ids] that are a product, whatever its status (a discount code may name a draft). */
     fun findExistingIds(ids: Collection<ProductId>): Set<ProductId>
 

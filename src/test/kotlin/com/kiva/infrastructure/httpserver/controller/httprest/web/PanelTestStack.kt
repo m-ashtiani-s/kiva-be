@@ -77,6 +77,15 @@ import com.kiva.application.usecase.returnrequest.usecase.query.FindAdminReturns
 import com.kiva.application.usecase.returnrequest.usecase.query.GetAdminReturnUc
 import com.kiva.application.usecase.returnrequest.usecase.query.GetMyReturnUc
 import com.kiva.application.usecase.returnrequest.usecase.query.ListMyReturnsUc
+import com.kiva.application.usecase.review.RatingBook
+import com.kiva.application.usecase.review.ReviewPurchases
+import com.kiva.application.usecase.review.Reviews
+import com.kiva.application.usecase.review.usecase.command.CreateReviewUc
+import com.kiva.application.usecase.review.usecase.command.DeleteMyReviewUc
+import com.kiva.application.usecase.review.usecase.command.UpdateMyReviewUc
+import com.kiva.application.usecase.review.usecase.query.GetMyReviewUc
+import com.kiva.application.usecase.review.usecase.query.ListMyReviewsUc
+import com.kiva.application.usecase.review.usecase.query.ListProductsAwaitingMyReviewUc
 import com.kiva.application.usecase.settings.usecase.command.UpdateSettingsUc
 import com.kiva.application.usecase.settings.usecase.query.GetAdminSettingsUc
 import com.kiva.common.patch.Patch
@@ -86,6 +95,7 @@ import com.kiva.domain.aggregate.inventory.InventoryDomainService
 import com.kiva.domain.aggregate.product.ProductDomainService
 import com.kiva.domain.aggregate.refund.RefundDomainService
 import com.kiva.domain.aggregate.returnrequest.ReturnDomainService
+import com.kiva.domain.aggregate.review.ReviewDomainService
 import com.kiva.domain.aggregate.session.entity.AuthSession
 import com.kiva.domain.aggregate.session.model.valueobject.SessionDevice
 import com.kiva.domain.aggregate.user.entity.User
@@ -133,6 +143,10 @@ import com.kiva.infrastructure.persistence.exposed.ProductRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.RefundIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.ReportQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ReturnIdGeneratorImpl
+import com.kiva.infrastructure.persistence.exposed.ProductRatingRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.ReviewIdGeneratorImpl
+import com.kiva.infrastructure.persistence.exposed.ReviewRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.ReviewVoteRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.SecurityEventLogImpl
 import com.kiva.infrastructure.persistence.exposed.ShopSettingsRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.SiteContentRepositoryImpl
@@ -140,6 +154,9 @@ import com.kiva.infrastructure.persistence.exposed.StaticPageRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.UserRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.tbl.AuthSessionTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.MediaTbl
+import com.kiva.infrastructure.persistence.exposed.tbl.ProductRatingTbl
+import com.kiva.infrastructure.persistence.exposed.tbl.ReviewTbl
+import com.kiva.infrastructure.persistence.exposed.tbl.ReviewVoteTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.OtpChallengeTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.RefreshTokenTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.UserTbl
@@ -310,6 +327,26 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         CloseReturnUc(transactions, returnByIdForPanel, purchase.returns, purchase.refunds, purchase.orders, users, auditTrail, returnNotices, clock),
     )
 
+    // --- reviews (phase 8) ---
+    val reviewRepository = ReviewRepositoryImpl()
+    val productRatings = ProductRatingRepositoryImpl()
+    val ratingBook = RatingBook(productRatings)
+    val reviewDomain = ReviewDomainService(ReviewIdGeneratorImpl())
+    val reviews = Reviews(mediaRepository, ReviewVoteRepositoryImpl(), productQm, colors)
+    val reviewPurchases = ReviewPurchases(purchase.orderQm)
+    val getMyReview = GetMyReviewUc(transactions, reviewRepository, reviews)
+    val reviewUseCases = ReviewUseCases(
+        CreateReviewUc(transactions, productQm, reviewRepository, reviewDomain, reviewPurchases, purchase.orderByCode, mediaRepository, purchase.settings, clock),
+        getMyReview,
+    )
+    val myReviews = MyReviewUseCases(
+        ListMyReviewsUc(transactions, reviewRepository, reviews),
+        getMyReview,
+        UpdateMyReviewUc(transactions, reviewRepository, clock),
+        DeleteMyReviewUc(transactions, reviewRepository, ratingBook, clock),
+        ListProductsAwaitingMyReviewUc(transactions, reviewPurchases, reviewRepository, productQm, colors),
+    )
+
     val adminRefunds = AdminRefundUseCases(
         checkPanelAccess,
         UpdateRefundUc(transactions, purchase.refunds, purchase.orderQm, purchase.orders, purchase.returns, users, auditTrail, purchase.orderNotices, clock),
@@ -417,6 +454,8 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
                     webV1MyUploads(uploadMedia, mediaStorage::newUploadFile, mediaUrls)
                     webV1MyReturns(myReturns, mediaUrls)
                     webV1AdminReturns(adminReturns, mediaUrls)
+                    webV1Reviews(reviewUseCases, mediaUrls)
+                    webV1MyReviews(myReviews, mediaUrls)
                     // Back from the gateway and the result page, for paying what a change left owed (phase 3).
                     webV1Payments(purchase.paymentUseCases, PaymentConfig.DEFAULT.resultUrl)
                     webV1Tracking(purchase.trackingUseCases, mediaUrls)
@@ -434,6 +473,11 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         // First the uploads and orders of the test users, found by their phones before the users go.
         transaction(db) {
             val userIds = UserTbl.select(UserTbl.id).where { UserTbl.phone like TEST_PHONES }.map { it[UserTbl.id].value }
+            // Their reviews, and the ratings of the products they reviewed (votes go with their reviews).
+            val reviewed = ReviewTbl.select(ReviewTbl.productId).where { ReviewTbl.userId inList userIds }.map { it[ReviewTbl.productId] }.distinct()
+            ReviewVoteTbl.deleteWhere { ReviewVoteTbl.userId inList userIds }
+            ReviewTbl.deleteWhere { ReviewTbl.userId inList userIds }
+            ProductRatingTbl.deleteWhere { ProductRatingTbl.productId inList reviewed }
             MediaTbl.deleteWhere { MediaTbl.uploadedBy inList userIds }
         }
         purchase.deleteWhatWasStored()

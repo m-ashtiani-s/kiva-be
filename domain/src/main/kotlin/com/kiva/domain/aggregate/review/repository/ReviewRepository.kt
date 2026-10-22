@@ -1,9 +1,12 @@
 package com.kiva.domain.aggregate.review.repository
 
+import com.kiva.common.pagination.Page
+import com.kiva.common.pagination.Pageable
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.product.model.valueobject.ProductId
 import com.kiva.domain.aggregate.review.entity.Review
 import com.kiva.domain.aggregate.review.model.valueobject.ReviewId
+import com.kiva.domain.aggregate.review.model.valueobject.ReviewStatus
 import java.time.Instant
 
 /**
@@ -31,6 +34,12 @@ interface ReviewRepository {
 
     /** When each review [userId] wrote after [since] was written: the daily cap's count. */
     fun createdSince(userId: UserId, since: Instant): List<Instant>
+
+    /** «نظرات من»: [userId]'s reviews in any status, newest first (ties to the newer id), for reading only. */
+    fun pageOfUser(userId: UserId, pageable: Pageable): Page<Review>
+
+    /** How many reviews [userId] has in each status; a status with none is missing. */
+    fun countsOfUser(userId: UserId): Map<ReviewStatus, Int>
 
     /** The products [userId] has a live review of: «نظر بده» and «منتظر نظر تو». */
     fun liveProductIdsOf(userId: UserId): Set<ProductId>

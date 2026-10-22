@@ -7,6 +7,7 @@ import com.kiva.application.repository.ProductCardQm
 import com.kiva.application.repository.ProductDetailQm
 import com.kiva.application.repository.ProductFacetsQm
 import com.kiva.application.repository.ProductFilter
+import com.kiva.application.repository.ProductBriefQm
 import com.kiva.application.repository.ProductQmRepository
 import com.kiva.application.repository.ProductRef
 import com.kiva.application.repository.VariantQm
@@ -49,6 +50,7 @@ abstract class UnusedProductQmRepository : ProductQmRepository {
     override fun findDueScheduled(now: Instant, limit: Int): List<ProductId> = unused()
     override fun isSlugTaken(slug: Slug): Boolean = unused()
     override fun findTakenSkus(skus: Collection<Sku>): Set<Sku> = unused()
+    override fun findBriefs(ids: Collection<ProductId>): Map<ProductId, ProductBriefQm> = unused()
     override fun findExistingIds(ids: Collection<ProductId>): Set<ProductId> = unused()
     override fun countActiveByCategory(): Map<Slug, Int> = unused()
     override fun countActiveByMaterial(): Map<Slug, Int> = unused()

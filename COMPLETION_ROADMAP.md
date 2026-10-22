@@ -3781,7 +3781,7 @@ Route: 200
 |---|---|---|---|
 | ۸.۰ | کانترکت 1.14.0 | S | ✅ |
 | ۸.۱ | دامنه‌ی نظر، جدول‌ها و امتیاز محصول | L | ✅ |
-| ۸.۲ | ثبت، ویرایش و حذف نظر؛ «نظرهای من» و «منتظر نظر تو» | L | ⬜ |
+| ۸.۲ | ثبت، ویرایش و حذف نظر؛ «نظرهای من» و «منتظر نظر تو» | L | ✅ |
 | ۸.۳ | لیست عمومی، خلاصه‌ی امتیاز و رأی «مفید بود» | M | ⬜ |
 | ۸.۴ | امتیاز روی کارت، صفحه و مرتب‌سازی محصول؛ «نظر بده» در سفارش‌ها | M | ⬜ |
 | ۸.۵ | صف پنل، تأیید و رد، «پاسخ کیوا» | M | ⬜ |
@@ -3827,6 +3827,11 @@ Route: 200
 | 34 | `rating_desc` بدون join (تازه، گام ۸.۱) | دو زیرپرسش ِ همبسته روی `productrating_tbl` (`sum/count` و `count`، هر دو `DESC NULLS LAST`) و بعد `firstPublishedOn`؛ کوئری لیست و `paginate` دست نخورد | ترتیب‌ها ثابت‌های `SortOrders` ان؛ join فقط برای یه ترتیب کل کوئری رو عوض می‌کرد |
 | 35 | `RatingBook` (تازه، گام ۸.۱) | `changed(before, review, now)` (تأیید، رد؛ `Counted` ِ قبل از تغییر) و `deleted(review, now)`؛ هر دو فقط وقتی جای نظر در امتیاز عوض شده ردیف امتیاز رو قفل و ذخیره می‌کنن | یه راه برای عوض شدن امتیاز |
 | 36 | دیوارهای `V33` (تازه، گام ۸.۱) | اسم‌دار: `review_rejected_reason_check`، `review_purchase_check` (سفارش، ردیف و رنگ با هم)، `review_reply_check`، `review_moderated_check`، `productrating_count_check`/`sum_check`/`verified_check`؛ `contact` موبایل یا ایمیل؛ ایندکس `reviewvote_user_idx` برای رأی‌های یه کاربر | هر قانون یه `CHECK` ِ هم‌معنی |
+| 37 | پاسخ ِ ثبت و ویرایش (تازه، گام ۸.۲) | `CreateReviewUc` و `UpdateMyReviewUc` شناسه برمی‌گردونن و route نظر رو با `GetMyReviewUc` می‌خونه | قانون ۶ ِ ۴.۵ |
+| 38 | خریدها برای نظر (تازه، گام ۸.۲) | سرویس مشترک `ReviewPurchases` روی read model ِ سفارش (`findOfCustomer` و `findDeliveredOfCustomer` ِ تازه، به‌جای `deliveredLinesOf`)؛ `orderCode` ِ بدشکل همون `404 ORDER_NOT_FOUND` ِ سفارش ناموجود | یه خوندن برای وصل خرید و «منتظر نظر تو» |
+| 39 | `product` ِ نظر (تازه، گام ۸.۲) | `ProductQmRepository.findBriefs` (هر وضعیتی، با اولین عکس رنگ پیش‌فرض) و `ProductRef` ِ پاسخ با `imageUrl` ِ نسخه‌ی کوچیک؛ هم «نظرات من»، هم «منتظر نظر تو»، هم چک «منتشرشده» ِ ثبت | یه خوندن برای کل صفحه |
+| 40 | ترتیب «نظرات من» (تازه، گام ۸.۲) | فقط `newest` (کانترکت `sort` نداره)؛ `sort` ِ دیگه ← `400 SORT_NOT_ALLOWED` | قانون عمومی صفحه‌بندی |
+| 41 | ویرایش ِ ردشده با نظر زنده‌ی دیگه (تازه، گام ۸.۲) | `409` فقط وقتی ویرایش واقعاً چیزی رو عوض می‌کنه (و نظر رو به صف برمی‌گردونه)؛ `{}` یا همون مقدارها ← `200` بی‌تغییر | تصمیم ۱۳: «`{}` ← `200` بی‌تغییر» |
 
 ### ۱۳.۳ تغییرات دامنه
 
@@ -4100,21 +4105,23 @@ Route: 200 با Review
 
 ---
 
-#### گام ۸.۲: ثبت، ویرایش و حذف نظر؛ «نظرهای من» و «منتظر نظر تو» · L ⬜
+#### گام ۸.۲: ثبت، ویرایش و حذف نظر؛ «نظرهای من» و «منتظر نظر تو» · L ✅
 
 **می‌سازی:** `CreateReviewUc`، `UpdateMyReviewUc`، `DeleteMyReviewUc`، `ListMyReviewsUc`، `ListProductsAwaitingMyReviewUc`؛ `deliveredLinesOf` روی `OrderQmRepository`؛ `webV1MyReviews.kt` و route ِ ثبت در `webV1Reviews.kt`؛ `ReviewHttpResponse`، `ReviewTexts`.
 
 وابسته به: ۸.۱
 
 **تموم شده یعنی:**
-- [ ] ثبت ← `201 PENDING`؛ دوباره ← `409`؛ بعد از رد ← `201`.
-- [ ] خریدار بدون `orderCode` ← `isVerifiedBuyer = true` و `purchasedColor` درست؛ غیرخریدار ← `false`.
-- [ ] `orderCode` ِ کس دیگه ← `404`؛ ردیف محصول دیگه ← `400`؛ سفارش ارسال‌شده و تحویل‌نشده ← `422`.
-- [ ] `reviewMedia` خاموش با `mediaIds` ← `400`؛ روشن با عکس کاربر دیگه ← `400 MEDIA_NOT_FOUND`.
-- [ ] ششمین نظر در ۲۴ ساعت ← `429`.
-- [ ] ویرایش `APPROVED` ← `422`؛ ویرایش `REJECTED` ← `PENDING`؛ `{}` ← `200`.
-- [ ] حذف نظر تأییدشده ← امتیاز محصول کم شد.
-- [ ] «منتظر نظر تو» یه ردیف برای محصولی که دو بار خریده شده، و بعد از ثبت نظر خالی.
+- [x] ثبت ← `201 PENDING`؛ دوباره ← `409`؛ بعد از رد ← `201`.
+- [x] خریدار بدون `orderCode` ← `isVerifiedBuyer = true` و `purchasedColor` درست؛ غیرخریدار ← `false`.
+- [x] `orderCode` ِ کس دیگه ← `404`؛ ردیف محصول دیگه ← `400`؛ سفارش ارسال‌شده و تحویل‌نشده ← `422`.
+- [x] `reviewMedia` خاموش با `mediaIds` ← `400`؛ روشن با عکس کاربر دیگه ← `400 MEDIA_NOT_FOUND`.
+- [x] ششمین نظر در ۲۴ ساعت ← `429`.
+- [x] ویرایش `APPROVED` ← `422`؛ ویرایش `REJECTED` ← `PENDING`؛ `{}` ← `200`.
+- [x] حذف نظر تأییدشده ← امتیاز محصول کم شد.
+- [x] «منتظر نظر تو» یه ردیف برای محصولی که دو بار خریده شده، و بعد از ثبت نظر خالی.
+
+**یادداشت پیاده‌سازی:** پنج تصمیم تازه (۳۷ تا ۴۱). `CreateReviewUc` (شکل با همه‌ی خطاها با هم، بعد به ترتیب کانترکت: محصول، نظر زنده، سقف روزانه، مدیا، وصل خرید؛ قید یکتا ← همون ۴۰۹)، `UpdateMyReviewUc` (`Patch`، قفل ۱۱)، `DeleteMyReviewUc` (`RatingBook.deleted`)، `ListMyReviewsUc` (با `counts.rejected`)، `ListProductsAwaitingMyReviewUc`، `GetMyReviewUc`؛ سرویس‌های مشترک `Reviews` (ساختن `Review` برای هر بیننده، بدون N+1) و `ReviewPurchases`؛ `ProductQmRepository.findBriefs`، `OrderQmRepository.findDeliveredOfCustomer`، `ReviewRepository.pageOfUser`/`countsOfUser`؛ `webV1Reviews.kt` (ثبت) و `webV1MyReviews.kt`؛ `ReviewHttpResponse`، `ReviewTexts`. تست: `WebV1MyReviewsOnDatabaseTest` (۱۰ تست، هر پاسخ با شِمای کانترکت؛ رسیدگی پشتیبانی تا ۸.۵ مستقیم روی ردیف‌ها با `RatingBook`). خرابکاری: بدون چک مالکیت در ویرایش ← «edits - … someone else's 404» قرمز (اولش قرمز نشد چون route بعد از ویرایش با Query ِ صاحب‌دار می‌خوند و باز ۴۰۴ می‌داد؛ تست حالا خود ردیف رو هم چک می‌کنه)؛ بدون چک مالکیت در حذف ← «an approved review deleted …» قرمز (تست تازه‌ی حذف ِ کاربر دیگه)؛ بدون `RatingBook.deleted` ← همون تست قرمز.
 
 ---
 
@@ -6326,3 +6333,4 @@ kiva {
 | ۳۰ مهر ۱۴۰۵ | ۷.۶ | Phase 7 step 7.6 | `RETURNS_REVIEW.md` (نه خرابکاری، همه قرمز)، `ReturnsLogScanOnDatabaseTest`، `docs/FRONTEND_RETURNS.md`. ۲۸۵۴ تست سبز، ۵ skip. فاز ۷ از طرف ریپو کامله؛ الگوهای فراز، دور واقعی و merge منتظر تو |
 | ۳۰ مهر ۱۴۰۵ | ۸.۰ | Phase 8 step 8.0 | کانترکت 1.14.0 با هر ۱۶ ردیف ِ ۱۳.۸ و دو ردیف تازه (۱۷ و ۱۸)؛ چهار تصمیم تازه (۲۸ تا ۳۱). YAML معتبر، ۱۳۳۸ `$ref`. متن ۱۰ کد تازه. برنچ `reviews` از نوک فاز ۷ |
 | ۳۰ مهر ۱۴۰۵ | ۸.۱ | Phase 8 step 8.1 | Aggregate ِ `Review`، VOها، `RatingTally`، `ReviewDomainService` (چهار قدم)، سه repository، `V33`، سه RepositoryImpl، `RatingBook`؛ `rating_desc` از `productrating_tbl`. پنج تصمیم تازه (۳۲ تا ۳۶). دو خرابکاری قرمز. ۲۸۹۱ تست سبز |
+| ۳۰ مهر ۱۴۰۵ | ۸.۲ | Phase 8 step 8.2 | ثبت (به ترتیب کانترکت، وصل خودکار خرید)، ویرایش، حذف (`RatingBook`)، «نظرات من» با `rejected`، «منتظر نظر تو»؛ `Reviews` و `ReviewPurchases`. پنج تصمیم تازه (۳۷ تا ۴۱). سه خرابکاری قرمز. ۲۹۰۱ تست سبز |
