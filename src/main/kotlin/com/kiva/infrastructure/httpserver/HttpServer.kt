@@ -1,5 +1,6 @@
 package com.kiva.infrastructure.httpserver
 
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1SharedWishlist
 import com.kiva.application.usecase.account.usecase.command.ConfirmPhoneChangeUc
 import com.kiva.application.usecase.account.usecase.command.RequestPhoneChangeUc
 import com.kiva.application.usecase.account.usecase.command.UpdateMyProfileUc
@@ -347,7 +348,8 @@ fun Application.configureRouting() {
             webV1MyReturns(MyReturnUseCases(get(), get(), get()), mediaUrls)
             webV1Reviews(ReviewUseCases(get(), get(), get(), get(), get()), mediaUrls)
             webV1MyReviews(MyReviewUseCases(get(), get(), get(), get(), get()), mediaUrls)
-            webV1Wishlist(WishlistUseCases(get(), get(), get(), get(), get(), get(), getCartUc), mediaUrls, config.shop.siteUrl)
+            webV1Wishlist(WishlistUseCases(get(), get(), get(), get(), get(), get(), getCartUc, get(), get(), get()), mediaUrls, config.shop.siteUrl)
+            webV1SharedWishlist(get(), mediaUrls)
             webV1Tracking(TrackingUseCases(get(), get(), get()), mediaUrls)
         }
     }

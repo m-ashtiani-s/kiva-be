@@ -292,7 +292,7 @@ ssh -o PubkeyAuthentication=no -o PreferredAuthentications=password kiva true   
 
 فهرست IPهای آروان رو از `https://www.arvancloud.ir/fa/ips.txt` می‌گیره و `conf.d/arvan-real-ip.conf` رو می‌سازه: هدر `ar-real-ip` فقط وقتی پذیرفته می‌شه که درخواست واقعاً از لبه‌ی آروان بیاد. هر ماه یه بار دوباره اجراش کن (`launch-check.sh` بعد از ۳۰ روز یادت می‌ندازه).
 
-بعد بقیه‌ی بلوک API از مرجع: `error_page 429 = @kiva_rate_limited;`، پنج location ِ محدود، و خود `@kiva_rate_limited`:
+بعد بقیه‌ی بلوک API از مرجع: `error_page 429 = @kiva_rate_limited;`، شش location ِ محدود، و خود `@kiva_rate_limited`:
 
 ```bash
 diff <(nginx -T 2>/dev/null | sed -n '/server_name api.kivashop.ir/,/^}/p') /opt/kiva-ops/nginx/api.kivashop.ir.conf
@@ -307,6 +307,7 @@ nginx -t && systemctl reload nginx
 | `/api/v1/orders` | ۳۰ در دقیقه، تا ۱۰ تا پشت‌سرهم (دوازدهمی ۴۲۹) |
 | `/api/v1/tracking/lookup` | ۱۰ در دقیقه، تا ۵ تا (برنامه خودش ۱۰ در ۱۰ دقیقه) |
 | `/api/v1/contact/messages` | ۶ در دقیقه، تا ۳ تا (فاز ۱۳) |
+| `/api/v1/wishlists/shared/` | ۳۰ در دقیقه، تا ۱۰ تا پشت‌سرهم (لینک عمومی علاقه‌مندی، فاز ۹) |
 
 ۴۲۹ ِ nginx همون Problem ِ برنامه‌ست (`RATE_LIMITED`، `meta.retryAfterSeconds`) با هدرهای CORS، تا فرانت فرقشون رو نفهمه. فهرست origin ِ `map` در `kiva-http.conf` باید همون `KIVA_ALLOWED_ORIGINS` باشه.
 

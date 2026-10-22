@@ -1,5 +1,12 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
+import io.ktor.server.response.header
+import io.ktor.http.HttpHeaders
+import com.kiva.infrastructure.httpserver.controller.httprest.model.response.SharedWishlistHttpResponse
+import com.kiva.infrastructure.httpserver.controller.httprest.model.response.WishlistShareHttpResponse
+import com.kiva.application.usecase.wishlist.usecase.query.GetSharedWishlistUc
+import com.kiva.application.usecase.wishlist.usecase.command.RevokeWishlistShareUc
+import com.kiva.application.usecase.wishlist.usecase.command.ShareMyWishlistUc
 import io.ktor.server.routing.post
 import io.ktor.server.response.respond
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.CartHttpResponse
@@ -44,6 +51,9 @@ class WishlistUseCases(
     val remove: RemoveFromWishlistUc,
     val toCart: AddWishlistToCartUc,
     val getCart: GetCartUc,
+    val share: ShareMyWishlistUc,
+    val revokeShare: RevokeWishlistShareUc,
+    val getShared: GetSharedWishlistUc,
 )
 
 /** The path parameter of a saved product. */
@@ -93,10 +103,32 @@ fun Route.webV1Wishlist(useCases: WishlistUseCases, mediaUrls: MediaUrls, siteUr
             call.respond(WishlistAddToCartHttpResponse.from(CartHttpResponse.from(cart, added.change.issues, mediaUrls), added))
         }
 
+        post("/me/wishlist/share") {
+            call.respondResult(useCases.share.execute(ShareMyWishlistUc.Cmd(call.accessPrincipal().userId))) { WishlistShareHttpResponse.from(it, siteUrl) }
+        }
+
+        delete("/me/wishlist/share") {
+            call.respondResult(useCases.revokeShare.execute(RevokeWishlistShareUc.Cmd(call.accessPrincipal().userId)))
+        }
+
         delete("/me/wishlist/items/{$PRODUCT_ID}") {
             val command = RemoveFromWishlistUc.Cmd(call.accessPrincipal().userId, call.parameters[PRODUCT_ID].orEmpty())
             call.respondResult(useCases.remove.execute(command)) { WishlistToggleHttpResponse.from(it) }
         }
+    }
+}
+
+/** The path parameter of a shared list. */
+private const val TOKEN = "token"
+
+/**
+ * Someone's shared wishlist, public (decision 14): never cached anywhere, since the owner may revoke it any moment and
+ * the answer is somebody's list. nginx limits it to 30 a minute per IP.
+ */
+fun Route.webV1SharedWishlist(getShared: GetSharedWishlistUc, mediaUrls: MediaUrls) {
+    get("/wishlists/shared/{$TOKEN}") {
+        call.response.header(HttpHeaders.CacheControl, "no-store")
+        call.respondResult(getShared.execute(GetSharedWishlistUc.Qry(call.parameters[TOKEN].orEmpty()))) { SharedWishlistHttpResponse.from(it, mediaUrls) }
     }
 }
 

@@ -1,5 +1,6 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.model.response
 
+import com.kiva.application.usecase.wishlist.usecase.query.GetSharedWishlistUc
 import com.kiva.application.usecase.wishlist.usecase.command.AddWishlistToCartUc
 import com.kiva.application.dto.WishlistDto
 import com.kiva.application.dto.WishlistItemDto
@@ -108,6 +109,17 @@ data class WishlistAddToCartHttpResponse(val cart: CartHttpResponse, val addedCo
             addedCount = added.addedCount,
             skipped = added.skipped.map { ReorderSkippedHttpResponse(it.productId, it.name, it.reason.name) },
             message = WishlistTexts.addedToCart(added.addedCount),
+        )
+    }
+}
+
+/** Contract schema `SharedWishlist`: the owner's first name only (or «یکی از دوستان کیوا»), and the published products' cards. */
+@Serializable
+data class SharedWishlistHttpResponse(val ownerDisplayName: String, val items: List<ProductSummaryHttpResponse>) {
+    companion object {
+        fun from(shared: GetSharedWishlistUc.Shared, urls: MediaUrls) = SharedWishlistHttpResponse(
+            ownerDisplayName = shared.ownerFirstName ?: WishlistTexts.SOMEONE,
+            items = shared.items.map { ProductSummaryHttpResponse.from(it, emptyList(), urls) },
         )
     }
 }

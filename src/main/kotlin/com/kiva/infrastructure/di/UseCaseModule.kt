@@ -1,5 +1,8 @@
 package com.kiva.infrastructure.di
 
+import com.kiva.application.usecase.wishlist.usecase.query.GetSharedWishlistUc
+import com.kiva.application.usecase.wishlist.usecase.command.RevokeWishlistShareUc
+import com.kiva.application.usecase.wishlist.usecase.command.ShareMyWishlistUc
 import com.kiva.application.usecase.account.usecase.command.ConfirmPhoneChangeUc
 import com.kiva.application.usecase.account.usecase.command.RequestPhoneChangeUc
 import com.kiva.application.usecase.account.usecase.command.UpdateMyProfileUc
@@ -701,6 +704,19 @@ val useCaseModule = module(createdAtStart = true) {
         AddWishlistToCartUc(transactionManager = get(), wishlistRepository = get(), wishlistCards = get(), cartBulkAdd = get(), clock = get())
     }
     single { MoveCartItemToWishlistUc(cartCommands = get(), cartDomainService = get(), wishlistRepository = get(), productQmRepository = get()) }
+    single {
+        ShareMyWishlistUc(
+            transactionManager = get(), wishlistRepository = get(), wishlistShareRepository = get(), tokens = get(), shopSettingsRepository = get(),
+            clock = get(),
+        )
+    }
+    single { RevokeWishlistShareUc(transactionManager = get(), wishlistRepository = get(), wishlistShareRepository = get()) }
+    single {
+        GetSharedWishlistUc(
+            transactionManager = get(), wishlistShareRepository = get(), wishlistRepository = get(), userRepository = get(), wishlistCards = get(),
+            shopSettingsRepository = get(), clock = get(),
+        )
+    }
     single {
         CreateReviewUc(
             transactionManager = get(), productQmRepository = get(), reviewRepository = get(), reviewDomainService = get(), reviewPurchases = get(),

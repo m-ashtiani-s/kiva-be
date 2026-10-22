@@ -1,5 +1,9 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
+import com.kiva.infrastructure.persistence.exposed.RandomWishlistShareTokens
+import com.kiva.application.usecase.wishlist.usecase.query.GetSharedWishlistUc
+import com.kiva.application.usecase.wishlist.usecase.command.RevokeWishlistShareUc
+import com.kiva.application.usecase.wishlist.usecase.command.ShareMyWishlistUc
 import com.kiva.application.usecase.wishlist.usecase.command.AddWishlistToCartUc
 import com.kiva.application.usecase.wishlist.WishlistCards
 import com.kiva.application.usecase.wishlist.usecase.command.AddToWishlistUc
@@ -384,6 +388,9 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         RemoveFromWishlistUc(transactions, wishlists, productQm),
         AddWishlistToCartUc(transactions, wishlists, wishlistCards, purchase.cartBulkAdd, clock),
         purchase.getCart,
+        ShareMyWishlistUc(transactions, wishlists, wishlistShares, RandomWishlistShareTokens(), purchase.settings, clock),
+        RevokeWishlistShareUc(transactions, wishlists, wishlistShares),
+        GetSharedWishlistUc(transactions, wishlistShares, wishlists, users, wishlistCards, purchase.settings, clock),
     )
 
     val adminReviews = AdminReviewUseCases(
@@ -517,6 +524,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
                     webV1Products(shopProducts.find, shopProducts.facets, shopProducts.get, shopProducts.related, SITE_URL, mediaUrls)
                     webV1MyReviews(myReviews, mediaUrls)
                     webV1Wishlist(wishlist, mediaUrls, SITE_URL)
+                    webV1SharedWishlist(wishlist.getShared, mediaUrls)
                     // Back from the gateway and the result page, for paying what a change left owed (phase 3).
                     webV1Payments(purchase.paymentUseCases, PaymentConfig.DEFAULT.resultUrl)
                     webV1Tracking(purchase.trackingUseCases, mediaUrls)
