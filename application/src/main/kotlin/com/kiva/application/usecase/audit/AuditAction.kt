@@ -62,6 +62,11 @@ enum class AuditAction {
     RETURN_PICKUP_SCHEDULED,
     RETURN_RECEIVED,
     RETURN_CLOSED,
+
+    // ---- reviews (phase 8) ----
+    REVIEW_MODERATED,
+    REVIEW_REPLIED,
+    REVIEW_REPLY_DELETED,
 }
 
 /** The kind of thing a panel write changed: the contract's AuditEntityType, value for value. */

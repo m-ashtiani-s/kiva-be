@@ -3838,6 +3838,10 @@ Route: 200
 | 45 | `RatingSummaryDto` (تازه، گام ۸.۳) | یه ساختن برای خلاصه‌ی لیست، `…/summary` و (از ۸.۴) صفحه‌ی محصول؛ `RatingSummaryHttpResponse.verifiedBuyerPercent` اضافه شد (تا ۸.۴ صفحه‌ی محصول `null`) | `required` ِ کانترکت 1.14.0 |
 | 46 | امتیاز ِ کارت (تازه، گام ۸.۴) | همیشه هست: بی‌نظر ← `{average: 0, count: 0}`؛ یه خوندن ِ `productrating_tbl` برای کل صفحه (کارت، جستجو، پنل)، نه join در کوئری لیست | جدول ۱۳.۷؛ «فقط یه کوئری بیشتر» |
 | 47 | `canReview` و `reviewed` (تازه، گام ۸.۴) | `reviewed` ِ ردیف = کاربر نظر زنده (`PENDING` یا `APPROVED`) از اون محصول داره؛ `canReview` = `DELIVERED` و دست‌کم یه ردیف با محصول ِ منتشرشده و `reviewed = false`. نظر ردشده دکمه رو برمی‌گردونه | تصمیم ۲۲ و ۲ (یه نظر زنده) |
+| 48 | پاسخ ِ moderation و پاسخ کیوا (تازه، گام ۸.۵) | `ModerateReviewUc` و `ReplyToReviewUc` `Unit` برمی‌گردونن و route نظر رو با `GetAdminReviewUc` (دید پنل، با `rejectionReason`) می‌خونه؛ شناسه‌ی بدشکل یا ناموجود ← `404 REVIEW_NOT_FOUND` | قانون ۶ ِ ۴.۵ |
+| 49 | تأیید ِ ردشده با نظر زنده‌ی دیگه (تازه، گام ۸.۵) | نویسنده بعد از رد یه نظر تازه نوشته و پنل نظر قدیمی رو تأیید می‌کنه ← ایندکس یکتای نظر زنده ← `409 REVIEW_ALREADY_EXISTS`، کل تراکنش (با امتیاز) برمی‌گرده. به کانترکت اضافه شد | تصمیم ۲ (یه نظر زنده)؛ مثل تصمیم ۴۱ |
+| 50 | پارامترهای صف (تازه، گام ۸.۵) | فقط `newest` (کانترکت `sort` نداره؛ دیگه ← `400 SORT_NOT_ALLOWED`)، ۲۰ و حداکثر ۱۰۰؛ `status` ناشناخته ← `400 REVIEW_STATUS_INVALID`، `productId` ِ غیرعددی ← `400 PRODUCT_ID_INVALID`، `hasReply` جز `true`/`false` ← `400 BOOLEAN_INVALID`، همه با هم | قانون عمومی پارامترها |
+| 51 | لاگ ِ نظرها (تازه، گام ۸.۵) | `entityLabel` اسم محصول؛ `REVIEW_MODERATED` با `status` و (اگه پاسخ همراه تأیید اومد) `reply` بدون متن؛ `REVIEW_REPLIED` با `reply` بدون متن؛ `REVIEW_REPLY_DELETED` بدون `changes` و فقط وقتی پاسخی بود. دلیل رد هم در لاگ نمی‌ره | ۵.۱: متن بلند فقط «عوض شد» |
 
 ### ۱۳.۳ تغییرات دامنه
 
@@ -4164,18 +4168,20 @@ Route: 200 با Review
 
 ---
 
-#### گام ۸.۵: صف پنل، تأیید و رد، «پاسخ کیوا» · M ⬜
+#### گام ۸.۵: صف پنل، تأیید و رد، «پاسخ کیوا» · M ✅
 
 **می‌سازی:** `FindAdminReviewsUc`، `ModerateReviewUc`، `ReplyToReviewUc`، `DeleteReviewReplyUc`؛ `webV1AdminReviews.kt`؛ `AdminReviewHttpResponse`؛ لاگ تغییرات.
 
 وابسته به: ۸.۲
 
 **تموم شده یعنی:**
-- [ ] تأیید ← امتیاز محصول بالا رفت، لاگ؛ تأیید دوباره ← `422`؛ رد ِ تأییدشده ← امتیاز پایین اومد، نظر از لیست عمومی رفت.
-- [ ] رد بدون دلیل ← `400`؛ رد با `reply` ← `400`؛ تأیید با `reply` ← پاسخ ثبت شد.
-- [ ] پاسخ روی `PENDING` ← `422`؛ پاسخ روی تأییدشده ← تو لیست عمومی با «کیوا»؛ `DELETE` دو بار ← هر دو `204`، یه ردیف لاگ.
-- [ ] تأیید و حذف همزمان (پنل و مشتری) ۲۰ بار ← `productrating_tbl` همیشه با `review_tbl` جوره (کوئری مقایسه در تست).
-- [ ] `OPERATOR` و `CATALOG_MANAGER` ← `403`.
+- [x] تأیید ← امتیاز محصول بالا رفت، لاگ؛ تأیید دوباره ← `422`؛ رد ِ تأییدشده ← امتیاز پایین اومد، نظر از لیست عمومی رفت.
+- [x] رد بدون دلیل ← `400`؛ رد با `reply` ← `400`؛ تأیید با `reply` ← پاسخ ثبت شد.
+- [x] پاسخ روی `PENDING` ← `422`؛ پاسخ روی تأییدشده ← تو لیست عمومی با «کیوا»؛ `DELETE` دو بار ← هر دو `204`، یه ردیف لاگ.
+- [x] تأیید و حذف همزمان (پنل و مشتری) ۲۰ بار ← `productrating_tbl` همیشه با `review_tbl` جوره (کوئری مقایسه در تست).
+- [x] `OPERATOR` و `CATALOG_MANAGER` ← `403`.
+
+**یادداشت پیاده‌سازی:** چهار تصمیم تازه (۴۸ تا ۵۱). `FindAdminReviewsUc` (`ReviewRepository.pageAdmin` با `AdminFilter` و `countPending`، حساب‌ها با `AdminCustomerRepository.findAll` برای کل صفحه)، `GetAdminReviewUc`، `ModerateReviewUc` (قفل ۱۱ و بعد `RatingBook`)، `ReplyToReviewUc`، `DeleteReviewReplyUc`؛ سه `AuditAction` ِ `REVIEW_*` و متن‌هاشون؛ `AdminReviewListHttpResponse`؛ `webV1AdminReviews.kt` (`[ADMIN, SUPPORT]`). کانترکت: `409 REVIEW_ALREADY_EXISTS` به moderation اضافه شد (تصمیم ۴۹). تست: `WebV1AdminReviewsOnDatabaseTest` (۷ تست، با ۲۰ دور تأیید و حذف همزمان و مقایسه‌ی `productrating_tbl` با `review_tbl` بعد از هر دور). خرابکاری: بدون `ratingBook.changed` در moderation ← سه تست قرمز (امتیاز بعد از تأیید، ۴۰۹، دورهای همزمان)؛ `OPERATOR` در نقش‌های route ← «OPERATOR and CATALOG_MANAGER 403…» قرمز. کل مجموعه: ۲۹۱۹ تست سبز، ۵ skip.
 
 ---
 
@@ -6346,3 +6352,4 @@ kiva {
 | ۳۰ مهر ۱۴۰۵ | ۸.۲ | Phase 8 step 8.2 | ثبت (به ترتیب کانترکت، وصل خودکار خرید)، ویرایش، حذف (`RatingBook`)، «نظرات من» با `rejected`، «منتظر نظر تو»؛ `Reviews` و `ReviewPurchases`. پنج تصمیم تازه (۳۷ تا ۴۱). سه خرابکاری قرمز. ۲۹۰۱ تست سبز |
 | ۳۰ مهر ۱۴۰۵ | ۸.۳ | Phase 8 step 8.3 | لیست عمومی (چهار sort، سه فیلتر، نظرهای در انتظار ِ خود کاربر)، خلاصه‌ی امتیاز، رأی «مفید بود». چهار تصمیم تازه (۴۲ تا ۴۵). دو خرابکاری قرمز. ۲۹۰۷ تست سبز |
 | ۳۰ مهر ۱۴۰۵ | ۸.۴ | Phase 8 step 8.4 | امتیاز روی کارت لیست، جستجو، صفحه و پنل (یه خوندن برای کل صفحه)، `ratingSummary` ِ واقعی؛ `canReview` و `reviewed` در سفارش‌ها با `ReviewMarks`. دو تصمیم تازه (۴۶ و ۴۷). دو خرابکاری قرمز. ۲۹۱۲ تست سبز |
+| ۳۰ مهر ۱۴۰۵ | ۸.۵ | Phase 8 step 8.5 | صف پنل (فیلترها، `pendingCount`، راه تماس)، تأیید و رد با `RatingBook`، «پاسخ کیوا» و حذفش، سه `AuditAction`؛ `409` ِ moderation در کانترکت. چهار تصمیم تازه (۴۸ تا ۵۱). دو خرابکاری قرمز. ۲۹۱۹ تست سبز |

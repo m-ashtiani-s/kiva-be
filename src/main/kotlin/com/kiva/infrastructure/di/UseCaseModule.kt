@@ -138,8 +138,13 @@ import com.kiva.application.usecase.review.ReviewPurchases
 import com.kiva.application.usecase.review.Reviews
 import com.kiva.application.usecase.review.usecase.command.CreateReviewUc
 import com.kiva.application.usecase.review.usecase.command.DeleteMyReviewUc
+import com.kiva.application.usecase.review.usecase.command.DeleteReviewReplyUc
+import com.kiva.application.usecase.review.usecase.command.ModerateReviewUc
+import com.kiva.application.usecase.review.usecase.command.ReplyToReviewUc
 import com.kiva.application.usecase.review.usecase.command.UpdateMyReviewUc
 import com.kiva.application.usecase.review.usecase.command.VoteReviewHelpfulUc
+import com.kiva.application.usecase.review.usecase.query.FindAdminReviewsUc
+import com.kiva.application.usecase.review.usecase.query.GetAdminReviewUc
 import com.kiva.application.usecase.review.usecase.query.GetReviewSummaryUc
 import com.kiva.application.usecase.review.usecase.query.ListProductReviewsUc
 import com.kiva.application.usecase.review.usecase.query.GetMyReviewUc
@@ -686,6 +691,15 @@ val useCaseModule = module(createdAtStart = true) {
     single { UpdateMyReviewUc(transactionManager = get(), reviewRepository = get(), clock = get()) }
     single { DeleteMyReviewUc(transactionManager = get(), reviewRepository = get(), ratingBook = get(), clock = get()) }
     single { ListMyReviewsUc(transactionManager = get(), reviewRepository = get(), reviews = get()) }
+    single { FindAdminReviewsUc(transactionManager = get(), reviewRepository = get(), reviews = get(), adminCustomerRepository = get()) }
+    single { GetAdminReviewUc(transactionManager = get(), reviewRepository = get(), reviews = get()) }
+    single {
+        ModerateReviewUc(
+            transactionManager = get(), reviewRepository = get(), ratingBook = get(), productQmRepository = get(), auditTrail = get(), clock = get(),
+        )
+    }
+    single { ReplyToReviewUc(transactionManager = get(), reviewRepository = get(), productQmRepository = get(), auditTrail = get(), clock = get()) }
+    single { DeleteReviewReplyUc(transactionManager = get(), reviewRepository = get(), productQmRepository = get(), auditTrail = get(), clock = get()) }
     single {
         ListProductsAwaitingMyReviewUc(
             transactionManager = get(), reviewPurchases = get(), reviewRepository = get(), productQmRepository = get(), colorRepository = get(),

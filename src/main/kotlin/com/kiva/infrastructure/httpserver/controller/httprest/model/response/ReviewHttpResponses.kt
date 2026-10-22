@@ -3,6 +3,7 @@ package com.kiva.infrastructure.httpserver.controller.httprest.model.response
 import com.kiva.application.dto.AdminReviewDto
 import com.kiva.application.dto.ReviewDto
 import com.kiva.application.repository.ProductBriefQm
+import com.kiva.application.usecase.review.usecase.query.FindAdminReviewsUc
 import com.kiva.application.usecase.review.usecase.query.ListMyReviewsUc
 import com.kiva.application.usecase.review.usecase.query.ListProductReviewsUc
 import com.kiva.application.usecase.review.usecase.query.ListProductsAwaitingMyReviewUc
@@ -169,6 +170,18 @@ data class AdminReviewHttpResponse(
                 admin.customerId, admin.contact,
             )
         }
+    }
+}
+
+/** Contract schema `AdminReviewListResponse`: the page, and every review still waiting, whatever the filters. */
+@Serializable
+data class AdminReviewListHttpResponse(val items: List<AdminReviewHttpResponse>, val meta: PageMetaHttpResponse, val pendingCount: Int) {
+    companion object {
+        fun from(queue: FindAdminReviewsUc.Queue, urls: MediaUrls) = AdminReviewListHttpResponse(
+            items = queue.page.items.map { AdminReviewHttpResponse.from(it, urls) },
+            meta = queue.page.let { PageMetaHttpResponse(it.page, it.size, it.totalItems, it.totalPages, it.hasNext) },
+            pendingCount = queue.pendingCount,
+        )
     }
 }
 

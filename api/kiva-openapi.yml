@@ -4931,6 +4931,11 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: "`REVIEW_ALREADY_EXISTS` — تأیید نظر ردشده وقتی نویسنده‌اش نظر زنده‌ی دیگری برای همین محصول دارد"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422':
           description: "`INVALID_STATUS_TRANSITION`"
           content:

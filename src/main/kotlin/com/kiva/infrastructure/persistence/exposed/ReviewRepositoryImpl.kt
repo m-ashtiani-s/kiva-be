@@ -43,6 +43,7 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greater
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.isNotNull
+import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.statements.UpdateBuilder
 import org.jetbrains.exposed.v1.exceptions.ExposedSQLException
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
@@ -117,6 +118,20 @@ class ReviewRepositoryImpl : ReviewRepository {
             .orderBy(ReviewTbl.createdOn to SortOrder.DESC, ReviewTbl.reviewId to SortOrder.DESC)
             .map { it.toReview() }
 
+    override fun pageAdmin(filter: ReviewRepository.AdminFilter, pageable: Pageable): Page<Review> {
+        val conditions = buildList {
+            filter.status?.let { add(ReviewTbl.status eq it) }
+            filter.productId?.let { add(ReviewTbl.productId eq it.value) }
+            filter.hasReply?.let { add(if (it) ReviewTbl.replyText.isNotNull() else ReviewTbl.replyText.isNull()) }
+        }
+        val query = ReviewTbl.selectAll()
+        if (conditions.isNotEmpty()) query.where { conditions.reduce { a, b -> a and b } }
+        return query.paginate(pageable, NEWEST_FIRST, tiebreaker = ReviewTbl.reviewId, tiebreakerOrder = SortOrder.DESC) { it.toReview() }
+    }
+
+    override fun countPending(): Int =
+        ReviewTbl.selectAll().where { ReviewTbl.status eq ReviewStatus.PENDING }.count().toInt()
+
     override fun countsOfUser(userId: UserId): Map<ReviewStatus, Int> {
         val count = ReviewTbl.reviewId.count()
         return ReviewTbl.select(ReviewTbl.status, count).where { ReviewTbl.userId eq userId.value }.groupBy(ReviewTbl.status)
@@ -164,7 +179,7 @@ class ReviewRepositoryImpl : ReviewRepository {
         val AGGREGATE_NAME = EventAggregateName("REVIEW")
         val LIVE = listOf(ReviewStatus.PENDING, ReviewStatus.APPROVED)
 
-        /** The one order of a customer's own list; the pageable's sort is ignored. */
+        /** The one order of a customer's own list and of the panel's queue; the pageable's sort is ignored. */
         val NEWEST_FIRST: SortOrders = mapOf(MINE to listOf(ReviewTbl.createdOn to SortOrder.DESC))
 
         const val MINE = "newest"

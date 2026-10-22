@@ -48,6 +48,12 @@ interface ReviewRepository {
     /** [userId]'s PENDING reviews of [productId], newest first: shown to them first on the product's page 1. */
     fun pendingOf(userId: UserId, productId: ProductId): List<Review>
 
+    /** The panel's queue: every review, [filter]ed, newest written first (ties to the newer id), for reading only. */
+    fun pageAdmin(filter: AdminFilter, pageable: Pageable): Page<Review>
+
+    /** How many reviews wait for moderation, whatever the panel's filters. */
+    fun countPending(): Int
+
     /** How many reviews [userId] has in each status; a status with none is missing. */
     fun countsOfUser(userId: UserId): Map<ReviewStatus, Int>
 
@@ -63,6 +69,9 @@ interface ReviewRepository {
 
     /** The public list's filters: [rating] stars only, only with photos, only by verified buyers. */
     data class PublicFilter(val rating: StarRating? = null, val withMedia: Boolean = false, val verifiedOnly: Boolean = false)
+
+    /** The panel's filters: one [status], one [productId], with or without Kiva's reply ([hasReply]); null is any. */
+    data class AdminFilter(val status: ReviewStatus? = null, val productId: ProductId? = null, val hasReply: Boolean? = null)
 }
 
 /** Hands out the ids of new reviews, each only once, from the `reviewid_seq` database sequence. */

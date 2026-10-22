@@ -69,6 +69,7 @@ import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminOrderUseC
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminProductUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminRefundUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminReturnUseCases
+import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminReviewUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminReportUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminSettingsUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AuthUseCases
@@ -97,6 +98,7 @@ import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminOrde
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminProducts
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminRefunds
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminReturns
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminReviews
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminReports
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminSettings
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Auth
@@ -316,6 +318,7 @@ fun Application.configureRouting() {
             webV1AdminOrders(adminOrderUseCases, mediaUrls)
             webV1AdminRefunds(AdminRefundUseCases(checkPanelAccessUc, get()))
             webV1AdminReturns(AdminReturnUseCases(checkPanelAccessUc, get(), get(), get(), get(), get(), get()), mediaUrls)
+            webV1AdminReviews(AdminReviewUseCases(checkPanelAccessUc, get(), get(), get(), get(), get()), mediaUrls)
             webV1AdminSettings(AdminSettingsUseCases(checkPanelAccessUc, get(), get()))
             webV1AdminDiscountCodes(AdminDiscountCodeUseCases(checkPanelAccessUc, get(), get(), get(), get(), get()))
             webV1AdminReports(AdminReportUseCases(checkPanelAccessUc, get()), mediaUrls)

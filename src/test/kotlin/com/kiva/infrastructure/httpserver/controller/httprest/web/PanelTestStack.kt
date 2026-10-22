@@ -86,8 +86,13 @@ import com.kiva.application.usecase.review.ReviewPurchases
 import com.kiva.application.usecase.review.Reviews
 import com.kiva.application.usecase.review.usecase.command.CreateReviewUc
 import com.kiva.application.usecase.review.usecase.command.DeleteMyReviewUc
+import com.kiva.application.usecase.review.usecase.command.DeleteReviewReplyUc
+import com.kiva.application.usecase.review.usecase.command.ModerateReviewUc
+import com.kiva.application.usecase.review.usecase.command.ReplyToReviewUc
 import com.kiva.application.usecase.review.usecase.command.UpdateMyReviewUc
 import com.kiva.application.usecase.review.usecase.command.VoteReviewHelpfulUc
+import com.kiva.application.usecase.review.usecase.query.FindAdminReviewsUc
+import com.kiva.application.usecase.review.usecase.query.GetAdminReviewUc
 import com.kiva.application.usecase.review.usecase.query.GetReviewSummaryUc
 import com.kiva.application.usecase.review.usecase.query.ListProductReviewsUc
 import com.kiva.application.usecase.review.usecase.query.GetMyReviewUc
@@ -356,6 +361,14 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         DeleteMyReviewUc(transactions, reviewRepository, ratingBook, clock),
         ListProductsAwaitingMyReviewUc(transactions, reviewPurchases, reviewRepository, productQm, colors),
     )
+    val adminReviews = AdminReviewUseCases(
+        checkPanelAccess,
+        FindAdminReviewsUc(transactions, reviewRepository, reviews, AdminCustomerRepositoryImpl()),
+        GetAdminReviewUc(transactions, reviewRepository, reviews),
+        ModerateReviewUc(transactions, reviewRepository, ratingBook, productQm, auditTrail, clock),
+        ReplyToReviewUc(transactions, reviewRepository, productQm, auditTrail, clock),
+        DeleteReviewReplyUc(transactions, reviewRepository, productQm, auditTrail, clock),
+    )
 
     /** The shop's own product use cases, as the app wires them. */
     inner class ShopProducts {
@@ -473,6 +486,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
                     webV1MyUploads(uploadMedia, mediaStorage::newUploadFile, mediaUrls)
                     webV1MyReturns(myReturns, mediaUrls)
                     webV1AdminReturns(adminReturns, mediaUrls)
+                    webV1AdminReviews(adminReviews, mediaUrls)
                     webV1Reviews(reviewUseCases, mediaUrls)
                     // The shop's product pages, for the ratings on cards and pages (phase 8).
                     webV1Products(shopProducts.find, shopProducts.facets, shopProducts.get, shopProducts.related, SITE_URL, mediaUrls)

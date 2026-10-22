@@ -65,6 +65,13 @@ object AuditTexts {
             AuditAction.RETURN_PICKUP_SCHEDULED -> "جمع‌آوری مرجوعی سفارش $name زمان‌بندی شد"
             AuditAction.RETURN_RECEIVED -> "کالای مرجوعی سفارش $name به انبار رسید"
             AuditAction.RETURN_CLOSED -> "مرجوعی سفارش $name بدون استرداد بسته شد"
+            AuditAction.REVIEW_MODERATED -> when (changes.firstOrNull { it.field == "status" }?.to) {
+                "APPROVED" -> "نظری روی $name تأیید شد"
+                "REJECTED" -> "نظری روی $name رد شد"
+                else -> "نظری روی $name بررسی شد"
+            }
+            AuditAction.REVIEW_REPLIED -> "پاسخ کیوا زیر نظری روی $name ثبت شد"
+            AuditAction.REVIEW_REPLY_DELETED -> "پاسخ کیوا زیر نظری روی $name حذف شد"
         }
     }
 
