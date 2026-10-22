@@ -1,5 +1,8 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
+import com.kiva.application.usecase.review.ReviewMarks
+import com.kiva.infrastructure.persistence.exposed.ProductQmRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.ReviewRepositoryImpl
 import com.kiva.application.port.PaymentGateways
 import com.kiva.application.repository.OfferQmRepository
 import com.kiva.application.usecase.address.usecase.command.AddAddressUc
@@ -208,6 +211,7 @@ class PurchaseTestStack(val clock: MutableClock) {
     val refunds = RefundRepositoryImpl()
     val returns = ReturnRequestRepositoryImpl()
     val returnRequests = ReturnRequests(returns, orderQm, MediaRepositoryImpl(), refunds, ColorRepositoryImpl())
+    val reviewMarks = ReviewMarks(ReviewRepositoryImpl(), ProductQmRepositoryImpl())
     val orderDetails = OrderDetails(payments, ColorRepositoryImpl(), reservations, MediaRepositoryImpl(), refunds, returnRequests)
     val orderNotices = OrderNotices(auth.sms)
     val orderCancellation = OrderCancellation(
@@ -215,8 +219,8 @@ class PurchaseTestStack(val clock: MutableClock) {
     )
 
     val myOrderUseCases = MyOrderUseCases(
-        ListMyOrdersUc(transactions, orderQm, settings, reservations, orderDetails, clock),
-        GetMyOrderUc(transactions, orderByCode, orderDetails, settings, clock),
+        ListMyOrdersUc(transactions, orderQm, settings, reservations, orderDetails, reviewMarks, clock),
+        GetMyOrderUc(transactions, orderByCode, orderDetails, reviewMarks, settings, clock),
         ReorderUc(transactions, orderQm, cartCommands, cartDomain),
         getCart,
         GetMyReservationUc(transactions, reservations, clock),

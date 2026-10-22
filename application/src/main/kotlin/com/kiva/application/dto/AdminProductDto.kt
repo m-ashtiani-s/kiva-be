@@ -26,6 +26,7 @@ data class AdminProductListItemDto(
     val soldCount: Int,
     val updatedAt: Instant,
     val image: GalleryItemDto?,
+    val rating: RatingSummaryDto,
 )
 
 /**

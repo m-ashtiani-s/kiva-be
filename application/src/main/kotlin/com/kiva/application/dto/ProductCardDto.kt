@@ -1,5 +1,6 @@
 package com.kiva.application.dto
 
+import com.kiva.domain.aggregate.review.model.valueobject.RatingTally
 import com.kiva.domain.aggregate.product.model.valueobject.BadgeCode
 import com.kiva.domain.aggregate.product.model.valueobject.BagType
 import com.kiva.domain.aggregate.product.model.valueobject.StockInfo
@@ -32,6 +33,8 @@ data class ProductCardDto(
     val hasVideo: Boolean,
     val soldCount: Int,
     val freeShippingEligible: Boolean,
+    /** Its approved reviews (phase 8): the card shows the average and the count, the page the whole summary. */
+    val rating: RatingSummaryDto = RatingSummaryDto.from(RatingTally.NONE),
 ) {
     data class CategoryRef(val id: Long, val slug: String, val name: String)
 

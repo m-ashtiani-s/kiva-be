@@ -3836,6 +3836,8 @@ Route: 200
 | 43 | فیلترهای لیست عمومی (تازه، گام ۸.۳) | `rating` بیرون ۱ تا ۵ ← `400 RATING_INVALID` روی `rating`؛ `withMedia`/`verifiedOnly` فقط `true`/`false` ← وگرنه `400 BOOLEAN_INVALID` روی همون پارامتر (مثل صف سفارش‌ها)؛ صفحه‌بندی همون `Page`/`Size` ِ کانترکت (۲۰، حداکثر ۱۰۰) | قانون عمومی پارامترها |
 | 44 | رأی بی‌اثر (تازه، گام ۸.۳) | رأی تکراری یا پس گرفتن ِ رأی ِ نداده ← `200` با همون شکل و بدون ذخیره؛ رأی همیشه زیر قفل ردیف نظر، پس `helpfulCount` با جدول رأی‌ها جوره | تصمیم ۲۰ |
 | 45 | `RatingSummaryDto` (تازه، گام ۸.۳) | یه ساختن برای خلاصه‌ی لیست، `…/summary` و (از ۸.۴) صفحه‌ی محصول؛ `RatingSummaryHttpResponse.verifiedBuyerPercent` اضافه شد (تا ۸.۴ صفحه‌ی محصول `null`) | `required` ِ کانترکت 1.14.0 |
+| 46 | امتیاز ِ کارت (تازه، گام ۸.۴) | همیشه هست: بی‌نظر ← `{average: 0, count: 0}`؛ یه خوندن ِ `productrating_tbl` برای کل صفحه (کارت، جستجو، پنل)، نه join در کوئری لیست | جدول ۱۳.۷؛ «فقط یه کوئری بیشتر» |
+| 47 | `canReview` و `reviewed` (تازه، گام ۸.۴) | `reviewed` ِ ردیف = کاربر نظر زنده (`PENDING` یا `APPROVED`) از اون محصول داره؛ `canReview` = `DELIVERED` و دست‌کم یه ردیف با محصول ِ منتشرشده و `reviewed = false`. نظر ردشده دکمه رو برمی‌گردونه | تصمیم ۲۲ و ۲ (یه نظر زنده) |
 
 ### ۱۳.۳ تغییرات دامنه
 
@@ -4146,17 +4148,19 @@ Route: 200 با Review
 
 ---
 
-#### گام ۸.۴: امتیاز روی کارت، صفحه و مرتب‌سازی محصول؛ «نظر بده» در سفارش‌ها · M ⬜
+#### گام ۸.۴: امتیاز روی کارت، صفحه و مرتب‌سازی محصول؛ «نظر بده» در سفارش‌ها · M ✅
 
 **می‌سازی:** جدول ۱۳.۷: `ProductCards` و `GetProductUc` و `FindAdminProductsUc` امتیاز رو از `ProductRatingRepository.findAll` می‌گیرن؛ `RatingBriefHttpResponse`؛ `OrderActionFacts` با `reviewedProductIds`؛ `reviewed` در `OrderItemHttpResponse`.
 
 وابسته به: ۸.۳
 
 **تموم شده یعنی:**
-- [ ] بعد از تأیید یه نظر ۵ ستاره، کارت محصول در لیست، جستجو و صفحه `{5.0, 1}` نشون می‌ده؛ بعد از ردش `{0, 0}`.
-- [ ] `rating_desc`: محصول ۴.۸ با ۲ نظر بالای ۴.۸ با ۱ نظر؛ بی‌نظرها بعد از نظردارها؛ ناموجود ته لیست.
-- [ ] تعداد کوئری لیست ۴۸ کارتی فقط یکی بیشتر شده (تست شمارش کوئری یا لاگ SQL).
-- [ ] سفارش تحویل‌شده: `canReview = true` و بعد از نظر برای همه‌ی ردیف‌ها `false`؛ `reviewed` هر ردیف درست.
+- [x] بعد از تأیید یه نظر ۵ ستاره، کارت محصول در لیست، جستجو و صفحه `{5.0, 1}` نشون می‌ده؛ بعد از ردش `{0, 0}`.
+- [x] `rating_desc`: محصول ۴.۸ با ۲ نظر بالای ۴.۸ با ۱ نظر؛ بی‌نظرها بعد از نظردارها؛ ناموجود ته لیست.
+- [x] تعداد کوئری لیست ۴۸ کارتی فقط یکی بیشتر شده (تست شمارش کوئری یا لاگ SQL).
+- [x] سفارش تحویل‌شده: `canReview = true` و بعد از نظر برای همه‌ی ردیف‌ها `false`؛ `reviewed` هر ردیف درست.
+
+**یادداشت پیاده‌سازی:** دو تصمیم تازه (۴۶ و ۴۷). `ProductCardQm.rating` و `AdminProductQm.rating` (پیش‌فرض `RatingTally.NONE`) با یه خوندن برای کل صفحه (`ProductQmRepositoryImpl.ratingsOf` روی `ProductRatingRepository.findAll`)؛ `ProductCardDto.rating` همون `RatingSummaryDto`؛ `RatingBriefHttpResponse.from` روی کارت لیست، جستجو و پنل؛ `ratingSummary` ِ واقعی روی صفحه‌ی محصول. سفارش‌ها: `OrderActionFacts.lineProductIds`/`reviews` با `ReviewedProducts` ِ تازه، سرویس `ReviewMarks` (دو خوندن برای کل صفحه‌ی سفارش‌ها) در `ListMyOrdersUc` و `GetMyOrderUc`، `reviewed` در هر ردیف. تست: `WebV1ReviewRatingsOnDatabaseTest` (۵ تست). خرابکاری: بدون چک «نظر داده» در `canReview` ← «a delivered order shows «نظر بده» until each of its products is reviewed…» قرمز؛ `ratingsOf` ِ خالی ← «an approved five-star review shows on the list's card, the page, the panel's list…» قرمز. سه تست قبلی به‌روز شد: دکمه‌ی `canReview` ِ سفارش تحویل‌شده در سفر فاز ۲، `rating` روی کارت `WebV1ProductsTest`، و شمارش کوئری لیست پنل (۳ ← ۴، فقط یکی بیشتر). کل مجموعه: ۲۹۱۲ تست سبز، ۵ skip.
 
 ---
 
@@ -6341,3 +6345,4 @@ kiva {
 | ۳۰ مهر ۱۴۰۵ | ۸.۱ | Phase 8 step 8.1 | Aggregate ِ `Review`، VOها، `RatingTally`، `ReviewDomainService` (چهار قدم)، سه repository، `V33`، سه RepositoryImpl، `RatingBook`؛ `rating_desc` از `productrating_tbl`. پنج تصمیم تازه (۳۲ تا ۳۶). دو خرابکاری قرمز. ۲۸۹۱ تست سبز |
 | ۳۰ مهر ۱۴۰۵ | ۸.۲ | Phase 8 step 8.2 | ثبت (به ترتیب کانترکت، وصل خودکار خرید)، ویرایش، حذف (`RatingBook`)، «نظرات من» با `rejected`، «منتظر نظر تو»؛ `Reviews` و `ReviewPurchases`. پنج تصمیم تازه (۳۷ تا ۴۱). سه خرابکاری قرمز. ۲۹۰۱ تست سبز |
 | ۳۰ مهر ۱۴۰۵ | ۸.۳ | Phase 8 step 8.3 | لیست عمومی (چهار sort، سه فیلتر، نظرهای در انتظار ِ خود کاربر)، خلاصه‌ی امتیاز، رأی «مفید بود». چهار تصمیم تازه (۴۲ تا ۴۵). دو خرابکاری قرمز. ۲۹۰۷ تست سبز |
+| ۳۰ مهر ۱۴۰۵ | ۸.۴ | Phase 8 step 8.4 | امتیاز روی کارت لیست، جستجو، صفحه و پنل (یه خوندن برای کل صفحه)، `ratingSummary` ِ واقعی؛ `canReview` و `reviewed` در سفارش‌ها با `ReviewMarks`. دو تصمیم تازه (۴۶ و ۴۷). دو خرابکاری قرمز. ۲۹۱۲ تست سبز |

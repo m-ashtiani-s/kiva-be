@@ -1,5 +1,6 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.model.response
 
+import com.kiva.application.dto.RatingSummaryDto
 import com.kiva.application.dto.AdminProductDto
 import com.kiva.application.dto.AdminProductListItemDto
 import com.kiva.application.dto.AdminVariantDto
@@ -7,11 +8,13 @@ import com.kiva.infrastructure.common.http.VersionETag
 import com.kiva.infrastructure.media.MediaUrls
 import kotlinx.serialization.Serializable
 
-/** Contract schema `RatingBrief`. Reviews come in phase 8; until then every product has none. */
+/** Contract schema `RatingBrief`: the approved reviews' average and count; none is `{0, 0}`. */
 @Serializable
 data class RatingBriefHttpResponse(val average: Double, val count: Int) {
     companion object {
         val NONE = RatingBriefHttpResponse(0.0, 0)
+
+        fun from(rating: RatingSummaryDto) = RatingBriefHttpResponse(rating.average, rating.count)
     }
 }
 
@@ -48,7 +51,7 @@ data class AdminProductListItemHttpResponse(
             variantsCount = item.variantsCount,
             lowStockVariants = item.lowStockVariants,
             soldCount = item.soldCount,
-            rating = RatingBriefHttpResponse.NONE,
+            rating = RatingBriefHttpResponse.from(item.rating),
             updatedAt = item.updatedAt.toString(),
         )
     }
@@ -139,7 +142,7 @@ data class AdminProductHttpResponse(
                 stock = shop.stock,
                 isNew = shop.isNew,
                 hasVideo = shop.hasVideo,
-                rating = RatingBriefHttpResponse.NONE,
+                rating = shop.rating,
                 soldCount = shop.soldCount,
                 freeShippingEligible = shop.freeShippingEligible,
                 isWishlisted = null,

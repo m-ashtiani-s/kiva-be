@@ -1,5 +1,6 @@
 package com.kiva.application.usecase.order.usecase.query
 
+import com.kiva.application.usecase.review.ReviewMarks
 import com.kiva.application.dto.OrderListDto
 import com.kiva.application.dto.OrderSummaryDto
 import com.kiva.application.repository.OrderQmRepository
@@ -28,6 +29,7 @@ class ListMyOrdersUc(
     private val shopSettingsRepository: ShopSettingsRepository,
     private val reservations: Reservations,
     private val orderDetails: OrderDetails,
+    private val reviewMarks: ReviewMarks,
     private val clock: Clock,
 ) : QueryUseCase<ListMyOrdersUc.Qry, OrderListDto, ListMyOrdersUc.Failure> {
 
@@ -52,7 +54,8 @@ class ListMyOrdersUc(
             val orders = orderQmRepository.listOfCustomer(query.userId, tab?.statuses, query.pageable)
             val held = reservations.infosOf(orders.items, now)
             val media = orderDetails.mediaOf(orders.items)
-            val page = orders.map { OrderSummaryDto.of(it, settings, now, held[it.orderId], media) }
+            val reviews = reviewMarks.of(query.userId, orders.items)
+            val page = orders.map { OrderSummaryDto.of(it, settings, now, held[it.orderId], media, reviews) }
             val byStatus = orderQmRepository.countByStatusOfCustomer(query.userId)
             fun countOf(tab: OrderTab) = byStatus.filterKeys { OrderTab.of(it) == tab }.values.sum()
             val counts = OrderListDto.Counts(

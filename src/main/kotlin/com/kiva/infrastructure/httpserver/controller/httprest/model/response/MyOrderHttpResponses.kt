@@ -137,7 +137,7 @@ data class OrderItemHttpResponse(
             unitPrice = item.unitPrice.toman,
             unitCompareAtPrice = item.unitCompareAtPrice?.toman,
             lineTotal = item.lineTotal.toman,
-            reviewed = false,
+            reviewed = item.reviewed,
             returnableUntil = item.returnableUntil?.toString(),
         )
     }

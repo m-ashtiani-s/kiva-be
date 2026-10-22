@@ -133,6 +133,7 @@ import com.kiva.application.usecase.refund.usecase.command.CreateRefundUc
 import com.kiva.application.usecase.refund.usecase.command.UpdateRefundUc
 import com.kiva.application.usecase.returnrequest.AdminReturnRequests
 import com.kiva.application.usecase.review.RatingBook
+import com.kiva.application.usecase.review.ReviewMarks
 import com.kiva.application.usecase.review.ReviewPurchases
 import com.kiva.application.usecase.review.Reviews
 import com.kiva.application.usecase.review.usecase.command.CreateReviewUc
@@ -330,7 +331,8 @@ val useCaseModule = module(createdAtStart = true) {
     // --- orders ---
     single {
         ListMyOrdersUc(
-            transactionManager = get(), orderQmRepository = get(), shopSettingsRepository = get(), reservations = get(), orderDetails = get(), clock = get(),
+            transactionManager = get(), orderQmRepository = get(), shopSettingsRepository = get(), reservations = get(), orderDetails = get(), reviewMarks = get(),
+            clock = get(),
         )
     }
     single { OrderByCode(orderQmRepository = get(), orderRepository = get()) }
@@ -369,7 +371,7 @@ val useCaseModule = module(createdAtStart = true) {
     single { ListDailyShipmentsUc(transactionManager = get(), orderQmRepository = get(), shopSettingsRepository = get(), clock = get()) }
     single { FindSilentPhotoOrdersUc(transactionManager = get(), orderQmRepository = get(), clock = get()) }
     single { ApproveSilentPhotosUc(transactionManager = get(), orderRepository = get(), clock = get()) }
-    single { GetMyOrderUc(transactionManager = get(), orderByCode = get(), orderDetails = get(), shopSettingsRepository = get(), clock = get()) }
+    single { GetMyOrderUc(transactionManager = get(), orderByCode = get(), orderDetails = get(), reviewMarks = get(), shopSettingsRepository = get(), clock = get()) }
     single { ReorderUc(transactionManager = get(), orderQmRepository = get(), cartCommands = get(), cartDomainService = get()) }
     single { GetOrderSummaryUc(transactionManager = get(), orderQmRepository = get(), shopSettingsRepository = get(), reservations = get(), clock = get()) }
 
@@ -666,6 +668,7 @@ val useCaseModule = module(createdAtStart = true) {
     single { RatingBook(productRatingRepository = get()) }
     single { Reviews(mediaRepository = get(), reviewVoteRepository = get(), productQmRepository = get(), colorRepository = get()) }
     single { ReviewPurchases(orderQmRepository = get()) }
+    single { ReviewMarks(reviewRepository = get(), productQmRepository = get()) }
     single {
         CreateReviewUc(
             transactionManager = get(), productQmRepository = get(), reviewRepository = get(), reviewDomainService = get(), reviewPurchases = get(),

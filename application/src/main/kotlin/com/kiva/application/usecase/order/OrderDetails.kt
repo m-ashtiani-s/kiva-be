@@ -1,5 +1,6 @@
 package com.kiva.application.usecase.order
 
+import com.kiva.domain.aggregate.order.model.policy.ReviewedProducts
 import com.kiva.application.dto.OrderDetailDto
 import com.kiva.application.dto.OrderSummaryDto
 import com.kiva.application.dto.PreShipmentMediaDto
@@ -32,16 +33,20 @@ class OrderDetails(
     private val returnRequests: ReturnRequests,
 ) {
 
-    /** [order]'s page at [now], with the shop's [settings] of now (the names of its shipping method and gateway). */
-    fun of(order: OrderQm, settings: ShopSettings, now: Instant): OrderDetailDto = of(order, settings, now, paymentRepository.findAttemptsOf(order.orderId))
+    /**
+     * [order]'s page at [now], with the shop's [settings] of now (the names of its shipping method and gateway), and what
+     * its customer reviewed ([reviews]; «نظر بده», phase 8).
+     */
+    fun of(order: OrderQm, settings: ShopSettings, now: Instant, reviews: ReviewedProducts = ReviewedProducts.NONE): OrderDetailDto =
+        of(order, settings, now, paymentRepository.findAttemptsOf(order.orderId), reviews)
 
     /** The same, with [attempts] (every attempt of the order, oldest first) already read. */
-    fun of(order: OrderQm, settings: ShopSettings, now: Instant, attempts: List<Payment>): OrderDetailDto {
+    fun of(order: OrderQm, settings: ShopSettings, now: Instant, attempts: List<Payment>, reviews: ReviewedProducts = ReviewedProducts.NONE): OrderDetailDto {
         val palette = colorRepository.findAll().associateBy { it.key }
         val latest = attempts.lastOrNull()
         val media = mediaOf(listOf(order))
         return OrderDetailDto(
-            summary = OrderSummaryDto.of(order, settings, now, reservations.infosOf(listOf(order), now)[order.orderId], media),
+            summary = OrderSummaryDto.of(order, settings, now, reservations.infosOf(listOf(order), now)[order.orderId], media, reviews),
             items = order.lines.map { line ->
                 val color = line.item.color
                 // A color taken out of the palette since keeps its name and hex, as bought, and sorts last.
@@ -61,6 +66,7 @@ class OrderDetails(
                     lineTotal = line.totals.total,
                     // Fixed when it was delivered, for the lines that could be returned then.
                     returnableUntil = order.returnableUntil?.takeIf { line.returnable },
+                    reviewed = reviews.isReviewed(line.productId),
                 )
             },
             address = order.address.let {

@@ -1,5 +1,6 @@
 package com.kiva.application.repository
 
+import com.kiva.domain.aggregate.order.model.policy.ReviewedProducts
 import com.kiva.common.valueobject.Money
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.order.entity.OrderLine
@@ -132,9 +133,9 @@ data class OrderQm(
         override fun toString(): String = "Cancellation(by=$by, reason=$reason, cancelledOn=$cancelledOn)"
     }
 
-    /** What its buttons depend on at [now], from what the read model has. */
-    fun actionFactsAt(now: Instant): OrderActionFacts =
-        OrderActionFacts(status, holdUntil, photoEverSent, photoStatus, balanceDue, returnableUntil, returnSettled, now)
+    /** What its buttons depend on at [now], from what the read model has, and what its customer reviewed ([reviews]). */
+    fun actionFactsAt(now: Instant, reviews: ReviewedProducts = ReviewedProducts.NONE): OrderActionFacts =
+        OrderActionFacts(status, holdUntil, photoEverSent, photoStatus, balanceDue, returnableUntil, returnSettled, now, lines.map { it.productId }.toSet(), reviews)
 
     override fun toString(): String = "OrderQm(orderId=${orderId.value}, code=${code.value}, status=$status)"
 }

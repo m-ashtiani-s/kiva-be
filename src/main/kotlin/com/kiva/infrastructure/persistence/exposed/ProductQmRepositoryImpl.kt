@@ -35,6 +35,7 @@ import com.kiva.domain.aggregate.product.model.valueobject.ShortDescription
 import com.kiva.domain.aggregate.product.model.valueobject.Sku
 import com.kiva.domain.aggregate.product.model.valueobject.StockStatus
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
+import com.kiva.domain.aggregate.review.model.valueobject.RatingTally
 import com.kiva.infrastructure.common.persistence.SortOrders
 import com.kiva.infrastructure.persistence.exposed.projector.ProductQmSummary
 import com.kiva.infrastructure.common.persistence.paginate
@@ -77,6 +78,9 @@ import java.time.ZoneOffset
 /** Reads productqm_tbl and productvariantqm_tbl. Runs inside the use case's transaction; it never opens one itself. */
 class ProductQmRepositoryImpl : ProductQmRepository {
 
+    /** The products' ratings live apart (productrating_tbl, phase 8); read with the cards, one query a page. */
+    private val ratings = ProductRatingRepositoryImpl()
+
     // ============ the shop's list ============
 
     /**
@@ -96,8 +100,10 @@ class ProductQmRepositoryImpl : ProductQmRepository {
             Page(rows.drop(skipped).take(pageable.size), pageable.page, pageable.size, rows.size.toLong())
         }
 
-        val colors = activeColorsOf(page.items.map { it[ProductQmTbl.productId] })
-        return page.map { cardOf(it, colors[it[ProductQmTbl.productId]].orEmpty()) }
+        val ids = page.items.map { it[ProductQmTbl.productId] }
+        val colors = activeColorsOf(ids)
+        val ratings = ratingsOf(ids)
+        return page.map { cardOf(it, colors[it[ProductQmTbl.productId]].orEmpty(), ratings[it[ProductQmTbl.productId]]) }
     }
 
     /** Only products in the shop, whatever else is asked; each filter given narrows further. */
@@ -155,7 +161,11 @@ class ProductQmRepositoryImpl : ProductQmRepository {
             }
     }
 
-    private fun cardOf(row: ResultRow, colors: List<ProductCardQm.Color>): ProductCardQm = ProductCardQm(
+    /** The ratings of [productIds] that have one, in one read (phase 8). */
+    private fun ratingsOf(productIds: List<Long>): Map<Long, RatingTally> =
+        ratings.findAll(productIds.map { ProductId.constructFromPersisted(it) }).mapKeys { it.key.value }
+
+    private fun cardOf(row: ResultRow, colors: List<ProductCardQm.Color>, rating: RatingTally? = null): ProductCardQm = ProductCardQm(
         productId = ProductId.constructFromPersisted(row[ProductQmTbl.productId]),
         slug = Slug.constructFromPersisted(row[ProductQmTbl.slug]),
         sku = Sku.constructFromPersisted(row[ProductQmTbl.sku]),
@@ -168,6 +178,7 @@ class ProductQmRepositoryImpl : ProductQmRepository {
         newUntil = row[ProductQmTbl.newUntil]?.toInstant(),
         maxPerOrder = MaxPerOrder.constructFromPersisted(row[ProductQmTbl.maxPerOrder]),
         colors = colors,
+        rating = rating ?: RatingTally.NONE,
     )
 
     private fun priceTagOf(price: Long, compareAtPrice: Long?): PriceTag =
@@ -207,6 +218,7 @@ class ProductQmRepositoryImpl : ProductQmRepository {
                 variants.zip(activeColors).map { (variant, color) ->
                     ProductCardQm.Color(variant.variantId, variant.colorKey, variant.isDefault, variant.available, cardPhotosOf(color))
                 },
+                ratings.find(ProductId.constructFromPersisted(row[ProductQmTbl.productId])),
             ),
             materialSlug = Slug.constructFromPersisted(row[ProductQmTbl.materialSlug]),
             materialDescription = row[ProductQmTbl.materialDescription]?.let { MaterialDescription.constructFromPersisted(it) },
@@ -246,6 +258,7 @@ class ProductQmRepositoryImpl : ProductQmRepository {
             .paginate(pageable, adminSortOrders, tiebreaker = ProductQmTbl.productId, tiebreakerOrder = SortOrder.DESC) { it }
 
         val media = defaultMediaOf(page.items.map { it[ProductQmTbl.productId] })
+        val ratings = ratingsOf(page.items.map { it[ProductQmTbl.productId] })
         return page.map { row ->
             AdminProductQm(
                 productId = ProductId.constructFromPersisted(row[ProductQmTbl.productId]),
@@ -260,6 +273,7 @@ class ProductQmRepositoryImpl : ProductQmRepository {
                 soldCount = row[ProductQmTbl.soldCount],
                 updatedOn = row[ProductQmTbl.updatedOn].toInstant(),
                 defaultMedia = media[row[ProductQmTbl.productId]],
+                rating = ratings[row[ProductQmTbl.productId]] ?: RatingTally.NONE,
             )
         }
     }
@@ -446,8 +460,10 @@ class ProductQmRepositoryImpl : ProductQmRepository {
             .limit(limit)
             .toList()
 
-        val colors = activeColorsOf(rows.map { it[ProductQmTbl.productId] })
-        return rows.map { cardOf(it, colors[it[ProductQmTbl.productId]].orEmpty()) }
+        val ids = rows.map { it[ProductQmTbl.productId] }
+        val colors = activeColorsOf(ids)
+        val ratings = ratingsOf(ids)
+        return rows.map { cardOf(it, colors[it[ProductQmTbl.productId]].orEmpty(), ratings[it[ProductQmTbl.productId]]) }
     }
 
     // ============ counts for the menus and filters ============

@@ -1,5 +1,6 @@
 package com.kiva.application.dto
 
+import com.kiva.domain.aggregate.order.model.policy.ReviewedProducts
 import com.kiva.application.repository.OrderQm
 import com.kiva.application.repository.OrderTimelineKind
 import com.kiva.common.valueobject.Money
@@ -74,6 +75,7 @@ data class OrderSummaryDto(
             now: Instant,
             reservation: ReservationInfoDto? = null,
             media: Map<MediaId, MediaAsset> = emptyMap(),
+            reviews: ReviewedProducts = ReviewedProducts.NONE,
         ): OrderSummaryDto = OrderSummaryDto(
             code = order.code.value,
             status = order.status,
@@ -99,7 +101,7 @@ data class OrderSummaryDto(
                 val code = parcel.trackingCode.value
                 ShipmentInfo(code, settings.shippingMethods.firstOrNull { it.code == order.shippingMethod }?.trackingUrlOf(code), parcel.shippedOn, order.deliveredOn)
             },
-            actions = OrderActionsPolicy.actionsOf(order.actionFactsAt(now)),
+            actions = OrderActionsPolicy.actionsOf(order.actionFactsAt(now, reviews)),
             reservation = reservation,
         )
     }

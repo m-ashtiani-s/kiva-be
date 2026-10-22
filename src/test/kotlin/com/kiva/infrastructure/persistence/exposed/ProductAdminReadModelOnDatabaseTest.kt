@@ -244,9 +244,9 @@ class ProductAdminReadModelOnDatabaseTest {
             statementCount - before
         }
 
-        // The rows, their total and the default colors' first media.
-        assertEquals(3, statementsFor(20))
-        assertEquals(3, statementsFor(1))
+        // The rows, their total, the default colors' first media and the ratings (phase 8).
+        assertEquals(4, statementsFor(20))
+        assertEquals(4, statementsFor(1))
     }
 
     // ============ one product for the panel ============

@@ -55,6 +55,8 @@ data class OrderDetailDto(
         val unitCompareAtPrice: Money?,
         val lineTotal: Money,
         val returnableUntil: Instant?,
+        /** Its customer has a live review of its product (phase 8). */
+        val reviewed: Boolean = false,
     )
 
     data class Color(val key: String, val name: String, val hex: String, val isLight: Boolean, val sortOrder: Int)

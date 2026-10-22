@@ -36,6 +36,7 @@ data class ProductSummaryHttpResponse(
     val hasVideo: Boolean,
     val soldCount: Int,
     val freeShippingEligible: Boolean,
+    val rating: RatingBriefHttpResponse,
 ) {
     companion object {
         /**
@@ -74,6 +75,7 @@ data class ProductSummaryHttpResponse(
             hasVideo = card.hasVideo,
             soldCount = card.soldCount,
             freeShippingEligible = card.freeShippingEligible,
+                rating = RatingBriefHttpResponse.from(card.rating),
         )
         }
 

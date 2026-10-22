@@ -1,5 +1,6 @@
 package com.kiva.application.usecase.order.usecase.query
 
+import com.kiva.application.usecase.review.ReviewMarks
 import com.kiva.application.dto.OrderDetailDto
 import com.kiva.application.usecase.order.OrderByCode
 import com.kiva.application.usecase.order.OrderDetails
@@ -22,6 +23,7 @@ class GetMyOrderUc(
     private val transactionManager: TransactionManager,
     private val orderByCode: OrderByCode,
     private val orderDetails: OrderDetails,
+    private val reviewMarks: ReviewMarks,
     private val shopSettingsRepository: ShopSettingsRepository,
     private val clock: Clock,
 ) : QueryUseCase<GetMyOrderUc.Qry, OrderDetailDto, GetMyOrderUc.Failure> {
@@ -42,7 +44,7 @@ class GetMyOrderUc(
 
         return transactionManager.inTransaction {
             val order = orderByCode.findOfCustomer(query.userId, query.orderCode) ?: return@inTransaction Result.failure(Failure.OrderNotFound)
-            Result.success(orderDetails.of(order, shopSettingsRepository.get(), clock.instant()))
+            Result.success(orderDetails.of(order, shopSettingsRepository.get(), clock.instant(), reviewMarks.of(query.userId, listOf(order))))
         }
     }
 

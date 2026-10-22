@@ -4,6 +4,7 @@ import com.kiva.application.dto.GalleryItemDto
 import com.kiva.application.dto.PriceDto
 import com.kiva.application.dto.ProductCardDto
 import com.kiva.application.dto.ProductDetailDto
+import com.kiva.application.dto.RatingSummaryDto
 import com.kiva.application.repository.ProductCardQm
 import com.kiva.common.valueobject.Money
 import com.kiva.domain.aggregate.category.entity.Category
@@ -72,6 +73,7 @@ object ProductCards {
             hasVideo = qm.hasVideo,
             soldCount = qm.soldCount,
             freeShippingEligible = PricePolicy.qualifiesForFreeShipping(qm.priceTag, freeShippingThreshold),
+            rating = RatingSummaryDto.from(qm.rating),
         )
     }
 

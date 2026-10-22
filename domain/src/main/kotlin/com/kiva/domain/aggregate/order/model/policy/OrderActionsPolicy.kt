@@ -5,6 +5,7 @@ import com.kiva.domain.aggregate.order.entity.Order
 import com.kiva.domain.aggregate.order.model.valueobject.OrderActions
 import com.kiva.domain.aggregate.order.model.valueobject.OrderStatus
 import com.kiva.domain.aggregate.order.model.valueobject.PhotoStatus
+import com.kiva.domain.aggregate.product.model.valueobject.ProductId
 import java.time.Instant
 
 /**
@@ -22,12 +23,30 @@ data class OrderActionFacts(
     val returnableUntil: Instant?,
     val returnSettled: Boolean,
     val now: Instant,
+    /** The products of its lines (phase 8: «نظر بده»). */
+    val lineProductIds: Set<ProductId> = emptySet(),
+    /** What the customer reviewed and which products are published; none known (the panel, a guest): no button. */
+    val reviews: ReviewedProducts = ReviewedProducts.NONE,
 ) {
     companion object {
-        /** The facts of [order] at [now]. */
-        fun of(order: Order, now: Instant): OrderActionFacts = OrderActionFacts(
+        /** The facts of [order] at [now], with what the customer reviewed ([reviews]). */
+        fun of(order: Order, now: Instant, reviews: ReviewedProducts = ReviewedProducts.NONE): OrderActionFacts = OrderActionFacts(
             order.status, order.holdUntil, order.photoEverSent, order.photoStatus, order.balanceDue, order.returnableUntil, order.returnSettled, now,
+            order.lines.map { it.productId }.toSet(), reviews,
         )
+    }
+}
+
+/**
+ * What «نظر بده» needs to know beyond the order (roadmap section 13.2, decision 22): the products its customer has a live
+ * review of ([reviewed]), and which products are in the shop now ([published]).
+ */
+data class ReviewedProducts(val reviewed: Set<ProductId>, val published: Set<ProductId>) {
+    /** Whether the line of [productId] shows «نظر داده‌ای». */
+    fun isReviewed(productId: ProductId): Boolean = productId in reviewed
+
+    companion object {
+        val NONE = ReviewedProducts(emptySet(), emptySet())
     }
 }
 
@@ -40,8 +59,8 @@ data class OrderActionFacts(
  * «درخواست تغییر» after they saw the photos, approved or not, until it ships, one at a time
  * (OrderTransitionPolicy.customerMayRequestChange), and «مرجوع کردن» while Order.returnRefusal would let a return be asked
  * for: delivered, within its time to return ([OrderActionFacts.returnableUntil], set only when a line is returnable), and
- * no return of it closed or refunded. Reviews (phase 8) are later, so their button stays off: no button without an
- * endpoint behind it.
+ * no return of it closed or refunded. «نظر بده» shows on a delivered order with a line whose product is published and
+ * not reviewed by its customer yet (phase 8, decision 22: by product, since one live review is per product).
  */
 object OrderActionsPolicy {
 
@@ -52,6 +71,7 @@ object OrderActionsPolicy {
         canReturn = facts.status == OrderStatus.DELIVERED && !facts.returnSettled && facts.returnableUntil?.let { !facts.now.isAfter(it) } == true,
         canPay = PaymentPolicy.canStartPayment(facts.status, facts.holdUntil, facts.now) || PaymentPolicy.canPayBalance(facts.status, facts.balanceDue),
         canAddToReservation = facts.status == OrderStatus.RESERVED,
-        canReview = false,
+        canReview = facts.status == OrderStatus.DELIVERED &&
+            facts.lineProductIds.any { it in facts.reviews.published && !facts.reviews.isReviewed(it) },
     )
 }

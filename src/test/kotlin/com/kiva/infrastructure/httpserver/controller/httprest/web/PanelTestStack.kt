@@ -1,5 +1,9 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
+import com.kiva.application.usecase.product.usecase.query.FindProductsUc
+import com.kiva.application.usecase.product.usecase.query.FindRelatedProductsUc
+import com.kiva.application.usecase.product.usecase.query.GetProductFacetsUc
+import com.kiva.application.usecase.product.usecase.query.GetProductUc
 import com.kiva.application.port.MediaProcessor
 import com.kiva.application.usecase.admin.usecase.command.CheckPanelAccessUc
 import com.kiva.application.usecase.admin.usecase.command.SetUserRolesUc
@@ -353,6 +357,15 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         ListProductsAwaitingMyReviewUc(transactions, reviewPurchases, reviewRepository, productQm, colors),
     )
 
+    /** The shop's own product use cases, as the app wires them. */
+    inner class ShopProducts {
+        val find = FindProductsUc(transactions, productQm, categories, colors, materials, clock, purchase.settings)
+        val facets = GetProductFacetsUc(transactions, productQm, categories, colors, materials, clock)
+        val related = FindRelatedProductsUc(transactions, productQm, categories, colors, clock, purchase.settings)
+        val get = GetProductUc(transactions, productQm, categories, materials, colors, clock, purchase.settings)
+    }
+    val shopProducts = ShopProducts()
+
     val adminRefunds = AdminRefundUseCases(
         checkPanelAccess,
         UpdateRefundUc(transactions, purchase.refunds, purchase.orderQm, purchase.orders, purchase.returns, users, auditTrail, purchase.orderNotices, clock),
@@ -461,6 +474,8 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
                     webV1MyReturns(myReturns, mediaUrls)
                     webV1AdminReturns(adminReturns, mediaUrls)
                     webV1Reviews(reviewUseCases, mediaUrls)
+                    // The shop's product pages, for the ratings on cards and pages (phase 8).
+                    webV1Products(shopProducts.find, shopProducts.facets, shopProducts.get, shopProducts.related, SITE_URL, mediaUrls)
                     webV1MyReviews(myReviews, mediaUrls)
                     // Back from the gateway and the result page, for paying what a change left owed (phase 3).
                     webV1Payments(purchase.paymentUseCases, PaymentConfig.DEFAULT.resultUrl)

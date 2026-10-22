@@ -1,5 +1,6 @@
 package com.kiva.application.repository
 
+import com.kiva.domain.aggregate.review.model.valueobject.RatingTally
 import com.kiva.application.dto.UploadedMediaDto
 import com.kiva.common.valueobject.Slug
 import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
@@ -32,6 +33,8 @@ data class ProductCardQm(
     val newUntil: Instant?,
     val maxPerOrder: MaxPerOrder,
     val colors: List<Color>,
+    /** Its approved reviews counted (productrating_tbl, phase 8); none: RatingTally.NONE. */
+    val rating: RatingTally = RatingTally.NONE,
 ) {
     /**
      * One active color.

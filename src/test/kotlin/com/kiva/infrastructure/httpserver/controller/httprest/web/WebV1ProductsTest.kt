@@ -230,7 +230,7 @@ class WebV1ProductsTest {
                    {"code":"HAS_VIDEO","label":"ویدیو دارد","tone":"GLASS","icon":"play"},
                    {"code":"LOW_STOCK","label":"فقط ۳ عدد","tone":"DANGER","icon":null}],
                  "stock":{"status":"LOW_STOCK","availableQuantity":3,"maxOrderQuantity":3,"label":"فقط ۳ عدد در انبار باقی مونده"},
-                 "isNew":true,"hasVideo":true,"soldCount":0,"freeShippingEligible":false}
+                 "isNew":true,"hasVideo":true,"soldCount":0,"freeShippingEligible":false,"rating":{"average":0.0,"count":0}}
                 """,
             ),
             item,

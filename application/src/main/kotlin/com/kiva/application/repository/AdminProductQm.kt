@@ -1,5 +1,6 @@
 package com.kiva.application.repository
 
+import com.kiva.domain.aggregate.review.model.valueobject.RatingTally
 import com.kiva.application.dto.GalleryItemDto
 import com.kiva.common.valueobject.Slug
 import com.kiva.common.valueobject.UserId
@@ -53,6 +54,8 @@ data class AdminProductQm(
     val soldCount: Int,
     val updatedOn: Instant,
     val defaultMedia: GalleryItemDto?,
+    /** Its approved reviews counted (phase 8). */
+    val rating: RatingTally = RatingTally.NONE,
 )
 
 /**

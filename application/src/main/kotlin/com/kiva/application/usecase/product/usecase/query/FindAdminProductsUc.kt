@@ -3,6 +3,7 @@ package com.kiva.application.usecase.product.usecase.query
 import com.kiva.application.dto.AdminProductListItemDto
 import com.kiva.application.dto.PriceDto
 import com.kiva.application.dto.ProductCardDto
+import com.kiva.application.dto.RatingSummaryDto
 import com.kiva.application.repository.AdminProductFilter
 import com.kiva.application.repository.ProductQmRepository
 import com.kiva.common.logging.getLogger
@@ -76,6 +77,7 @@ class FindAdminProductsUc(
                         soldCount = row.soldCount,
                         updatedAt = row.updatedOn,
                         image = row.defaultMedia,
+                        rating = RatingSummaryDto.from(row.rating),
                     )
                 },
             )
