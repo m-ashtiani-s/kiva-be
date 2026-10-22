@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: KIVA Store API — کیوا
-  version: 1.15.0
+  version: 1.16.0
   contact:
     name: KIVA Engineering
     email: support@kiva.ir
@@ -234,7 +234,7 @@ info:
     | جمع‌آوری مرجوعی | SMS | کد مرجوعی + اسم حامل؛ با `notifyCustomer` |
     | مرجوعی بسته شد | SMS | کد مرجوعی + «جزئیات تو حسابت»؛ با `notifyCustomer`. **بدون** دلیل بستن |
     | درخواست تغییر بررسی شد | SMS | کد سفارش + «جزئیات در صفحه‌ی سفارش»؛ با `notifyCustomer`. **بدون `note`**: متن آزاد پیامک نداریم، `note` در `feedback.resolution` و تایم‌لاین دیده می‌شود |
-    | موجود شد | SMS | لینک محصول (اشتراک «موجود شد خبرم کن») |
+    | موجود شد | SMS | اسم محصول (حداکثر ۳۰ نویسه) + لینک صفحه‌اش به رنگ موجودشده؛ یه کار زمان‌بندی‌شده تا ۵ دقیقه بعد از موجود شدن، از هر راهی، می‌فرسته؛ نه بین ۲۲ تا ۸ صبح تهران؛ هر اشتراک فقط یه بار |
 
     ## ۶. نگاشت صفحه‌ها به endpointها
 
@@ -880,11 +880,14 @@ paths:
     post:
       tags: [Product]
       operationId: createStockAlert
-      summary: "«موجود شد خبرم کن» — اشتراک پیامک موجود شدن"
+      summary: "«موجود شد خبرم کن» — اشتراک پیامک موجود شدن (نیازمند ورود)"
       description: |
-        اگر کاربر وارد شده باشد شماره‌ی حسابش استفاده می‌شود؛ در غیر این صورت `phone` الزامی است.
-        اگر `variantId` نیاید، با موجود شدن **هر** رنگی اطلاع داده می‌شود.
-      security: [{}, { bearerAuth: [] }]
+        فقط با ورود؛ پیامک به موبایل **حساب** می‌رود (موقع فرستادن خوانده می‌شود)، شماره‌ی دیگری پذیرفته نمی‌شود. محصول منتشرشده لازم است (`404 PRODUCT_NOT_FOUND`).
+        `variantId` اختیاری: اگر هست باید رنگ فعال همین محصول باشد (`400 VARIANT_NOT_FOUND` روی `variantId`) و موجود نباشد (`422 PRODUCT_IN_STOCK`)؛
+        اگر نیاید، با موجود شدن **هر** رنگی خبر می‌دهیم و اگر همین الان یک رنگ فعال موجود است ← `422 PRODUCT_IN_STOCK` با `meta.inStockColorKeys`.
+        یک اشتراک `ACTIVE` برای هر (محصول، رنگ یا «هر رنگی») ← `409 STOCK_ALERT_EXISTS`؛ «هر رنگی» و «رنگ خاص» با هم مجازند؛ بعد از `NOTIFIED` یا `CANCELLED`
+        اشتراک تازه مجاز است. حداکثر ۳۰ اشتراک `ACTIVE` (`422 STOCK_ALERT_LIMIT_REACHED` با `meta.limit`) و ۱۰ ثبت در ساعت (`429 RATE_LIMITED` با `Retry-After`).
+      security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/ProductId'
       requestBody:
@@ -904,20 +907,25 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
         '422':
-          description: "`PRODUCT_IN_STOCK` — محصول/رنگ موجود است"
+          description: "`PRODUCT_IN_STOCK` — رنگ (یا برای «هر رنگی» یکی از رنگ‌ها) همین الان موجود است؛ `STOCK_ALERT_LIMIT_REACHED` — ۳۰ اشتراک فعال"
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
         '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
   /products/{productId}/inquiry:
     get:
       tags: [Product]
       operationId: getProductInquiryLinks
       summary: "«سؤال داری؟ عکس یا ویدیوی بیشتر بخواه» — لینک پیام‌رسان‌ها با متن آماده"
       description: |
-        متن پیام شامل نام محصول، رنگ انتخابی و کد محصول (KV-1001) است و در `url` هر کانال (`?text=`) قرار می‌گیرد.
-        ساخت لینک در سرور انجام می‌شود تا تغییر آیدی‌ها یا متن نیاز به انتشار فرانت نداشته باشد.
+        متن پیام شامل نام محصول، رنگ انتخابی و کد محصول (KV-1001) است و در `url` هر کانال (`?text=`، یا `&text=` وقتی آدرس کانال خودش `?` دارد،
+        متن با UTF-8 کدشده و فاصله `%20`) قرار می‌گیرد. ساخت لینک در سرور انجام می‌شود تا تغییر آیدی‌ها یا متن نیاز به انتشار فرانت نداشته باشد.
+        محصول منتشرشده لازم است (`404`). `color` اختیاری؛ اگر هست باید رنگ فعال همین محصول باشد (`400 COLOR_NOT_FOUND` روی `color`)؛ نیاید ← رنگ پیش‌فرض.
+        `channels` فقط روبیکا، تلگرام و بله، به ترتیب تنظیمات (اینستاگرام متن آماده نمی‌گیرد). پیش‌پر شدن متن دست پیام‌رسان است، پس فرانت `prefilledText`
+        را برای کپی هم نشان می‌دهد. کش نمی‌شود.
       parameters:
         - $ref: '#/components/parameters/ProductId'
         - name: color
@@ -2695,6 +2703,7 @@ paths:
       tags: [Product]
       operationId: listMyStockAlerts
       summary: "اشتراک‌های «موجود شد خبرم کن» من"
+      description: '`ACTIVE` ها و `NOTIFIED` های ۹۰ روز اخیر، تازه‌ترین اول، حداکثر ۱۰۰. `CANCELLED` نمی‌آید.'
       security: [{ bearerAuth: [] }]
       responses:
         '200':
@@ -2710,6 +2719,7 @@ paths:
       tags: [Product]
       operationId: deleteMyStockAlert
       summary: "لغو اشتراک موجود شدن"
+      description: اشتراک `ACTIVE` ← `CANCELLED` (پاک نمی‌شود). روی اشتراک تمام‌شده‌ی خود (`NOTIFIED`/`CANCELLED`) ← `204` بی‌تغییر. مال کس دیگر یا ناموجود ← `404 STOCK_ALERT_NOT_FOUND`.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: alertId
@@ -3215,7 +3225,7 @@ paths:
         `STOCKTAKE` و `MANUAL_CORRECTION` هر دو (`ADJUSTMENT_DIRECTION_INVALID`). `STOCKTAKE` هم یک **تفاوت** است، نه عدد شمارش:
         پنل خودش تفاوت شمارش با موجودی فعلی را حساب می‌کند. رنگ ناموجود ← `400 VARIANT_NOT_FOUND` روی `variantId`.
         موجودی بعد از تغییر نباید از رزروشده کمتر شود ← `422 QUANTITY_EXCEEDS_STOCK` با `meta.availableQuantity` (چقدر می‌شود کم کرد).
-        با موجود شدن ورینتی که قبلاً صفر بوده، پیامک «موجود شد» برای مشترکین صف می‌شود.
+        پیامک «موجود شد» را کار زمان‌بندی‌شده‌ی «موجود شد خبرم کن» تا ۵ دقیقه بعد می‌فرستد (نه بین ۲۲ تا ۸ صبح)، نه خود این درخواست.
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -3623,7 +3633,9 @@ paths:
       summary: "صف «موجود شد خبرم کن»: چند نفر منتظر کدام رنگ‌اند"
       description: |
         اشتراک‌های فعال (`ACTIVE`) تجمیع‌شده برای هر ورینت (یا برای محصول، وقتی مشتری رنگ خاصی نخواسته)، به ترتیب بیشترین منتظر.
-        شماره‌ی مشترکین در این لیست نمی‌آید. با موجود شدن ورینت پیامک‌ها خودکار می‌روند (`POST /admin/inventory/adjustments`).
+        به ترتیب `waitingCount` نزولی و بعد `oldestAt` صعودی. شماره‌ی مشترکین در این لیست نمی‌آید. پیامک‌ها را یک کار زمان‌بندی‌شده تا ۵ دقیقه بعد از
+        موجود شدن، **از هر راهی** (تنظیم موجودی، رسیدن مرجوعی، انقضا یا لغو سفارش، انتشار دوباره)، می‌فرستد؛ نه بین ۲۲ تا ۸ صبح تهران.
+        `inStock = true` یعنی همین الان موجود است (پیامک به‌زودی می‌رود). فیلتر `inStock` جز `true`/`false` ← `400 BOOLEAN_INVALID`.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: productId
@@ -5747,6 +5759,8 @@ components:
         - REVIEW_ALREADY_EXISTS
         - REVIEW_NOT_EDITABLE
         - STOCK_ALERT_EXISTS
+        - STOCK_ALERT_LIMIT_REACHED
+        - STOCK_ALERT_NOT_FOUND
         - PRODUCT_IN_STOCK
         - WISHLIST_LIMIT_REACHED
         - WISHLIST_SHARE_DISABLED
@@ -6078,7 +6092,7 @@ components:
           description: گالری این رنگ به ترتیب (thumbnailها + عکس اصلی). ویدیوها هم با `type = VIDEO` در همین لیست هستند.
           items: { $ref: '#/components/schemas/ProductMedia' }
         hasVideo: { type: boolean, example: true }
-        stockAlertSubscribed: { type: boolean, nullable: true, description: برای کاربر واردشده و ورینت ناموجود }
+        stockAlertSubscribed: { type: boolean, nullable: true, description: 'کاربر واردشده برای همین رنگ اشتراک `ACTIVE` دارد؛ مهمان `false`' }
     ProductDimensions:
       type: object
       description: ابعاد (طول × ارتفاع × عرض) به سانتی‌متر
@@ -6275,6 +6289,8 @@ components:
             stockAlert:
               type: object
               nullable: true
+              description: 'اشتراک `ACTIVE` ِ «هر رنگی» ِ کاربر واردشده برای این محصول؛ مهمان: `{subscribed: false, alertId: null}`'
+              required: [subscribed, alertId]
               properties:
                 subscribed: { type: boolean }
                 alertId: { type: integer, nullable: true }
@@ -6356,24 +6372,22 @@ components:
     CreateStockAlertRequest:
       type: object
       properties:
-        variantId: { type: integer, nullable: true, example: 501 }
-        phone:
-          allOf: [{ $ref: '#/components/schemas/PhoneNumber' }]
-          description: برای کاربر مهمان الزامی
+        variantId: { type: integer, nullable: true, description: 'رنگ فعال همین محصول؛ نیاید: هر رنگی', example: 501 }
         channel: { type: string, enum: [SMS], default: SMS }
     StockAlert:
       type: object
+      required: [id, product, variantId, color, channel, phoneMasked, status, createdAt, notifiedAt, message]
       properties:
         id: { type: integer, example: 77 }
         product: { $ref: '#/components/schemas/ProductRef' }
         variantId: { type: integer, nullable: true }
         color: { type: object, allOf: [{ $ref: '#/components/schemas/Color' }], nullable: true }
         channel: { type: string, enum: [SMS] }
-        phoneMasked: { type: string, example: '0912***6789' }
+        phoneMasked: { type: string, description: 'موبایل حساب: ۴ رقم اول، ***، ۴ رقم آخر', example: '0912***6789' }
         status: { type: string, enum: [ACTIVE, NOTIFIED, CANCELLED] }
         createdAt: { type: string, format: date-time }
         notifiedAt: { type: string, format: date-time, nullable: true }
-        message: { type: string, example: هر وقت موجود شد، بهت پیامک می‌دیم }
+        message: { type: string, description: '`ACTIVE` «هر وقت موجود شد، بهت پیامک می‌دیم»؛ `NOTIFIED` «موجود شد و بهت خبر دادیم»؛ `CANCELLED` «اشتراک لغو شد»', example: هر وقت موجود شد، بهت پیامک می‌دیم }
     MessengerLink:
       type: object
       required: [channel, name, url]
@@ -6385,6 +6399,7 @@ components:
         responseHours: { type: string, example: پاسخگویی ۹ تا ۲۱ }
     ProductInquiry:
       type: object
+      required: [productCode, productName, colorName, prefilledText, channels]
       properties:
         productCode: { type: string, example: KV-1001 }
         productName: { type: string, example: کیف دوشی ماهک }
@@ -8473,7 +8488,7 @@ components:
             stockReserved: { type: integer, description: رزرو موقت سبدهای در حال پرداخت + سفارش‌های ارسال‌نشده, example: 2 }
             stockAvailable: { type: integer, example: 10 }
             soldCount: { type: integer, example: 64 }
-            stockAlertSubscribers: { type: integer, example: 7 }
+            stockAlertSubscribers: { type: integer, description: 'اشتراک‌های `ACTIVE` ِ همین رنگ (بدون «هر رنگی»)', example: 7 }
     AdminProduct:
       description: |
         همه‌ی فیلدهای `ProductDetail` (همان چیزی که مشتری می‌بیند) به‌اضافه‌ی فیلدهای پنل. `variants` فقط رنگ‌های **فعال** است و
