@@ -292,7 +292,7 @@ class FindProductsUcTest {
         )
 
         private fun color(variantId: Long, key: String, available: Int, isDefault: Boolean = false) =
-            ProductCardQm.Color(VariantId.constructFromPersisted(variantId), ColorKey.constructFromPersisted(key), isDefault, available)
+            ProductCardQm.Color(VariantId.constructFromPersisted(variantId), ColorKey.constructFromPersisted(key), isDefault, available, Money.constructFromPersisted(1_450_000))
 
         private suspend fun only(qm: ProductCardQm): ProductCardDto {
             readModel.cards = listOf(qm)

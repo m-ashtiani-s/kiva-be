@@ -15,17 +15,20 @@ import com.kiva.common.usecase.CommandUseCase
 import com.kiva.domain.aggregate.product.model.valueobject.ProductId
 import com.kiva.domain.aggregate.product.model.valueobject.ProductStatus
 import com.kiva.domain.aggregate.product.repository.ProductRepository
+import com.kiva.domain.aggregate.wishlist.repository.WishlistRepository
 import java.time.Clock
 
 /**
  * The panel removes a product (`DELETE /admin/products/{productId}`; ADMIN, CATALOG_MANAGER): it is archived, never
  * deleted, because past orders point to it. Already archived is done too (204), with no event and no change log row.
  * Past orders and open reservations are not touched; a cart holding it shows the line as not purchasable (the cart's
- * own rule).
+ * own rule). It leaves every wishlist in the same transaction (phase 9, decision 6): an archived product never comes
+ * back, unlike a draft, whose rows stay hidden.
  */
 class ArchiveProductUc(
     private val transactionManager: TransactionManager,
     private val productRepository: ProductRepository,
+    private val wishlistRepository: WishlistRepository,
     private val auditTrail: AuditTrail,
     private val clock: Clock,
 ) : CommandUseCase<ArchiveProductUc.Cmd, Unit, ArchiveProductUc.Failure> {
@@ -47,6 +50,7 @@ class ArchiveProductUc(
             val now = clock.instant()
             product.archive(command.actor.userId, now).getOrNull() ?: error("Not archived yet")
             productRepository.save(product)
+            wishlistRepository.deleteProduct(id)
             auditTrail.record(
                 AuditEntry(
                     now, command.actor, AuditAction.PRODUCT_ARCHIVED, AuditEntityType.PRODUCT, id.value.toString(), product.details.name.value,

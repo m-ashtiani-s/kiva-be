@@ -12,7 +12,8 @@ import kotlinx.serialization.Serializable
  * [image] and [hoverImage] are the first two photos of the color the card is drawn in ([displayColorKey]); always
  * there, `null` while that color has none (the client then draws the bag's illustration). A video is never the card's
  * picture. [defaultColorKey] and [displayColorKey] are never null in the shop: only a panel draft without an active
- * color has none. Not sent yet: `rating` (no reviews yet) and `isWishlisted` (no accounts yet); neither is required.
+ * color has none. [isWishlisted]: true or false for a customer on an uncached answer, null for a guest (decision 15 of
+ * phase 9).
  */
 @Serializable
 data class ProductSummaryHttpResponse(
@@ -37,6 +38,7 @@ data class ProductSummaryHttpResponse(
     val soldCount: Int,
     val freeShippingEligible: Boolean,
     val rating: RatingBriefHttpResponse,
+    val isWishlisted: Boolean?,
 ) {
     companion object {
         /**
@@ -75,7 +77,8 @@ data class ProductSummaryHttpResponse(
             hasVideo = card.hasVideo,
             soldCount = card.soldCount,
             freeShippingEligible = card.freeShippingEligible,
-                rating = RatingBriefHttpResponse.from(card.rating),
+            rating = RatingBriefHttpResponse.from(card.rating),
+            isWishlisted = card.isWishlisted,
         )
         }
 

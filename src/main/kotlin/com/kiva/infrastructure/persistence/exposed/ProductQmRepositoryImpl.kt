@@ -106,6 +106,19 @@ class ProductQmRepositoryImpl : ProductQmRepository {
         return page.map { cardOf(it, colors[it[ProductQmTbl.productId]].orEmpty(), ratings[it[ProductQmTbl.productId]]) }
     }
 
+    /** Three reads whatever the number: the rows, their active colors, their ratings. */
+    override fun findCards(ids: List<ProductId>): List<ProductCardQm> {
+        if (ids.isEmpty()) return emptyList()
+        val position = ids.withIndex().associate { (index, id) -> id.value to index }
+        val rows = ProductQmTbl.selectAll()
+            .where { (ProductQmTbl.productId inList position.keys) and (ProductQmTbl.status eq ProductStatus.ACTIVE) }
+            .sortedBy { position.getValue(it[ProductQmTbl.productId]) }
+        val found = rows.map { it[ProductQmTbl.productId] }
+        val colors = activeColorsOf(found)
+        val ratings = ratingsOf(found)
+        return rows.map { cardOf(it, colors[it[ProductQmTbl.productId]].orEmpty(), ratings[it[ProductQmTbl.productId]]) }
+    }
+
     /** Only products in the shop, whatever else is asked; each filter given narrows further. */
     private fun conditionsOf(filter: ProductFilter): Op<Boolean> {
         val conditions = buildList<Op<Boolean>> {
@@ -156,6 +169,7 @@ class ProductQmRepositoryImpl : ProductQmRepository {
                     colorKey = ColorKey.constructFromPersisted(it[ProductVariantQmTbl.colorKey]),
                     isDefault = it[ProductVariantQmTbl.isDefault],
                     available = it[ProductVariantQmTbl.onHand] - it[ProductVariantQmTbl.reserved],
+                    price = Money.constructFromPersisted(it[ProductVariantQmTbl.price]),
                     photos = cardPhotosOf(it),
                 )
             }
@@ -216,7 +230,7 @@ class ProductQmRepositoryImpl : ProductQmRepository {
             card = cardOf(
                 row,
                 variants.zip(activeColors).map { (variant, color) ->
-                    ProductCardQm.Color(variant.variantId, variant.colorKey, variant.isDefault, variant.available, cardPhotosOf(color))
+                    ProductCardQm.Color(variant.variantId, variant.colorKey, variant.isDefault, variant.available, variant.priceTag.price, cardPhotosOf(color))
                 },
                 ratings.find(ProductId.constructFromPersisted(row[ProductQmTbl.productId])),
             ),

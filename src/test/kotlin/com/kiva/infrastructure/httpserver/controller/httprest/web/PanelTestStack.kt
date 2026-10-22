@@ -1,5 +1,14 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
+import com.kiva.application.usecase.wishlist.WishlistCards
+import com.kiva.application.usecase.wishlist.usecase.command.AddToWishlistUc
+import com.kiva.application.usecase.wishlist.usecase.command.ClearMyWishlistUc
+import com.kiva.application.usecase.wishlist.usecase.command.RemoveFromWishlistUc
+import com.kiva.application.usecase.wishlist.usecase.query.GetMyWishlistIdsUc
+import com.kiva.application.usecase.wishlist.usecase.query.GetMyWishlistUc
+import com.kiva.infrastructure.persistence.exposed.WishlistShareRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.tbl.WishlistItemTbl
+import com.kiva.infrastructure.persistence.exposed.tbl.WishlistShareTbl
 import com.kiva.application.usecase.product.usecase.query.FindProductsUc
 import com.kiva.application.usecase.product.usecase.query.FindRelatedProductsUc
 import com.kiva.application.usecase.product.usecase.query.GetProductFacetsUc
@@ -159,6 +168,7 @@ import com.kiva.infrastructure.persistence.exposed.ProductRatingRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ReviewIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.ReviewRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ReviewVoteRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.WishlistRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.SecurityEventLogImpl
 import com.kiva.infrastructure.persistence.exposed.ShopSettingsRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.SiteContentRepositoryImpl
@@ -264,7 +274,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         ),
         updateProduct = UpdateProductUc(transactions, productDomainService, products, productInput, auditTrail, clock),
         changeStatus = ChangeProductStatusUc(transactions, products, auditTrail, clock),
-        archiveProduct = ArchiveProductUc(transactions, products, auditTrail, clock),
+        archiveProduct = ArchiveProductUc(transactions, products, WishlistRepositoryImpl(), auditTrail, clock),
         addVariant = AddVariantUc(
             transactions, productDomainService, products, productQm, colors, productInput, mediaAttachments, InventoryDomainService(inventories), inventories,
             auditTrail, clock,
@@ -361,6 +371,18 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         DeleteMyReviewUc(transactions, reviewRepository, ratingBook, clock),
         ListProductsAwaitingMyReviewUc(transactions, reviewPurchases, reviewRepository, productQm, colors),
     )
+    // --- wishlist (phase 9) ---
+    val wishlists = WishlistRepositoryImpl()
+    val wishlistShares = WishlistShareRepositoryImpl()
+    val wishlistCards = WishlistCards(productQm, categories, colors, purchase.settings)
+    val wishlist = WishlistUseCases(
+        GetMyWishlistUc(transactions, wishlists, wishlistShares, wishlistCards, purchase.settings, clock),
+        GetMyWishlistIdsUc(transactions, wishlists),
+        ClearMyWishlistUc(transactions, wishlists),
+        AddToWishlistUc(transactions, wishlists, wishlistCards, clock),
+        RemoveFromWishlistUc(transactions, wishlists, productQm),
+    )
+
     val adminReviews = AdminReviewUseCases(
         checkPanelAccess,
         FindAdminReviewsUc(transactions, reviewRepository, reviews, AdminCustomerRepositoryImpl()),
@@ -491,6 +513,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
                     // The shop's product pages, for the ratings on cards and pages (phase 8).
                     webV1Products(shopProducts.find, shopProducts.facets, shopProducts.get, shopProducts.related, SITE_URL, mediaUrls)
                     webV1MyReviews(myReviews, mediaUrls)
+                    webV1Wishlist(wishlist, mediaUrls, SITE_URL)
                     // Back from the gateway and the result page, for paying what a change left owed (phase 3).
                     webV1Payments(purchase.paymentUseCases, PaymentConfig.DEFAULT.resultUrl)
                     webV1Tracking(purchase.trackingUseCases, mediaUrls)
@@ -512,6 +535,8 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
             val reviewed = ReviewTbl.select(ReviewTbl.productId).where { ReviewTbl.userId inList userIds }.map { it[ReviewTbl.productId] }.distinct()
             ReviewVoteTbl.deleteWhere { ReviewVoteTbl.userId inList userIds }
             ReviewTbl.deleteWhere { ReviewTbl.userId inList userIds }
+            WishlistItemTbl.deleteWhere { WishlistItemTbl.userId inList userIds }
+            WishlistShareTbl.deleteWhere { WishlistShareTbl.userId inList userIds }
             ProductRatingTbl.deleteWhere { ProductRatingTbl.productId inList reviewed }
             MediaTbl.deleteWhere { MediaTbl.uploadedBy inList userIds }
         }

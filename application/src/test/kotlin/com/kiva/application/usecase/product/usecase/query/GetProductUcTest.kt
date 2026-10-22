@@ -138,7 +138,7 @@ class GetProductUcTest {
             soldCount = 0,
             newUntil = null,
             maxPerOrder = MaxPerOrder.DEFAULT,
-            colors = listOf(lilac, black).map { ProductCardQm.Color(it.variantId, it.colorKey, it.isDefault, it.available) },
+            colors = listOf(lilac, black).map { ProductCardQm.Color(it.variantId, it.colorKey, it.isDefault, it.available, Money.constructFromPersisted(1_450_000)) },
         ),
         materialSlug = Slug.constructFromPersisted("faux-leather-matte"),
         materialDescription = MaterialDescription.constructFromPersisted("چرم مصنوعی مات درجه یک"),

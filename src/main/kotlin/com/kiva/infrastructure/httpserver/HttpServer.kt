@@ -111,6 +111,8 @@ import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Me
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1MyOrders
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1MyReturns
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1MyReviews
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Wishlist
+import com.kiva.infrastructure.httpserver.controller.httprest.web.WishlistUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Reviews
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1MyUploads
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Payments
@@ -345,6 +347,7 @@ fun Application.configureRouting() {
             webV1MyReturns(MyReturnUseCases(get(), get(), get()), mediaUrls)
             webV1Reviews(ReviewUseCases(get(), get(), get(), get(), get()), mediaUrls)
             webV1MyReviews(MyReviewUseCases(get(), get(), get(), get(), get()), mediaUrls)
+            webV1Wishlist(WishlistUseCases(get(), get(), get(), get(), get()), mediaUrls, config.shop.siteUrl)
             webV1Tracking(TrackingUseCases(get(), get(), get()), mediaUrls)
         }
     }

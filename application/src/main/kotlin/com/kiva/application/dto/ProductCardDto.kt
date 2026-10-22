@@ -35,6 +35,8 @@ data class ProductCardDto(
     val freeShippingEligible: Boolean,
     /** Its approved reviews (phase 8): the card shows the average and the count, the page the whole summary. */
     val rating: RatingSummaryDto = RatingSummaryDto.from(RatingTally.NONE),
+    /** The viewer saved it (phase 9): true or false for a customer, null for a guest and in every cached answer. */
+    val isWishlisted: Boolean? = null,
 ) {
     data class CategoryRef(val id: Long, val slug: String, val name: String)
 

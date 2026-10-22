@@ -88,7 +88,13 @@ import com.kiva.infrastructure.persistence.exposed.RefundIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.RefundRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ReturnIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.ProductRatingRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.RandomWishlistShareTokens
 import com.kiva.infrastructure.persistence.exposed.ReviewIdGeneratorImpl
+import com.kiva.infrastructure.persistence.exposed.WishlistRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.WishlistShareRepositoryImpl
+import com.kiva.domain.aggregate.wishlist.repository.WishlistRepository
+import com.kiva.domain.aggregate.wishlist.repository.WishlistShareRepository
+import com.kiva.domain.aggregate.wishlist.repository.WishlistShareTokenGenerator
 import com.kiva.infrastructure.persistence.exposed.ReviewRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ReviewVoteRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ReturnRequestRepositoryImpl
@@ -137,6 +143,9 @@ val daoModule = module(createdAtStart = true) {
     single<ReturnIdGenerator> { ReturnIdGeneratorImpl() }
     single<ReviewRepository> { ReviewRepositoryImpl() }
     single<ReviewIdGenerator> { ReviewIdGeneratorImpl() }
+    single<WishlistRepository> { WishlistRepositoryImpl() }
+    single<WishlistShareRepository> { WishlistShareRepositoryImpl() }
+    single<WishlistShareTokenGenerator> { RandomWishlistShareTokens() }
     single<ReviewVoteRepository> { ReviewVoteRepositoryImpl() }
     single<ProductRatingRepository> { ProductRatingRepositoryImpl() }
     single<OrderIdGenerator> { OrderIdGeneratorImpl() }

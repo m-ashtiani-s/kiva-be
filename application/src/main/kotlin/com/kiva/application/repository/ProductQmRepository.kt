@@ -28,6 +28,12 @@ interface ProductQmRepository {
      */
     fun find(filter: ProductFilter, pageable: Pageable): Page<ProductCardQm>
 
+    /**
+     * The cards of those of [ids] that are in the shop now, in the order of [ids] (a draft or an archived one, or one
+     * nobody has, is left out): any number, unlike [ProductFilter.ids]. A wishlist's products.
+     */
+    fun findCards(ids: List<ProductId>): List<ProductCardQm>
+
     /** One product's page, if it is in the shop: a draft or an archived product is null, like one nobody has. */
     fun findDetail(ref: ProductRef): ProductDetailQm?
 

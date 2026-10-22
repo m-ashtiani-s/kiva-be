@@ -1,5 +1,7 @@
 package com.kiva.application.usecase.product.usecase.command
 
+import com.kiva.domain.aggregate.wishlist.entity.Wishlist
+import com.kiva.domain.aggregate.wishlist.repository.WishlistRepository
 import com.kiva.application.port.AuditChange
 import com.kiva.application.port.PanelActor
 import com.kiva.application.usecase.audit.AuditAction
@@ -39,7 +41,8 @@ class ProductStatusUseCasesTest {
     private val domain = ProductDomainService(products, ids, Catalog.categories, Catalog.materials, Catalog.colors)
 
     private val changeStatus = ChangeProductStatusUc(transactionManager, products, audit, clock)
-    private val archive = ArchiveProductUc(transactionManager, products, audit, clock)
+    private val wishlists = WishlistRemovals()
+    private val archive = ArchiveProductUc(transactionManager, products, wishlists, audit, clock)
     private val publishScheduled = PublishScheduledProductUc(transactionManager, products, clock)
 
     private var made = 0
@@ -200,8 +203,23 @@ class ProductStatusUseCasesTest {
             assertEquals(ProductStatus.ARCHIVED, stored(id).status)
             assertEquals(version, stored(id).version)
             assertEquals(listOf(AuditAction.PRODUCT_ARCHIVED), audit.recorded.map { it.action })
+            assertEquals(listOf(id), wishlists.removed, "out of every wishlist, once")
             assertEquals(Result.failure(ArchiveProductUc.Failure.NotFound), archive.execute(ArchiveProductUc.Cmd("99", staff)))
         }
+    }
+
+    /** Only what archiving does to wishlists: which products left them. */
+    private class WishlistRemovals : WishlistRepository {
+        val removed = mutableListOf<ProductId>()
+        override fun deleteProduct(productId: ProductId) {
+            removed += productId
+        }
+        override fun lockFor(userId: UserId): Wishlist = error("not used")
+        override fun find(userId: UserId): Wishlist = error("not used")
+        override fun save(wishlist: Wishlist) = error("not used")
+        override fun visibleIdsOf(userId: UserId): List<ProductId> = error("not used")
+        override fun countVisible(userId: UserId): Int = error("not used")
+        override fun idsAmong(userId: UserId, productIds: Collection<ProductId>): Set<ProductId> = error("not used")
     }
 
     @Nested

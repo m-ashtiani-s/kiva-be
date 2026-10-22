@@ -134,6 +134,12 @@ import com.kiva.application.usecase.refund.usecase.command.UpdateRefundUc
 import com.kiva.application.usecase.returnrequest.AdminReturnRequests
 import com.kiva.application.usecase.review.RatingBook
 import com.kiva.application.usecase.review.ReviewMarks
+import com.kiva.application.usecase.wishlist.WishlistCards
+import com.kiva.application.usecase.wishlist.usecase.command.AddToWishlistUc
+import com.kiva.application.usecase.wishlist.usecase.command.ClearMyWishlistUc
+import com.kiva.application.usecase.wishlist.usecase.command.RemoveFromWishlistUc
+import com.kiva.application.usecase.wishlist.usecase.query.GetMyWishlistIdsUc
+import com.kiva.application.usecase.wishlist.usecase.query.GetMyWishlistUc
 import com.kiva.application.usecase.review.ReviewPurchases
 import com.kiva.application.usecase.review.Reviews
 import com.kiva.application.usecase.review.usecase.command.CreateReviewUc
@@ -455,7 +461,7 @@ val useCaseModule = module(createdAtStart = true) {
     }
     single { ProductInput(htmlSanitizer = get()) }
     single { ChangeProductStatusUc(transactionManager = get(), productRepository = get(), auditTrail = get(), clock = get()) }
-    single { ArchiveProductUc(transactionManager = get(), productRepository = get(), auditTrail = get(), clock = get()) }
+    single { ArchiveProductUc(transactionManager = get(), productRepository = get(), wishlistRepository = get(), auditTrail = get(), clock = get()) }
     single {
         AddVariantUc(
             transactionManager = get(), productDomainService = get(), productRepository = get(), productQmRepository = get(), colorRepository = get(),
@@ -674,6 +680,19 @@ val useCaseModule = module(createdAtStart = true) {
     single { Reviews(mediaRepository = get(), reviewVoteRepository = get(), productQmRepository = get(), colorRepository = get()) }
     single { ReviewPurchases(orderQmRepository = get()) }
     single { ReviewMarks(reviewRepository = get(), productQmRepository = get()) }
+
+    // --- wishlist (phase 9) ---
+    single { WishlistCards(productQmRepository = get(), categoryRepository = get(), colorRepository = get(), shopSettingsRepository = get()) }
+    single {
+        GetMyWishlistUc(
+            transactionManager = get(), wishlistRepository = get(), wishlistShareRepository = get(), wishlistCards = get(), shopSettingsRepository = get(),
+            clock = get(),
+        )
+    }
+    single { GetMyWishlistIdsUc(transactionManager = get(), wishlistRepository = get()) }
+    single { ClearMyWishlistUc(transactionManager = get(), wishlistRepository = get()) }
+    single { AddToWishlistUc(transactionManager = get(), wishlistRepository = get(), wishlistCards = get(), clock = get()) }
+    single { RemoveFromWishlistUc(transactionManager = get(), wishlistRepository = get(), productQmRepository = get()) }
     single {
         CreateReviewUc(
             transactionManager = get(), productQmRepository = get(), reviewRepository = get(), reviewDomainService = get(), reviewPurchases = get(),

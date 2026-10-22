@@ -79,7 +79,7 @@ class FindRelatedProductsUcTest {
         soldCount = 0,
         newUntil = null,
         maxPerOrder = MaxPerOrder.DEFAULT,
-        colors = listOf(ProductCardQm.Color(VariantId.constructFromPersisted(901), ColorKey.constructFromPersisted("black"), isDefault = true, available = 2)),
+        colors = listOf(ProductCardQm.Color(VariantId.constructFromPersisted(901), ColorKey.constructFromPersisted("black"), isDefault = true, available = 2, price = Money.constructFromPersisted(1_450_000))),
     )
     private val readModel = RelatedReadModel(listOf(hasti))
 
