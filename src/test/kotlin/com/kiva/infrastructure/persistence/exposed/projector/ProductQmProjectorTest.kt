@@ -185,7 +185,7 @@ class ProductQmProjectorTest {
                 row[ProductQmTbl.specs],
             ),
         )
-        assertEquals(listOf(0, 0), listOf(row[ProductQmTbl.soldCount], row[ProductQmTbl.ratingAvg].toInt()))
+        assertEquals(0, row[ProductQmTbl.soldCount])
         assertMatchesDomain(product)
     }
 

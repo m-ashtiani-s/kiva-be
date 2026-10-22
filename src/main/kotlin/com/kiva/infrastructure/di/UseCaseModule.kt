@@ -132,6 +132,7 @@ import com.kiva.application.usecase.product.usecase.query.GetProductUc
 import com.kiva.application.usecase.refund.usecase.command.CreateRefundUc
 import com.kiva.application.usecase.refund.usecase.command.UpdateRefundUc
 import com.kiva.application.usecase.returnrequest.AdminReturnRequests
+import com.kiva.application.usecase.review.RatingBook
 import com.kiva.application.usecase.returnrequest.ReturnByIdForPanel
 import com.kiva.application.usecase.returnrequest.ReturnNotices
 import com.kiva.application.usecase.returnrequest.ReturnRequests
@@ -649,6 +650,9 @@ val useCaseModule = module(createdAtStart = true) {
             auditTrail = get(), returnNotices = get(), clock = get(),
         )
     }
+
+    // --- reviews (phase 8) ---
+    single { RatingBook(productRatingRepository = get()) }
 
     // --- admin: refunds (phase 2) ---
     single {

@@ -40,6 +40,10 @@ import com.kiva.domain.aggregate.product.repository.ProductRepository
 import com.kiva.domain.aggregate.refund.repository.RefundIdGenerator
 import com.kiva.domain.aggregate.refund.repository.RefundRepository
 import com.kiva.domain.aggregate.returnrequest.repository.ReturnIdGenerator
+import com.kiva.domain.aggregate.review.repository.ProductRatingRepository
+import com.kiva.domain.aggregate.review.repository.ReviewIdGenerator
+import com.kiva.domain.aggregate.review.repository.ReviewRepository
+import com.kiva.domain.aggregate.review.repository.ReviewVoteRepository
 import com.kiva.domain.aggregate.returnrequest.repository.ReturnRequestRepository
 import com.kiva.domain.aggregate.reservation.repository.ReservationGroupIdGenerator
 import com.kiva.domain.aggregate.reservation.repository.ReservationGroupRepository
@@ -83,6 +87,10 @@ import com.kiva.infrastructure.persistence.exposed.ProductRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.RefundIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.RefundRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ReturnIdGeneratorImpl
+import com.kiva.infrastructure.persistence.exposed.ProductRatingRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.ReviewIdGeneratorImpl
+import com.kiva.infrastructure.persistence.exposed.ReviewRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.ReviewVoteRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ReturnRequestRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ReportQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ReservationGroupIdGeneratorImpl
@@ -127,6 +135,10 @@ val daoModule = module(createdAtStart = true) {
     single<RefundIdGenerator> { RefundIdGeneratorImpl() }
     single<ReturnRequestRepository> { ReturnRequestRepositoryImpl() }
     single<ReturnIdGenerator> { ReturnIdGeneratorImpl() }
+    single<ReviewRepository> { ReviewRepositoryImpl() }
+    single<ReviewIdGenerator> { ReviewIdGeneratorImpl() }
+    single<ReviewVoteRepository> { ReviewVoteRepositoryImpl() }
+    single<ProductRatingRepository> { ProductRatingRepositoryImpl() }
     single<OrderIdGenerator> { OrderIdGeneratorImpl() }
     single<OrderQmRepository> { OrderQmRepositoryImpl() }
     single<PaymentRepository> { PaymentRepositoryImpl() }

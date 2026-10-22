@@ -3780,7 +3780,7 @@ Route: 200
 | گام | عنوان | اندازه | وضعیت |
 |---|---|---|---|
 | ۸.۰ | کانترکت 1.14.0 | S | ✅ |
-| ۸.۱ | دامنه‌ی نظر، جدول‌ها و امتیاز محصول | L | ⬜ |
+| ۸.۱ | دامنه‌ی نظر، جدول‌ها و امتیاز محصول | L | ✅ |
 | ۸.۲ | ثبت، ویرایش و حذف نظر؛ «نظرهای من» و «منتظر نظر تو» | L | ⬜ |
 | ۸.۳ | لیست عمومی، خلاصه‌ی امتیاز و رأی «مفید بود» | M | ⬜ |
 | ۸.۴ | امتیاز روی کارت، صفحه و مرتب‌سازی محصول؛ «نظر بده» در سفارش‌ها | M | ⬜ |
@@ -3822,6 +3822,11 @@ Route: 200
 | 29 | کدهای فیلدی ِ عمومی (تازه، گام ۸.۰) | متن کوتاه‌تر از حداقل ← کد عمومی ِ تازه‌ی `TEXT_TOO_SHORT` (`meta.minLength`)، کنار `TEXT_TOO_LONG` و `TEXT_INVALID`؛ امتیاز بیرون ۱ تا ۵ ← `RATING_INVALID` ِ موجود؛ فیلتر صف ← `REVIEW_STATUS_INVALID`؛ `action` ِ ناشناخته ← `MODERATION_ACTION_INVALID`؛ فقط یکی از `orderCode`/`orderItemId` ← `FIELD_REQUIRED` روی اون یکی | یه کد عمومی با `meta` به‌جای کدهای هم‌معنی |
 | 30 | `required` ِ پاسخ‌ها (تازه، گام ۸.۰) | `Review` (همه‌ی فیلدها)، `ReviewablePurchase`، `MyReviewListResponse.counts`، پاسخ رأی، `AdminReviewListResponse.items` (`customerId`، `contact`) و `RatingSummary.verifiedBuyerPercent` `required` شدن | همه‌ی فیلدها همیشه فرستاده می‌شن (بخش ۱ ِ کانترکت) |
 | 31 | پاسخ‌های خطای ثبت (تازه، گام ۸.۰) | `404` ِ ثبت هر دو کد رو داره (`PRODUCT_NOT_FOUND`، `ORDER_NOT_FOUND`)؛ `429` همون `TooManyRequests` ِ مشترک (با `Retry-After`)؛ `401` به لیست عمومی، و `404`/`422` به رأی و `409` به ویرایش اضافه شدن | کانترکت هر کدی که ممکنه بیاد رو می‌گه |
+| 32 | گرد کردن امتیاز (تازه، گام ۸.۱) | `RatingTally` با `BigDecimal` و `HALF_UP`: میانگین و درصد یه رقم اعشار، سهم خریدارها عدد صحیح. `stars` لیست پنج‌تایی (ستاره‌ی ۱ اول) | تصمیم ۱۶؛ `Double` ِ خام نیم‌ها رو اشتباه گرد می‌کنه |
+| 33 | قدم‌های `ReviewDomainService` (تازه، گام ۸.۱) | به‌جای یه `submit` ِ بزرگ، چهار قدم که UseCase به ترتیب کانترکت صدا می‌زنه: `gate` (محصول، نظر زنده، سقف روزانه با `Retry-After`)، `mediaProblems`، `purchaseLink` (با `PurchaseLine` ِ خوندنی از read model ِ سفارش)، `submit` | ترتیب خطاهای کانترکت (گام ۸.۰) بین قانون‌ها خرید رو بعد از مدیا می‌خواد |
+| 34 | `rating_desc` بدون join (تازه، گام ۸.۱) | دو زیرپرسش ِ همبسته روی `productrating_tbl` (`sum/count` و `count`، هر دو `DESC NULLS LAST`) و بعد `firstPublishedOn`؛ کوئری لیست و `paginate` دست نخورد | ترتیب‌ها ثابت‌های `SortOrders` ان؛ join فقط برای یه ترتیب کل کوئری رو عوض می‌کرد |
+| 35 | `RatingBook` (تازه، گام ۸.۱) | `changed(before, review, now)` (تأیید، رد؛ `Counted` ِ قبل از تغییر) و `deleted(review, now)`؛ هر دو فقط وقتی جای نظر در امتیاز عوض شده ردیف امتیاز رو قفل و ذخیره می‌کنن | یه راه برای عوض شدن امتیاز |
+| 36 | دیوارهای `V33` (تازه، گام ۸.۱) | اسم‌دار: `review_rejected_reason_check`، `review_purchase_check` (سفارش، ردیف و رنگ با هم)، `review_reply_check`، `review_moderated_check`، `productrating_count_check`/`sum_check`/`verified_check`؛ `contact` موبایل یا ایمیل؛ ایندکس `reviewvote_user_idx` برای رأی‌های یه کاربر | هر قانون یه `CHECK` ِ هم‌معنی |
 
 ### ۱۳.۳ تغییرات دامنه
 
@@ -4075,7 +4080,7 @@ Route: 200 با Review
 
 ---
 
-#### گام ۸.۱: دامنه‌ی نظر، جدول‌ها و امتیاز محصول · L ⬜
+#### گام ۸.۱: دامنه‌ی نظر، جدول‌ها و امتیاز محصول · L ✅
 
 **می‌سازی:** ۱۳.۳ (Aggregate، VOها، `RatingTally`، `ReviewDomainService`، repositoryها)؛ `V33__reviews.sql`؛ `ReviewRepositoryImpl` (با ترجمه‌ی قید یکتا)، `ReviewVoteRepositoryImpl`، `ProductRatingRepositoryImpl`، `ReviewIdGeneratorImpl`؛ `RatingBook`؛ جدا کردن `ProductQmTbl` و `ProductSorts` از `ratingAvg`.
 
@@ -4086,10 +4091,12 @@ Route: 200 با Review
 - چرا `CHECK` های جمع روی `productrating_tbl`؟ اگه یه UseCase یادش بره `minus` بزنه، دیتابیس جلوی عدد ناسازگار رو می‌گیره (دیوار دوم).
 
 **تموم شده یعنی:**
-- [ ] تست واحد همه‌ی انتقال‌ها و ویرایش‌ها (جدول تصمیم‌های ۱۰ و ۱۳).
-- [ ] `RatingTally`: سه نظر ۵، ۴، ۴ ← میانگین `4.3`، درصد ستاره‌ی ۴ `66.7`؛ `minus` تا صفر؛ `init` با داده‌ی ناسازگار می‌ترکه.
-- [ ] `purchaseLink`: وصل صریح (هر چهار خطا)، پیدا کردن خودکار (دو سفارش تحویل‌شده ← آخری)، سفارش لغوشده هیچ‌وقت.
-- [ ] migration روی دیتابیس فاز ۷ بدون خطا؛ لیست محصولات با `sort=rating_desc` بعد از حذف ستون کار می‌کنه.
+- [x] تست واحد همه‌ی انتقال‌ها و ویرایش‌ها (جدول تصمیم‌های ۱۰ و ۱۳).
+- [x] `RatingTally`: سه نظر ۵، ۴، ۴ ← میانگین `4.3`، درصد ستاره‌ی ۴ `66.7`؛ `minus` تا صفر؛ `init` با داده‌ی ناسازگار می‌ترکه.
+- [x] `purchaseLink`: وصل صریح (هر چهار خطا)، پیدا کردن خودکار (دو سفارش تحویل‌شده ← آخری)، سفارش لغوشده هیچ‌وقت.
+- [x] migration روی دیتابیس فاز ۷ بدون خطا؛ لیست محصولات با `sort=rating_desc` بعد از حذف ستون کار می‌کنه.
+
+**یادداشت پیاده‌سازی:** پنج تصمیم تازه (۳۲ تا ۳۶). Aggregate ِ `Review` (انتقال‌ها، ویرایش با `Patch`، پاسخ، رأی)، VOها در `ReviewValues.kt` (`ReviewId`، `ReviewStatus`، `StarRating`، `ReviewAuthorName`، `ReviewContact`، `ReviewText` با کد عمومی ِ `TextTooShort`، `ReviewPurchase`، `ReviewReply`)، `RatingTally`، `ReviewDomainService` (`gate`، `mediaProblems`، `purchaseLink` با `PurchaseLine`، `submit`)، سه repository. `V33` ِ کامل با اسم قیدها؛ `ReviewRepositoryImpl` (قید یکتا ← `UniqueTakenException`)، `ReviewVoteRepositoryImpl`، `ProductRatingRepositoryImpl` (`insertIgnore` و `FOR UPDATE`)، `ReviewIdGeneratorImpl`؛ `RatingBook`؛ `ratingAvg` از `ProductQmTbl` رفت و `rating_desc` از `productrating_tbl` می‌خونه. تست: ۳۰ تست دامنه (`ReviewTest`، `RatingTallyTest`، `ReviewDomainServiceTest`) و `ReviewRepositoryImplTest` (۷ تست، با `rating_desc` روی کاتالوگ seed). خرابکاری: بدون `UNIQUE` ِ `review_one_live_idx` ← دو تست ِ «یه نظر زنده» قرمز؛ بدون `productrating_sum_check` ← «V33 refuses a rating whose numbers don't add up…» قرمز. کل مجموعه: ۲۸۹۱ تست سبز، ۵ skip.
 
 ---
 
@@ -6318,3 +6325,4 @@ kiva {
 | ۳۰ مهر ۱۴۰۵ | ۷.۵ | Phase 7 step 7.5 | رسید (`ReceiveReturnUc`، برگشت به موجودی با `RETURNED`، سفارش `RETURNED`)، بستن (`CloseReturnUc`، `RETURN_REFUND_OPEN`)، استرداد ِ مرجوعی با `returnId` (`RETURN_REFUND_EXISTS`، روش ِ مرجوعی) و `COMPLETED` ← مرجوعی و سفارش `REFUNDED`. پنج تصمیم تازه (۴۸ تا ۵۲). خرابکاری قرمز. کل مجموعه: ۲۸۵۲ تست سبز، ۵ skip |
 | ۳۰ مهر ۱۴۰۵ | ۷.۶ | Phase 7 step 7.6 | `RETURNS_REVIEW.md` (نه خرابکاری، همه قرمز)، `ReturnsLogScanOnDatabaseTest`، `docs/FRONTEND_RETURNS.md`. ۲۸۵۴ تست سبز، ۵ skip. فاز ۷ از طرف ریپو کامله؛ الگوهای فراز، دور واقعی و merge منتظر تو |
 | ۳۰ مهر ۱۴۰۵ | ۸.۰ | Phase 8 step 8.0 | کانترکت 1.14.0 با هر ۱۶ ردیف ِ ۱۳.۸ و دو ردیف تازه (۱۷ و ۱۸)؛ چهار تصمیم تازه (۲۸ تا ۳۱). YAML معتبر، ۱۳۳۸ `$ref`. متن ۱۰ کد تازه. برنچ `reviews` از نوک فاز ۷ |
+| ۳۰ مهر ۱۴۰۵ | ۸.۱ | Phase 8 step 8.1 | Aggregate ِ `Review`، VOها، `RatingTally`، `ReviewDomainService` (چهار قدم)، سه repository، `V33`، سه RepositoryImpl، `RatingBook`؛ `rating_desc` از `productrating_tbl`. پنج تصمیم تازه (۳۲ تا ۳۶). دو خرابکاری قرمز. ۲۸۹۱ تست سبز |

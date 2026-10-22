@@ -40,6 +40,7 @@ import com.kiva.infrastructure.common.persistence.paginate
 import com.kiva.infrastructure.persistence.exposed.tbl.ProductQmTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.ProductVariantQmTbl
 import org.jetbrains.exposed.v1.core.Column
+import org.jetbrains.exposed.v1.core.QueryBuilder
 import org.jetbrains.exposed.v1.core.ComparisonOp
 import org.jetbrains.exposed.v1.core.Expression
 import org.jetbrains.exposed.v1.core.LikePattern
@@ -506,16 +507,21 @@ class ProductQmRepositoryImpl : ProductQmRepository {
          * (ProductSorts.putsSoldOutLast). paginate adds pId last, so rows that tie keep one order across pages.
          */
         val sortOrders: SortOrders = ProductSorts.names.associateWith { sort ->
-            val own: Pair<Expression<*>, SortOrder> = when (sort) {
-                ProductSorts.NEWEST -> ProductQmTbl.firstPublishedOn to SortOrder.DESC
-                ProductSorts.BESTSELLING -> ProductQmTbl.soldCount to SortOrder.DESC
-                ProductSorts.PRICE_ASC -> ProductQmTbl.price to SortOrder.ASC
-                ProductSorts.PRICE_DESC -> ProductQmTbl.price to SortOrder.DESC
-                ProductSorts.DISCOUNT_DESC -> ProductQmTbl.discountPercent to SortOrder.DESC
-                ProductSorts.RATING_DESC -> ProductQmTbl.ratingAvg to SortOrder.DESC
+            val own: List<Pair<Expression<*>, SortOrder>> = when (sort) {
+                ProductSorts.NEWEST -> listOf(ProductQmTbl.firstPublishedOn to SortOrder.DESC)
+                ProductSorts.BESTSELLING -> listOf(ProductQmTbl.soldCount to SortOrder.DESC)
+                ProductSorts.PRICE_ASC -> listOf(ProductQmTbl.price to SortOrder.ASC)
+                ProductSorts.PRICE_DESC -> listOf(ProductQmTbl.price to SortOrder.DESC)
+                ProductSorts.DISCOUNT_DESC -> listOf(ProductQmTbl.discountPercent to SortOrder.DESC)
+                // The rating is apart (productrating_tbl, phase 8): its average, then how many, then the newest; none last.
+                ProductSorts.RATING_DESC -> listOf(
+                    RatingOf("r.sum::numeric / NULLIF(r.count, 0)") to SortOrder.DESC_NULLS_LAST,
+                    RatingOf("r.count") to SortOrder.DESC_NULLS_LAST,
+                    ProductQmTbl.firstPublishedOn to SortOrder.DESC,
+                )
                 else -> error("No database order for sort '$sort'")
             }
-            if (ProductSorts.putsSoldOutLast(sort)) listOf(ProductQmTbl.inStock to SortOrder.DESC, own) else listOf(own)
+            if (ProductSorts.putsSoldOutLast(sort)) listOf(ProductQmTbl.inStock to SortOrder.DESC) + own else own
         }
 
         /** What each of AdminProductSorts means here; the largest productId breaks ties. Nothing puts sold-out last. */
@@ -532,5 +538,15 @@ class ProductQmRepositoryImpl : ProductQmRepository {
             }
             listOf(own)
         }
+    }
+}
+
+/**
+ * One number of the product's rating (`productrating_tbl`), as a subquery of the product's row: [sql] over the rating
+ * row `r`. Null for a product without a rating row.
+ */
+private class RatingOf(private val sql: String) : Expression<Any>() {
+    override fun toQueryBuilder(queryBuilder: QueryBuilder) {
+        queryBuilder.append("(SELECT $sql FROM productrating_tbl r WHERE r.\"productId\" = productqm_tbl.\"productId\")")
     }
 }

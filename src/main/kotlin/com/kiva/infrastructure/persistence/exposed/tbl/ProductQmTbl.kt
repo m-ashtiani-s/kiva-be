@@ -8,7 +8,6 @@ import kotlinx.serialization.json.JsonObject
 import org.jetbrains.exposed.v1.core.dao.id.LongIdTable
 import org.jetbrains.exposed.v1.javatime.timestampWithTimeZone
 import org.jetbrains.exposed.v1.json.jsonb
-import java.math.BigDecimal
 
 /**
  * One row per product, ready for the shop's lists and filters. Written only by the projectors. Created by
@@ -35,7 +34,6 @@ object ProductQmTbl : LongIdTable(name = "productqm_tbl", columnName = "pId") {
     val inStock = bool("inStock")
     val hasVideo = bool("hasVideo")
     val soldCount = integer("soldCount").default(0)
-    val ratingAvg = decimal("ratingAvg", 2, 1).default(BigDecimal.ZERO)
     val newUntil = timestampWithTimeZone("newUntil").nullable()
     val sortPriority = integer("sortPriority")
     val occasions = array<String>("occasions")
