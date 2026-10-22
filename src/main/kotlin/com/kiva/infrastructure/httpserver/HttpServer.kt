@@ -311,7 +311,7 @@ fun Application.configureRouting() {
             webV1AdminInventory(adminInventoryUseCases)
             webV1AdminOrders(adminOrderUseCases, mediaUrls)
             webV1AdminRefunds(AdminRefundUseCases(checkPanelAccessUc, get()))
-            webV1AdminReturns(AdminReturnUseCases(checkPanelAccessUc, get(), get(), get(), get()), mediaUrls)
+            webV1AdminReturns(AdminReturnUseCases(checkPanelAccessUc, get(), get(), get(), get(), get(), get()), mediaUrls)
             webV1AdminSettings(AdminSettingsUseCases(checkPanelAccessUc, get(), get()))
             webV1AdminDiscountCodes(AdminDiscountCodeUseCases(checkPanelAccessUc, get(), get(), get(), get(), get()))
             webV1AdminReports(AdminReportUseCases(checkPanelAccessUc, get()), mediaUrls)

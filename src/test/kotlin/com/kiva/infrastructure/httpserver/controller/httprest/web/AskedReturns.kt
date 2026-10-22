@@ -87,10 +87,11 @@ class AskedReturns(private val panel: PanelTestStack, private val clock: Mutable
         who: PanelTestStack.Caller,
         reason: String = "CHANGED_MIND",
         items: List<Pair<Int, Int>> = listOf(1 to 1),
+        refundMethod: String? = null,
     ): Long {
         val media = if (reason == "CHANGED_MIND" || reason == "OTHER") "[]" else """["${photo(who)}"]"""
         val lines = items.joinToString(",", "[", "]") { (line, quantity) -> """{"orderItemId":$line,"quantity":$quantity}""" }
-        val asked = ask(code, who, """{"items":$lines,"reason":"$reason","mediaIds":$media,"description":"توضیح"}""")
+        val asked = ask(code, who, """{"items":$lines,"reason":"$reason","mediaIds":$media,"description":"توضیح","refundMethod":${refundMethod?.let { "\"$it\"" } ?: "null"}}""")
         assertEquals(HttpStatusCode.Created, asked.status, asked.bodyAsText())
         return Json.parseToJsonElement(asked.bodyAsText()).jsonObject.getValue("id").jsonPrimitive.content.toLong()
     }

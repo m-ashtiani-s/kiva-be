@@ -25,6 +25,9 @@ import com.kiva.domain.aggregate.refund.model.valueobject.RefundId
 import com.kiva.domain.aggregate.refund.model.valueobject.RefundNote
 import com.kiva.domain.aggregate.refund.model.valueobject.RefundStatus
 import com.kiva.domain.aggregate.refund.repository.RefundRepository
+import com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnId
+import com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnOutcome
+import com.kiva.domain.aggregate.returnrequest.repository.ReturnRequestRepository
 import com.kiva.domain.aggregate.user.repository.UserRepository
 import java.time.Clock
 import java.time.Instant
@@ -39,12 +42,17 @@ import java.time.Instant
  * on the same order at once never wait on each other in a circle. One REFUND_UPDATED row in the change log, with the
  * status from and to, and only the name of `referenceId`; after the commit «پولت برگشت» to the buyer when completed.
  * Asking for PROCESSING while it is PROCESSING changes nothing and logs nothing.
+ *
+ * A completed refund of a return (phase 7, decision 17) gives the return's money back: the return is locked after the
+ * refund (lock 10) and goes REFUNDED, and the order REFUNDED too (OrderReturnEnded REFUNDED, saved with OrderRefunded in
+ * one go). A FAILED one leaves the return RECEIVED, for a new refund.
  */
 class UpdateRefundUc(
     private val transactionManager: TransactionManager,
     private val refundRepository: RefundRepository,
     private val orderQmRepository: OrderQmRepository,
     private val orderRepository: OrderRepository,
+    private val returnRequestRepository: ReturnRequestRepository,
     private val userRepository: UserRepository,
     private val auditTrail: AuditTrail,
     private val orderNotices: OrderNotices,
@@ -86,6 +94,13 @@ class UpdateRefundUc(
 
             if (refund.status == RefundStatus.COMPLETED) {
                 order.recordRefund(refund.id, refund.amount, command.actor.userId, now)
+                refund.returnId?.let { returnId ->
+                    // Lock 10: the return whose money this was, after its order's row and the refund's.
+                    val ret = returnRequestRepository.lock(ReturnId.constructFromPersisted(returnId)) ?: error("Refund ${id.value} of return $returnId, which is gone")
+                    ret.markRefunded(refund.id, now).failureOrNull()?.let { error("Refund ${id.value} completed for return $returnId, which is ${ret.status}") }
+                    order.endReturn(ret.id, ReturnOutcome.REFUNDED, command.actor.userId, now)
+                    returnRequestRepository.save(ret)
+                }
                 orderRepository.save(order)
             }
             refundRepository.save(refund)

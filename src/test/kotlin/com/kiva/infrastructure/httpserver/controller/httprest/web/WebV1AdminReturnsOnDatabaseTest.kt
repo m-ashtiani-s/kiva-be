@@ -30,6 +30,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
@@ -107,7 +108,7 @@ class WebV1AdminReturnsOnDatabaseTest {
 
     /** The change log's rows of the return [returnId]: (action, its changes as "field: from -> to"). */
     private fun auditOf(returnId: Long): List<Pair<String, List<String>>> = transaction(db) {
-        AuditLogTbl.selectAll().where { AuditLogTbl.entityId eq returnId.toString() }.orderBy(AuditLogTbl.id).map { row ->
+        AuditLogTbl.selectAll().where { (AuditLogTbl.entityType eq "RETURN") and (AuditLogTbl.entityId eq returnId.toString()) }.orderBy(AuditLogTbl.id).map { row ->
             val changes = row[AuditLogTbl.changes]?.let { Json.parseToJsonElement(it.toString()).jsonArray }.orEmpty()
             row[AuditLogTbl.action] to changes.map { it.jsonObject.let { c -> "${c.text("field")}: ${c.text("from")} -> ${c.text("to")}" } }
         }

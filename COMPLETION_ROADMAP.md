@@ -3260,7 +3260,7 @@ CREATE TABLE announcement_tbl (
 | ۷.۲ | دامنه‌ی مرجوعی، رویدادهای سفارش و جدول | L | ✅ |
 | ۷.۳ | درخواست مرجوعی و «مرجوعی‌های من» | M | ✅ |
 | ۷.۴ | صف پنل، تصمیم و جمع‌آوری | M | ✅ |
-| ۷.۵ | رسیدن به انبار، بستن، و استرداد ِ مرجوعی | L | ⬜ |
+| ۷.۵ | رسیدن به انبار، بستن، و استرداد ِ مرجوعی | L | ✅ |
 | ۷.۶ | ریویو و دور با پنل | M | ⬜ |
 
 ### ۱۲.۲ تصمیم‌های این فاز
@@ -3314,6 +3314,11 @@ CREATE TABLE announcement_tbl (
 | 45 | جمع‌آوری ِ تکراری (تازه، گام ۷.۴) | همون جمع‌آوری (بعد از نرمال شدن کد رهگیری) دوباره ← `200` بدون ذخیره، بدون ردیف لاگ و بدون پیامک. `changes` ِ `RETURN_PICKUP_SCHEDULED` `status` رو هم داره (اولین بار `APPROVED` ← `PICKUP_SCHEDULED`) | کاری که چیزی رو عوض نکرد ردیف نمی‌ذاره (۵.۱) |
 | 46 | ترتیب `allowedTransitions` (تازه، گام ۷.۴) | به ترتیب قدم‌ها (ترتیب `ReturnStatus`)، نه الفبا: `[PICKUP_SCHEDULED, RECEIVED, CLOSED]`، `[REFUNDED, CLOSED]` | همون مثال‌های کانترکت و جدول ۱۲.۳ |
 | 47 | ساختن ِ `AdminReturnRequest` (تازه، گام ۷.۴) | سرویس مشترک `AdminReturnRequests` روی `ReturnRequests` (`ordersOf` و `of(returns, orders, settings)` ِ تازه): حساب‌ها، استردادهای سفارش‌ها (`RefundRepository.findAllOfOrders`) و فقط برای `RECEIVED` ها پرداخت‌ها (`PaymentRepository.findAttemptsOfOrders`)، هر کدوم یه خوندن برای کل صفحه. `suggestedRefund` همین‌جا ساخته شد (تستش با ۷.۵). `customer.phone` ِ حساب ِ نبوده ← موبایل گیرنده‌ی سفارش (مثل `AdminOrder`) | بدون N+1؛ یه ساختن برای صف و هر قدم |
+| 48 | ترتیب قفل ِ استرداد ِ مرجوعی (تازه، گام ۷.۵) | ثبت: ۹ ← ۱۰ ← ردیف‌های استرداد (`lockAllOf`)؛ پیگیری (`PATCH`): ۹ ← ردیف استرداد ← ۱۰. هر دو اول ۹ رو می‌گیرن، پس بن‌بست نمی‌سازن | قفل ۹ هر کار روی پول یه سفارش رو پشت هم می‌ذاره |
+| 49 | `returnId` ِ بدشکل و ناموجود (تازه، گام ۷.۵) | `returnId ≤ 0` خطای شکله (با بقیه‌ی خطاها، `400 RETURN_NOT_FOUND`)؛ ناموجود یا مال سفارش دیگه در تراکنش، بعد از پیدا شدن سفارش، همون `400 RETURN_NOT_FOUND` روی `returnId` | قانون «شکل قبل از تراکنش» |
+| 50 | قلم تکراری در رسید (تازه، گام ۷.۵) | `RECEIPT_ITEMS_MISMATCH` (کانترکت: «کم، اضافه یا تکراری»)، نه `LIST_ITEM_DUPLICATE` | کانترکت |
+| 51 | `changes` ِ `RETURN_RECEIVED` (تازه، گام ۷.۵) | `status` و `items` (لیست JSON ِ `{orderItemId, receivedQuantity, restockQuantity}` به ترتیب قلم)؛ یادداشت بازبینی نه | «تعداد رسیده و برگشتی به ازای هر قلم»؛ یادداشت داخلیه |
+| 52 | دیوار دامنه‌ی استرداد (تازه، گام ۷.۵) | `Refund` `require((source == RETURN) == (returnId != null))`، هم‌معنی ِ `refund_return_source_check` ِ V32 | هر قانون یه `CHECK` و یه `require` |
 
 ### ۱۲.۳ ماشین وضعیت مرجوعی
 
@@ -3722,7 +3727,7 @@ Route: 200
 
 ---
 
-#### گام ۷.۵: رسیدن به انبار، بستن، و استرداد ِ مرجوعی · L ⬜
+#### گام ۷.۵: رسیدن به انبار، بستن، و استرداد ِ مرجوعی · L ✅
 
 **می‌سازی:** `ReceiveReturnUc`، `CloseReturnUc`؛ گسترش `CreateRefundUc` و `UpdateRefundUc` (قانون‌های ۱۵ و ۱۷)؛ `suggestedRefund` در پاسخ؛ پیامک بستن؛ دو route ِ دیگه.
 
@@ -3733,14 +3738,16 @@ Route: 200
 - چرا `RETURN_REFUND_OPEN` موقع بستن؟ بستن یعنی «بدون استرداد»؛ اگه استرداد در جریانه و بعد کامل بشه، مرجوعی ِ بسته‌شده نمی‌تونه `REFUNDED` بشه و پول بی‌صاحب می‌مونه.
 
 **تموم شده یعنی:**
-- [ ] رسید با دو قلم (یکی سالم، یکی خراب) ← `RECEIVED`، سفارش `RETURNED`، موجودی رنگ سالم +۱ با دلیل `RETURNED` در `GET /admin/inventory/adjustments` با `note` = کد مرجوعی و `createdBy` = اپراتور؛ رنگ خراب بی‌تغییر.
-- [ ] رسید بدون یکی از قلم‌ها ← `400 RECEIPT_ITEMS_MISMATCH`؛ `restock > received` ← `400`.
-- [ ] `OPERATOR` رسید ثبت می‌کنه (با اینکه تنظیم موجودی دستی براش ممنوعه).
-- [ ] `suggestedRefund` با کد تخفیف همون عدد تست طلایی ۷.۲.
-- [ ] استرداد با `returnId` ِ سفارش دیگه ← `400`؛ قبل از `RECEIVED` ← `422`؛ دومی ← `422 RETURN_REFUND_EXISTS`؛ بعد از `FAILED` ِ اولی ← دومی `201`.
-- [ ] `COMPLETED` ← مرجوعی `REFUNDED`، سفارش `REFUNDED`، `totals.refunded`، پیامک.
-- [ ] بستن با استرداد باز ← `422 RETURN_REFUND_OPEN`؛ بستن از `RECEIVED` ← `CLOSED`، سفارش `DELIVERED`، `canReturn = false` (حتی با مهلت باز).
-- [ ] رسید همزمان دو اپراتور ← یکی `200`، یکی `422`؛ موجودی فقط یه بار بالا رفته.
+- [x] رسید با دو قلم (یکی سالم، یکی خراب) ← `RECEIVED`، سفارش `RETURNED`، موجودی رنگ سالم +۱ با دلیل `RETURNED` در `GET /admin/inventory/adjustments` با `note` = کد مرجوعی و `createdBy` = اپراتور؛ رنگ خراب بی‌تغییر.
+- [x] رسید بدون یکی از قلم‌ها ← `400 RECEIPT_ITEMS_MISMATCH`؛ `restock > received` ← `400`.
+- [x] `OPERATOR` رسید ثبت می‌کنه (با اینکه تنظیم موجودی دستی براش ممنوعه).
+- [x] `suggestedRefund` با کد تخفیف همون عدد تست طلایی ۷.۲.
+- [x] استرداد با `returnId` ِ سفارش دیگه ← `400`؛ قبل از `RECEIVED` ← `422`؛ دومی ← `422 RETURN_REFUND_EXISTS`؛ بعد از `FAILED` ِ اولی ← دومی `201`.
+- [x] `COMPLETED` ← مرجوعی `REFUNDED`، سفارش `REFUNDED`، `totals.refunded`، پیامک.
+- [x] بستن با استرداد باز ← `422 RETURN_REFUND_OPEN`؛ بستن از `RECEIVED` ← `CLOSED`، سفارش `DELIVERED`، `canReturn = false` (حتی با مهلت باز).
+- [x] رسید همزمان دو اپراتور ← یکی `200`، یکی `422`؛ موجودی فقط یه بار بالا رفته.
+
+**یادداشت پیاده‌سازی:** پنج تصمیم تازه (۴۸ تا ۵۲). `ReceiveReturnUc` (تا ۳ بار با `ConcurrentChangeException`، `restockForReturn` به ترتیب قفل ۷، `OrderReturnReceived`)، `CloseReturnUc` (`RETURN_REFUND_OPEN` اول، بعد انتقال؛ `OrderReturnEnded(CLOSED)`)، `CreateRefundUc` با `returnId` (قفل ۱۰، `RECEIVED`، `RETURN_REFUND_EXISTS`، روش ِ مرجوعی، `source = RETURN`)، `UpdateRefundUc` (`COMPLETED` ← `markRefunded` و `OrderReturnEnded(REFUNDED)` کنار `OrderRefunded` در یه `save`)؛ `Refund.start`/`RefundDomainService.open` با `returnId`؛ دو route ِ دیگه. `suggestedRefund` از ۷.۴ (`AdminReturnRequests`). تست: `WebV1AdminReturnReceiptOnDatabaseTest` (۹ تست، با رسید همزمان ِ دو اپراتور ۱۰ بار)، تست `WebV1AdminRefundsOnDatabaseTest` برای قانون تازه‌ی `returnId` به‌روز شد، `RefundTest` (مرجوعی ⇔ `returnId`). تست‌های لاگ تغییرات حالا `entityType` رو هم فیلتر می‌کنن (شناسه‌ی استرداد و مرجوعی با هم برخورد می‌کردن). خرابکاری: بدون چک `RETURN_REFUND_EXISTS` ← «a return's refund - … a second one 422 RETURN_REFUND_EXISTS…» قرمز (ایندکس یکتا ۵۰۰ می‌داد، نه ۴۲۲).
 
 ---
 
@@ -6298,3 +6305,4 @@ kiva {
 | ۲۹ مهر ۱۴۰۵ | ۷.۲ | Phase 7 step 7.2 | Aggregate ِ `ReturnRequest` و VOها و سه سیاست، `ReturnDomainService.open` (به ترتیب کانترکت)، سه رویداد سفارش با payload و JSON ِ طلایی، `Order.returnRefusal`/`requestReturn`/`receiveReturn`/`endReturn`، `canReturn`، `restockForReturn`، `V32` ِ کامل، `ReturnRequestRepositoryImpl`، Projector و پنج ردیف تایم‌لاین. شش تصمیم تازه (۳۴ تا ۳۹). دو خرابکاری قرمز. کل مجموعه: ۲۸۲۱ تست، یکی قرمز (دکمه‌ی `canReturn` ِ سفارش تحویل‌شده در تست سفر فاز ۲، که حالا درست روشنه؛ به‌روز شد)، ۵ skip |
 | ۲۹ مهر ۱۴۰۵ | ۷.۳ | Phase 7 step 7.3 | `POST /me/orders/{orderCode}/returns` و `GET /me/returns`: `CreateReturnUc` (قفل ۹، به ترتیب کانترکت)، `ListMyReturnsUc`، `GetMyReturnUc`، `ReturnRequests` (بدون N+1)، `ReturnRequestHttpResponse`، `ReturnTexts`؛ `returns` در صفحه‌ی سفارش. چهار تصمیم تازه (۴۰ تا ۴۳). دو خرابکاری قرمز |
 | ۳۰ مهر ۱۴۰۵ | ۷.۴ | Phase 7 step 7.4 | صف پنل (`GET /admin/returns` با `status` و `sort`)، تصمیم (تأیید/رد با `OrderReturnEnded(REJECTED)`) و جمع‌آوری؛ `ReturnByIdForPanel` (قفل‌های ۹ و ۱۰)، `AdminReturnRequests` (بدون N+1، با `suggestedRefund`)، چهار پیامک مرجوعی با مسیر کامل، چهار `AuditAction`. چهار تصمیم تازه (۴۴ تا ۴۷). خرابکاری قرمز. کل مجموعه: ۲۸۴۲ تست سبز، ۵ skip (روی Postgres ِ موقت ِ پورت ۵۴۳۳) |
+| ۳۰ مهر ۱۴۰۵ | ۷.۵ | Phase 7 step 7.5 | رسید (`ReceiveReturnUc`، برگشت به موجودی با `RETURNED`، سفارش `RETURNED`)، بستن (`CloseReturnUc`، `RETURN_REFUND_OPEN`)، استرداد ِ مرجوعی با `returnId` (`RETURN_REFUND_EXISTS`، روش ِ مرجوعی) و `COMPLETED` ← مرجوعی و سفارش `REFUNDED`. پنج تصمیم تازه (۴۸ تا ۵۲). خرابکاری قرمز. کل مجموعه: ۲۸۵۲ تست سبز، ۵ skip |

@@ -44,3 +44,19 @@ data class AdminReturnPickupHttpRequest(
 ) {
     override fun toString(): String = "AdminReturnPickupHttpRequest(carrier=$carrier, scheduledFor=$scheduledFor, notifyCustomer=$notifyCustomer)"
 }
+
+/** The body of `POST /admin/returns/{returnId}/receipt` (contract AdminReturnReceiptRequest). The note: [toString] hides it. */
+@Serializable
+data class AdminReturnReceiptHttpRequest(val items: List<AdminReturnReceiptItemHttpRequest?>? = null, val note: String? = null) {
+    override fun toString(): String = "AdminReturnReceiptHttpRequest(items=$items)"
+}
+
+/** One line of AdminReturnReceiptRequest.items. */
+@Serializable
+data class AdminReturnReceiptItemHttpRequest(val orderItemId: Int? = null, val receivedQuantity: Int? = null, val restockQuantity: Int? = null)
+
+/** The body of `POST /admin/returns/{returnId}/close` (contract AdminReturnCloseRequest). The reason: [toString] hides it. */
+@Serializable
+data class AdminReturnCloseHttpRequest(val reason: String? = null, val notifyCustomer: Boolean? = null) {
+    override fun toString(): String = "AdminReturnCloseHttpRequest(notifyCustomer=$notifyCustomer)"
+}

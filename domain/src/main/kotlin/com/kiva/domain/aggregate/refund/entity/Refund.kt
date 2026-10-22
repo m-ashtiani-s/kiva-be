@@ -17,6 +17,7 @@ import com.kiva.domain.aggregate.refund.model.valueobject.RefundStatus.COMPLETED
 import com.kiva.domain.aggregate.refund.model.valueobject.RefundStatus.FAILED
 import com.kiva.domain.aggregate.refund.model.valueobject.RefundStatus.PENDING
 import com.kiva.domain.aggregate.refund.model.valueobject.RefundStatus.PROCESSING
+import com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnId
 import java.time.Duration
 import java.time.Instant
 
@@ -78,6 +79,7 @@ class Refund private constructor(
         require((status == COMPLETED) == (completedOn != null)) { "Refund ${id.value} is $status with completedOn=$completedOn" }
         require((status == FAILED) == (failedOn != null)) { "Refund ${id.value} is $status with failedOn=$failedOn" }
         require(status != COMPLETED || referenceId != null) { "Refund ${id.value} completed without the bank's reference" }
+        require((source == RefundSource.RETURN) == (returnId != null)) { "Refund ${id.value} of source $source with return $returnId" }
     }
 
     /** Staff are on it. Only from PENDING; asking again while PROCESSING changes nothing. */
@@ -120,7 +122,10 @@ class Refund private constructor(
         /** How soon staff are expected to call the customer and send the money (`expectedBy`, an estimate). */
         val EXPECTED_WITHIN: Duration = Duration.ofHours(72)
 
-        /** A new refund of [amount], PENDING from [now]. Whether that much is still refundable is RefundDomainService's to check first. */
+        /**
+         * A new refund of [amount], PENDING from [now]. Whether that much is still refundable is RefundDomainService's to
+         * check first. [returnId] is the return it gives the money of back: there exactly when [source] is RETURN.
+         */
         fun start(
             id: RefundId,
             orderId: OrderId,
@@ -130,8 +135,9 @@ class Refund private constructor(
             reason: RefundReason?,
             by: UserId,
             now: Instant,
+            returnId: ReturnId? = null,
         ): Refund = Refund(
-            id, orderId, amount, method, PENDING, source, reason, returnId = null, expectedBy = now.plus(EXPECTED_WITHIN), referenceId = null,
+            id, orderId, amount, method, PENDING, source, reason, returnId = returnId?.value, expectedBy = now.plus(EXPECTED_WITHIN), referenceId = null,
             statusNote = null, createdOn = now, createdBy = by, processingOn = null, completedOn = null, failedOn = null, version = 0,
         )
 

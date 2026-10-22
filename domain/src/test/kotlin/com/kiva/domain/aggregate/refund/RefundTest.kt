@@ -50,6 +50,19 @@ class RefundTest {
         assertEquals(admin, refund.createdBy)
     }
 
+    @Test
+    fun `a refund of a return has its return, and only a refund of a return has one`() {
+        val returnId = com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnId.constructFromPersisted(12)
+        fun start(source: RefundSource, of: com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnId?) = Refund.start(
+            RefundId.constructFromPersisted(32), OrderId.constructFromPersisted(5), Money.constructFromPersisted(100_000), RefundMethod.BANK_TRANSFER,
+            source, null, admin, now, of,
+        )
+
+        assertEquals(12L, start(RefundSource.RETURN, returnId).returnId)
+        kotlin.test.assertFailsWith<IllegalArgumentException> { start(RefundSource.RETURN, null) }
+        kotlin.test.assertFailsWith<IllegalArgumentException> { start(RefundSource.MANUAL, returnId) }
+    }
+
     @Nested
     inner class AllowedMoves {
         @Test

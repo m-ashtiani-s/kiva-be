@@ -68,8 +68,10 @@ import com.kiva.application.usecase.report.usecase.query.GetReportOverviewUc
 import com.kiva.application.usecase.returnrequest.AdminReturnRequests
 import com.kiva.application.usecase.returnrequest.ReturnByIdForPanel
 import com.kiva.application.usecase.returnrequest.ReturnNotices
+import com.kiva.application.usecase.returnrequest.usecase.command.CloseReturnUc
 import com.kiva.application.usecase.returnrequest.usecase.command.CreateReturnUc
 import com.kiva.application.usecase.returnrequest.usecase.command.DecideReturnUc
+import com.kiva.application.usecase.returnrequest.usecase.command.ReceiveReturnUc
 import com.kiva.application.usecase.returnrequest.usecase.command.ScheduleReturnPickupUc
 import com.kiva.application.usecase.returnrequest.usecase.query.FindAdminReturnsUc
 import com.kiva.application.usecase.returnrequest.usecase.query.GetAdminReturnUc
@@ -269,8 +271,8 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         setPhotos = SetPreShipmentMediaUc(transactions, purchase.orderByCode, purchase.orders, mediaAttachments, auditTrail, clock),
         sendPhotos = SendPreShipmentMediaUc(transactions, purchase.orderByCode, purchase.orders, users, purchase.settings, auditTrail, purchase.orderNotices, clock),
         createRefund = CreateRefundUc(
-            transactions, purchase.orderByCode, purchase.orderQm, purchase.orders, purchase.payments, purchase.refunds, RefundDomainService(RefundIdGeneratorImpl()),
-            auditTrail, clock,
+            transactions, purchase.orderByCode, purchase.orderQm, purchase.orders, purchase.payments, purchase.refunds, purchase.returns,
+            RefundDomainService(RefundIdGeneratorImpl()), auditTrail, clock,
         ),
         changeStatus = ChangeOrderStatusUc(
             transactions, purchase.orderByCode, purchase.orderCancellation, purchase.orderQm, purchase.orders, purchase.settings, users, auditTrail,
@@ -304,11 +306,13 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         GetAdminReturnUc(transactions, purchase.returns, adminReturnRequests, purchase.settings),
         DecideReturnUc(transactions, returnByIdForPanel, purchase.returns, purchase.orders, users, auditTrail, returnNotices, clock),
         ScheduleReturnPickupUc(transactions, returnByIdForPanel, purchase.returns, purchase.settings, users, auditTrail, returnNotices, clock),
+        ReceiveReturnUc(transactions, returnByIdForPanel, purchase.returns, purchase.orders, purchase.stock, purchase.inventories, auditTrail, clock),
+        CloseReturnUc(transactions, returnByIdForPanel, purchase.returns, purchase.refunds, purchase.orders, users, auditTrail, returnNotices, clock),
     )
 
     val adminRefunds = AdminRefundUseCases(
         checkPanelAccess,
-        UpdateRefundUc(transactions, purchase.refunds, purchase.orderQm, purchase.orders, users, auditTrail, purchase.orderNotices, clock),
+        UpdateRefundUc(transactions, purchase.refunds, purchase.orderQm, purchase.orders, purchase.returns, users, auditTrail, purchase.orderNotices, clock),
     )
 
     // --- the shop's settings (phase 4) ---

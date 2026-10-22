@@ -124,16 +124,19 @@ class WebV1AdminRefundsOnDatabaseTest {
     }
 
     @Test
-    fun `a missing reason, no amount, store credit or a return id are 400 on their fields - a code nobody has 404`() = panel.app {
+    fun `a missing reason, no amount, store credit or a return id that can't be one are 400 on their fields - a return nobody has 400 - a code nobody has 404`() = panel.app {
         val code = panel.paidOrders.paid(customer(2).user.id, nilaOlive)
 
-        val refused = open(code, """{"method":"STORE_CREDIT","returnId":12}""")
+        val refused = open(code, """{"method":"STORE_CREDIT","returnId":0}""")
+        val noSuchReturn = open(code, """{"amount":1000,"reason":"مرجوعی","returnId":999999999}""")
 
         assertEquals(HttpStatusCode.BadRequest, refused.status)
         assertEquals(
             setOf("amount" to "REFUND_AMOUNT_INVALID", "reason" to "REFUND_REASON_REQUIRED", "method" to "REFUND_METHOD_INVALID", "returnId" to "RETURN_NOT_FOUND"),
             refused.json().array("errors").map { it.jsonObject.let { e -> e.text("field") to e.text("code") } }.toSet(),
         )
+        assertEquals(HttpStatusCode.BadRequest, noSuchReturn.status)
+        assertEquals(listOf("returnId" to "RETURN_NOT_FOUND"), noSuchReturn.json().array("errors").map { it.jsonObject.let { e -> e.text("field") to e.text("code") } })
         assertEquals(HttpStatusCode.NotFound, open(OrderCode.constructFromPersisted("KV-999999"), """{"amount":1,"reason":"x"}""").status)
         assertEquals(HttpStatusCode.NotFound, follow(999_999, """{"status":"PROCESSING"}""").status)
     }

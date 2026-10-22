@@ -1,7 +1,9 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
 import com.kiva.application.usecase.admin.usecase.command.CheckPanelAccessUc
+import com.kiva.application.usecase.returnrequest.usecase.command.CloseReturnUc
 import com.kiva.application.usecase.returnrequest.usecase.command.DecideReturnUc
+import com.kiva.application.usecase.returnrequest.usecase.command.ReceiveReturnUc
 import com.kiva.application.usecase.returnrequest.usecase.command.ScheduleReturnPickupUc
 import com.kiva.application.usecase.returnrequest.usecase.query.FindAdminReturnsUc
 import com.kiva.application.usecase.returnrequest.usecase.query.GetAdminReturnUc
@@ -14,8 +16,10 @@ import com.kiva.infrastructure.common.http.respondResult
 import com.kiva.infrastructure.common.http.toHttpResponse
 import com.kiva.infrastructure.httpserver.auth.panelActor
 import com.kiva.infrastructure.httpserver.auth.requireRoles
+import com.kiva.infrastructure.httpserver.controller.httprest.model.request.AdminReturnCloseHttpRequest
 import com.kiva.infrastructure.httpserver.controller.httprest.model.request.AdminReturnDecisionHttpRequest
 import com.kiva.infrastructure.httpserver.controller.httprest.model.request.AdminReturnPickupHttpRequest
+import com.kiva.infrastructure.httpserver.controller.httprest.model.request.AdminReturnReceiptHttpRequest
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.AdminReturnRequestHttpResponse
 import com.kiva.infrastructure.media.MediaUrls
 import io.ktor.server.request.receive
@@ -31,6 +35,8 @@ class AdminReturnUseCases(
     val getReturn: GetAdminReturnUc,
     val decide: DecideReturnUc,
     val schedulePickup: ScheduleReturnPickupUc,
+    val receive: ReceiveReturnUc,
+    val close: CloseReturnUc,
 )
 
 /** The path parameter every panel return route names its return by. */
@@ -64,6 +70,22 @@ fun Route.webV1AdminReturns(useCases: AdminReturnUseCases, mediaUrls: MediaUrls)
             val request = call.receive<AdminReturnPickupHttpRequest>()
             val command = ScheduleReturnPickupUc.Cmd(id, request.carrier, request.scheduledFor, request.trackingCode, request.note, request.notifyCustomer, call.panelActor())
             useCases.schedulePickup.execute(command).unwrapOr { return@put call.respondFailure(it) }
+            call.respondResult(useCases.getReturn.execute(GetAdminReturnUc.Qry(id))) { AdminReturnRequestHttpResponse.from(it, mediaUrls) }
+        }
+
+        // The answer has the receipt, [REFUNDED, CLOSED] and the suggested refund.
+        post("/admin/returns/{$RETURN_ID}/receipt") {
+            val id = call.parameters[RETURN_ID].orEmpty()
+            val request = call.receive<AdminReturnReceiptHttpRequest>()
+            val items = request.items?.map { ReceiveReturnUc.LineFields(it?.orderItemId, it?.receivedQuantity, it?.restockQuantity) }
+            useCases.receive.execute(ReceiveReturnUc.Cmd(id, items, request.note, call.panelActor())).unwrapOr { return@post call.respondFailure(it) }
+            call.respondResult(useCases.getReturn.execute(GetAdminReturnUc.Qry(id))) { AdminReturnRequestHttpResponse.from(it, mediaUrls) }
+        }
+
+        post("/admin/returns/{$RETURN_ID}/close") {
+            val id = call.parameters[RETURN_ID].orEmpty()
+            val request = call.receive<AdminReturnCloseHttpRequest>()
+            useCases.close.execute(CloseReturnUc.Cmd(id, request.reason, request.notifyCustomer, call.panelActor())).unwrapOr { return@post call.respondFailure(it) }
             call.respondResult(useCases.getReturn.execute(GetAdminReturnUc.Qry(id))) { AdminReturnRequestHttpResponse.from(it, mediaUrls) }
         }
     }

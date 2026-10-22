@@ -135,8 +135,10 @@ import com.kiva.application.usecase.returnrequest.AdminReturnRequests
 import com.kiva.application.usecase.returnrequest.ReturnByIdForPanel
 import com.kiva.application.usecase.returnrequest.ReturnNotices
 import com.kiva.application.usecase.returnrequest.ReturnRequests
+import com.kiva.application.usecase.returnrequest.usecase.command.CloseReturnUc
 import com.kiva.application.usecase.returnrequest.usecase.command.CreateReturnUc
 import com.kiva.application.usecase.returnrequest.usecase.command.DecideReturnUc
+import com.kiva.application.usecase.returnrequest.usecase.command.ReceiveReturnUc
 import com.kiva.application.usecase.returnrequest.usecase.command.ScheduleReturnPickupUc
 import com.kiva.application.usecase.returnrequest.usecase.query.FindAdminReturnsUc
 import com.kiva.application.usecase.returnrequest.usecase.query.GetAdminReturnUc
@@ -630,6 +632,18 @@ val useCaseModule = module(createdAtStart = true) {
         )
     }
     single {
+        ReceiveReturnUc(
+            transactionManager = get(), returnByIdForPanel = get(), returnRequestRepository = get(), orderRepository = get(),
+            inventoryDomainService = get(), inventoryRepository = get(), auditTrail = get(), clock = get(),
+        )
+    }
+    single {
+        CloseReturnUc(
+            transactionManager = get(), returnByIdForPanel = get(), returnRequestRepository = get(), refundRepository = get(), orderRepository = get(),
+            userRepository = get(), auditTrail = get(), returnNotices = get(), clock = get(),
+        )
+    }
+    single {
         ScheduleReturnPickupUc(
             transactionManager = get(), returnByIdForPanel = get(), returnRequestRepository = get(), shopSettingsRepository = get(), userRepository = get(),
             auditTrail = get(), returnNotices = get(), clock = get(),
@@ -640,12 +654,12 @@ val useCaseModule = module(createdAtStart = true) {
     single {
         CreateRefundUc(
             transactionManager = get(), orderByCode = get(), orderQmRepository = get(), orderRepository = get(), paymentRepository = get(),
-            refundRepository = get(), refundDomainService = get(), auditTrail = get(), clock = get(),
+            refundRepository = get(), returnRequestRepository = get(), refundDomainService = get(), auditTrail = get(), clock = get(),
         )
     }
     single {
         UpdateRefundUc(
-            transactionManager = get(), refundRepository = get(), orderQmRepository = get(), orderRepository = get(), userRepository = get(),
+            transactionManager = get(), refundRepository = get(), orderQmRepository = get(), orderRepository = get(), returnRequestRepository = get(), userRepository = get(),
             auditTrail = get(), orderNotices = get(), clock = get(),
         )
     }

@@ -16,6 +16,7 @@ import com.kiva.domain.aggregate.refund.model.valueobject.RefundReason
 import com.kiva.domain.aggregate.refund.model.valueobject.RefundSource
 import com.kiva.domain.aggregate.refund.model.valueobject.RefundStatus
 import com.kiva.domain.aggregate.refund.repository.RefundIdGenerator
+import com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnId
 import java.time.Instant
 
 /**
@@ -43,7 +44,8 @@ class RefundDomainService(
 
     /**
      * A new PENDING refund of [amount] for [order], when that much is still refundable; otherwise [OpenFailure.ExceedsPaid]
-     * with what is (400 on `amount`). [payments] and [existing] are all of the order's.
+     * with what is (400 on `amount`). [payments] and [existing] are all of the order's. [returnId] is the return whose
+     * money it gives back (source RETURN, phase 7).
      */
     fun open(
         order: Order,
@@ -55,14 +57,15 @@ class RefundDomainService(
         source: RefundSource,
         by: UserId,
         now: Instant,
+        returnId: ReturnId? = null,
     ): Result<Refund, OpenFailure> {
-        logger.info("open orderId=${order.id.value} amount=${amount.toman} method=$method source=$source")
+        logger.info("open orderId=${order.id.value} amount=${amount.toman} method=$method source=$source returnId=${returnId?.value}")
         require(payments.all { it.orderId == order.id } && existing.all { it.orderId == order.id }) { "Payments or refunds of another order than ${order.id.value}" }
         require(amount > Money.ZERO) { "A refund of nothing for order ${order.id.value}" }
 
         val refundable = refundable(paidBy(payments), existing)
         if (amount > refundable) return Result.failure(OpenFailure.ExceedsPaid(refundable))
-        return Result.success(Refund.start(refundIdGenerator.nextRefundId(), order.id, amount, method, source, reason, by, now))
+        return Result.success(Refund.start(refundIdGenerator.nextRefundId(), order.id, amount, method, source, reason, by, now, returnId))
     }
 
     sealed class OpenFailure(code: String, kind: FailureKind, field: String? = null, meta: Map<String, Any> = emptyMap()) :
