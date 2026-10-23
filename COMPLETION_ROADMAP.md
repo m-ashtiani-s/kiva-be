@@ -4807,7 +4807,7 @@ url (تلگرام با آدرس https://t.me/kiva_shop) = https://t.me/kiva_shop
 | ۱۱.۲ | کمپین در فروشگاه: `/campaigns/active`، فیلتر `campaign`، شمارنده‌ی صفحه‌ی محصول | M | ✅ |
 | ۱۱.۳ | بنرها | M | ✅ |
 | ۱۱.۴ | پیام‌های رضایت | M | ✅ |
-| ۱۱.۵ | آمار سایت و خلاصه‌ی رضایت | S | ⬜ |
+| ۱۱.۵ | آمار سایت و خلاصه‌ی رضایت | S | ✅ |
 | ۱۱.۶ | `GET /home` | M | ⬜ |
 | ۱۱.۷ | ریویو و دور با پنل و kiva-fe | S | ⬜ |
 
@@ -5103,14 +5103,16 @@ Route: respondResultCacheable؛ همه‌ی کارت‌ها با isWishlisted = 
 
 ---
 
-#### گام ۱۱.۵: آمار سایت و خلاصه‌ی رضایت · S ⬜
+#### گام ۱۱.۵: آمار سایت و خلاصه‌ی رضایت · S ✅
 
 **می‌سازی:** `GetSiteStatsUc`؛ `SatisfactionSummaryHttpResponse` و `SiteStatsHttpResponse`؛ `summary` در `ListTestimonialsUc`.
 
 وابسته به: ۱۱.۴
 
 **تموم شده یعنی:**
-- [ ] `PUT /admin/settings` با `siteStats` ِ تازه ← `GET /site/stats` و `summary` ِ پیام‌ها همون عددها.
+- [x] `PUT /admin/settings` با `siteStats` ِ تازه ← `GET /site/stats` و `summary` ِ پیام‌ها همون عددها.
+
+**یادداشت پیاده‌سازی:** `SiteStatsHttpResponse` و `SatisfactionSummaryHttpResponse` از فاز ۴ آماده بودن و `summary` ِ پیام‌ها در گام ۱۱.۴ اومد (تصمیم ۲۷)؛ این گام `GetSiteStatsUc` و `GET /site/stats` (بدون کش). تست: `WebV1SiteStatsOnDatabaseTest` (قبل از تایپ صفرها و `summary = null`؛ بعد از `PUT /admin/settings` هر دو همون عددها). خرابکاری: `SiteStats.NONE` به‌جای تنظیمات، و `summary = null` ← همون تست قرمز. کل مجموعه با `--rerun-tasks`: ۲۹۹۵ تست سبز، ۵ skip.
 
 ---
 
@@ -6439,3 +6441,4 @@ kiva {
 | ۱ آبان ۱۴۰۵ | ۱۱.۲ | Phase 11 step 11.2 | کمپین در فروشگاه: `/campaigns/active`، فیلتر `campaign` در لیست و شمارنده‌ها، شمارنده‌ی صفحه‌ی محصول؛ قیمت‌ها دست‌نخورده. یه تصمیم تازه (۲۵). پنج خرابکاری قرمز. ۲۹۸۲ تست سبز |
 | ۱ آبان ۱۴۰۵ | ۱۱.۳ | Phase 11 step 11.3 | بنرها: فرم پنل (عکس `BANNER` اجباری، دکمه‌ی کامل، لینک امن)، `GET /banners` با بازه و ترتیب، لاگ تغییرات؛ `OpenWindow` ِ مشترک. یه تصمیم تازه (۲۶). سه خرابکاری قرمز. ۲۹۸۹ تست سبز |
 | ۱ آبان ۱۴۰۵ | ۱۱.۴ | Phase 11 step 11.4 | پیام‌های رضایت: فرم پنل (رنگ همون محصول، نه از آینده)، `GET /testimonials` (فقط منتشرشده‌ها، ترتیب پنل، خلاصه‌ی دستی)، رنگ در استفاده ← `409`، لاگ بدون اسم و متن. یه تصمیم تازه (۲۷). چهار خرابکاری قرمز. ۲۹۹۴ تست سبز |
+| ۱ آبان ۱۴۰۵ | ۱۱.۵ | Phase 11 step 11.5 | `GET /site/stats` از تنظیمات، همون عددهای `summary` ِ پیام‌ها. دو خرابکاری قرمز. ۲۹۹۵ تست سبز |

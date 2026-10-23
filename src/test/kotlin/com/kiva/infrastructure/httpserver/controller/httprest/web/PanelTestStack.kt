@@ -14,6 +14,7 @@ import com.kiva.infrastructure.persistence.exposed.tbl.BannerTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.TestimonialTbl
 import com.kiva.infrastructure.persistence.exposed.TestimonialRepositoryImpl
 import com.kiva.application.usecase.testimonial.TestimonialReferences
+import com.kiva.application.usecase.content.usecase.query.GetSiteStatsUc
 import com.kiva.application.usecase.testimonial.Testimonials
 import com.kiva.application.usecase.testimonial.usecase.command.CreateTestimonialUc
 import com.kiva.application.usecase.testimonial.usecase.command.DeleteTestimonialUc
@@ -447,6 +448,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         GetActiveCampaignUc(transactions, campaignRepository, campaignShowcases, clock),
         ListBannersUc(transactions, bannerRepository, banners, clock),
         ListTestimonialsUc(transactions, testimonialRepository, testimonialViews, purchase.settings),
+        GetSiteStatsUc(transactions, purchase.settings),
     )
     val adminMarketing = AdminMarketingUseCases(
         checkPanelAccess,
