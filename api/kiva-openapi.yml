@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: KIVA Store API — کیوا
-  version: 1.17.0
+  version: 1.18.0
   contact:
     name: KIVA Engineering
     email: support@kiva.ir
@@ -34,7 +34,7 @@ info:
     | خطا | `application/problem+json` (RFC 7807) + فیلد ماشینی `code` (لیست کامل در `ErrorCode`) + `message` فارسی قابل نمایش به کاربر + `errors[]` برای خطای فیلدها |
     | 400 در برابر 422 | `400 VALIDATION_ERROR` = ورودی از نظر شکل/فرمت غلط است. `422` = ورودی درست است ولی قانون کسب‌وکار اجازه نمی‌دهد (مثل `DISCOUNT_MIN_SUBTOTAL_NOT_MET`). |
     | Idempotency | `POST /orders`، `POST /payments/{id}/retry` و `POST /me/orders/{code}/payments` هدر `Idempotency-Key` (UUID) می‌گیرند. تکرار با همان کلید و همان بدنه همان سفارش و همان تراکنش را برمی‌گرداند (با وضعیت **فعلی** آن‌ها، پس پاسخ از نظر معنی یکی است، نه بایت‌به‌بایت). همان کلید با بدنه‌ی دیگر `409 IDEMPOTENCY_KEY_REUSED`. درخواستی که شکست خورد و چیزی نساخت ثبت نمی‌شود و تکرارش دوباره اجرا می‌شود. کلید ۲۴ ساعت نگه داشته می‌شود. هدر نیامده یا UUID نیست = `400 VALIDATION_ERROR` روی فیلد `Idempotency-Key`. |
-    | کش | `GET /config`، `/home`، `/categories`، `/colors`، `/faq`، `/geo/*` و بلاگ با `ETag` + `Cache-Control: public, max-age=300` کش می‌شوند. |
+    | کش | `GET /config`، `/home`، `/categories`، `/colors`، `/faq`، `/search/hints`، `/geo/*` و بلاگ با `ETag` + `Cache-Control: public, max-age=300` کش می‌شوند. |
     | Rate limit | ورود و کدهای تأیید: جدول «محدودیت‌ها» در بخش ۲. پیگیری مهمان: ۱۰ بار در ۱۰ دقیقه برای هر IP. سفارش پرداخت‌نشده و تلاش پرداخت: بخش ۳. پاسخ `429` همیشه با هدر `Retry-After` (ثانیه) و `meta.retryAfterSeconds`. |
 
     ## ۲. احراز هویت
@@ -1110,17 +1110,27 @@ paths:
     get:
       tags: [Search]
       operationId: searchSuggest
-      summary: "جستجوی زنده‌ی هدر (حداکثر ۸ محصول + دسته‌ها و رنگ‌های منطبق)"
+      summary: "جستجوی زنده‌ی هدر (حداکثر `limit` محصول، پیش‌فرض ۸، + دسته‌ها و رنگ‌های منطبق)"
       description: |
-        جستجو روی نام محصول، نام دسته، نام رنگ‌ها و متریال انجام می‌شود و همه‌ی کلمات باید منطبق باشند (AND).
-        اگر کلمه‌ای از نام رنگ در عبارت باشد (مثلاً «کیف مشکی»)، `matchedColorKey` همان رنگ است تا تصویر و لینک با همان رنگ باز شوند.
-        `nameHighlighted` با تگ `<mark>` آماده‌ی نمایش است (HTML-escaped).
+        * `q` اول نرمال می‌شود (ارقام فارسی و عربی ← لاتین، `ي`/`ى` ← `ی`، `ك` ← `ک`، نیم‌فاصله ← فاصله، فاصله‌های پشت‌سرهم ← یکی، trim)، بعد طولش چک
+          می‌شود: خالی (فاصله یا نیم‌فاصله‌ی تنها هم) ← `400 SEARCH_QUERY_EMPTY` روی `q`؛ بیشتر از ۱۰۰ ← `400 SEARCH_QUERY_TOO_LONG`. `limit` ۱ تا ۲۰ (`400 LIMIT_INVALID`).
+        * حداکثر ۶ کلمه‌ی اول؛ **همه‌ی کلمه‌ها** باید جایی در نام محصول، نام دسته، نام رنگ‌های فعال، متریال یا کد محصول باشند (AND، «شامل»؛ همان قانون
+          `GET /products?q=`). فقط محصولات منتشرشده، ناموجودها هم ولی بعد از موجودها.
+        * ترتیب: اول محصولاتی که همه‌ی کلمه‌ها در **نام**شان است، بعد موجودها، بعد پرفروش‌تر، بعد شناسه‌ی بزرگ‌تر. `totalProducts` همه‌ی منطبق‌هاست (نه فقط این تعداد)
+          و با `meta.totalItems` ِ `GET /products?q=` ِ همان عبارت یکی است.
+        * `matchedColorKey`: بلندترین نام رنگ پالت که به‌صورت کلمه‌ی کامل در عبارت است (مثلاً «مشکی» در «کراس مشکی»)؛ اگر محصول آن رنگ را فعال دارد، تصویر و
+          `url` با همان رنگ، وگرنه `null` و رنگ پیش‌فرض.
+        * `nameHighlighted`: نام همان‌طور که ذخیره شده، HTML-escaped، با `<mark>` دور هر جایی که یکی از کلمه‌ها پیدا شد (بازه‌های هم‌پوشان یکی می‌شوند)؛ هیچ تگ دیگری.
+        * `categories`: دسته‌های منو با حداقل یک محصول منتشرشده که نامشان حداقل یکی از کلمه‌های دو حرفی یا بیشتر را دارد، به ترتیب منو، حداکثر ۴.
+          `colors`: رنگ‌هایی که حداقل یک محصول منتشرشده دارند و نامشان یکی از کلمه‌ها را دارد، حداکثر ۴.
+        * `seeAllUrl` = `/products?q=` + عبارت نرمال‌شده (UTF-8، فاصله `%20`). ورود اختیاری است و اثری ندارد (توکن نامعتبر `401`). کش نمی‌شود؛ فرانت حداقل ۲۵۰ میلی‌ثانیه debounce کند.
       security: [{}, { bearerAuth: [] }]
       parameters:
         - name: q
           in: query
           required: true
-          schema: { type: string, minLength: 1, maxLength: 100, example: کراس مشکی }
+          description: 'طول بعد از نرمال‌سازی چک می‌شود (۱ تا ۱۰۰)'
+          schema: { type: string, example: کراس مشکی }
         - name: limit
           in: query
           schema: { type: integer, minimum: 1, maximum: 20, default: 8 }
@@ -1135,13 +1145,21 @@ paths:
     get:
       tags: [Search]
       operationId: getSearchHints
-      summary: "پیشنهادهای اولیه‌ی پنل جستجو (دسته‌ها، رنگ‌ها، جستجوهای پرتکرار)"
+      summary: "پیشنهادهای اولیه‌ی پنل جستجو (دسته‌ها، رنگ‌ها، جستجوهای پیشنهادی)"
+      description: |
+        `categories`: دسته‌های منو با حداقل یک محصول منتشرشده، به ترتیب منو، حداکثر ۸. `colors`: رنگ‌هایی که حداقل یک محصول منتشرشده با آن رنگ ِ فعال هست،
+        به ترتیب پالت، حداکثر ۱۲. `popularQueries`: **لیست دستی** محتوای سایت (لاگ جستجو نگه داشته نمی‌شود)، حداکثر ۸.
+        با `ETag` و `Cache-Control: public, max-age=300` کش می‌شود؛ `If-None-Match` برابر ← `304`.
       responses:
         '200':
           description: OK
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/SearchHints' }
+        '304':
+          description: تغییری نکرده (`If-None-Match` همان `ETag` فعلی است)؛ بدون بدنه
 
   # ================================================================
   #  CART
@@ -5401,7 +5419,7 @@ components:
     SearchQuery:
       name: q
       in: query
-      description: جستجو روی نام، دسته، رنگ‌های فعال، متریال و کد محصول (SKU)، با نرمال‌سازی ی/ک
+      description: 'جستجو روی نام، دسته، رنگ‌های فعال، متریال و کد محصول (SKU)، با همان نرمال‌سازی `GET /search/suggest`؛ همه‌ی کلمه‌ها (AND، «شامل»)، حداکثر ۶ کلمه‌ی اول'
       schema: { type: string, maxLength: 100, example: کراس‌بادی }
     CategoryFilter:
       name: category
@@ -5827,6 +5845,7 @@ components:
         - STOCK_ALERT_NOT_FOUND
         - CAMPAIGN_OVERLAP
         - IMAGE_REQUIRED
+        - SEARCH_QUERY_EMPTY
         - CTA_INCOMPLETE
         - PRODUCT_IN_STOCK
         - WISHLIST_LIMIT_REACHED
@@ -6584,6 +6603,7 @@ components:
     # ============ SEARCH ============
     SearchSuggestProduct:
       type: object
+      required: [id, slug, name, nameHighlighted, categoryName, price, matchedColorKey, imageUrl, url]
       properties:
         id: { type: integer, example: 2 }
         slug: { type: string, example: nila-crossbody }
@@ -6592,10 +6612,11 @@ components:
         categoryName: { type: string, example: کراس‌بادی }
         price: { $ref: '#/components/schemas/PriceInfo' }
         matchedColorKey: { type: string, allOf: [{ $ref: '#/components/schemas/ColorKey' }], nullable: true, example: black }
-        imageUrl: { type: string, format: uri }
-        url: { type: string, example: '/product/nila-crossbody?color=black' }
+        imageUrl: { type: string, format: uri, nullable: true, description: 'عکس کوچک ِ رنگ منطبق یا پیش‌فرض؛ محصول بی‌عکس ← `null`' }
+        url: { type: string, description: 'با `?color=` فقط وقتی `matchedColorKey` هست', example: '/product/nila-crossbody?color=black' }
     SearchSuggestResponse:
       type: object
+      required: [query, normalizedQuery, products, categories, colors, totalProducts, seeAllUrl]
       properties:
         query: { type: string, example: کراس مشکي }
         normalizedQuery: { type: string, example: کراس مشکی }
@@ -6612,6 +6633,7 @@ components:
         seeAllUrl: { type: string, example: '/products?q=کراس%20مشکی' }
     SearchHints:
       type: object
+      required: [categories, colors, popularQueries]
       properties:
         categories:
           type: array
