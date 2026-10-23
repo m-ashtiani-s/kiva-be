@@ -17,6 +17,8 @@ import com.kiva.application.usecase.campaign.CampaignProducts
 import com.kiva.application.usecase.banner.Banners
 import com.kiva.application.usecase.testimonial.TestimonialReferences
 import com.kiva.application.usecase.content.usecase.query.GetSiteStatsUc
+import com.kiva.application.usecase.content.usecase.query.GetHomePageUc
+import com.kiva.application.usecase.catalog.CategoryMenu
 import com.kiva.application.usecase.testimonial.Testimonials
 import com.kiva.application.usecase.testimonial.usecase.command.CreateTestimonialUc
 import com.kiva.application.usecase.testimonial.usecase.command.DeleteTestimonialUc
@@ -816,6 +818,14 @@ val useCaseModule = module(createdAtStart = true) {
     }
     single { DeleteTestimonialUc(transactionManager = get(), testimonialRepository = get(), auditTrail = get(), clock = get()) }
     single { GetSiteStatsUc(transactionManager = get(), shopSettingsRepository = get()) }
+    single { CategoryMenu(categoryRepository = get(), productQmRepository = get(), mediaRepository = get()) }
+    single {
+        GetHomePageUc(
+            transactionManager = get(), siteContentRepository = get(), shopSettingsRepository = get(), productQmRepository = get(),
+            categoryRepository = get(), colorRepository = get(), categoryMenu = get(), bannerRepository = get(), banners = get(),
+            campaignRepository = get(), campaignShowcases = get(), testimonialRepository = get(), testimonials = get(), clock = get(),
+        )
+    }
 
     // --- wishlist (phase 9) ---
     single { WishlistHearts.of(get()) }

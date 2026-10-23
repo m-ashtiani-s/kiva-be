@@ -15,6 +15,8 @@ import com.kiva.infrastructure.persistence.exposed.tbl.TestimonialTbl
 import com.kiva.infrastructure.persistence.exposed.TestimonialRepositoryImpl
 import com.kiva.application.usecase.testimonial.TestimonialReferences
 import com.kiva.application.usecase.content.usecase.query.GetSiteStatsUc
+import com.kiva.application.usecase.content.usecase.query.GetHomePageUc
+import com.kiva.application.usecase.catalog.CategoryMenu
 import com.kiva.application.usecase.testimonial.Testimonials
 import com.kiva.application.usecase.testimonial.usecase.command.CreateTestimonialUc
 import com.kiva.application.usecase.testimonial.usecase.command.DeleteTestimonialUc
@@ -449,6 +451,10 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         ListBannersUc(transactions, bannerRepository, banners, clock),
         ListTestimonialsUc(transactions, testimonialRepository, testimonialViews, purchase.settings),
         GetSiteStatsUc(transactions, purchase.settings),
+        GetHomePageUc(
+            transactions, SiteContentRepositoryImpl(), purchase.settings, productQm, categories, colors, CategoryMenu(categories, productQm, mediaRepository),
+            bannerRepository, banners, campaignRepository, campaignShowcases, testimonialRepository, testimonialViews, clock,
+        ),
     )
     val adminMarketing = AdminMarketingUseCases(
         checkPanelAccess,
@@ -626,7 +632,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
                     webV1AdminStockAlerts(adminStockAlerts, mediaUrls)
                     webV1ProductInquiry(productInquiry)
                     webV1AdminMarketing(adminMarketing, mediaUrls)
-                    webV1Home(home, mediaUrls)
+                    webV1Home(home, mediaUrls, SITE_URL)
                     webV1Addresses(purchase.addressUseCases)
                     webV1SharedWishlist(wishlist.getShared, mediaUrls)
                     // Back from the gateway and the result page, for paying what a change left owed (phase 3).
