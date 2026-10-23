@@ -4805,7 +4805,7 @@ url (تلگرام با آدرس https://t.me/kiva_shop) = https://t.me/kiva_shop
 | ۱۱.۰ | کانترکت 1.17.0 | S | ✅ |
 | ۱۱.۱ | کمپین: جدول، دامنه و CRUD ِ پنل | M | ✅ |
 | ۱۱.۲ | کمپین در فروشگاه: `/campaigns/active`، فیلتر `campaign`، شمارنده‌ی صفحه‌ی محصول | M | ✅ |
-| ۱۱.۳ | بنرها | M | ⬜ |
+| ۱۱.۳ | بنرها | M | ✅ |
 | ۱۱.۴ | پیام‌های رضایت | M | ⬜ |
 | ۱۱.۵ | آمار سایت و خلاصه‌ی رضایت | S | ⬜ |
 | ۱۱.۶ | `GET /home` | M | ⬜ |
@@ -4840,6 +4840,7 @@ url (تلگرام با آدرس https://t.me/kiva_shop) = https://t.me/kiva_shop
 | 23 | محصول‌های چند کمپین (تازه، گام ۱۱.۱) | `CampaignShowcases` (قانون ۱۵) همه‌ی کاندیدها رو با **یه** خوندن `campaignShowcase` می‌گیره (`productIds` ِ همه‌ی کمپین‌ها، یا همه وقتی یکی خالیه) و برای هر کمپین در حافظه فیلتر می‌کنه؛ لیست پنل، فرم، `/campaigns/active` و خانه همین رو صدا می‌زنن. محصول ِ `DRAFT` در `productIds` مجازه (بعد از انتشار نشون داده می‌شه)؛ فقط ناموجود و بایگانی ← `400` | بدون N+1 |
 | 24 | مدل `sitecontent` (تازه، گام ۱۱.۱) | چون `SiteContentDocument` سخت‌گیرانه خونده می‌شه، کلید `home` ِ `V36` همون گام به مدل (و `SiteContentQm.home`) اضافه می‌شه، نه در ۱۱.۶. متن‌های خانه از `index.html` ِ پروتوتایپ (سه مرحله‌ی «چطور کار می‌کنیم»؛ «رزرو {holdDays} روزه» و «{returnWindowDays} روز ضمانت بازگشت» با جای‌گذاری تنظیمات) | کلید ناشناخته `/config` رو می‌شکست |
 | 25 | `LiveCampaign` (تازه، گام ۱۱.۲) | مثل `WishlistHearts` یه `fun interface` با `NONE`: `scope(filter, now)` فیلتر `campaign` رو به `campaignProductIds` (و `onSale`) تبدیل می‌کنه و `showing(productId, discounted, now)` نشونه‌ی صفحه‌ی محصول رو می‌ده. لیست **و** شمارنده‌های فیلتر (`facets`) هر دو با فیلتر محدودشده حساب می‌شن. کمپینی که الان نیست ← `campaignProductIds` ِ خالی ← لیست خالی. چیپ `campaign` (و عنوان لیست) فقط وقتی کمپین فعاله؛ `onSale` ِ ضمنی چیپ نمی‌گیره | شمارنده‌ها با لیست یکی بمونن |
+| 26 | فرم بنر (تازه، گام ۱۱.۳) | جایگاه ناشناخته ← `400 BANNER_PLACEMENT_INVALID`، رنگ‌بندی ← `400 BANNER_THEME_INVALID`، شبکه‌ی `overlayChannel` ← `400 SOCIAL_CHANNEL_INVALID`؛ `CTA_INCOMPLETE` روی همون نیمه‌ای که نیومده؛ `tagIcon` بی `tagLabel` نادیده (`tag = null`)؛ همه‌ی `overlay*` خالی ← `overlay = null`. `OpenWindow` ِ تازه در `common` (بازه‌ی باز) و اطلاعیه‌های فاز ۵ هم ازش استفاده می‌کنن. یه UseCase برای هر فایل، مثل بقیه‌ی پروژه | کانترکت فقط `enum` داشت؛ یه قانون بازه در یه جا |
 
 ### ۱۶.۳ تغییرات دامنه
 
@@ -5071,16 +5072,18 @@ Route: respondResultCacheable؛ همه‌ی کارت‌ها با isWishlisted = 
 
 ---
 
-#### گام ۱۱.۳: بنرها · M ⬜
+#### گام ۱۱.۳: بنرها · M ✅
 
 **می‌سازی:** `V36` (بخش بنر)؛ `Banner`، repository؛ پنج UseCase؛ routeها.
 
 وابسته به: ۱۱.۰
 
 **تموم شده یعنی:**
-- [ ] بدون عکس ← `400 IMAGE_REQUIRED`؛ عکس `PRODUCT` ← `400 MEDIA_PURPOSE_MISMATCH`؛ فقط `ctaLabel` ← `400 CTA_INCOMPLETE`؛ `ctaUrl = javascript:…` ← `400`.
-- [ ] بنر زمان‌بندی‌شده برای فردا تو `GET /banners` نیست، تو پنل هست؛ ترتیب `sortOrder`.
-- [ ] `placement` نیومده ← `400`.
+- [x] بدون عکس ← `400 IMAGE_REQUIRED`؛ عکس `PRODUCT` ← `400 MEDIA_PURPOSE_MISMATCH`؛ فقط `ctaLabel` ← `400 CTA_INCOMPLETE`؛ `ctaUrl = javascript:…` ← `400`.
+- [x] بنر زمان‌بندی‌شده برای فردا تو `GET /banners` نیست، تو پنل هست؛ ترتیب `sortOrder`.
+- [x] `placement` نیومده ← `400`.
+
+**یادداشت پیاده‌سازی:** یه تصمیم تازه (۲۶). `OpenWindow` در `common` (و `AnnouncementBar` ازش استفاده می‌کنه)؛ دامنه: `Banner`، `BannerDraft`، `BannerId`/`BannerPlacement`/`BannerTheme`/`BannerTag`/`BannerCta`/`BannerOverlay`، `BannerRepository`؛ `BannerRepositoryImpl` (فیلتر بازه در SQL)؛ `BannerFields` و `Banners` (عکس‌ها با یه خوندن)؛ شش UseCase (`ListBannersUc` ِ عمومی، لیست و یکی ِ پنل، ساخت، ویرایش، حذف) با `MediaAttachments` (`BANNER`، فقط عکس) و لاگ؛ `GET /banners` در `webV1Home.kt` و `/admin/banners*` در `webV1AdminMarketing.kt`؛ دو متن خطای تازه. تست: `BannerTest` (۳)، `WebV1BannersOnDatabaseTest` (۴). خرابکاری: purpose ِ اشتباه در ساخت ← سه تست قرمز؛ بدون `CTA_INCOMPLETE` و بدون `CHECK` ِ جدول ← تست فرم و `BannerTest` قرمز؛ بدون فیلتر بازه ← «the shop - only those in their window …» قرمز. کل مجموعه با `--rerun-tasks`: ۲۹۸۹ تست سبز، ۵ skip.
 
 ---
 
@@ -6431,3 +6434,4 @@ kiva {
 | ۱ آبان ۱۴۰۵ | ۱۱.۰ | Phase 11 step 11.0 | کانترکت 1.17.0 با هر ۱۱ ردیف ِ ۱۶.۷ و `required` ِ شِماهای بازاریابی؛ `DATE_RANGE_INVALID` به‌جای `ENDS_BEFORE_START` (تصمیم ۲۰)؛ متن سه کد تازه و `DATE_IN_FUTURE`. برنچ `marketing` از نوک فاز ۱۰ |
 | ۱ آبان ۱۴۰۵ | ۱۱.۱ | Phase 11 step 11.1 | کمپین: `V36` ِ کامل، دامنه، قفل `campaigns` با `EXCLUDE` به‌عنوان دیوار آخر، CRUD ِ پنل با لاگ، `campaignShowcase`. چهار تصمیم تازه (۲۱ تا ۲۴). چهار خرابکاری قرمز. ۲۹۷۸ تست سبز |
 | ۱ آبان ۱۴۰۵ | ۱۱.۲ | Phase 11 step 11.2 | کمپین در فروشگاه: `/campaigns/active`، فیلتر `campaign` در لیست و شمارنده‌ها، شمارنده‌ی صفحه‌ی محصول؛ قیمت‌ها دست‌نخورده. یه تصمیم تازه (۲۵). پنج خرابکاری قرمز. ۲۹۸۲ تست سبز |
+| ۱ آبان ۱۴۰۵ | ۱۱.۳ | Phase 11 step 11.3 | بنرها: فرم پنل (عکس `BANNER` اجباری، دکمه‌ی کامل، لینک امن)، `GET /banners` با بازه و ترتیب، لاگ تغییرات؛ `OpenWindow` ِ مشترک. یه تصمیم تازه (۲۶). سه خرابکاری قرمز. ۲۹۸۹ تست سبز |

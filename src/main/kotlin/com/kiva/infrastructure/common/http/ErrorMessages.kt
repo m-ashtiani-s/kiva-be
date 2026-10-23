@@ -101,6 +101,8 @@ object ErrorMessages {
         "PRODUCT_IN_STOCK" to "این کالا الان موجوده",
         "CAMPAIGN_OVERLAP" to "یه کمپین فعال دیگه همین بازه رو داره؛ بازه رو عوض کن یا یکی رو غیرفعال کن",
         "IMAGE_REQUIRED" to "بنر باید عکس داشته باشه",
+        "BANNER_PLACEMENT_INVALID" to "جایگاه بنر باید یکی از HOME_HERO، HOME_PROMO، SHOP_TOP، PRODUCT_SIDEBAR یا BLOG_TOP باشه",
+        "BANNER_THEME_INVALID" to "رنگ‌بندی بنر باید یکی از CREAM، PURPLE، LILAC، DARK یا WHITE باشه",
         "CTA_INCOMPLETE" to "متن دکمه و لینکش رو با هم پر کن، یا هیچ‌کدوم رو",
         "DATE_IN_FUTURE" to "این تاریخ نمی‌تونه بعد از الان باشه",
         "WISHLIST_LIMIT_REACHED" to "لیست علاقه‌مندی‌هات پر شده",

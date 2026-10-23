@@ -14,6 +14,13 @@ import com.kiva.application.usecase.stockalert.StockAlerts
 import com.kiva.domain.aggregate.stockalert.StockAlertDomainService
 import com.kiva.domain.aggregate.campaign.CampaignDomainService
 import com.kiva.application.usecase.campaign.CampaignProducts
+import com.kiva.application.usecase.banner.Banners
+import com.kiva.application.usecase.banner.usecase.command.CreateBannerUc
+import com.kiva.application.usecase.banner.usecase.command.DeleteBannerUc
+import com.kiva.application.usecase.banner.usecase.command.UpdateBannerUc
+import com.kiva.application.usecase.banner.usecase.query.GetAdminBannerUc
+import com.kiva.application.usecase.banner.usecase.query.ListAdminBannersUc
+import com.kiva.application.usecase.banner.usecase.query.ListBannersUc
 import com.kiva.application.usecase.campaign.LiveCampaign
 import com.kiva.application.usecase.campaign.usecase.query.GetActiveCampaignUc
 import com.kiva.application.usecase.campaign.CampaignShowcases
@@ -775,6 +782,13 @@ val useCaseModule = module(createdAtStart = true) {
     single { DeleteCampaignUc(transactionManager = get(), campaignRepository = get(), auditTrail = get(), clock = get()) }
     single { LiveCampaign.of(get()) }
     single { GetActiveCampaignUc(transactionManager = get(), campaignRepository = get(), campaignShowcases = get(), clock = get()) }
+    single { Banners(mediaRepository = get()) }
+    single { ListBannersUc(transactionManager = get(), bannerRepository = get(), banners = get(), clock = get()) }
+    single { ListAdminBannersUc(transactionManager = get(), bannerRepository = get(), banners = get()) }
+    single { GetAdminBannerUc(transactionManager = get(), bannerRepository = get(), banners = get()) }
+    single { CreateBannerUc(transactionManager = get(), bannerRepository = get(), mediaAttachments = get(), auditTrail = get(), clock = get()) }
+    single { UpdateBannerUc(transactionManager = get(), bannerRepository = get(), mediaAttachments = get(), auditTrail = get(), clock = get()) }
+    single { DeleteBannerUc(transactionManager = get(), bannerRepository = get(), auditTrail = get(), clock = get()) }
 
     // --- wishlist (phase 9) ---
     single { WishlistHearts.of(get()) }

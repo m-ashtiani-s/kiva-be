@@ -1,6 +1,11 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
 import com.kiva.application.usecase.admin.usecase.command.CheckPanelAccessUc
+import com.kiva.application.usecase.banner.usecase.command.CreateBannerUc
+import com.kiva.application.usecase.banner.usecase.command.DeleteBannerUc
+import com.kiva.application.usecase.banner.usecase.command.UpdateBannerUc
+import com.kiva.application.usecase.banner.usecase.query.GetAdminBannerUc
+import com.kiva.application.usecase.banner.usecase.query.ListAdminBannersUc
 import com.kiva.application.usecase.campaign.usecase.command.CreateCampaignUc
 import com.kiva.application.usecase.campaign.usecase.command.DeleteCampaignUc
 import com.kiva.application.usecase.campaign.usecase.command.UpdateCampaignUc
@@ -12,7 +17,9 @@ import com.kiva.infrastructure.common.http.respondFailure
 import com.kiva.infrastructure.common.http.respondResult
 import com.kiva.infrastructure.httpserver.auth.panelActor
 import com.kiva.infrastructure.httpserver.auth.requireRoles
+import com.kiva.infrastructure.httpserver.controller.httprest.model.request.BannerUpsertHttpRequest
 import com.kiva.infrastructure.httpserver.controller.httprest.model.request.CampaignUpsertHttpRequest
+import com.kiva.infrastructure.httpserver.controller.httprest.model.response.BannerHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.AdminCampaignHttpResponse
 import com.kiva.infrastructure.media.MediaUrls
 import io.ktor.http.HttpStatusCode
@@ -31,14 +38,22 @@ class AdminMarketingUseCases(
     val createCampaign: CreateCampaignUc,
     val updateCampaign: UpdateCampaignUc,
     val deleteCampaign: DeleteCampaignUc,
+    val listBanners: ListAdminBannersUc,
+    val getBanner: GetAdminBannerUc,
+    val createBanner: CreateBannerUc,
+    val updateBanner: UpdateBannerUc,
+    val deleteBanner: DeleteBannerUc,
 )
 
 /** The path parameter of a campaign. */
 private const val CAMPAIGN_ID = "campaignId"
 
+/** The path parameter of a banner. */
+private const val BANNER_ID = "bannerId"
+
 /**
- * The panel's marketing (contract tag `Admin · Marketing`, `[ADMIN, CONTENT_EDITOR]`): campaigns. Mounted under
- * `/api/v1`. An id that can't be one, or nobody has, is 404. Making and replacing answer with the campaign as it is now.
+ * The panel's marketing (contract tag `Admin · Marketing`, `[ADMIN, CONTENT_EDITOR]`): campaigns and banners. Mounted under
+ * `/api/v1`. An id that can't be one, or nobody has, is 404. Making and replacing answer with the thing as it is now.
  */
 fun Route.webV1AdminMarketing(useCases: AdminMarketingUseCases, mediaUrls: MediaUrls) {
     requireRoles(useCases.checkPanelAccess, Role.ADMIN, Role.CONTENT_EDITOR) {
@@ -59,6 +74,24 @@ fun Route.webV1AdminMarketing(useCases: AdminMarketingUseCases, mediaUrls: Media
         }
         delete("/admin/campaigns/{$CAMPAIGN_ID}") {
             call.respondResult(useCases.deleteCampaign.execute(DeleteCampaignUc.Cmd(call.parameters[CAMPAIGN_ID].orEmpty(), call.panelActor())))
+        }
+
+        get("/admin/banners") {
+            call.respondResult(useCases.listBanners.execute(ListAdminBannersUc.Qry)) { list -> list.map { BannerHttpResponse.from(it, mediaUrls) } }
+        }
+        post("/admin/banners") {
+            val request = call.receive<BannerUpsertHttpRequest>()
+            val id = useCases.createBanner.execute(CreateBannerUc.Cmd(request.toFields(), call.panelActor())).unwrapOr { return@post call.respondFailure(it) }
+            call.respondResult(useCases.getBanner.execute(GetAdminBannerUc.Qry(id)), HttpStatusCode.Created) { BannerHttpResponse.from(it, mediaUrls) }
+        }
+        put("/admin/banners/{$BANNER_ID}") {
+            val request = call.receive<BannerUpsertHttpRequest>()
+            val command = UpdateBannerUc.Cmd(call.parameters[BANNER_ID].orEmpty(), request.toFields(), call.panelActor())
+            val id = useCases.updateBanner.execute(command).unwrapOr { return@put call.respondFailure(it) }
+            call.respondResult(useCases.getBanner.execute(GetAdminBannerUc.Qry(id))) { BannerHttpResponse.from(it, mediaUrls) }
+        }
+        delete("/admin/banners/{$BANNER_ID}") {
+            call.respondResult(useCases.deleteBanner.execute(DeleteBannerUc.Cmd(call.parameters[BANNER_ID].orEmpty(), call.panelActor())))
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.kiva.domain.aggregate.announcement.entity
 
+import com.kiva.common.valueobject.OpenWindow
 import com.kiva.common.valueobject.SiteLink
 import com.kiva.domain.aggregate.announcement.model.valueobject.AnnouncementId
 import com.kiva.domain.aggregate.settings.model.valueobject.IconName
@@ -29,8 +30,8 @@ data class AnnouncementBar(val items: List<Announcement>) {
             require(startsAt == null || endsAt == null || endsAt.isAfter(startsAt)) { "Announcement ${id.value} ends before it starts" }
         }
 
-        /** It shows at [now]. */
-        fun isShowingAt(now: Instant): Boolean = (startsAt == null || !now.isBefore(startsAt)) && (endsAt == null || now.isBefore(endsAt))
+        /** It shows at [now] (the same window rule as a banner's: OpenWindow). */
+        fun isShowingAt(now: Instant): Boolean = OpenWindow(startsAt, endsAt).contains(now)
     }
 
     // The draft refuses this with a Failure; only broken stored data gets here. A bug: stop loudly.
