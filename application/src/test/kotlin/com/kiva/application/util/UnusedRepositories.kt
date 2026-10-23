@@ -42,6 +42,7 @@ private fun unused(): Nothing = error("not used here")
 abstract class UnusedProductQmRepository : ProductQmRepository {
     override fun findCards(ids: List<ProductId>): List<ProductCardQm> = unused()
     override fun campaignShowcase(productIds: Set<ProductId>?, limit: Int): List<ProductCardQm> = unused()
+    override fun suggest(words: List<String>, limit: Int): ProductQmRepository.SuggestPage = unused()
     override fun find(filter: ProductFilter, pageable: Pageable): Page<ProductCardQm> = unused()
     override fun findDetail(ref: ProductRef): ProductDetailQm? = unused()
     override fun facets(filter: ProductFilter, now: Instant): ProductFacetsQm = unused()

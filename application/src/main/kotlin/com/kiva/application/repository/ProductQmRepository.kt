@@ -41,6 +41,16 @@ interface ProductQmRepository {
      */
     fun campaignShowcase(productIds: Set<ProductId>?, limit: Int): List<ProductCardQm>
 
+    /**
+     * The live search's products (roadmap phase 12, decisions 2 to 4): those in the shop with every one of [words]
+     * (folded, small letters) in their search text, those with every word in their name first, then those that can be
+     * bought, the best selling, the largest id; at most [limit], and how many match in all. A fixed number of reads.
+     */
+    fun suggest(words: List<String>, limit: Int): SuggestPage
+
+    /** The live search's page: the first products and how many match in all (the same as `GET /products?q=`'s count). */
+    data class SuggestPage(val products: List<ProductCardQm>, val total: Int)
+
     /** One product's page, if it is in the shop: a draft or an archived product is null, like one nobody has. */
     fun findDetail(ref: ProductRef): ProductDetailQm?
 

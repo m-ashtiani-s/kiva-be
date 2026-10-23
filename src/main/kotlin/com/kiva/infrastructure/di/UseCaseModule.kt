@@ -17,6 +17,7 @@ import com.kiva.application.usecase.campaign.CampaignProducts
 import com.kiva.application.usecase.banner.Banners
 import com.kiva.application.usecase.testimonial.TestimonialReferences
 import com.kiva.application.usecase.content.usecase.query.GetSiteStatsUc
+import com.kiva.application.usecase.search.usecase.query.SearchSuggestUc
 import com.kiva.application.usecase.content.usecase.query.GetHomePageUc
 import com.kiva.application.usecase.catalog.CategoryMenu
 import com.kiva.application.usecase.testimonial.Testimonials
@@ -818,6 +819,14 @@ val useCaseModule = module(createdAtStart = true) {
     }
     single { DeleteTestimonialUc(transactionManager = get(), testimonialRepository = get(), auditTrail = get(), clock = get()) }
     single { GetSiteStatsUc(transactionManager = get(), shopSettingsRepository = get()) }
+
+    // --- search (phase 12) ---
+    single {
+        SearchSuggestUc(
+            transactionManager = get(), productQmRepository = get(), categoryRepository = get(), colorRepository = get(), shopSettingsRepository = get(),
+            clock = get(),
+        )
+    }
     single { CategoryMenu(categoryRepository = get(), productQmRepository = get(), mediaRepository = get()) }
     single {
         GetHomePageUc(

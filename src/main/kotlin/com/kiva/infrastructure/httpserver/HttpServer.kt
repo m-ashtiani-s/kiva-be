@@ -9,6 +9,8 @@ import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminMarketing
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminMarketing
 import com.kiva.infrastructure.httpserver.controller.httprest.web.HomeUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Home
+import com.kiva.infrastructure.httpserver.controller.httprest.web.SearchUseCases
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Search
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1MyDashboard
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1SharedWishlist
 import com.kiva.application.usecase.account.usecase.command.ConfirmPhoneChangeUc
@@ -344,6 +346,7 @@ fun Application.configureRouting() {
             webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, config.shop.siteUrl, mediaUrls)
             webV1ProductInquiry(get())
             webV1Home(HomeUseCases(get(), get(), get(), get(), get()), mediaUrls, config.shop.siteUrl)
+            webV1Search(SearchUseCases(get()), mediaUrls)
             webV1Geo(listProvincesUc, listCitiesOfProvinceUc)
             webV1Content(ContentUseCases(get(), get(), get()), config.shop.siteUrl)
             webV1Addresses(AddressUseCases(listMyAddressesUc, getMyAddressUc, addAddressUc, updateAddressUc, deleteAddressUc, setDefaultAddressUc))

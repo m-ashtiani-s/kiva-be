@@ -15,6 +15,7 @@ import com.kiva.infrastructure.persistence.exposed.tbl.TestimonialTbl
 import com.kiva.infrastructure.persistence.exposed.TestimonialRepositoryImpl
 import com.kiva.application.usecase.testimonial.TestimonialReferences
 import com.kiva.application.usecase.content.usecase.query.GetSiteStatsUc
+import com.kiva.application.usecase.search.usecase.query.SearchSuggestUc
 import com.kiva.application.usecase.content.usecase.query.GetHomePageUc
 import com.kiva.application.usecase.catalog.CategoryMenu
 import com.kiva.application.usecase.testimonial.Testimonials
@@ -456,6 +457,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
             bannerRepository, banners, campaignRepository, campaignShowcases, testimonialRepository, testimonialViews, clock,
         ),
     )
+    val search = SearchUseCases(SearchSuggestUc(transactions, productQm, categories, colors, purchase.settings, clock))
     val adminMarketing = AdminMarketingUseCases(
         checkPanelAccess,
         ListAdminCampaignsUc(transactions, campaignRepository, campaignShowcases, clock),
@@ -633,6 +635,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
                     webV1ProductInquiry(productInquiry)
                     webV1AdminMarketing(adminMarketing, mediaUrls)
                     webV1Home(home, mediaUrls, SITE_URL)
+                    webV1Search(search, mediaUrls)
                     webV1Addresses(purchase.addressUseCases)
                     webV1SharedWishlist(wishlist.getShared, mediaUrls)
                     // Back from the gateway and the result page, for paying what a change left owed (phase 3).

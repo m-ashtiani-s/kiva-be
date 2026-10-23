@@ -134,6 +134,21 @@ class ProductQmRepositoryImpl : ProductQmRepository {
         return rows.map { cardOf(it, colors[it[ProductQmTbl.productId]].orEmpty(), ratings[it[ProductQmTbl.productId]]) }
     }
 
+    // Every match is read (a few columns; a shop of hundreds), ranked here, then the first ones' cards: four reads in all.
+    override fun suggest(words: List<String>, limit: Int): ProductQmRepository.SuggestPage {
+        val matches = ProductQmTbl.select(ProductQmTbl.productId, ProductQmTbl.searchName, ProductQmTbl.inStock, ProductQmTbl.soldCount)
+            .where { conditionsOf(ProductFilter(words = words)) }
+            .toList()
+        val ranked = matches.sortedWith(
+            compareByDescending<ResultRow> { row -> words.all { row[ProductQmTbl.searchName].lowercase().contains(it) } }
+                .thenByDescending { it[ProductQmTbl.inStock] }
+                .thenByDescending { it[ProductQmTbl.soldCount] }
+                .thenByDescending { it[ProductQmTbl.productId] },
+        )
+        val first = ranked.take(limit).map { ProductId.constructFromPersisted(it[ProductQmTbl.productId]) }
+        return ProductQmRepository.SuggestPage(findCards(first), matches.size)
+    }
+
     /** Only products in the shop, whatever else is asked; each filter given narrows further. */
     private fun conditionsOf(filter: ProductFilter): Op<Boolean> {
         val conditions = buildList<Op<Boolean>> {
