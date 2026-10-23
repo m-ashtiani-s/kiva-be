@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: KIVA Store API — کیوا
-  version: 1.16.0
+  version: 1.17.0
   contact:
     name: KIVA Engineering
     email: support@kiva.ir
@@ -350,18 +350,33 @@ paths:
         شامل: محصول نمایشی هیرو (با رنگ‌ها و عکس هر رنگ)، ویژگی‌ها، دسته‌بندی‌ها با تعداد مدل،
         محصولات جدید (۸ تا)، بنرهای تبلیغاتی، کمپین تخفیف فعال با شمارنده‌ی معکوس + ۴ محصول با بیشترین درصد تخفیف (موجود)،
         خلاصه‌ی رضایت و پیام‌های مشتریان، و مراحل «چطور کار می‌کنیم».
+
+        * `hero`، `features` و `howItWorks` محتوای ثابت سایت‌اند (فعلاً بدون endpoint ِ پنل). `hero.showcaseProduct` محصول انتخاب‌شده‌ی محتواست
+          اگر منتشرشده باشد، وگرنه تازه‌ترین محصول منتشرشده؛ فروشگاه خالی ← `null`.
+        * `categories` همان `GET /categories`؛ `newArrivals` ۸ تازه‌ترین منتشرشده (ناموجودها ته لیست)؛ `promos` بنرهای دیده‌شده‌ی `HOME_PROMO` (حداکثر ۶)؛
+          `sale` کمپین فعال با ۴ محصول (یا `null`)؛ `testimonials` خلاصه‌ی رضایت و ۶ پیام اول. بنرهای `HOME_HERO` جزو خانه نیستند (`GET /banners?placement=HOME_HERO`).
+        * ورود اثری ندارد: `isWishlisted` روی همه‌ی کارت‌ها **همیشه `null`** است (پاسخ کش می‌شود؛ قلب‌ها را از `GET /me/wishlist/ids` روشن کن).
+        * با `ETag` و `Cache-Control: public, max-age=300` کش می‌شود؛ `If-None-Match` برابر ← `304`. شمارنده‌ی `sale` را با `serverTime` ِ
+          `GET /campaigns/active` همگام کن، نه با این پاسخ که تا ۵ دقیقه کهنه است.
       security: [{}, { bearerAuth: [] }]
       responses:
         '200':
           description: OK
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/HomePage' }
+        '304':
+          description: تغییری نکرده (`If-None-Match` همان `ETag` فعلی است)؛ بدون بدنه
   /banners:
     get:
       tags: [Config & Home]
       operationId: listBanners
       summary: "بنرهای فعال یک جایگاه"
+      description: |
+        بنرهای **دیده‌شده** ِ همان جایگاه: `startsAt ≤ الان < endsAt` (هر کدام `null` = باز)، به ترتیب `sortOrder` و بعد شناسه، حداکثر ۱۰.
+        `placement` نیامد یا ناشناخته ← `400`. کش نمی‌شود.
       parameters:
         - name: placement
           in: query
@@ -381,6 +396,10 @@ paths:
       tags: [Config & Home]
       operationId: getActiveCampaign
       summary: "کمپین تخفیف فعال (مثل جشنواره پاییزه) با زمان پایان برای شمارنده"
+      description: |
+        «فعال» = `isActive` و `startsAt ≤ الان < endsAt`؛ دو کمپین فعال هم‌پوشان ساخته نمی‌شوند، پس حداکثر یکی است. نبود ← `204`.
+        کمپین فقط نمایشی است و **هیچ قیمتی را عوض نمی‌کند**؛ تخفیف هر محصول همان `compareAtPrice` ِ خودش است. `products` حداکثر ۲۴ (قانون در `Campaign`)،
+        کارت‌ها با `isWishlisted = null`. کش نمی‌شود (`serverTime` باید تازه باشد).
       responses:
         '200':
           description: OK
@@ -394,6 +413,9 @@ paths:
       tags: [Config & Home]
       operationId: listTestimonials
       summary: "پیام‌های رضایت مشتریان از پیام‌رسان‌ها + خلاصه‌ی رضایت"
+      description: |
+        فقط منتشرشده‌ها، به ترتیب `sortOrder` صعودی، بعد `receivedAt` نزولی (بی‌تاریخ آخر)، بعد شناسه نزولی. `summary` دستی است (`siteStats.satisfaction`
+        ِ `PUT /admin/settings`) و از پیام‌ها یا نظرها حساب نمی‌شود؛ تنظیم نشده ← `null`. کش نمی‌شود.
       parameters:
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/Size'
@@ -409,6 +431,7 @@ paths:
       tags: [Config & Home]
       operationId: getSiteStats
       summary: "آمار عمومی (صفحه‌ی درباره ما — مشتری راضی، عکس قبل از ارسال، درصد رضایت، تعداد مدل)"
+      description: همان `siteStats` ِ `PUT /admin/settings`، همان‌طور که ذخیره شده (دستی؛ هیچ عددی حساب نمی‌شود). کش نمی‌شود.
       responses:
         '200':
           description: OK
@@ -4387,6 +4410,7 @@ paths:
       x-roles: [ADMIN, CONTENT_EDITOR]
       operationId: adminListCampaigns
       summary: "کمپین‌ها (جشنواره‌ها)، همه: گذشته، فعال و آینده"
+      description: همه، به ترتیب `startsAt` نزولی (آینده‌ها و فعلی بالا). `products` ِ هر کدام حساب‌شده است، حتی اگر الان فعال نیست.
       security: [{ bearerAuth: [] }]
       responses:
         '200':
@@ -4403,6 +4427,11 @@ paths:
       x-roles: [ADMIN, CONTENT_EDITOR]
       operationId: adminCreateCampaign
       summary: "ساخت کمپین"
+      description: |
+        `PUT` جایگزینی کامل است: فیلد اختیاری ِ نیامده `null` یا پیش‌فرض می‌شود. قانون‌های شکل در `CampaignUpsertRequest`، همه با هم (`400`).
+        بعد: محصول ناموجود یا بایگانی‌شده ← `400 PRODUCT_NOT_FOUND` روی `productIds.{i}`؛ `slug` ِ تکراری (به‌جز خودش) ← `409 DUPLICATE_SLUG`؛
+        کمپین فعال (`isActive`) با بازه‌ی هم‌پوشان با کمپین فعال دیگری ← `409 CAMPAIGN_OVERLAP` با `meta.campaignId`. هر ذخیره یک ردیف
+        `CAMPAIGN_CREATED` / `CAMPAIGN_UPDATED` در لاگ تغییرات. کمپین هیچ قیمتی را عوض نمی‌کند.
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -4418,12 +4447,22 @@ paths:
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: '`DUPLICATE_SLUG` یا `CAMPAIGN_OVERLAP` (با `meta.campaignId` ِ کمپین هم‌پوشان)'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
   /admin/campaigns/{campaignId}:
     put:
       tags: [Admin · Marketing]
       x-roles: [ADMIN, CONTENT_EDITOR]
       operationId: adminUpdateCampaign
       summary: "ویرایش کمپین"
+      description: |
+        `PUT` جایگزینی کامل است: فیلد اختیاری ِ نیامده `null` یا پیش‌فرض می‌شود. قانون‌های شکل در `CampaignUpsertRequest`، همه با هم (`400`).
+        بعد: محصول ناموجود یا بایگانی‌شده ← `400 PRODUCT_NOT_FOUND` روی `productIds.{i}`؛ `slug` ِ تکراری (به‌جز خودش) ← `409 DUPLICATE_SLUG`؛
+        کمپین فعال (`isActive`) با بازه‌ی هم‌پوشان با کمپین فعال دیگری ← `409 CAMPAIGN_OVERLAP` با `meta.campaignId`. هر ذخیره یک ردیف
+        `CAMPAIGN_CREATED` / `CAMPAIGN_UPDATED` در لاگ تغییرات. کمپین هیچ قیمتی را عوض نمی‌کند.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: campaignId
@@ -4445,12 +4484,19 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: '`DUPLICATE_SLUG` یا `CAMPAIGN_OVERLAP` (با `meta.campaignId` ِ کمپین هم‌پوشان)'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
     delete:
       tags: [Admin · Marketing]
       x-roles: [ADMIN, CONTENT_EDITOR]
       operationId: adminDeleteCampaign
       summary: "حذف کمپین"
-      description: کمپین فقط نمایشی است (شمارنده و لیست محصولات)؛ حذفش روی قیمت‌ها و سفارش‌ها اثری ندارد. برای پنهان کردن موقت، `isActive = false`.
+      description: |
+        کمپین فقط نمایشی است (شمارنده و لیست محصولات)؛ حذفش روی قیمت‌ها و سفارش‌ها اثری ندارد، و تمام شدنش هم قیمتی را برنمی‌گرداند (کار زمان‌بندی‌شده‌ای
+        برای پایان تخفیف‌ها نیست). برای پنهان کردن موقت، `isActive = false`. واقعاً پاک می‌شود؛ یک ردیف `CAMPAIGN_DELETED`.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: campaignId
@@ -4468,6 +4514,7 @@ paths:
       x-roles: [ADMIN, CONTENT_EDITOR]
       operationId: adminListBanners
       summary: "بنرها"
+      description: همه (زمان‌بندی‌شده و تمام‌شده هم)، به ترتیب جایگاه، `sortOrder` و شناسه.
       security: [{ bearerAuth: [] }]
       responses:
         '200':
@@ -4484,6 +4531,9 @@ paths:
       x-roles: [ADMIN, CONTENT_EDITOR]
       operationId: adminCreateBanner
       summary: "ساخت بنر"
+      description: |
+        `PUT` جایگزینی کامل است. قانون‌ها در `BannerUpsertRequest`، همه با هم (`400`)؛ عکس با قانون‌های مدیا: ناموجود `MEDIA_NOT_FOUND`، `purpose` جز
+        `BANNER` ← `MEDIA_PURPOSE_MISMATCH`، ویدیو ← `MEDIA_TYPE_NOT_ALLOWED`. هر ذخیره یک ردیف `BANNER_CREATED` / `BANNER_UPDATED` در لاگ تغییرات.
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -4505,6 +4555,9 @@ paths:
       x-roles: [ADMIN, CONTENT_EDITOR]
       operationId: adminUpdateBanner
       summary: "ویرایش بنر"
+      description: |
+        `PUT` جایگزینی کامل است. قانون‌ها در `BannerUpsertRequest`، همه با هم (`400`)؛ عکس با قانون‌های مدیا: ناموجود `MEDIA_NOT_FOUND`، `purpose` جز
+        `BANNER` ← `MEDIA_PURPOSE_MISMATCH`، ویدیو ← `MEDIA_TYPE_NOT_ALLOWED`. هر ذخیره یک ردیف `BANNER_CREATED` / `BANNER_UPDATED` در لاگ تغییرات.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: bannerId
@@ -4598,6 +4651,7 @@ paths:
       x-roles: [ADMIN, CONTENT_EDITOR]
       operationId: adminListTestimonials
       summary: "پیام‌های رضایت، منتشرشده و منتشرنشده (به ترتیب `sortOrder` و بعد تازه‌ترین)"
+      description: ترتیب همان `GET /testimonials`. `published` جز `true`/`false` ← `400 BOOLEAN_INVALID`.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: published
@@ -4627,6 +4681,10 @@ paths:
       x-roles: [ADMIN, CONTENT_EDITOR]
       operationId: adminCreateTestimonial
       summary: "ثبت پیام رضایت (از اسکرین‌شات پیام‌رسان)"
+      description: |
+        `PUT` جایگزینی کامل است. قانون‌ها در `TestimonialUpsertRequest`، همه با هم (`400`)؛ محصول ناموجود یا بایگانی‌شده ← `400 PRODUCT_NOT_FOUND`
+        روی `productId`؛ `colorKey` باید رنگ همان محصول باشد ← `400 COLOR_NOT_FOUND`؛ اسکرین‌شات با قانون‌های مدیا (`purpose` = `TESTIMONIAL`، فقط عکس).
+        هر ذخیره یک ردیف `TESTIMONIAL_CREATED` / `TESTIMONIAL_UPDATED` در لاگ تغییرات.
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -4648,6 +4706,10 @@ paths:
       x-roles: [ADMIN, CONTENT_EDITOR]
       operationId: adminUpdateTestimonial
       summary: "ویرایش پیام رضایت"
+      description: |
+        `PUT` جایگزینی کامل است. قانون‌ها در `TestimonialUpsertRequest`، همه با هم (`400`)؛ محصول ناموجود یا بایگانی‌شده ← `400 PRODUCT_NOT_FOUND`
+        روی `productId`؛ `colorKey` باید رنگ همان محصول باشد ← `400 COLOR_NOT_FOUND`؛ اسکرین‌شات با قانون‌های مدیا (`purpose` = `TESTIMONIAL`، فقط عکس).
+        هر ذخیره یک ردیف `TESTIMONIAL_CREATED` / `TESTIMONIAL_UPDATED` در لاگ تغییرات.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: testimonialId
@@ -5420,7 +5482,9 @@ components:
     CampaignFilter:
       name: campaign
       in: query
-      description: slug کمپین (برای صفحه‌ی «همه تخفیف‌های جشنواره»)
+      description: |
+        slug کمپین (برای صفحه‌ی «همه تخفیف‌های جشنواره»): فقط محصول‌های تخفیف‌دار ِ مجموعه‌ی کمپین **فعال** با همین `slug` (ناموجودها طبق قانون
+        موجود ته لیست). کمپینی که الان فعال نیست یا نیست ← لیست خالی، نه خطا. شکل غلط slug ← `400`.
       schema: { type: string, example: paeez-1405 }
     ProductIds:
       name: ids
@@ -5761,6 +5825,9 @@ components:
         - STOCK_ALERT_EXISTS
         - STOCK_ALERT_LIMIT_REACHED
         - STOCK_ALERT_NOT_FOUND
+        - CAMPAIGN_OVERLAP
+        - IMAGE_REQUIRED
+        - CTA_INCOMPLETE
         - PRODUCT_IN_STOCK
         - WISHLIST_LIMIT_REACHED
         - WISHLIST_SHARE_DISABLED
@@ -5968,6 +6035,7 @@ components:
       properties:
         code:
           type: string
+          description: '`CAMPAIGN` فعلاً استفاده نمی‌شود (کارت تخفیف‌دار نشان `SALE` دارد؛ کمپین فقط روی صفحه‌ی محصول، `ProductDetail.campaign`)'
           enum: [NEW, SALE, HAS_VIDEO, FREE_SHIPPING, SOLD_OUT, LOW_STOCK, BESTSELLER, HANDMADE, CAMPAIGN]
         label: { type: string, example: ۱۷٪ تخفیف }
         tone: { $ref: '#/components/schemas/Tone' }
@@ -6281,7 +6349,8 @@ components:
             campaign:
               type: object
               nullable: true
-              description: '[پیشنهادی] اگر محصول در کمپین فعال است (برای شمارنده روی صفحه‌ی محصول)'
+              description: 'وقتی محصول در مجموعه‌ی کمپین فعال است و تخفیف دارد (برای شمارنده روی صفحه‌ی محصول)، وگرنه `null`'
+              required: [slug, title, endsAt]
               properties:
                 slug: { type: string }
                 title: { type: string }
@@ -7937,6 +8006,8 @@ components:
       enum: [HOME_HERO, HOME_PROMO, SHOP_TOP, PRODUCT_SIDEBAR, BLOG_TOP]
     Banner:
       type: object
+      description: 'دیده می‌شود وقتی `startsAt ≤ الان < endsAt` (هر کدام `null` = باز)؛ فیلد `isActive` ندارد: برای پنهان کردن `endsAt` را گذشته بگذار یا حذف کن'
+      required: [id, placement, theme, tag, title, text, cta, image, overlay, sortOrder, startsAt, endsAt]
       properties:
         id: { type: integer, example: 3 }
         placement: { $ref: '#/components/schemas/BannerPlacement' }
@@ -7948,9 +8019,11 @@ components:
             label: { type: string, example: رزرو ۴ روزه }
             icon: { $ref: '#/components/schemas/IconName' }
         title: { type: string, example: 'الان بخر، همه رو یکجا تحویل بگیر' }
-        text: { type: string, example: پول کیف رو بده و تا ۴ روز رزروش کن؛ هر خرید دیگه‌ای هم داشتی، همه با یک هزینه ارسال می‌رسه. }
+        text: { type: string, nullable: true, example: پول کیف رو بده و تا ۴ روز رزروش کن؛ هر خرید دیگه‌ای هم داشتی، همه با یک هزینه ارسال می‌رسه. }
         cta:
           type: object
+          nullable: true
+          description: 'بنر بی‌دکمه ← `null`'
           properties:
             label: { type: string, example: بیشتر بدونم }
             url: { type: string, example: /faq#reserve }
@@ -7969,23 +8042,27 @@ components:
         endsAt: { type: string, format: date-time, nullable: true }
     Campaign:
       type: object
+      required: [id, slug, title, subtitle, icon, startsAt, endsAt, serverTime, products, seeAllUrl, isActive]
       properties:
         id: { type: integer, example: 5 }
         slug: { type: string, example: paeez-1405 }
         title: { type: string, example: جشنواره پاییزه }
-        subtitle: { type: string, example: تا پایان جشنواره فرصت داری }
-        icon: { $ref: '#/components/schemas/IconName' }
+        subtitle: { type: string, nullable: true, example: تا پایان جشنواره فرصت داری }
+        icon: { type: string, allOf: [{ $ref: '#/components/schemas/IconName' }], nullable: true }
         startsAt: { type: string, format: date-time }
         endsAt: { type: string, format: date-time, description: مقصد شمارنده‌ی معکوس }
         serverTime: { type: string, format: date-time, description: برای همگام‌سازی شمارنده با ساعت سرور }
         products:
           type: array
-          description: محصولات تخفیف‌دار موجود به ترتیب بیشترین درصد تخفیف
+          description: |
+            مجموعه = `productIds` ِ کمپین (اگر خالی نیست) وگرنه همه‌ی محصولات منتشرشده؛ فقط تخفیف‌دارها (`discountPercent ≥ 1`) با حداقل یک رنگ موجود؛
+            به ترتیب درصد تخفیف نزولی، بعد پرفروش‌تر، بعد شناسه. `GET /campaigns/active` حداکثر ۲۴، صفحه‌ی خانه ۴.
           items: { $ref: '#/components/schemas/ProductSummary' }
-        seeAllUrl: { type: string, example: '/products?onSale=true' }
+        seeAllUrl: { type: string, description: 'همیشه `/products?campaign={slug}`', example: '/products?campaign=paeez-1405' }
         isActive: { type: boolean, example: true }
     SatisfactionSummary:
       type: object
+      description: '**دستی**، همان `siteStats.satisfaction` ِ `PUT /admin/settings`؛ از نظرها یا پیام‌ها حساب نمی‌شود'
       properties:
         averageRating: { type: number, minimum: 0, maximum: 5, description: حداکثر یک رقم اعشار, example: 4.9 }
         scale: { type: integer, description: 'همیشه ۵؛ در `PUT /admin/settings` فقط خواندنی', example: 5 }
@@ -8003,24 +8080,26 @@ components:
           items: { $ref: '#/components/schemas/SocialChannel' }
     Testimonial:
       type: object
+      required: [id, customerName, customerInitial, city, source, sourceName, message, messageTime, receivedAt, rating, product, color, screenshotUrl]
       properties:
         id: { type: integer, example: 1 }
         customerName: { type: string, example: سارا }
         customerInitial: { type: string, example: س }
-        city: { type: string, example: تهران }
+        city: { type: string, nullable: true, example: تهران }
         source: { $ref: '#/components/schemas/SocialChannel' }
         sourceName: { type: string, example: تلگرام }
         message: { type: string, example: سلام، کیف امروز رسید. دقیقاً همونیه که توی عکس دیده بودم، حتی رنگش! }
-        messageTime: { type: string, example: '10:12' }
-        receivedAt: { type: string, format: date-time }
+        messageTime: { type: string, nullable: true, example: '10:12' }
+        receivedAt: { type: string, format: date-time, nullable: true }
         rating: { type: integer, minimum: 1, maximum: 5, example: 5 }
         product: { $ref: '#/components/schemas/ProductRef' }
-        color: { $ref: '#/components/schemas/Color' }
+        color: { type: object, allOf: [{ $ref: '#/components/schemas/Color' }], nullable: true }
         screenshotUrl: { type: string, format: uri, nullable: true, description: '[پیشنهادی] اسکرین‌شات واقعی پیام برای اعتماد بیشتر' }
     TestimonialListResponse:
       type: object
+      required: [summary, items, meta]
       properties:
-        summary: { $ref: '#/components/schemas/SatisfactionSummary' }
+        summary: { type: object, allOf: [{ $ref: '#/components/schemas/SatisfactionSummary' }], nullable: true, description: 'تنظیم نشده ← `null`' }
         items:
           type: array
           items: { $ref: '#/components/schemas/Testimonial' }
@@ -8033,6 +8112,7 @@ components:
         subtitle: { type: string, example: کیف خودت رو قبل از ارسال ببین }
     HomePage:
       type: object
+      required: [hero, features, categories, newArrivals, promos, sale, testimonials, howItWorks]
       properties:
         hero:
           type: object
@@ -8044,7 +8124,10 @@ components:
             secondaryCta: { type: object, properties: { label: { type: string, example: چطور کار می‌کنیم؟ }, url: { type: string, example: '#how' } } }
             showcaseProduct:
               allOf: [{ $ref: '#/components/schemas/ProductSummary' }]
-              description: محصولی که رنگ‌هایش در کارت «روی سایت دیدی = قبل از ارسال فرستادیم» می‌چرخد (از `colors[].imageUrl`)
+              nullable: true
+              description: |
+                محصولی که رنگ‌هایش در کارت «روی سایت دیدی = قبل از ارسال فرستادیم» می‌چرخد (از `colors[].imageUrl`): محصول انتخاب‌شده‌ی محتوا اگر
+                منتشرشده است، وگرنه تازه‌ترین محصول منتشرشده؛ هیچ محصولی نیست ← `null`
             showcaseMessenger: { $ref: '#/components/schemas/PhotoMessengerChannel' }
         features:
           type: array
@@ -8906,17 +8989,18 @@ components:
       type: object
       required: [slug, title, startsAt, endsAt]
       properties:
-        slug: { type: string, example: paeez-1405 }
-        title: { type: string, example: جشنواره پاییزه }
-        subtitle: { type: string }
-        icon: { $ref: '#/components/schemas/IconName' }
+        slug: { type: string, maxLength: 60, description: 'الگوی slug ِ محصول (`SLUG_INVALID`)؛ یکتا (`409 DUPLICATE_SLUG`)', example: paeez-1405 }
+        title: { type: string, minLength: 1, maxLength: 80, example: جشنواره پاییزه }
+        subtitle: { type: string, maxLength: 120, nullable: true }
+        icon: { type: string, allOf: [{ $ref: '#/components/schemas/IconName' }], nullable: true }
         startsAt: { type: string, format: date-time }
-        endsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time, description: 'بعد از `startsAt` (`400 DATE_RANGE_INVALID` روی `endsAt`)' }
         productIds:
           type: array
-          description: خالی = همه‌ی محصولات تخفیف‌دار
+          maxItems: 200
+          description: 'خالی یا نیامده = همه‌ی محصولات تخفیف‌دار؛ بدون تکرار (`LIST_ITEM_DUPLICATE`)؛ هر کدام محصول غیربایگانی'
           items: { type: integer }
-        isActive: { type: boolean }
+        isActive: { type: boolean, default: true }
     AdminCampaign:
       description: کمپین در پنل؛ `Campaign` به‌اضافه‌ی انتخاب ذخیره‌شده‌ی محصولات برای فرم ویرایش
       allOf:
@@ -8931,40 +9015,40 @@ components:
               example: [1, 4, 9]
     BannerUpsertRequest:
       type: object
-      required: [placement, title]
+      required: [placement, title, imageMediaId]
       properties:
         placement: { $ref: '#/components/schemas/BannerPlacement' }
-        theme: { type: string, enum: [CREAM, PURPLE, LILAC, DARK, WHITE] }
-        tagLabel: { type: string, nullable: true }
-        tagIcon: { $ref: '#/components/schemas/IconName' }
-        title: { type: string }
-        text: { type: string }
-        ctaLabel: { type: string }
-        ctaUrl: { type: string }
-        imageMediaId: { type: string }
-        overlayHighlight: { type: string, nullable: true }
-        overlayTitle: { type: string, nullable: true }
-        overlaySubtitle: { type: string, nullable: true }
-        overlayChannel: { type: string, allOf: [{ $ref: '#/components/schemas/SocialChannel' }], nullable: true }
-        sortOrder: { type: integer }
+        theme: { type: string, enum: [CREAM, PURPLE, LILAC, DARK, WHITE], default: CREAM }
+        tagLabel: { type: string, maxLength: 30, nullable: true, description: 'بدون `tagLabel`، `tag = null`' }
+        tagIcon: { type: string, allOf: [{ $ref: '#/components/schemas/IconName' }], nullable: true }
+        title: { type: string, minLength: 1, maxLength: 80 }
+        text: { type: string, maxLength: 200, nullable: true }
+        ctaLabel: { type: string, maxLength: 30, nullable: true, description: 'با `ctaUrl` یا هر دو یا هیچ‌کدام (`400 CTA_INCOMPLETE`)' }
+        ctaUrl: { type: string, maxLength: 300, nullable: true, description: '`https://` ِ کامل یا مسیر همین سایت با `/` (`400 URL_INVALID`)' }
+        imageMediaId: { type: string, description: 'اجباری (`400 IMAGE_REQUIRED`)؛ مدیای `BANNER`، فقط عکس' }
+        overlayHighlight: { type: string, maxLength: 30, nullable: true }
+        overlayTitle: { type: string, maxLength: 30, nullable: true }
+        overlaySubtitle: { type: string, maxLength: 30, nullable: true }
+        overlayChannel: { type: string, allOf: [{ $ref: '#/components/schemas/SocialChannel' }], nullable: true, description: 'همه‌ی `overlay*` خالی ← `overlay = null`' }
+        sortOrder: { type: integer, default: 0 }
         startsAt: { type: string, format: date-time, nullable: true }
-        endsAt: { type: string, format: date-time, nullable: true }
+        endsAt: { type: string, format: date-time, nullable: true, description: 'وقتی هر دو هست، بعد از `startsAt` (`400 DATE_RANGE_INVALID`)' }
     TestimonialUpsertRequest:
       type: object
       required: [customerName, source, message, productId]
       properties:
-        customerName: { type: string, example: مریم }
-        city: { type: string, example: اصفهان }
+        customerName: { type: string, minLength: 1, maxLength: 40, example: مریم }
+        city: { type: string, maxLength: 40, nullable: true, example: اصفهان }
         source: { $ref: '#/components/schemas/SocialChannel' }
-        message: { type: string, maxLength: 500 }
-        messageTime: { type: string, example: '11:17' }
-        receivedAt: { type: string, format: date-time }
+        message: { type: string, minLength: 1, maxLength: 500, description: متن ساده (نه HTML) }
+        messageTime: { type: string, pattern: '^\d{2}:\d{2}$', nullable: true, example: '11:17' }
+        receivedAt: { type: string, format: date-time, nullable: true, description: 'نه بعد از الان (`400 DATE_IN_FUTURE`)' }
         rating: { type: integer, minimum: 1, maximum: 5, default: 5 }
-        productId: { type: integer }
-        colorKey: { $ref: '#/components/schemas/ColorKey' }
-        screenshotMediaId: { type: string, nullable: true }
+        productId: { type: integer, description: 'محصول غیربایگانی (`400 PRODUCT_NOT_FOUND`)' }
+        colorKey: { type: string, allOf: [{ $ref: '#/components/schemas/ColorKey' }], nullable: true, description: 'رنگی از همان محصول (`400 COLOR_NOT_FOUND`)' }
+        screenshotMediaId: { type: string, nullable: true, description: 'مدیای `TESTIMONIAL`، فقط عکس' }
         isPublished: { type: boolean, default: true }
-        sortOrder: { type: integer }
+        sortOrder: { type: integer, default: 0 }
     AdminTestimonial:
       description: پیام رضایت در پنل؛ `Testimonial` به‌اضافه‌ی فیلدهایی که فقط فرم ویرایش لازم دارد
       allOf:

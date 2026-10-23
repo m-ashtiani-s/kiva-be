@@ -4801,7 +4801,7 @@ url (تلگرام با آدرس https://t.me/kiva_shop) = https://t.me/kiva_shop
 
 | گام | عنوان | اندازه | وضعیت |
 |---|---|---|---|
-| ۱۱.۰ | کانترکت 1.17.0 | S | ⬜ |
+| ۱۱.۰ | کانترکت 1.17.0 | S | ✅ |
 | ۱۱.۱ | کمپین: جدول، دامنه و CRUD ِ پنل | M | ⬜ |
 | ۱۱.۲ | کمپین در فروشگاه: `/campaigns/active`، فیلتر `campaign`، شمارنده‌ی صفحه‌ی محصول | M | ⬜ |
 | ۱۱.۳ | بنرها | M | ⬜ |
@@ -4833,6 +4833,7 @@ url (تلگرام با آدرس https://t.me/kiva_shop) = https://t.me/kiva_shop
 | 17 | کش | `/home`: `respondResultCacheable` (۵ دقیقه، کانترکت) و `isWishlisted` همیشه `null` (فاز ۹، تصمیم ۱۵). `/banners`، `/campaigns/active`، `/testimonials`، `/site/stats`: **کش نمی‌شن** (کانترکت نگفته، و `serverTime` ِ کمپین باید تازه باشه) | پاسخ عمومی کش‌شده شخصی نمی‌شه؛ شمارنده‌ی معکوس با ساعت ۵ دقیقه کهنه غلط نشون می‌ده (صفحه‌ی خانه شمارنده رو با `serverTime` ِ `/campaigns/active` همگام کنه) |
 | 18 | حذف | کمپین، بنر و پیام رضایت واقعاً پاک می‌شن (`204`). مدیای بنر و اسکرین‌شات می‌مونه (قانون ۵.۲) | — |
 | 19 | لاگ تغییرات | `CAMPAIGN_*`، `BANNER_*`، `TESTIMONIAL_*` با `CREATED`/`UPDATED`/`DELETED` (بخش ۵.۱) | — |
+| 20 | کد «پایان قبل از شروع» (تازه، گام ۱۱.۰) | به‌جای کد تازه‌ی `ENDS_BEFORE_START`، همون `DATE_RANGE_INVALID` روی `endsAt` که کد تخفیف و نوار اطلاعیه از قبل دارن (کمپین و بنر). `receivedAt` ِ پیام رضایت بعد از الان ← `400 DATE_IN_FUTURE` (کد فیلدی تازه، فقط با متن فارسی) | دو کد برای یه قانون نمی‌مونه؛ پنل از قبل `DATE_RANGE_INVALID` رو می‌شناسه |
 
 ### ۱۶.۳ تغییرات دامنه
 
@@ -5017,16 +5018,18 @@ Route: respondResultCacheable؛ همه‌ی کارت‌ها با isWishlisted = 
 | 8 | `SatisfactionSummary`، `SiteStats` | «دستی، از `AdminSettings.siteStats`» | تصمیم ۱۴ |
 | 9 | `HomePage`، `GET /home` | `hero.showcaseProduct` `nullable` و قانون انتخابش؛ سقف هر بخش؛ «`HOME_HERO` جزو خانه نیست»؛ «`isWishlisted` همیشه `null`»؛ `ETag` و `304` | تصمیم‌های ۱۵ تا ۱۷ |
 | 10 | `DELETE /admin/campaigns/{campaignId}` | «تموم شدن کمپین هم قیمتی رو برنمی‌گردونه» | تصمیم ۱ |
-| 11 | `ErrorCode` | `CAMPAIGN_OVERLAP`، `ENDS_BEFORE_START`، `IMAGE_REQUIRED`، `CTA_INCOMPLETE` | — |
+| 11 | `ErrorCode` | `CAMPAIGN_OVERLAP`، `IMAGE_REQUIRED`، `CTA_INCOMPLETE` (`ENDS_BEFORE_START` نه: تصمیم ۲۰) | — |
 
 ### ۱۶.۸ گام‌ها
 
-#### گام ۱۱.۰: کانترکت 1.17.0 · S ⬜
+#### گام ۱۱.۰: کانترکت 1.17.0 · S ✅
 
 **می‌سازی:** برنچ `marketing`؛ ردیف‌های ۱۶.۷؛ متن کدهای تازه.
 
 **تموم شده یعنی:**
-- [ ] کانترکت معتبر؛ `ErrorMessagesTest` و `RouteGuardsTest` سبز (دوازده route ِ پنل `[ADMIN, CONTENT_EDITOR]`).
+- [x] کانترکت معتبر؛ `ErrorMessagesTest` و `RouteGuardsTest` سبز (دوازده route ِ پنل `[ADMIN, CONTENT_EDITOR]`).
+
+**یادداشت پیاده‌سازی:** برنچ `marketing` از نوک فاز ۱۰ (`f20b2b4`). یه تصمیم تازه (۲۰). کانترکت 1.17.0 با هر ۱۱ ردیف ِ ۱۶.۷: قانون‌های فرم کمپین و `409` ِ `DUPLICATE_SLUG` و `CAMPAIGN_OVERLAP` (با `meta.campaignId`)، «`PUT` جایگزینی کامل»، تعریف «فعال» و قانون و ترتیب `products`، `seeAllUrl = /products?campaign={slug}`، «بدون کش» برای `/banners`، `/campaigns/active`، `/testimonials` و `/site/stats`؛ پارامتر `campaign` ِ `GET /products`؛ `ProductDetail.campaign` و «`CAMPAIGN` استفاده نمی‌شه»؛ فرم بنر (`imageMediaId` اجباری، `ctaLabel`/`ctaUrl` با هم، `cta` و `text` ِ `nullable`، تعریف «دیده‌شده»، ترتیب و سقف ۱۰)؛ فرم و ترتیب پیام رضایت؛ «دستی» برای `SatisfactionSummary` و `SiteStats`؛ `HomePage` با `showcaseProduct` ِ `nullable`، سقف هر بخش، «`HOME_HERO` جزو خانه نیست»، «`isWishlisted` همیشه `null`»، `ETag` و `304`؛ «تموم شدن کمپین قیمتی رو برنمی‌گردونه»؛ `required` ِ `Campaign`، `Banner`، `Testimonial`، `TestimonialListResponse` و `HomePage`. سه کد تازه در `ErrorCode` و متن فارسی‌شون، به‌علاوه‌ی متن کد فیلدی `DATE_IN_FUTURE`. YAML معتبر؛ `ErrorMessagesTest` و `RouteGuardsTest` سبز.
 
 ---
 
@@ -6415,3 +6418,4 @@ kiva {
 | ۳۰ مهر ۱۴۰۵ | ۱۰.۲ | Phase 10 step 10.2 | job ِ «موجود شد» (هر ۵ دقیقه، بعد از commit پیامک، ساعت سکوت، بدون الگو اجرا نمی‌شه، ۲۰۰ در هر اجرا)، پاک‌سازی شبانه، مسیر کامل پیامک `KIVA_FARAZ_BACK_IN_STOCK_PATTERN`، شمارنده‌ی پنل. سه تصمیم تازه (۲۳ تا ۲۵). چهار خرابکاری قرمز. ۲۹۶۱ تست سبز |
 | ۱ آبان ۱۴۰۵ | ۱۰.۳ | Phase 10 step 10.3 | صف پنل «موجود شد خبرم کن» (گروه‌ها، موجودی دقیق، فیلتر `inStock` در SQL، بدون موبایل) و «سؤال داری؟» (رنگ پیش‌فرض، فقط سه پیام‌رسان، `url` ِ کدشده با `?`/`&text=`، `responseHours`). سه تصمیم تازه (۲۶ تا ۲۸). دو خرابکاری قرمز. ۲۹۶۶ تست سبز |
 | ۱ آبان ۱۴۰۵ | ۱۰.۴ | Phase 10 step 10.4 | `STOCK_ALERTS_REVIEW.md` (دوازده خرابکاری، همه قرمز؛ یکی بعد از یه تست تازه)، `docs/FRONTEND_STOCK_ALERTS.md`. ۲۹۶۷ تست سبز، ۵ skip. فاز ۱۰ از طرف ریپو کامله؛ الگوی فراز، دور واقعی و merge منتظر تو |
+| ۱ آبان ۱۴۰۵ | ۱۱.۰ | Phase 11 step 11.0 | کانترکت 1.17.0 با هر ۱۱ ردیف ِ ۱۶.۷ و `required` ِ شِماهای بازاریابی؛ `DATE_RANGE_INVALID` به‌جای `ENDS_BEFORE_START` (تصمیم ۲۰)؛ متن سه کد تازه و `DATE_IN_FUTURE`. برنچ `marketing` از نوک فاز ۱۰ |
