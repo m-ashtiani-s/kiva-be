@@ -7,6 +7,7 @@ import com.kiva.application.usecase.address.AddressFields
 import com.kiva.application.usecase.cart.CartCaller
 import com.kiva.application.usecase.cart.usecase.command.AddCartItemUc
 import com.kiva.application.usecase.checkout.usecase.command.PlaceOrderUc
+import com.kiva.application.usecase.stockalert.usecase.command.CancelMyStockAlertUc
 import com.kiva.application.usecase.stockalert.usecase.command.CreateStockAlertUc
 import com.kiva.application.usecase.stockalert.usecase.command.DeleteOldStockAlertsUc
 import com.kiva.application.usecase.stockalert.usecase.command.NotifyStockAlertUc
@@ -178,6 +179,28 @@ class EngagementJobsOnDatabaseTest {
 
         assertEquals(StockAlertStatus.NOTIFIED, statusOf(alert))
         assertEquals(1, sms.backInStock.size)
+    }
+
+    @Test
+    fun `found due, then called off or sold again before its turn - checked again under its lock, nobody told`() {
+        val bag = published(listOf("lilac", "black"))
+        val calledOff = subscribe(1, bag.id.value, bag.variant("lilac"))
+        val soldAgain = subscribe(2, bag.id.value, bag.variant("black"))
+        restock(bag.variant("lilac"), 1)
+        restock(bag.variant("black"), 1)
+        val due = runBlocking { FindDueStockAlertsUc(panel.transactions, repository).execute(FindDueStockAlertsUc.Qry()) }.getOrNull().orEmpty()
+        assertEquals(setOf(calledOff, soldAgain), due.map { it.value }.toSet())
+
+        // Between the finding and the telling: one is called off, the other's last bag goes.
+        val owner = panel.caller(PanelTestStack.phone(901)).user.id
+        runBlocking { panel.stockAlertUseCases.cancel.execute(CancelMyStockAlertUc.Cmd(owner, calledOff.toString())) }
+        restock(bag.variant("black"), -1)
+        val notify = NotifyStockAlertUc(panel.transactions, repository, panel.productQm, panel.users, sender, PanelTestStack.SITE_URL, clock)
+        val outcomes = due.map { runBlocking { notify.execute(NotifyStockAlertUc.Cmd(it)) }.getOrNull() }
+
+        assertEquals(listOf(NotifyStockAlertUc.Outcome.NOT_DUE, NotifyStockAlertUc.Outcome.NOT_DUE), outcomes)
+        assertEquals(listOf(StockAlertStatus.CANCELLED, StockAlertStatus.ACTIVE), listOf(statusOf(calledOff), statusOf(soldAgain)))
+        assertEquals(0, sms.backInStock.size)
     }
 
     @Test
