@@ -12,6 +12,11 @@ import com.kiva.infrastructure.persistence.exposed.CampaignRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.tbl.CampaignTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.BannerTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.TestimonialTbl
+import com.kiva.infrastructure.persistence.exposed.tbl.ContactMessageTbl
+import com.kiva.infrastructure.persistence.exposed.ContactMessageRepositoryImpl
+import com.kiva.application.usecase.contact.usecase.command.CreateContactMessageUc
+import com.kiva.application.usecase.contact.usecase.query.ListContactTopicsUc
+import com.kiva.domain.aggregate.contact.TicketCodeGenerator
 import com.kiva.infrastructure.persistence.exposed.TestimonialRepositoryImpl
 import com.kiva.application.usecase.testimonial.TestimonialReferences
 import com.kiva.application.usecase.content.usecase.query.GetSiteStatsUc
@@ -462,6 +467,10 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         SearchSuggestUc(transactions, productQm, categories, colors, purchase.settings, clock),
         GetSearchHintsUc(transactions, categories, colors, productQm, SiteContentRepositoryImpl()),
     )
+    // --- contact and newsletter (phase 13) ---
+    val contactMessages = ContactMessageRepositoryImpl()
+    val contact = ContactUseCases(ListContactTopicsUc(), CreateContactMessageUc(transactions, contactMessages, TicketCodeGenerator(), clock))
+
     val adminMarketing = AdminMarketingUseCases(
         checkPanelAccess,
         ListAdminCampaignsUc(transactions, campaignRepository, campaignShowcases, clock),
@@ -640,6 +649,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
                     webV1AdminMarketing(adminMarketing, mediaUrls)
                     webV1Home(home, mediaUrls, SITE_URL)
                     webV1Search(search, mediaUrls)
+                    webV1Contact(contact)
                     webV1Addresses(purchase.addressUseCases)
                     webV1SharedWishlist(wishlist.getShared, mediaUrls)
                     // Back from the gateway and the result page, for paying what a change left owed (phase 3).
@@ -669,11 +679,12 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
             ProductRatingTbl.deleteWhere { ProductRatingTbl.productId inList reviewed }
             MediaTbl.deleteWhere { MediaTbl.uploadedBy inList userIds }
         }
-        // Campaigns belong to nobody: every one a test made goes (kiva_test only).
+        // Campaigns and contact messages belong to no test user: every one a test made goes (kiva_test only).
         transaction(db) {
             CampaignTbl.deleteAll()
             BannerTbl.deleteAll()
             TestimonialTbl.deleteAll()
+            ContactMessageTbl.deleteAll()
         }
         purchase.deleteWhatWasStored()
         transaction(db) {

@@ -182,6 +182,7 @@ object ErrorMessages {
         "EMAIL_NOT_AVAILABLE" to "این پیام ایمیل نداره؛ با پیامک جواب بده",
         "REPLY_CHANNEL_REQUIRED" to "بگو پاسخ با پیامک بره یا ایمیل",
         "REPLY_REQUIRED" to "متن پاسخ رو بنویس",
+        "CONTACT_TOPIC_INVALID" to "موضوع پیام رو از لیست انتخاب کن",
         "UNSUBSCRIBE_TOKEN_INVALID" to "این لینک لغو عضویت درست نیست",
         "SEARCH_QUERY_EMPTY" to "یه چیزی بنویس تا دنبالش بگردیم",
         "SEARCH_QUERY_TOO_LONG" to "متن جستجو حداکثر {maxLength} حرفه",

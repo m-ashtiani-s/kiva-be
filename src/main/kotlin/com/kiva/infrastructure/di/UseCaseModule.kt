@@ -19,6 +19,9 @@ import com.kiva.application.usecase.testimonial.TestimonialReferences
 import com.kiva.application.usecase.content.usecase.query.GetSiteStatsUc
 import com.kiva.application.usecase.search.usecase.query.SearchSuggestUc
 import com.kiva.application.usecase.search.usecase.query.GetSearchHintsUc
+import com.kiva.application.usecase.contact.usecase.command.CreateContactMessageUc
+import com.kiva.application.usecase.contact.usecase.query.ListContactTopicsUc
+import com.kiva.domain.aggregate.contact.TicketCodeGenerator
 import com.kiva.application.usecase.content.usecase.query.GetHomePageUc
 import com.kiva.application.usecase.catalog.CategoryMenu
 import com.kiva.application.usecase.testimonial.Testimonials
@@ -839,6 +842,11 @@ val useCaseModule = module(createdAtStart = true) {
             campaignRepository = get(), campaignShowcases = get(), testimonialRepository = get(), testimonials = get(), clock = get(),
         )
     }
+
+    // --- contact and newsletter (phase 13) ---
+    single { TicketCodeGenerator() }
+    single { ListContactTopicsUc() }
+    single { CreateContactMessageUc(transactionManager = get(), contactMessageRepository = get(), ticketCodeGenerator = get(), clock = get()) }
 
     // --- wishlist (phase 9) ---
     single { WishlistHearts.of(get()) }

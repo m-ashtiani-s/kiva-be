@@ -97,6 +97,10 @@ import com.kiva.infrastructure.httpserver.controller.httprest.web.ReviewUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.OTP_SEND_RATE_LIMIT
 import com.kiva.infrastructure.httpserver.controller.httprest.web.PaymentUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.TRACKING_LOOKUP_RATE_LIMIT
+import com.kiva.infrastructure.httpserver.controller.httprest.web.CONTACT_RATE_LIMIT
+import com.kiva.infrastructure.httpserver.controller.httprest.web.ContactUseCases
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Contact
+import com.kiva.domain.aggregate.contact.model.policy.ContactPolicy
 import com.kiva.infrastructure.httpserver.controller.httprest.web.TrackingUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.devFakeGateway
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Addresses
@@ -197,6 +201,10 @@ fun Application.configureHttp(allowedOrigins: List<String> = emptyList(), truste
         }
         register(TRACKING_LOOKUP_RATE_LIMIT) {
             rateLimiter(limit = TRACKING_LOOKUPS_PER_IP, refillPeriod = TRACKING_LOOKUP_WINDOW)
+            requestKey { call -> call.request.origin.remoteAddress }
+        }
+        register(CONTACT_RATE_LIMIT) {
+            rateLimiter(limit = ContactPolicy.MAX_PER_IP, refillPeriod = ContactPolicy.IP_WINDOW.toKotlinDuration())
             requestKey { call -> call.request.origin.remoteAddress }
         }
     }
@@ -370,6 +378,7 @@ fun Application.configureRouting() {
             webV1Wishlist(WishlistUseCases(get(), get(), get(), get(), get(), get(), getCartUc, get(), get(), get()), mediaUrls, config.shop.siteUrl)
             webV1SharedWishlist(get(), mediaUrls)
             webV1Tracking(TrackingUseCases(get(), get(), get()), mediaUrls)
+            webV1Contact(ContactUseCases(get(), get()))
         }
     }
 }
