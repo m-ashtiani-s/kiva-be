@@ -101,7 +101,7 @@
 | ۹ | ۹.۰ تا ۹.۵ | 🔧 ریپو آماده؛ دور واقعی و merge با تو (`WISHLIST_REVIEW.md`) |
 | ۱۰ | ۱۰.۰ تا ۱۰.۴ | 🔧 ریپو آماده؛ الگوی فراز، دور واقعی و merge با تو (`STOCK_ALERTS_REVIEW.md`) |
 | ۱۱ | ۱۱.۰ تا ۱۱.۷ | 🔧 ریپو آماده؛ دور واقعی و merge با تو (`MARKETING_REVIEW.md`) |
-| ۱۲ | ۱۲.۰ تا ۱۲.۳ | ⬜ |
+| ۱۲ | ۱۲.۰ تا ۱۲.۳ | 🔧 ریپو آماده؛ nginx، دور واقعی و merge با تو (`SEARCH_REVIEW.md`) |
 | ۱۳ | ۱۳.۰ تا ۱۳.۵ | ⬜ |
 | ۱۴ | ۱۴.۰ تا ۱۴.۴ | ⬜ |
 | ۱۵ | ۱۵.۰ تا ۱۵.۵ | ⬜ |
@@ -5160,7 +5160,7 @@ Route: respondResultCacheable؛ همه‌ی کارت‌ها با isWishlisted = 
 | ۱۲.۰ | کانترکت 1.18.0 | S | ✅ |
 | ۱۲.۱ | تطابق، رتبه و هایلایت | M | ✅ |
 | ۱۲.۲ | `GET /search/suggest` | M | ✅ |
-| ۱۲.۳ | `GET /search/hints` و ریویو | S | ⬜ |
+| ۱۲.۳ | `GET /search/hints` و ریویو | S | ✅ |
 
 ### ۱۷.۲ تصمیم‌های این فاز
 
@@ -5299,15 +5299,18 @@ Route: 200
 
 ---
 
-#### گام ۱۲.۳: `GET /search/hints` و ریویو · S ⬜
+#### گام ۱۲.۳: `GET /search/hints` و ریویو · S ✅
 
 **می‌سازی:** `GetSearchHintsUc` و route؛ `SEARCH_REVIEW.md` (خرابکاری: escape ِ اسم، فیلتر منتشرشده، قانون AND)؛ `limit_req` ِ nginx برای `/api/v1/search/suggest` (گام ۶.۵)؛ `docs/FRONTEND_SEARCH.md` (debounce، `query` رو escape‌شده نشون بده، `nameHighlighted` فقط با `<mark>`)؛ merge.
 
 وابسته به: ۱۲.۲
 
 **تموم شده یعنی:**
-- [ ] `hints` با کانترکت؛ `304` با `If-None-Match`؛ رنگی که هیچ محصول منتشرشده‌ای نداره نمیاد.
-- [ ] خرابکاری‌ها قرمز می‌کنن؛ merge به `main` و deploy.
+- [x] `hints` با کانترکت؛ `304` با `If-None-Match`؛ رنگی که هیچ محصول منتشرشده‌ای نداره نمیاد.
+- [x] خرابکاری‌ها قرمز می‌کنن (ده نگهبان، جدول `SEARCH_REVIEW.md`).
+- [ ] merge به `main` و deploy: منتظر تو، همراه با قطعه‌ی nginx و دور واقعی با kiva-fe.
+
+**یادداشت پیاده‌سازی:** `GetSearchHintsUc` و `GET /search/hints` با `respondResultCacheable`؛ zone ِ `kiva_search` (۱۰ در ثانیه، `burst=20`) در `kiva-http.conf` و `api.kivashop.ir.conf` و ردیف جدول `LAUNCH.md`؛ `SEARCH_REVIEW.md` (ده خرابکاری که با یه اسکریپت دوباره رفتن و همه قرمز کردن؛ دو تست قوی‌تر شدن چون نگهبانشون رو نمی‌دیدن)؛ `docs/FRONTEND_SEARCH.md`. تست: یه تست تازه در `WebV1SearchOnDatabaseTest` (شکل، پیشنهادهای دستی، رنگ ِ فقط پیش‌نویس نمیاد، `304`). کل مجموعه با `--rerun-tasks`: ۳۰۱۴ تست سبز، ۵ skip. فاز ۱۲ از طرف ریپو کامله؛ nginx، دور واقعی و merge منتظر تو.
 
 ---
 
@@ -6462,3 +6465,4 @@ kiva {
 | ۱ آبان ۱۴۰۵ | ۱۲.۰ | Phase 12 step 12.0 | کانترکت 1.18.0 با هر چهار ردیف ِ ۱۷.۷ و `required` ِ شِماهای جستجو؛ متن `SEARCH_QUERY_EMPTY`. برنچ `search` از نوک فاز ۱۱ |
 | ۱ آبان ۱۴۰۵ | ۱۲.۱ | Phase 12 step 12.1 | تطابق و هایلایت: `V37` (تابع SQL ِ نرمال‌سازی، `searchName`، پیشنهادهای دستی)، `SearchQueryPolicy`، `MatchRanges` ِ مشترک با سؤالات متداول. دو تصمیم تازه (۱۵ و ۱۶). سه خرابکاری قرمز. ۳۰۰۹ تست سبز |
 | ۱ آبان ۱۴۰۵ | ۱۲.۲ | Phase 12 step 12.2 | `GET /search/suggest`: نمونه‌ی ۱۷.۶ عیناً، رتبه، خطاها، فقط منتشرشده‌ها، همون شمارش `GET /products?q=`. یه تصمیم تازه (۱۷). پنج خرابکاری قرمز (یکی بعد از قوی‌تر شدن تست). ۳۰۱۳ تست سبز |
+| ۱ آبان ۱۴۰۵ | ۱۲.۳ | Phase 12 step 12.3 | `GET /search/hints` (کش، پیشنهادهای دستی)، محدودیت nginx ِ جستجو، `SEARCH_REVIEW.md` (ده خرابکاری، همه قرمز)، `docs/FRONTEND_SEARCH.md`. ۳۰۱۴ تست سبز، ۵ skip. فاز ۱۲ از طرف ریپو کامله؛ nginx، دور واقعی و merge منتظر تو |

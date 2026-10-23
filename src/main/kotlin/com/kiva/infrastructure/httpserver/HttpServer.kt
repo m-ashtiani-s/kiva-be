@@ -346,7 +346,7 @@ fun Application.configureRouting() {
             webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, config.shop.siteUrl, mediaUrls)
             webV1ProductInquiry(get())
             webV1Home(HomeUseCases(get(), get(), get(), get(), get()), mediaUrls, config.shop.siteUrl)
-            webV1Search(SearchUseCases(get()), mediaUrls)
+            webV1Search(SearchUseCases(get(), get()), mediaUrls)
             webV1Geo(listProvincesUc, listCitiesOfProvinceUc)
             webV1Content(ContentUseCases(get(), get(), get()), config.shop.siteUrl)
             webV1Addresses(AddressUseCases(listMyAddressesUc, getMyAddressUc, addAddressUc, updateAddressUc, deleteAddressUc, setDefaultAddressUc))

@@ -308,6 +308,7 @@ nginx -t && systemctl reload nginx
 | `/api/v1/tracking/lookup` | ۱۰ در دقیقه، تا ۵ تا (برنامه خودش ۱۰ در ۱۰ دقیقه) |
 | `/api/v1/contact/messages` | ۶ در دقیقه، تا ۳ تا (فاز ۱۳) |
 | `/api/v1/wishlists/shared/` | ۳۰ در دقیقه، تا ۱۰ تا پشت‌سرهم (لینک عمومی علاقه‌مندی، فاز ۹) |
+| `/api/v1/search/suggest` | ۱۰ در ثانیه، تا ۲۰ تا پشت‌سرهم (جستجوی زنده‌ی هدر، فاز ۱۲) |
 
 ۴۲۹ ِ nginx همون Problem ِ برنامه‌ست (`RATE_LIMITED`، `meta.retryAfterSeconds`) با هدرهای CORS، تا فرانت فرقشون رو نفهمه. فهرست origin ِ `map` در `kiva-http.conf` باید همون `KIVA_ALLOWED_ORIGINS` باشه.
 

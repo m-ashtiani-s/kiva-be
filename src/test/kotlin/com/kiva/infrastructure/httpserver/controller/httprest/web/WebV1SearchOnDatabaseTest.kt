@@ -27,6 +27,16 @@ import com.kiva.infrastructure.persistence.exposed.tbl.ProductQmTbl
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
+import com.kiva.domain.aggregate.user.model.valueobject.Role
+import com.kiva.infrastructure.persistence.exposed.tbl.ColorTbl
+import io.ktor.client.request.header
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
+import io.ktor.http.contentType
+import org.jetbrains.exposed.v1.core.like
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -55,6 +65,31 @@ class WebV1SearchOnDatabaseTest {
         panel.deleteWhatWasStored()
         catalog.deleteAll()
         seeded.deleteSeeded()
+        transaction(TestDatabase.database) { ColorTbl.deleteWhere { ColorTbl.colorKey like "tst%" } }
+    }
+
+    @Test
+    fun `the hints - menu categories with products, colours a product in the shop comes in, the typed queries - cached with 304`() = panel.app {
+        val admin = panel.callerWith(Role.ADMIN)
+        val made = client.post("$API_V1/admin/colors") {
+            header(HttpHeaders.Authorization, admin.bearer)
+            contentType(ContentType.Application.Json)
+            setBody("""{"key":"tst-draft-only","name":"فقط پیش‌نویس","hex":"#123456","sortOrder":0}""")
+        }
+        assertEquals(HttpStatusCode.Created, made.status, made.bodyAsText())
+        catalog.newProduct(listOf(NewColor("tst-draft-only")))
+
+        val response = client.get("$API_V1/search/hints")
+        assertEquals(HttpStatusCode.OK, response.status)
+        val hints = response.json()
+        assertEquals(ContractSchemas.propertiesOf("SearchHints"), hints.keys)
+        assertEquals(listOf("کیف مجلسی", "کوله دانشگاه", "کراس‌بادی مشکی"), hints.getValue("popularQueries").jsonArray.map { it.jsonPrimitive.content })
+        val colors = hints.getValue("colors").jsonArray.map { it.jsonObject.text("key") }
+        assertTrue("black" in colors && "tst-draft-only" !in colors, "$colors")
+        assertTrue(hints.getValue("categories").jsonArray.size in 1..8)
+
+        val again = client.get("$API_V1/search/hints") { header(HttpHeaders.IfNoneMatch, response.headers[HttpHeaders.ETag]!!) }
+        assertEquals(HttpStatusCode.NotModified, again.status)
     }
 
     private suspend fun ApplicationTestBuilder.suggest(q: String, limit: String? = null): HttpResponse =
