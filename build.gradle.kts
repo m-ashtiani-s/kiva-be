@@ -40,6 +40,7 @@ dependencies {
     implementation(libs.ktor.server.auth.jwt)
     implementation(libs.ktor.server.forwarded.header)
     implementation(libs.jsoup)
+    implementation(libs.angus.mail)
     implementation(libs.ktor.serialization.kotlinx.json)
     // The payment gateway (Zarinpal), called server to server.
     implementation(libs.ktor.client.core)

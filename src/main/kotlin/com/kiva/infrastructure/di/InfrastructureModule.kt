@@ -9,6 +9,10 @@ import com.kiva.application.port.OtpCodes
 import com.kiva.application.port.PaymentGateways
 import com.kiva.application.port.SessionTokens
 import com.kiva.application.port.SmsSender
+import com.kiva.application.port.EmailSender
+import com.kiva.infrastructure.email.EmailProvider
+import com.kiva.infrastructure.email.LogEmailSender
+import com.kiva.infrastructure.email.SmtpEmailSender
 import com.kiva.common.transaction.TransactionManager
 import com.kiva.domain.aggregate.product.model.valueobject.HtmlSanitizer
 import com.kiva.infrastructure.auth.HmacOtpCodes
@@ -53,6 +57,12 @@ fun infrastructureModule(config: AppConfig, database: Database) = module {
         when (config.sms.provider) {
             SmsProvider.LOG -> LogSmsSender()
             SmsProvider.FARAZ -> FarazSmsSender(checkNotNull(config.sms.faraz), CIO.create())
+        }
+    }
+    single<EmailSender> {
+        when (config.email.provider) {
+            EmailProvider.LOG -> LogEmailSender()
+            EmailProvider.SMTP -> SmtpEmailSender(checkNotNull(config.email.smtp))
         }
     }
     // The scheduled jobs; started by Application.start once the app has started, when kiva.jobs.enabled.

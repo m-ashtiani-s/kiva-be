@@ -5328,7 +5328,7 @@ Route: 200
 | گام | عنوان | اندازه | وضعیت |
 |---|---|---|---|
 | ۱۳.۰ | کانترکت 1.19.0 | S | ✅ |
-| ۱۳.۱ | پورت ایمیل: لاگ و SMTP | M | ⬜ |
+| ۱۳.۱ | پورت ایمیل: لاگ و SMTP | M | ✅ |
 | ۱۳.۲ | موضوع‌ها و ثبت پیام تماس | M | ⬜ |
 | ۱۳.۳ | پیام‌های تماس در پنل و پاسخ | M | ⬜ |
 | ۱۳.۴ | خبرنامه | M | ⬜ |
@@ -5509,7 +5509,7 @@ Route: 200 با AdminContactMessage
 
 ---
 
-#### گام ۱۳.۱: پورت ایمیل: لاگ و SMTP · M ⬜
+#### گام ۱۳.۱: پورت ایمیل: لاگ و SMTP · M ✅
 
 **می‌سازی:** `EmailSender`، `LogEmailSender`، `SmtpEmailSender`، `EmailConfig` (`kiva.email.provider` = `log` | `smtp`؛ `smtp.host`، `port` (۵۸۷)، `username`، `password`، `from`، `startTls`)؛ وابستگی Angus Mail در `build.gradle.kts`؛ انتخاب پیاده‌سازی در `InfrastructureModule`؛ `RecordingEmailSender`؛ README (پیکربندی SMTP روی سرور، رمز با `read -rsp`).
 
@@ -5520,9 +5520,11 @@ Route: 200 با AdminContactMessage
 - چرا متن ساده؟ ایمیل HTML قالب، تست چند کلاینت و پاک‌سازی لازم داره و این‌جا ارزشش رو نداره.
 
 **تموم شده یعنی:**
-- [ ] `provider = log` ← لاگ با ایمیل ماسک‌شده (`s***@example.com`)، بدون متن.
-- [ ] `SmtpEmailSender` با یه سرور SMTP ِ آزمایشی در تست (GreenMail یا یه سوکت ساده) ← ایمیل با موضوع و متن UTF-8 درست؛ `assumeTrue` اگه پورت آزاد نیست.
-- [ ] `provider = smtp` بدون `host` ← برنامه با پیام روشن بالا نمیاد.
+- [x] `provider = log` ← لاگ با ایمیل ماسک‌شده (`s***@example.com`)، بدون متن.
+- [x] `SmtpEmailSender` با یه سرور SMTP ِ آزمایشی در تست (GreenMail یا یه سوکت ساده) ← ایمیل با موضوع و متن UTF-8 درست؛ `assumeTrue` اگه پورت آزاد نیست.
+- [x] `provider = smtp` بدون `host` ← برنامه با پیام روشن بالا نمیاد.
+
+**یادداشت پیاده‌سازی:** `EmailSender` در `application/port`؛ `EmailConfig` (`kiva.email.provider` = `log` | `smtp`؛ ناشناخته، `smtp` بدون `KIVA_SMTP_HOST` یا `KIVA_SMTP_FROM`، نصف ِ ورود (`username` بی `password`)، پورت بیرون از ۱ تا ۶۵۵۳۵ یا غلط ِ `startTls` ← برنامه با پیامی که اسم متغیر رو می‌بره بالا نمیاد؛ `toString` رمز رو `***` نشون می‌ده)؛ `LogEmailSender` (WARN با ایمیل ماسک‌شده و موضوع، هیچ‌وقت متن)؛ `SmtpEmailSender` (Angus Mail 2.0.3، `STARTTLS` ِ اجباری مگه خاموش، timeout ِ ۱۰ ثانیه، UTF-8، روی `Dispatchers.IO`)؛ انتخاب در `InfrastructureModule`؛ `application.conf`، `kiva.env.example` و بخش «Email» ِ README (رمز با `read -rsp` و `set-env.sh --secret`)؛ `RecordingEmailSender`. سرور آزمایشی ِ تست یه سوکت ساده‌ست (چند خط SMTP)، نه GreenMail: یه وابستگی کمتر. تست: `EmailSendersTest` (۳)، چهار تست تازه در `AppConfigTest`. ۱۳ خرابکاری (host و from ِ اجباری، `startTls` ِ سخت‌گیر و پیش‌فرضش، نصف ِ ورود، بازه‌ی پورت، رمز در `toString`، provider ِ ناشناخته، متن یا ایمیل کامل در لاگ، charset ِ موضوع و متن، گیرنده) همه قرمز. کل مجموعه با `--rerun-tasks`: ۳۰۲۱ تست سبز، ۵ skip.
 
 ---
 
@@ -6469,3 +6471,4 @@ kiva {
 | ۱ آبان ۱۴۰۵ | ۱۲.۲ | Phase 12 step 12.2 | `GET /search/suggest`: نمونه‌ی ۱۷.۶ عیناً، رتبه، خطاها، فقط منتشرشده‌ها، همون شمارش `GET /products?q=`. یه تصمیم تازه (۱۷). پنج خرابکاری قرمز (یکی بعد از قوی‌تر شدن تست). ۳۰۱۳ تست سبز |
 | ۱ آبان ۱۴۰۵ | ۱۲.۳ | Phase 12 step 12.3 | `GET /search/hints` (کش، پیشنهادهای دستی)، محدودیت nginx ِ جستجو، `SEARCH_REVIEW.md` (ده خرابکاری، همه قرمز)، `docs/FRONTEND_SEARCH.md`. ۳۰۱۴ تست سبز، ۵ skip. فاز ۱۲ از طرف ریپو کامله؛ nginx، دور واقعی و merge منتظر تو |
 | ۱ آبان ۱۴۰۵ | ۱۳.۰ | Phase 13 step 13.0 | کانترکت 1.19.0 با هر ۹ ردیف ِ ۱۸.۸ و `required` ِ شِماهای تماس؛ متن سه کد تازه و `UNSUBSCRIBE_TOKEN_INVALID`. برنچ `contact` از نوک فاز ۱۲ |
+| ۱ آبان ۱۴۰۵ | ۱۳.۱ | Phase 13 step 13.1 | پورت ایمیل: `LogEmailSender` (پیش‌فرض) و `SmtpEmailSender` (Angus Mail)، `EmailConfig` با چک‌های بوت، README و `kiva.env.example`. ۱۳ خرابکاری قرمز. ۳۰۲۱ تست سبز، ۵ skip |

@@ -54,6 +54,20 @@ openssl rand -base64 32
 With the `log` provider, the code of `POST /api/v1/auth/otp/send` (and the two codes of a phone change) is in the log,
 on a `WARN` line from `LogSmsSender`. Tests use their own fixed secrets and need none of these.
 
+### Email
+
+`KIVA_EMAIL_PROVIDER=log` (the default) sends nothing: a `WARN` line names the masked recipient and the subject, never the
+text. The shop works without an email provider; a reply to a contact message by email and the newsletter's welcome mail are
+then only in the log. With `smtp`:
+
+| Variable | What |
+| --- | --- |
+| `KIVA_SMTP_HOST` | Required with `smtp`: the server's host. The app doesn't start without it. |
+| `KIVA_SMTP_PORT` | Default `587`. |
+| `KIVA_SMTP_USERNAME`, `KIVA_SMTP_PASSWORD` | Optional together: the login. The password is a secret: set it on the server with `sudo tools/ops/set-env.sh --secret KIVA_SMTP_PASSWORD` (typed, not shown), never in git; it is in no log and no `toString`. |
+| `KIVA_SMTP_FROM` | Required with `smtp`: the sender, a bare address such as `noreply@kivashop.ir`. |
+| `KIVA_SMTP_STARTTLS` | Default `true` (STARTTLS required); `false` only for a local test server. |
+
 ### SMS through Faraz SMS
 
 With `KIVA_SMS_PROVIDER=faraz`, every SMS is a pattern approved in the Faraz SMS panel, sent through its web service

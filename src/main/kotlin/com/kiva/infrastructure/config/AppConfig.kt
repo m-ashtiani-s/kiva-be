@@ -2,6 +2,7 @@ package com.kiva.infrastructure.config
 
 import com.kiva.common.valueobject.IranianMobileNumber
 import com.kiva.infrastructure.auth.sms.FarazSmsConfig
+import com.kiva.infrastructure.email.EmailConfig
 import com.kiva.infrastructure.media.MediaConfig
 import com.kiva.infrastructure.payment.PaymentConfig
 import com.kiva.infrastructure.payment.PaymentProvider
@@ -21,6 +22,7 @@ data class AppConfig(
     val payment: PaymentConfig = PaymentConfig.DEFAULT,
     val jobs: JobsConfig = JobsConfig(enabled = false),
     val media: MediaConfig = MediaConfig.DEFAULT,
+    val email: EmailConfig = EmailConfig.LOG,
 ) {
     companion object {
         fun from(config: ApplicationConfig): AppConfig {
@@ -46,6 +48,7 @@ data class AppConfig(
                     trustedProxyHops = config.property("kiva.http.trustedProxyHops").getString().toInt(),
                 ),
                 sms = SmsConfig.from(config),
+                email = EmailConfig.from(config),
                 payment = PaymentConfig(
                     provider = PaymentProvider.of(config.property("kiva.payment.provider").getString()),
                     callbackBaseUrl = config.property("kiva.payment.callbackBaseUrl").getString(),

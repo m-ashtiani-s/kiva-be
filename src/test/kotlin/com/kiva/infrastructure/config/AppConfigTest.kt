@@ -1,6 +1,8 @@
 package com.kiva.infrastructure.config
 
 import com.kiva.domain.aggregate.settings.model.valueobject.PaymentGatewayCode
+import com.kiva.infrastructure.email.EmailConfig
+import com.kiva.infrastructure.email.EmailProvider
 import com.kiva.infrastructure.payment.PaymentProvider
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigResolveOptions
@@ -314,5 +316,60 @@ class AppConfigTest {
 
         assertEquals("http://localhost:8080/media", media.publicBaseUrl)
         assertTrue(media.serveLocally)
+    }
+
+    private val smtp = arrayOf(
+        "kiva.email.provider" to "smtp",
+        "kiva.email.smtp.host" to "smtp.example.com",
+        "kiva.email.smtp.username" to "kiva",
+        "kiva.email.smtp.password" to "smtp-secret-1234",
+        "kiva.email.smtp.from" to "noreply@kivashop.ir",
+    )
+
+    @Test
+    fun `emails go to the log unless smtp is chosen, and smtp is read with its port 587 and STARTTLS by default`() {
+        assertEquals(EmailConfig.LOG, read().email)
+
+        val settings = assertNotNull(read(*smtp).email.smtp)
+        assertEquals(EmailProvider.SMTP, read(*smtp).email.provider)
+        assertEquals(listOf("smtp.example.com", "587", "kiva", "noreply@kivashop.ir", "true"), listOf(settings.host, settings.port.toString(), settings.username, settings.from, settings.startTls.toString()))
+        assertEquals(465, read(*smtp, "kiva.email.smtp.port" to "465").email.smtp?.port)
+        assertEquals(false, read(*smtp, "kiva.email.smtp.startTls" to "false").email.smtp?.startTls)
+    }
+
+    @Test
+    fun `smtp without its host or sender, with half a login, a bad port, a STARTTLS typo or an unknown provider stops the boot`() {
+        assertTrue("KIVA_SMTP_HOST" in refusal(*smtp, "kiva.email.smtp.host" to null))
+        assertTrue("KIVA_SMTP_HOST" in refusal(*smtp, "kiva.email.smtp.host" to "  "))
+        assertTrue("KIVA_SMTP_FROM" in refusal(*smtp, "kiva.email.smtp.from" to null))
+        assertTrue("KIVA_SMTP_PASSWORD" in refusal(*smtp, "kiva.email.smtp.password" to null))
+        assertTrue("KIVA_SMTP_PORT" in refusal(*smtp, "kiva.email.smtp.port" to "smtp"))
+        assertTrue("KIVA_SMTP_PORT" in refusal(*smtp, "kiva.email.smtp.port" to "70000"))
+        assertTrue("yes" in refusal(*smtp, "kiva.email.smtp.startTls" to "yes"))
+        assertTrue("mailgun" in refusal("kiva.email.provider" to "mailgun"))
+    }
+
+    @Test
+    fun `the SMTP password never shows when the settings are printed`() {
+        val printed = read(*smtp).toString()
+
+        assertFalse("smtp-secret-1234" in printed)
+        assertTrue("password=***" in printed)
+    }
+
+    @Test
+    fun `application conf sends emails to the log, and reads smtp from the environment with its defaults`() {
+        val file = ConfigFactory.parseResources("application.conf")
+        val noEnvironment = ConfigResolveOptions.noSystem()
+        val secrets = mapOf("kiva.auth.otpPepper" to valid.getValue("kiva.auth.otpPepper"), "kiva.auth.jwtSecret" to valid.getValue("kiva.auth.jwtSecret"))
+        assertEquals(EmailConfig.LOG, AppConfig.from(HoconApplicationConfig(ConfigFactory.parseMap(secrets).withFallback(file).resolve(noEnvironment))).email)
+
+        val chosen = secrets + ("kiva.email.provider" to "smtp")
+        val withoutHost = HoconApplicationConfig(ConfigFactory.parseMap(chosen).withFallback(file).resolve(noEnvironment))
+        assertTrue("KIVA_SMTP_HOST" in assertFailsWith<IllegalArgumentException> { AppConfig.from(withoutHost) }.message.orEmpty())
+
+        val complete = chosen + ("kiva.email.smtp.host" to "smtp.example.com") + ("kiva.email.smtp.from" to "noreply@kivashop.ir")
+        val settings = assertNotNull(AppConfig.from(HoconApplicationConfig(ConfigFactory.parseMap(complete).withFallback(file).resolve(noEnvironment))).email.smtp)
+        assertEquals(listOf("587", "true", "null"), listOf(settings.port.toString(), settings.startTls.toString(), settings.username.toString()))
     }
 }
