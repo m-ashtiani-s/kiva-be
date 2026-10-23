@@ -4806,7 +4806,7 @@ url (تلگرام با آدرس https://t.me/kiva_shop) = https://t.me/kiva_shop
 | ۱۱.۱ | کمپین: جدول، دامنه و CRUD ِ پنل | M | ✅ |
 | ۱۱.۲ | کمپین در فروشگاه: `/campaigns/active`، فیلتر `campaign`، شمارنده‌ی صفحه‌ی محصول | M | ✅ |
 | ۱۱.۳ | بنرها | M | ✅ |
-| ۱۱.۴ | پیام‌های رضایت | M | ⬜ |
+| ۱۱.۴ | پیام‌های رضایت | M | ✅ |
 | ۱۱.۵ | آمار سایت و خلاصه‌ی رضایت | S | ⬜ |
 | ۱۱.۶ | `GET /home` | M | ⬜ |
 | ۱۱.۷ | ریویو و دور با پنل و kiva-fe | S | ⬜ |
@@ -4841,6 +4841,7 @@ url (تلگرام با آدرس https://t.me/kiva_shop) = https://t.me/kiva_shop
 | 24 | مدل `sitecontent` (تازه، گام ۱۱.۱) | چون `SiteContentDocument` سخت‌گیرانه خونده می‌شه، کلید `home` ِ `V36` همون گام به مدل (و `SiteContentQm.home`) اضافه می‌شه، نه در ۱۱.۶. متن‌های خانه از `index.html` ِ پروتوتایپ (سه مرحله‌ی «چطور کار می‌کنیم»؛ «رزرو {holdDays} روزه» و «{returnWindowDays} روز ضمانت بازگشت» با جای‌گذاری تنظیمات) | کلید ناشناخته `/config` رو می‌شکست |
 | 25 | `LiveCampaign` (تازه، گام ۱۱.۲) | مثل `WishlistHearts` یه `fun interface` با `NONE`: `scope(filter, now)` فیلتر `campaign` رو به `campaignProductIds` (و `onSale`) تبدیل می‌کنه و `showing(productId, discounted, now)` نشونه‌ی صفحه‌ی محصول رو می‌ده. لیست **و** شمارنده‌های فیلتر (`facets`) هر دو با فیلتر محدودشده حساب می‌شن. کمپینی که الان نیست ← `campaignProductIds` ِ خالی ← لیست خالی. چیپ `campaign` (و عنوان لیست) فقط وقتی کمپین فعاله؛ `onSale` ِ ضمنی چیپ نمی‌گیره | شمارنده‌ها با لیست یکی بمونن |
 | 26 | فرم بنر (تازه، گام ۱۱.۳) | جایگاه ناشناخته ← `400 BANNER_PLACEMENT_INVALID`، رنگ‌بندی ← `400 BANNER_THEME_INVALID`، شبکه‌ی `overlayChannel` ← `400 SOCIAL_CHANNEL_INVALID`؛ `CTA_INCOMPLETE` روی همون نیمه‌ای که نیومده؛ `tagIcon` بی `tagLabel` نادیده (`tag = null`)؛ همه‌ی `overlay*` خالی ← `overlay = null`. `OpenWindow` ِ تازه در `common` (بازه‌ی باز) و اطلاعیه‌های فاز ۵ هم ازش استفاده می‌کنن. یه UseCase برای هر فایل، مثل بقیه‌ی پروژه | کانترکت فقط `enum` داشت؛ یه قانون بازه در یه جا |
+| 27 | پیام رضایت (تازه، گام ۱۱.۴) | ساعت پیام فقط ساعت واقعی (`00:00` تا `23:59`، ارقام فارسی هم) ← وگرنه `400 MESSAGE_TIME_INVALID`؛ متن ساده: خط تازه نگه داشته، نویسه‌ی کنترلی دیگه ← `400 TEXT_INVALID`؛ رنگ باید رنگی از همون محصول باشه، فعال یا نه (`findAdminDetail`). **لاگ تغییرات:** `entityLabel` = «#شناسه» (اسم مشتری نه)، `customerName` فقط اسمش (`hidden`)، `message` فقط «عوض شد» (`longText`). `summary` ِ `GET /testimonials` همین گام (پاسخش از فاز ۴ آماده بود)؛ گام ۱۱.۵ فقط `/site/stats`. «عوض کردن کلید رنگ» از API ممکن نیست (کلید رنگ تغییرناپذیره، فاز ۱)، پس `ON UPDATE CASCADE` فقط دیوار SQL ـه و تست API نداره | داده‌ی شخصی کمتر در لاگ؛ قانون موجود رنگ |
 
 ### ۱۶.۳ تغییرات دامنه
 
@@ -5087,16 +5088,18 @@ Route: respondResultCacheable؛ همه‌ی کارت‌ها با isWishlisted = 
 
 ---
 
-#### گام ۱۱.۴: پیام‌های رضایت · M ⬜
+#### گام ۱۱.۴: پیام‌های رضایت · M ✅
 
 **می‌سازی:** `V36` (بخش پیام رضایت)؛ `Testimonial`، repository؛ پنج UseCase؛ routeها؛ گسترش شمارش «در استفاده» ِ `DeleteColorUc`.
 
 وابسته به: ۱۱.۰
 
 **تموم شده یعنی:**
-- [ ] رنگ محصول دیگه ← `400 COLOR_NOT_FOUND`؛ پیام ۵۰۱ نویسه ← `400`.
-- [ ] منتشرنشده تو `GET /testimonials` نیست؛ ترتیب تصمیم ۱۲.
-- [ ] حذف رنگی که پیام رضایت داره ← `409 IN_USE`؛ عوض کردن کلید رنگ ← پیام رضایت با کلید تازه.
+- [x] رنگ محصول دیگه ← `400 COLOR_NOT_FOUND`؛ پیام ۵۰۱ نویسه ← `400`.
+- [x] منتشرنشده تو `GET /testimonials` نیست؛ ترتیب تصمیم ۱۲.
+- [x] حذف رنگی که پیام رضایت داره ← `409 IN_USE` (با `meta.testimonialCount`). «عوض کردن کلید رنگ»: تصمیم ۲۷ (کلید از API عوض نمی‌شه).
+
+**یادداشت پیاده‌سازی:** یه تصمیم تازه (۲۷). دامنه: `Testimonial`، `TestimonialDraft` (همه‌ی خطاها با هم، `DATE_IN_FUTURE`، `MESSAGE_TIME_INVALID`)، `TestimonialId`، `TestimonialRepository` (`page` با ترتیب تصمیم ۱۲، `countWithColor`)؛ `TestimonialRepositoryImpl`؛ `TestimonialFields`، `TestimonialReferences` (محصول غیربایگانی و رنگ همون محصول)، `Testimonials` (محصول، رنگ و اسکرین‌شات با سه خوندن)؛ شش UseCase؛ `GET /testimonials` (با `summary` ِ دستی) و `/admin/testimonials*`؛ `MarketingTexts.sourceName`؛ `DeleteColorUc` پیام‌های رضایت رو هم می‌شمره. تست: `WebV1TestimonialsOnDatabaseTest` (۵). خرابکاری: لیست عمومی با منتشرنشده‌ها ← «the shop - only the published ones …» قرمز؛ بدون چک رنگ محصول و بدون چک آینده ← تست فرم قرمز؛ بدون شمارش در `DeleteColorUc` ← «a colour a testimonial names …» قرمز. کل مجموعه با `--rerun-tasks`: ۲۹۹۴ تست سبز، ۵ skip.
 
 ---
 
@@ -6435,3 +6438,4 @@ kiva {
 | ۱ آبان ۱۴۰۵ | ۱۱.۱ | Phase 11 step 11.1 | کمپین: `V36` ِ کامل، دامنه، قفل `campaigns` با `EXCLUDE` به‌عنوان دیوار آخر، CRUD ِ پنل با لاگ، `campaignShowcase`. چهار تصمیم تازه (۲۱ تا ۲۴). چهار خرابکاری قرمز. ۲۹۷۸ تست سبز |
 | ۱ آبان ۱۴۰۵ | ۱۱.۲ | Phase 11 step 11.2 | کمپین در فروشگاه: `/campaigns/active`، فیلتر `campaign` در لیست و شمارنده‌ها، شمارنده‌ی صفحه‌ی محصول؛ قیمت‌ها دست‌نخورده. یه تصمیم تازه (۲۵). پنج خرابکاری قرمز. ۲۹۸۲ تست سبز |
 | ۱ آبان ۱۴۰۵ | ۱۱.۳ | Phase 11 step 11.3 | بنرها: فرم پنل (عکس `BANNER` اجباری، دکمه‌ی کامل، لینک امن)، `GET /banners` با بازه و ترتیب، لاگ تغییرات؛ `OpenWindow` ِ مشترک. یه تصمیم تازه (۲۶). سه خرابکاری قرمز. ۲۹۸۹ تست سبز |
+| ۱ آبان ۱۴۰۵ | ۱۱.۴ | Phase 11 step 11.4 | پیام‌های رضایت: فرم پنل (رنگ همون محصول، نه از آینده)، `GET /testimonials` (فقط منتشرشده‌ها، ترتیب پنل، خلاصه‌ی دستی)، رنگ در استفاده ← `409`، لاگ بدون اسم و متن. یه تصمیم تازه (۲۷). چهار خرابکاری قرمز. ۲۹۹۴ تست سبز |

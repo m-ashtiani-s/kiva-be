@@ -16,6 +16,7 @@ import com.kiva.common.usecase.CommandUseCase
 import com.kiva.domain.aggregate.category.repository.CategoryRepository
 import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
 import com.kiva.domain.aggregate.color.repository.ColorRepository
+import com.kiva.domain.aggregate.testimonial.repository.TestimonialRepository
 import java.time.Clock
 
 /**
@@ -31,6 +32,7 @@ class DeleteColorUc(
     private val colorRepository: ColorRepository,
     private val categoryRepository: CategoryRepository,
     private val productQmRepository: ProductQmRepository,
+    private val testimonialRepository: TestimonialRepository,
     private val auditTrail: AuditTrail,
     private val clock: Clock,
 ) : CommandUseCase<DeleteColorUc.Cmd, Unit, DeleteColorUc.Failure> {
@@ -47,8 +49,7 @@ class DeleteColorUc(
             val color = colorRepository.findByKey(key) ?: return@inTransaction Result.failure(Failure.NotFound)
             val products = productQmRepository.countAllWithColor(key)
             val categories = categoryRepository.countWithIcon(key)
-            // Testimonials name a color from phase 11 on; until then nothing else can.
-            val testimonials = 0
+            val testimonials = testimonialRepository.countWithColor(key)
             if (products + categories + testimonials > 0) return@inTransaction Result.failure(Failure.InUse(products, categories, testimonials))
             try {
                 colorRepository.delete(key)

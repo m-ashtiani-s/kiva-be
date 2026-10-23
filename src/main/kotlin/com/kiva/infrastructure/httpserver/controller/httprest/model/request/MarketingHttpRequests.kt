@@ -2,6 +2,7 @@ package com.kiva.infrastructure.httpserver.controller.httprest.model.request
 
 import com.kiva.application.usecase.banner.BannerFields
 import com.kiva.application.usecase.campaign.CampaignFields
+import com.kiva.application.usecase.testimonial.TestimonialFields
 import kotlinx.serialization.Serializable
 
 /**
@@ -21,6 +22,27 @@ data class CampaignUpsertHttpRequest(
     val isActive: Boolean? = null,
 ) {
     fun toFields() = CampaignFields(slug, title, subtitle, icon, startsAt, endsAt, productIds, isActive)
+}
+
+/** Contract schema `TestimonialUpsertRequest`, the body of `POST` and `PUT /admin/testimonials*`; every field nullable with a default. */
+@Serializable
+data class TestimonialUpsertHttpRequest(
+    val customerName: String? = null,
+    val city: String? = null,
+    val source: String? = null,
+    val message: String? = null,
+    val messageTime: String? = null,
+    val receivedAt: String? = null,
+    val rating: Int? = null,
+    val productId: Long? = null,
+    val colorKey: String? = null,
+    val screenshotMediaId: String? = null,
+    val isPublished: Boolean? = null,
+    val sortOrder: Int? = null,
+) {
+    override fun toString(): String = "TestimonialUpsertHttpRequest(productId=$productId)"
+
+    fun toFields() = TestimonialFields(customerName, city, source, message, messageTime, receivedAt, rating, productId, colorKey, screenshotMediaId, isPublished, sortOrder)
 }
 
 /** Contract schema `BannerUpsertRequest`, the body of `POST` and `PUT /admin/banners*`; every field nullable with a default. */

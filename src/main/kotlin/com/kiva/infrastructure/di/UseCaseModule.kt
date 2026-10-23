@@ -15,6 +15,14 @@ import com.kiva.domain.aggregate.stockalert.StockAlertDomainService
 import com.kiva.domain.aggregate.campaign.CampaignDomainService
 import com.kiva.application.usecase.campaign.CampaignProducts
 import com.kiva.application.usecase.banner.Banners
+import com.kiva.application.usecase.testimonial.TestimonialReferences
+import com.kiva.application.usecase.testimonial.Testimonials
+import com.kiva.application.usecase.testimonial.usecase.command.CreateTestimonialUc
+import com.kiva.application.usecase.testimonial.usecase.command.DeleteTestimonialUc
+import com.kiva.application.usecase.testimonial.usecase.command.UpdateTestimonialUc
+import com.kiva.application.usecase.testimonial.usecase.query.GetAdminTestimonialUc
+import com.kiva.application.usecase.testimonial.usecase.query.ListAdminTestimonialsUc
+import com.kiva.application.usecase.testimonial.usecase.query.ListTestimonialsUc
 import com.kiva.application.usecase.banner.usecase.command.CreateBannerUc
 import com.kiva.application.usecase.banner.usecase.command.DeleteBannerUc
 import com.kiva.application.usecase.banner.usecase.command.UpdateBannerUc
@@ -249,7 +257,8 @@ val useCaseModule = module(createdAtStart = true) {
     single { UpdateColorUc(transactionManager = get(), colorRepository = get(), productQmRepository = get(), auditTrail = get(), clock = get()) }
     single {
         DeleteColorUc(
-            transactionManager = get(), colorRepository = get(), categoryRepository = get(), productQmRepository = get(), auditTrail = get(), clock = get(),
+            transactionManager = get(), colorRepository = get(), categoryRepository = get(), productQmRepository = get(), testimonialRepository = get(), auditTrail = get(),
+            clock = get(),
         )
     }
     single { ListAdminMaterialsUc(transactionManager = get(), materialRepository = get(), productQmRepository = get()) }
@@ -789,6 +798,22 @@ val useCaseModule = module(createdAtStart = true) {
     single { CreateBannerUc(transactionManager = get(), bannerRepository = get(), mediaAttachments = get(), auditTrail = get(), clock = get()) }
     single { UpdateBannerUc(transactionManager = get(), bannerRepository = get(), mediaAttachments = get(), auditTrail = get(), clock = get()) }
     single { DeleteBannerUc(transactionManager = get(), bannerRepository = get(), auditTrail = get(), clock = get()) }
+    single { TestimonialReferences(productQmRepository = get()) }
+    single { Testimonials(productQmRepository = get(), colorRepository = get(), mediaRepository = get()) }
+    single { ListTestimonialsUc(transactionManager = get(), testimonialRepository = get(), testimonials = get(), shopSettingsRepository = get()) }
+    single { ListAdminTestimonialsUc(transactionManager = get(), testimonialRepository = get(), testimonials = get()) }
+    single { GetAdminTestimonialUc(transactionManager = get(), testimonialRepository = get(), testimonials = get()) }
+    single {
+        CreateTestimonialUc(
+            transactionManager = get(), testimonialRepository = get(), references = get(), mediaAttachments = get(), auditTrail = get(), clock = get(),
+        )
+    }
+    single {
+        UpdateTestimonialUc(
+            transactionManager = get(), testimonialRepository = get(), references = get(), mediaAttachments = get(), auditTrail = get(), clock = get(),
+        )
+    }
+    single { DeleteTestimonialUc(transactionManager = get(), testimonialRepository = get(), auditTrail = get(), clock = get()) }
 
     // --- wishlist (phase 9) ---
     single { WishlistHearts.of(get()) }

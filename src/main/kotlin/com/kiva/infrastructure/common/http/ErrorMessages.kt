@@ -103,6 +103,7 @@ object ErrorMessages {
         "IMAGE_REQUIRED" to "بنر باید عکس داشته باشه",
         "BANNER_PLACEMENT_INVALID" to "جایگاه بنر باید یکی از HOME_HERO، HOME_PROMO، SHOP_TOP، PRODUCT_SIDEBAR یا BLOG_TOP باشه",
         "BANNER_THEME_INVALID" to "رنگ‌بندی بنر باید یکی از CREAM، PURPLE، LILAC، DARK یا WHITE باشه",
+        "MESSAGE_TIME_INVALID" to "ساعت پیام باید مثل 10:12 باشه",
         "CTA_INCOMPLETE" to "متن دکمه و لینکش رو با هم پر کن، یا هیچ‌کدوم رو",
         "DATE_IN_FUTURE" to "این تاریخ نمی‌تونه بعد از الان باشه",
         "WISHLIST_LIMIT_REACHED" to "لیست علاقه‌مندی‌هات پر شده",

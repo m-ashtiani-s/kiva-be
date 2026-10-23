@@ -2,6 +2,9 @@ package com.kiva.infrastructure.httpserver.controller.httprest.web
 
 import com.kiva.application.usecase.banner.usecase.query.ListBannersUc
 import com.kiva.application.usecase.campaign.usecase.query.GetActiveCampaignUc
+import com.kiva.application.usecase.testimonial.usecase.query.ListTestimonialsUc
+import com.kiva.infrastructure.common.http.pageable
+import com.kiva.infrastructure.httpserver.controller.httprest.model.response.TestimonialListHttpResponse
 import com.kiva.infrastructure.common.http.respondResult
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.BannerHttpResponse
 import com.kiva.common.railway.unwrapOr
@@ -13,15 +16,19 @@ import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 
+/** The one order of the testimonials (the contract has no `sort`). */
+private const val TESTIMONIAL_ORDER = "sortOrder"
+
 /** The use cases of the home page and what it is made of, as the routes need them. */
 class HomeUseCases(
     val activeCampaign: GetActiveCampaignUc,
     val banners: ListBannersUc,
+    val testimonials: ListTestimonialsUc,
 )
 
 /**
- * The home page and its parts (contract tag `Config & Home`), public: the running campaign and the banners of a
- * placement. Mounted under `/api/v1`.
+ * The home page and its parts (contract tag `Config & Home`), public: the running campaign, the banners of a
+ * placement and the testimonials. Mounted under `/api/v1`.
  * Nothing here reads a login, and only `/home` is cached (the countdown's `serverTime` must be fresh).
  */
 fun Route.webV1Home(useCases: HomeUseCases, mediaUrls: MediaUrls) {
@@ -34,5 +41,11 @@ fun Route.webV1Home(useCases: HomeUseCases, mediaUrls: MediaUrls) {
         call.respondResult(useCases.banners.execute(ListBannersUc.Qry(call.request.queryParameters["placement"]))) { list ->
             list.map { BannerHttpResponse.from(it, mediaUrls) }
         }
+    }
+
+    get("/testimonials") {
+        val pageable = call.pageable(allowedSorts = setOf(TESTIMONIAL_ORDER), defaultSort = TESTIMONIAL_ORDER, defaultSize = 20, maxSize = 100)
+            .unwrapOr { return@get call.respondFailure(it) }
+        call.respondResult(useCases.testimonials.execute(ListTestimonialsUc.Qry(pageable))) { TestimonialListHttpResponse.from(it, mediaUrls) }
     }
 }

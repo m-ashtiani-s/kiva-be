@@ -11,6 +11,16 @@ import com.kiva.application.usecase.product.usecase.query.GetProductInquiryUc
 import com.kiva.infrastructure.persistence.exposed.CampaignRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.tbl.CampaignTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.BannerTbl
+import com.kiva.infrastructure.persistence.exposed.tbl.TestimonialTbl
+import com.kiva.infrastructure.persistence.exposed.TestimonialRepositoryImpl
+import com.kiva.application.usecase.testimonial.TestimonialReferences
+import com.kiva.application.usecase.testimonial.Testimonials
+import com.kiva.application.usecase.testimonial.usecase.command.CreateTestimonialUc
+import com.kiva.application.usecase.testimonial.usecase.command.DeleteTestimonialUc
+import com.kiva.application.usecase.testimonial.usecase.command.UpdateTestimonialUc
+import com.kiva.application.usecase.testimonial.usecase.query.GetAdminTestimonialUc
+import com.kiva.application.usecase.testimonial.usecase.query.ListAdminTestimonialsUc
+import com.kiva.application.usecase.testimonial.usecase.query.ListTestimonialsUc
 import com.kiva.infrastructure.persistence.exposed.BannerRepositoryImpl
 import com.kiva.application.usecase.banner.Banners
 import com.kiva.application.usecase.banner.usecase.command.CreateBannerUc
@@ -293,7 +303,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         getColor = GetAdminColorUc(transactions, colors),
         createColor = CreateColorUc(transactions, colors, auditTrail, clock),
         updateColor = UpdateColorUc(transactions, colors, productQm, auditTrail, clock),
-        deleteColor = DeleteColorUc(transactions, colors, categories, productQm, auditTrail, clock),
+        deleteColor = DeleteColorUc(transactions, colors, categories, productQm, TestimonialRepositoryImpl(), auditTrail, clock),
         listMaterials = ListAdminMaterialsUc(transactions, materials, productQm),
         getMaterial = GetAdminMaterialUc(transactions, materials, productQm),
         createMaterial = CreateMaterialUc(transactions, materials, MaterialIdGeneratorImpl(), auditTrail, clock),
@@ -431,7 +441,13 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
     val liveCampaign = LiveCampaign.of(campaignRepository)
     val bannerRepository = BannerRepositoryImpl()
     val banners = Banners(mediaRepository)
-    val home = HomeUseCases(GetActiveCampaignUc(transactions, campaignRepository, campaignShowcases, clock), ListBannersUc(transactions, bannerRepository, banners, clock))
+    val testimonialRepository = TestimonialRepositoryImpl()
+    val testimonialViews = Testimonials(productQm, colors, mediaRepository)
+    val home = HomeUseCases(
+        GetActiveCampaignUc(transactions, campaignRepository, campaignShowcases, clock),
+        ListBannersUc(transactions, bannerRepository, banners, clock),
+        ListTestimonialsUc(transactions, testimonialRepository, testimonialViews, purchase.settings),
+    )
     val adminMarketing = AdminMarketingUseCases(
         checkPanelAccess,
         ListAdminCampaignsUc(transactions, campaignRepository, campaignShowcases, clock),
@@ -444,6 +460,11 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         CreateBannerUc(transactions, bannerRepository, MediaAttachments(mediaRepository), auditTrail, clock),
         UpdateBannerUc(transactions, bannerRepository, MediaAttachments(mediaRepository), auditTrail, clock),
         DeleteBannerUc(transactions, bannerRepository, auditTrail, clock),
+        ListAdminTestimonialsUc(transactions, testimonialRepository, testimonialViews),
+        GetAdminTestimonialUc(transactions, testimonialRepository, testimonialViews),
+        CreateTestimonialUc(transactions, testimonialRepository, TestimonialReferences(productQm), MediaAttachments(mediaRepository), auditTrail, clock),
+        UpdateTestimonialUc(transactions, testimonialRepository, TestimonialReferences(productQm), MediaAttachments(mediaRepository), auditTrail, clock),
+        DeleteTestimonialUc(transactions, testimonialRepository, auditTrail, clock),
     )
 
     // --- wishlist (phase 9) ---
@@ -637,6 +658,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         transaction(db) {
             CampaignTbl.deleteAll()
             BannerTbl.deleteAll()
+            TestimonialTbl.deleteAll()
         }
         purchase.deleteWhatWasStored()
         transaction(db) {
