@@ -14,7 +14,7 @@ object SiteContentTbl : LongIdTable(name = "sitecontent_tbl", columnName = "pId"
     val updatedOn = timestampWithTimeZone("updatedOn")
 }
 
-/** `sitecontent_tbl.document` as V31 wrote it, with V36's `home`; every key required. */
+/** `sitecontent_tbl.document` as V31 wrote it, with V36's `home` and V37's `search`; every key required. */
 @Serializable
 data class SiteContentDocument(
     val brand: Brand,
@@ -27,7 +27,12 @@ data class SiteContentDocument(
     val trustBadges: List<TrustBadge>,
     val footerLinks: List<FooterGroup>,
     val home: Home,
+    val search: Search,
 ) {
+    /** The search panel's suggested queries (V37; roadmap phase 12, decision 13). */
+    @Serializable
+    data class Search(val popularQueries: List<String>)
+
     /** The home page's fixed sections (V36; roadmap phase 11, decision 15). */
     @Serializable
     data class Home(val hero: Hero, val features: List<Perk>, val howItWorks: List<Step>, val showcaseProductId: Long?, val showcaseMessenger: String)
@@ -79,5 +84,6 @@ data class SiteContentDocument(
             showcaseProductId = home.showcaseProductId,
             showcaseMessenger = home.showcaseMessenger,
         ),
+        popularQueries = search.popularQueries,
     )
 }

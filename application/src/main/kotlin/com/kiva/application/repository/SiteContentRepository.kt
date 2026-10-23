@@ -23,6 +23,8 @@ data class SiteContentQm(
     val trustBadges: List<TrustBadge>,
     val footerLinks: List<FooterGroup>,
     val home: Home,
+    /** The search panel's suggested queries, typed by hand (roadmap phase 12, decision 13). */
+    val popularQueries: List<String>,
 ) {
     /**
      * The home page's fixed sections (roadmap phase 11, decision 15).

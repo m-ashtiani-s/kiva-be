@@ -81,6 +81,7 @@ internal object ProductQmSummary {
                 color[ProductVariantQmTbl.media].any { media -> media.isVideo }
             }
             it[searchText] = searchTextOf(product, colorKeys)
+            it[searchName] = product[ProductQmTbl.name].normalizePersian()
             if (updatedOn != null) it[ProductQmTbl.updatedOn] = updatedOn.atOffset(ZoneOffset.UTC)
         }
         check(updated == 1) { "Refreshing product $productId updated $updated rows" }

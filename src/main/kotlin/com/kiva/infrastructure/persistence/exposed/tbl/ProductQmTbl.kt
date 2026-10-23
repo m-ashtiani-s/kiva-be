@@ -22,6 +22,9 @@ object ProductQmTbl : LongIdTable(name = "productqm_tbl", columnName = "pId") {
     val sku = varchar("sku", 80).uniqueIndex()
     val name = varchar("name", 120)
     val searchText = text("searchText")
+
+    /** The name through normalizePersian (V37): the live search puts products whose name has every word first. */
+    val searchName = text("searchName")
     val categorySlug = varchar("categorySlug", 100).references(CategoryTbl.slug)
     val materialSlug = varchar("materialSlug", 100).references(MaterialTbl.slug)
     val bagType = enumerationByName<BagType>("bagType", 20)

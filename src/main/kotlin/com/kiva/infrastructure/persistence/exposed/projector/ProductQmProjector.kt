@@ -141,6 +141,7 @@ object ProductQmProjector {
             it[inStock] = false
             it[hasVideo] = false
             it[searchText] = ""
+            it[searchName] = ""
             it[status] = ProductStatus.DRAFT
             it[createdOn] = event.occurredOn.utc()
             it[updatedOn] = event.occurredOn.utc()

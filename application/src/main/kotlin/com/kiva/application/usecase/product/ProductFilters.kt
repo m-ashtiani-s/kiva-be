@@ -16,6 +16,7 @@ import com.kiva.common.text.normalizePersian
 import com.kiva.common.valueobject.Money
 import com.kiva.common.valueobject.Slug
 import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
+import com.kiva.domain.aggregate.product.model.policy.SearchQueryPolicy
 import com.kiva.domain.aggregate.product.model.valueobject.BagType
 import com.kiva.domain.aggregate.product.model.valueobject.Occasion
 import com.kiva.domain.aggregate.product.model.valueobject.ProductId
@@ -98,11 +99,14 @@ object ProductFilters {
         return Slug.makeNew(text).forField("campaign")
     }
 
-    /** The search text in words, normalized like the read model's searchText: «كيف» typed on an Arabic keyboard finds «کیف». */
+    /**
+     * The search text in words, read as the live search reads it (SearchQueryPolicy): «كيف» typed on an Arabic keyboard
+     * finds «کیف», a half-space splits words, at most 6 of them, and each must be in the product (phase 12, decision 2).
+     */
     private fun wordsOf(q: String?): Result<List<String>, ResultFailure> {
-        val text = q?.trim().orEmpty()
+        val text = SearchQueryPolicy.normalize(q.orEmpty())
         if (text.length > MAX_QUERY_LENGTH) return Result.failure(Problem.SearchTooLong)
-        return Result.success(text.normalizePersian().lowercase().split(' ').filter { it.isNotEmpty() })
+        return Result.success(SearchQueryPolicy.wordsOf(text))
     }
 
     private fun idsOf(raws: List<String>): Result<List<ProductId>, ResultFailure> {
