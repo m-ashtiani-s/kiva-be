@@ -40,6 +40,8 @@ object ErrorMessages {
         "PHONE_ALREADY_REGISTERED" to "این شماره مال یه حساب دیگه‌ست",
         "PHONE_SAME_AS_CURRENT" to "این همین شماره‌ی فعلی حسابته",
         "ACCOUNT_HAS_ACTIVE_ORDERS" to "تا وقتی سفارش جاری داری نمی‌شه حساب رو حذف کرد",
+        "STAFF_ACCOUNT_CANNOT_BE_DELETED" to "حساب کارمند از این‌جا حذف نمی‌شه؛ اول ادمین نقش‌هات رو برداره",
+        "INVOICE_NOT_AVAILABLE" to "رسید خرید بعد از پرداخت سفارش آماده می‌شه",
         "ROLE_CHANGE_NOT_ALLOWED" to "این تغییر نقش مجاز نیست: نقش‌های خودت رو نمی‌تونی عوض کنی، و آخرین ادمین هم باید ادمین بمونه",
         // --- catalog & cart ---
         "PRODUCT_NOT_FOUND" to "این محصول پیدا نشد",

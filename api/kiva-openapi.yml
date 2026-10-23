@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: KIVA Store API — کیوا
-  version: 1.19.0
+  version: 1.20.0
   contact:
     name: KIVA Engineering
     email: support@kiva.ir
@@ -1871,11 +1871,24 @@ paths:
     delete:
       tags: [Account]
       operationId: deleteMe
-      summary: "حذف حساب کاربری (با OTP تأیید) [پیشنهادی — بعد از فاز سفارش]"
+      summary: "حذف حساب کاربری (با OTP تأیید)"
       description: |
-        کد را اول از `POST /me/deletion/request` بگیر. با حذف، اطلاعات شخصی (نام، ایمیل، تولد، پیام‌رسان) پاک،
-        همه‌ی نشست‌ها باطل و شماره آزاد می‌شود؛ سفارش‌های قبلی برای حسابداری بی‌نام می‌مانند.
-        کسی که سفارش جاری دارد (پرداخت‌شده و هنوز تحویل‌نشده، یا رزرو فعال) نمی‌تواند حساب را حذف کند.
+        کد را اول از `POST /me/deletion/request` بگیر (هدف `DELETE_ACCOUNT`؛ کد ورود این‌جا پذیرفته نمی‌شود و برعکس).
+        ترتیب چک‌ها: شکل بدنه (`400`)؛ کارمند (هر نقش پنل) ← `422 STAFF_ACCOUNT_CANNOT_BE_DELETED` (اول ادمین نقش‌ها را بردارد)؛
+        سفارش جاری ← `422 ACCOUNT_HAS_ACTIVE_ORDERS` با `meta.orderCodes`؛ **بعد** کد (پس کدی که به‌خاطر سفارش جاری رد شد مصرف نمی‌شود).
+        «سفارش جاری»: سفارشی در `PENDING_PAYMENT`، `RESERVED`، `PROCESSING`، `PHOTO_SENT`، `CHANGE_REQUESTED`، `SHIPPED`،
+        `RETURN_REQUESTED` یا `RETURNED`؛ یا سفارش با مانده‌ی پرداخت‌نشده؛ یا استرداد `PENDING`/`PROCESSING`.
+
+        با حذف:
+        * حساب بی‌نام می‌شود (ردیفش برای ارجاع سفارش‌ها می‌ماند): موبایل، نام، ایمیل، تولد، جنسیت، پیام‌رسان پیش‌فرض و رضایت پیامک
+          تبلیغاتی پاک، نقش‌ها فقط `CUSTOMER`. **شماره آزاد می‌شود**: ورود دوباره با همان شماره یک حساب تازه می‌سازد که به سفارش‌های قبلی ربطی ندارد.
+        * سفارش‌ها برای حسابداری می‌مانند ولی بی‌نام: گیرنده، موبایل گیرنده، نشانی، پلاک، واحد، کد پستی، پیام‌رسان، یادداشت سفارش و
+          پیام هدیه پاک (استان و شهر، مبلغ‌ها، ردیف‌ها، کد رهگیری و تاریخ‌ها می‌مانند). مرجوعی‌ها و استردادها (سند مالی) می‌مانند.
+        * پاک: آدرس‌ها، سبد، علاقه‌مندی‌ها و لینک اشتراکش، «موجود شد خبرم کن»ها، پیام‌های فرم تماس، عضویت خبرنامه با ایمیل حساب.
+        * نظرها می‌مانند با «کاربر کیوا» (`authorName` و راه تماس پاک).
+        * همه‌ی نشست‌ها باطل؛ توکن دسترسی ِ همان لحظه هم دیگر کار نمی‌کند (`401`).
+        * `reason` (اختیاری، حداکثر ۳۰۰) **بی هیچ شناسه‌ای** (فقط متن و تاریخ) برای فهمیدن دلیل رفتن ذخیره می‌شود.
+        * رویدادهای قبلی ِ سفارش در تاریخچه‌ی داخلی (event store) عوض نمی‌شوند؛ این داده هیچ‌جا از API بیرون نمی‌رود.
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -1893,7 +1906,7 @@ paths:
           headers:
             Set-Cookie: { $ref: '#/components/headers/ClearRefreshCookie' }
         '422':
-          description: "`OTP_INVALID` (با `meta.attemptsLeft`)، `OTP_EXPIRED`، `OTP_TOO_MANY_ATTEMPTS` یا `ACCOUNT_HAS_ACTIVE_ORDERS`"
+          description: "`OTP_INVALID` (با `meta.attemptsLeft`)، `OTP_EXPIRED`، `OTP_TOO_MANY_ATTEMPTS`، `ACCOUNT_HAS_ACTIVE_ORDERS` (با `meta.orderCodes`) یا `STAFF_ACCOUNT_CANNOT_BE_DELETED`"
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -1904,8 +1917,11 @@ paths:
     post:
       tags: [Account]
       operationId: requestAccountDeletion
-      summary: "ارسال کد تأیید حذف حساب به موبایل خود کاربر [پیشنهادی — بعد از فاز سفارش]"
-      description: کد فقط برای `DELETE /me` معتبر است، نه برای ورود؛ و کد ورود هم برای حذف حساب پذیرفته نمی‌شود.
+      summary: "ارسال کد تأیید حذف حساب به موبایل خود کاربر"
+      description: |
+        کد فقط برای `DELETE /me` معتبر است، نه برای ورود؛ و کد ورود هم برای حذف حساب پذیرفته نمی‌شود. همان سقف‌های کد ورود (`429`).
+        **اول** مانع‌ها چک می‌شوند و اگر هست پیامکی نمی‌رود: کارمند ← `422 STAFF_ACCOUNT_CANNOT_BE_DELETED`؛ سفارش جاری
+        (تعریف در `DELETE /me`) ← `422 ACCOUNT_HAS_ACTIVE_ORDERS` با `meta.orderCodes`.
       security: [{ bearerAuth: [] }]
       responses:
         '200':
@@ -1914,6 +1930,11 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/SendOtpResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '422':
+          description: "`ACCOUNT_HAS_ACTIVE_ORDERS` (با `meta.orderCodes`) یا `STAFF_ACCOUNT_CANNOT_BE_DELETED`؛ پیامکی نرفت"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
   /me/phone-change/request:
     post:
@@ -2603,18 +2624,35 @@ paths:
     get:
       tags: [Orders]
       operationId: downloadInvoice
-      summary: "دانلود فاکتور PDF [پیشنهادی]"
+      summary: "دانلود رسید خرید PDF"
+      description: |
+        **رسید خرید، نه فاکتور رسمی مالیاتی** (فروشگاه شناسه‌ی مالیاتی و ارزش افزوده ندارد). فقط مالک، فقط سفارشی که یک بار پرداخت شده
+        (لغوشده و مرجوعی‌شده هم)؛ پرداخت‌نشده ← `422 INVOICE_NOT_AVAILABLE`؛ سفارش ناموجود یا مال دیگری ← `404 ORDER_NOT_FOUND`.
+        محتوا: نام، تلفن و نشانی فروشگاه؛ شماره = کد سفارش؛ تاریخ پرداخت (شمسی، وقت تهران)؛ خریدار (نام و نشانی سفارش)؛ ردیف‌های
+        **فعلی** سفارش (بعد از درخواست تغییر) با رنگ، تعداد، قیمت واحد، قیمت خط‌خورده و جمع ردیف؛ جمع‌ها مثل `OrderDetail.totals`؛
+        روش ارسال و کد رهگیری اگر هست؛ برای لغوشده نوار «لغو شده». ارقام فارسی، تومان.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/OrderCode'
       responses:
         '200':
           description: فایل PDF
+          headers:
+            Content-Disposition:
+              description: 'همیشه `attachment; filename="kiva-{orderCode}.pdf"` (CORS این هدر را expose می‌کند)'
+              schema: { type: string, example: 'attachment; filename="kiva-KV-215566.pdf"' }
+            Cache-Control:
+              schema: { type: string, example: 'private, no-store' }
           content:
             application/pdf:
               schema: { type: string, format: binary }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422':
+          description: "`INVOICE_NOT_AVAILABLE`: سفارش هنوز پرداخت نشده"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
   /me/returns:
     get:
       tags: [Orders]
@@ -5225,7 +5263,7 @@ paths:
       x-roles: [ADMIN, SUPPORT]
       operationId: adminListCustomers
       summary: "مشتریان (جستجو با موبایل/نام)"
-      description: '`role` فقط کاربرانی که آن نقش را دارند (برای صفحه‌ی نقش‌ها و کارمندها)؛ `CUSTOMER` = همه. نقش ناشناخته ← `400 ROLE_INVALID` روی `role`.'
+      description: '`role` فقط کاربرانی که آن نقش را دارند (برای صفحه‌ی نقش‌ها و کارمندها)؛ `CUSTOMER` = همه. نقش ناشناخته ← `400 ROLE_INVALID` روی `role`. حساب‌های حذف‌شده نمی‌آیند.'
       security: [{ bearerAuth: [] }]
       parameters:
         - name: q
@@ -5257,7 +5295,7 @@ paths:
       x-roles: [ADMIN, SUPPORT]
       operationId: adminGetCustomer
       summary: "جزئیات یک مشتری: پروفایل، آدرس‌ها و آخرین سفارش‌ها"
-      description: 'کاربر ناموجود یا شناسه‌ی بدشکل ← `404 NOT_FOUND`. خواندن در لاگ تغییرات ثبت نمی‌شود.'
+      description: 'کاربر ناموجود، حساب حذف‌شده یا شناسه‌ی بدشکل ← `404 NOT_FOUND`. خواندن در لاگ تغییرات ثبت نمی‌شود.'
       security: [{ bearerAuth: [] }]
       parameters:
         - name: customerId
@@ -5883,6 +5921,8 @@ components:
         - DUPLICATE_SKU
         - RESERVATION_UNAVAILABLE
         - ACCOUNT_HAS_ACTIVE_ORDERS
+        - STAFF_ACCOUNT_CANNOT_BE_DELETED
+        - INVOICE_NOT_AVAILABLE
         - ROLE_CHANGE_NOT_ALLOWED
         # --- پنل ادمین: کلید تکراری (رنگ) ---
         - DUPLICATE_CODE
@@ -7257,16 +7297,17 @@ components:
         currency: { $ref: '#/components/schemas/Currency' }
     AddressSnapshot:
       type: object
+      description: 'نشانی ِ سفارش در لحظه‌ی ثبت. سفارش ِ حسابی که حذف شده بی‌نام است: همه‌ی فیلدهای شخصی `null` و فقط استان و شهر می‌مانند'
       properties:
         provinceName: { type: string, example: تهران }
         cityName: { type: string, example: تهران }
-        addressLine: { type: string, example: 'خیابان ولیعصر، بالاتر از پارک ساعی، کوچه نسترن، پلاک ۱۲، واحد ۴' }
+        addressLine: { type: string, nullable: true, example: 'خیابان ولیعصر، بالاتر از پارک ساعی، کوچه نسترن، پلاک ۱۲، واحد ۴' }
         plaque: { type: string, nullable: true, example: '12' }
         unit: { type: string, nullable: true, example: '4' }
-        postalCode: { $ref: '#/components/schemas/PostalCode' }
-        recipientName: { type: string, example: سارا محمدی }
-        recipientPhone: { $ref: '#/components/schemas/PhoneNumber' }
-        fullText: { type: string, example: 'تهران، تهران، خیابان ولیعصر، ...' }
+        postalCode: { type: string, nullable: true, allOf: [{ $ref: '#/components/schemas/PostalCode' }] }
+        recipientName: { type: string, nullable: true, example: سارا محمدی }
+        recipientPhone: { type: string, nullable: true, allOf: [{ $ref: '#/components/schemas/PhoneNumber' }] }
+        fullText: { type: string, example: 'تهران، تهران، خیابان ولیعصر، ...', description: 'برای سفارش بی‌نام فقط «استان، شهر»' }
     OrderMediaItem:
       allOf:
         - $ref: '#/components/schemas/MediaAsset'
@@ -7364,7 +7405,7 @@ components:
             returns:
               type: array
               items: { $ref: '#/components/schemas/ReturnRequest' }
-            invoiceUrl: { type: string, nullable: true, example: /api/v1/me/orders/KV-215566/invoice }
+            invoiceUrl: { type: string, nullable: true, example: /api/v1/me/orders/KV-215566/invoice, description: 'برای سفارشی که یک بار پرداخت شده (لغوشده و مرجوعی‌شده هم)؛ وگرنه `null`' }
             refunds:
               type: array
               description: 'همه‌ی استردادهای سفارش، قدیمی‌ترین اول، با وضعیت و `statusNote`'
@@ -8796,8 +8837,8 @@ components:
               type: object
               properties:
                 id: { type: integer }
-                fullName: { type: string, nullable: true, description: 'اسم حساب؛ `null` وقتی مشتری اسمش را نداده' }
-                phone: { $ref: '#/components/schemas/PhoneNumber' }
+                fullName: { type: string, nullable: true, description: 'اسم حساب؛ `null` وقتی مشتری اسمش را نداده یا حسابش حذف شده' }
+                phone: { type: string, nullable: true, allOf: [{ $ref: '#/components/schemas/PhoneNumber' }], description: '`null` وقتی حساب حذف شده (پنل «حساب حذف‌شده» نشان می‌دهد)' }
                 ordersCount: { type: integer, description: 'سفارش‌های پرداخت‌شده‌ی مشتری (لغوشده هم)', example: 3 }
             shipmentGroup:
               type: object
@@ -8914,7 +8955,7 @@ components:
               properties:
                 id: { type: integer }
                 fullName: { type: string, nullable: true }
-                phone: { $ref: '#/components/schemas/PhoneNumber' }
+                phone: { type: string, nullable: true, allOf: [{ $ref: '#/components/schemas/PhoneNumber' }], description: '`null` وقتی حساب حذف شده' }
             suggestedRefund:
               type: integer
               allOf: [{ $ref: '#/components/schemas/Money' }]
