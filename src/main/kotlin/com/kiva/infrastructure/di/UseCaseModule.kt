@@ -12,6 +12,14 @@ import com.kiva.application.usecase.stockalert.usecase.command.CreateStockAlertU
 import com.kiva.application.usecase.stockalert.StockAlertFlags
 import com.kiva.application.usecase.stockalert.StockAlerts
 import com.kiva.domain.aggregate.stockalert.StockAlertDomainService
+import com.kiva.domain.aggregate.campaign.CampaignDomainService
+import com.kiva.application.usecase.campaign.CampaignProducts
+import com.kiva.application.usecase.campaign.CampaignShowcases
+import com.kiva.application.usecase.campaign.usecase.command.CreateCampaignUc
+import com.kiva.application.usecase.campaign.usecase.command.DeleteCampaignUc
+import com.kiva.application.usecase.campaign.usecase.command.UpdateCampaignUc
+import com.kiva.application.usecase.campaign.usecase.query.GetAdminCampaignUc
+import com.kiva.application.usecase.campaign.usecase.query.ListAdminCampaignsUc
 import com.kiva.application.usecase.account.usecase.query.GetMyDashboardUc
 import com.kiva.application.usecase.review.ReviewsAwaiting
 import com.kiva.application.usecase.wishlist.WishlistHearts
@@ -742,6 +750,24 @@ val useCaseModule = module(createdAtStart = true) {
         )
     }
     single { GetProductInquiryUc(transactionManager = get(), productQmRepository = get(), colorRepository = get(), shopSettingsRepository = get()) }
+
+    // --- marketing (phase 11) ---
+    single { CampaignDomainService(campaignRepository = get()) }
+    single { CampaignProducts(productQmRepository = get()) }
+    single { CampaignShowcases(productQmRepository = get(), categoryRepository = get(), colorRepository = get(), shopSettingsRepository = get()) }
+    single { ListAdminCampaignsUc(transactionManager = get(), campaignRepository = get(), campaignShowcases = get(), clock = get()) }
+    single { GetAdminCampaignUc(transactionManager = get(), campaignRepository = get(), campaignShowcases = get(), clock = get()) }
+    single {
+        CreateCampaignUc(
+            transactionManager = get(), campaignRepository = get(), campaignDomainService = get(), campaignProducts = get(), auditTrail = get(), clock = get(),
+        )
+    }
+    single {
+        UpdateCampaignUc(
+            transactionManager = get(), campaignRepository = get(), campaignDomainService = get(), campaignProducts = get(), auditTrail = get(), clock = get(),
+        )
+    }
+    single { DeleteCampaignUc(transactionManager = get(), campaignRepository = get(), auditTrail = get(), clock = get()) }
 
     // --- wishlist (phase 9) ---
     single { WishlistHearts.of(get()) }

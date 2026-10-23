@@ -1,6 +1,8 @@
 package com.kiva.infrastructure.di
 
 import com.kiva.infrastructure.persistence.exposed.StockAlertIdGeneratorImpl
+import com.kiva.infrastructure.persistence.exposed.CampaignRepositoryImpl
+import com.kiva.domain.aggregate.campaign.repository.CampaignRepository
 import com.kiva.infrastructure.persistence.exposed.StockAlertRepositoryImpl
 import com.kiva.domain.aggregate.stockalert.repository.StockAlertIdGenerator
 import com.kiva.domain.aggregate.stockalert.repository.StockAlertRepository
@@ -150,6 +152,7 @@ val daoModule = module(createdAtStart = true) {
     single<WishlistRepository> { WishlistRepositoryImpl() }
     single<StockAlertRepository> { StockAlertRepositoryImpl() }
     single<StockAlertIdGenerator> { StockAlertIdGeneratorImpl() }
+    single<CampaignRepository> { CampaignRepositoryImpl() }
     single<WishlistShareRepository> { WishlistShareRepositoryImpl() }
     single<WishlistShareTokenGenerator> { RandomWishlistShareTokens() }
     single<ReviewVoteRepository> { ReviewVoteRepositoryImpl() }

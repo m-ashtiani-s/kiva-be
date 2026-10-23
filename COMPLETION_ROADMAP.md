@@ -500,8 +500,9 @@ class AddAddressUc(
 | 7 | ردیف محصول‌ها و رنگ‌ها در read model، صعودی `(productId, variantId)` | رزرو، آزادسازی، ارسال، `soldCount`، برگشت به موجودی از مرجوعی، هر تغییر پنل روی محصول و رنگ، تغییر اسم دسته/رنگ/متریال (`refreshSearchText`) |
 | 8 | stream ِ سفارش (قید یکتای event store) | همه‌ی رویدادهای سفارش |
 | 12 | ردیف‌های لاگ تغییرات (فقط insert، بدون قفل) | همه‌ی نوشتن‌های پنل، آخر تراکنش |
+| **14** | **advisory ِ کمپین‌ها `campaigns` (تازه، فاز ۱۱)** | ساخت، ویرایش و حذف کمپین؛ هیچ قفل دیگه‌ای با این نمی‌گیره |
 
-**ترتیب واقعی، از بالا به پایین:** ۰، ۱، ۲، ۱۳، ۳، ۴، ۵، ۶، ۹، ۱۰، ۱۱، ۷، ۸، ۱۲. شماره‌ها اسم قفل‌ان، نه ترتیبشون (۱ تا ۸ از خرید اومدن و عوض نمی‌شن).
+**ترتیب واقعی، از بالا به پایین:** ۰، ۱، ۲، ۱۳، ۳، ۴، ۵، ۶، ۹، ۱۰، ۱۱، ۷، ۸، ۱۲. شماره‌ها اسم قفل‌ان، نه ترتیبشون (۱ تا ۸ از خرید اومدن و عوض نمی‌شن). قفل ۱۴ (کمپین‌ها) با هیچ‌کدوم از این‌ها در یه تراکنش نمیاد.
 
 **قفل ۹ چرا بین ۶ و ۷:** هر کاری که سفارش پرداخت‌شده رو عوض می‌کنه (لغو، ارسال، استرداد) اول ممکنه پرداخت‌ها رو بخونه (۶)، بعد سفارش رو یکی‌یکی می‌کنه (۹)، بعد موجودی رو آزاد یا کسر می‌کنه (۷)، بعد رویداد سفارش رو می‌نویسه (۸). قفل ۹ جلوی دو کار همزمانِ پنل روی یه سفارش (دو اپراتور، یا اپراتور و مشتری) رو قبل از هر محاسبه‌ای می‌گیره، تا مثلاً جمع استردادها با یه عدد کهنه حساب نشه. چون همه‌ی رویدادهای سفارش در نهایت قید یکتای stream (۸) رو هم دارن، قفل ۹ ثبات رو قوی‌تر می‌کنه، نه اینکه جای ۸ رو بگیره.
 
@@ -4802,7 +4803,7 @@ url (تلگرام با آدرس https://t.me/kiva_shop) = https://t.me/kiva_shop
 | گام | عنوان | اندازه | وضعیت |
 |---|---|---|---|
 | ۱۱.۰ | کانترکت 1.17.0 | S | ✅ |
-| ۱۱.۱ | کمپین: جدول، دامنه و CRUD ِ پنل | M | ⬜ |
+| ۱۱.۱ | کمپین: جدول، دامنه و CRUD ِ پنل | M | ✅ |
 | ۱۱.۲ | کمپین در فروشگاه: `/campaigns/active`، فیلتر `campaign`، شمارنده‌ی صفحه‌ی محصول | M | ⬜ |
 | ۱۱.۳ | بنرها | M | ⬜ |
 | ۱۱.۴ | پیام‌های رضایت | M | ⬜ |
@@ -4834,6 +4835,10 @@ url (تلگرام با آدرس https://t.me/kiva_shop) = https://t.me/kiva_shop
 | 18 | حذف | کمپین، بنر و پیام رضایت واقعاً پاک می‌شن (`204`). مدیای بنر و اسکرین‌شات می‌مونه (قانون ۵.۲) | — |
 | 19 | لاگ تغییرات | `CAMPAIGN_*`، `BANNER_*`، `TESTIMONIAL_*` با `CREATED`/`UPDATED`/`DELETED` (بخش ۵.۱) | — |
 | 20 | کد «پایان قبل از شروع» (تازه، گام ۱۱.۰) | به‌جای کد تازه‌ی `ENDS_BEFORE_START`، همون `DATE_RANGE_INVALID` روی `endsAt` که کد تخفیف و نوار اطلاعیه از قبل دارن (کمپین و بنر). `receivedAt` ِ پیام رضایت بعد از الان ← `400 DATE_IN_FUTURE` (کد فیلدی تازه، فقط با متن فارسی) | دو کد برای یه قانون نمی‌مونه؛ پنل از قبل `DATE_RANGE_INVALID` رو می‌شناسه |
+| 21 | قفل کمپین‌ها (تازه، گام ۱۱.۱) | هر نوشتن کمپین (ساخت، ویرایش، حذف) اول قفل advisory ِ `campaigns` رو می‌گیره (قفل ۱۴ ِ بخش ۴.۱۱، به هیچ قفل دیگه‌ای کاری نداره)، بعد چک slug و هم‌پوشانی؛ قید یکتای slug و `EXCLUDE` دیوار آخرن و در رقابت به همون `409`ها ترجمه می‌شن (`CAMPAIGN_OVERLAP` ِ دیوار آخر `meta.campaignId` نداره: تراکنش ِ ردشده دیگه نمی‌تونه بخونه) | `meta.campaignId` همیشه درست باشه؛ رقابت با قفل از اول پیش نمیاد |
+| 22 | ستون `productIds` (تازه، گام ۱۱.۱) | `BIGINT[]` با `cardinality ≤ 200` (مثل لیست‌های `discountcode_tbl`)، نه `JSONB` | یه شکل برای یه نوع داده در پروژه |
+| 23 | محصول‌های چند کمپین (تازه، گام ۱۱.۱) | `CampaignShowcases` (قانون ۱۵) همه‌ی کاندیدها رو با **یه** خوندن `campaignShowcase` می‌گیره (`productIds` ِ همه‌ی کمپین‌ها، یا همه وقتی یکی خالیه) و برای هر کمپین در حافظه فیلتر می‌کنه؛ لیست پنل، فرم، `/campaigns/active` و خانه همین رو صدا می‌زنن. محصول ِ `DRAFT` در `productIds` مجازه (بعد از انتشار نشون داده می‌شه)؛ فقط ناموجود و بایگانی ← `400` | بدون N+1 |
+| 24 | مدل `sitecontent` (تازه، گام ۱۱.۱) | چون `SiteContentDocument` سخت‌گیرانه خونده می‌شه، کلید `home` ِ `V36` همون گام به مدل (و `SiteContentQm.home`) اضافه می‌شه، نه در ۱۱.۶. متن‌های خانه از `index.html` ِ پروتوتایپ (سه مرحله‌ی «چطور کار می‌کنیم»؛ «رزرو {holdDays} روزه» و «{returnWindowDays} روز ضمانت بازگشت» با جای‌گذاری تنظیمات) | کلید ناشناخته `/config` رو می‌شکست |
 
 ### ۱۶.۳ تغییرات دامنه
 
@@ -5033,17 +5038,19 @@ Route: respondResultCacheable؛ همه‌ی کارت‌ها با isWishlisted = 
 
 ---
 
-#### گام ۱۱.۱: کمپین: جدول، دامنه و CRUD ِ پنل · M ⬜
+#### گام ۱۱.۱: کمپین: جدول، دامنه و CRUD ِ پنل · M ✅
 
 **می‌سازی:** `V36__marketing.sql` (بخش کمپین)؛ `Campaign`، `CampaignDomainService`، repository (با ترجمه‌ی قیدهای یکتا و `EXCLUDE`)؛ چهار UseCase ِ پنل؛ `webV1AdminMarketing.kt` (کمپین)؛ `campaignShowcase` در `ProductQmRepository`.
 
 وابسته به: ۱۱.۰
 
 **تموم شده یعنی:**
-- [ ] ساخت، ویرایش، حذف، لاگ؛ `slug` ِ تکراری ← `409`؛ `endsAt` قبل از `startsAt` ← `400`.
-- [ ] دو کمپین فعال هم‌پوشان ← `409 CAMPAIGN_OVERLAP`؛ یکیش `isActive = false` ← مجاز؛ دو ساخت همزمان هم‌پوشان ← یکی `201`، یکی `409` (قید `EXCLUDE`).
-- [ ] `productIds` با محصول بایگانی‌شده ← `400` با مسیر فیلد.
-- [ ] `PUT` بدون `subtitle` ← `subtitle = null`.
+- [x] ساخت، ویرایش، حذف، لاگ؛ `slug` ِ تکراری ← `409`؛ `endsAt` قبل از `startsAt` ← `400`.
+- [x] دو کمپین فعال هم‌پوشان ← `409 CAMPAIGN_OVERLAP`؛ یکیش `isActive = false` ← مجاز؛ دو ساخت همزمان هم‌پوشان ← یکی `201`، یکی `409` (قید `EXCLUDE`).
+- [x] `productIds` با محصول بایگانی‌شده ← `400` با مسیر فیلد.
+- [x] `PUT` بدون `subtitle` ← `subtitle = null`.
+
+**یادداشت پیاده‌سازی:** چهار تصمیم تازه (۲۱ تا ۲۴). `V36__marketing.sql` کامل (کمپین با قید یکتای slug و `EXCLUDE`، بنر، پیام رضایت، بخش `home` ِ `sitecontent`)؛ دامنه: `Campaign`، `CampaignDraft` (همه‌ی خطاهای فرم با هم، `DATE_RANGE_INVALID` روی `endsAt`)، `CampaignId`/`CampaignWindow`، `CampaignShowcasePolicy`، `CampaignDomainService` (slug، بعد هم‌پوشانی با `meta.campaignId`)، `CampaignRepository` با `lockAll`؛ `CampaignRepositoryImpl` (ترجمه‌ی هر دو قید)؛ `ProductQmRepository.campaignShowcase`؛ `CampaignProducts`، `CampaignShowcases`، پنج UseCase (لیست، یکی، ساخت، ویرایش، حذف)؛ `webV1AdminMarketing.kt` (کمپین)؛ ۹ `AuditAction` ِ فاز با جمله‌هاشون؛ `SiteContentDocument.home`. تست: `CampaignTest` (۶)، `WebV1AdminCampaignsOnDatabaseTest` (۵: ساخت/ویرایش/حذف با لاگ و محصول‌ها به ترتیب تخفیف، فرم و ۴۰۰/۴۰۹، هم‌پوشانی، دو ساخت همزمان ۱۰ بار، نقش‌ها). خرابکاری: بدون `EXCLUDE` و بدون قفل ← «two overlapping campaigns made at once …» قرمز؛ بدون چک هم‌پوشانی ← «two active campaigns sharing a moment …» و `CampaignTest` قرمز؛ بدون چک و کلید slug ← «the form - …» قرمز؛ بایگانی‌شده پذیرفته ← همون تست قرمز. کل مجموعه با `--rerun-tasks`: ۲۹۷۸ تست سبز، ۵ skip.
 
 ---
 
@@ -6041,7 +6048,7 @@ Route: 204
 | 33 | `V33__reviews.sql` | ۸.۱ | `review_tbl`، `reviewvote_tbl`، `productrating_tbl`، حذف `productqm_tbl.ratingAvg` |
 | 34 | `V34__wishlist.sql` | ۹.۱ | `wishlistitem_tbl`، `wishlistshare_tbl` |
 | 35 | `V35__stock_alerts.sql` | ۱۰.۱ | `stockalert_tbl` |
-| 36 | `V36__marketing.sql` | ۱۱.۱، ۱۱.۳، ۱۱.۴، ۱۱.۶ | `campaign_tbl` (با قید `EXCLUDE`)، `banner_tbl`، `testimonial_tbl`، بخش `home` ِ `sitecontent` |
+| 36 | `V36__marketing.sql` | ۱۱.۱ (کامل؛ ۱۱.۳، ۱۱.۴ و ۱۱.۶ ازش استفاده می‌کنن) | `campaign_tbl` (با قید `EXCLUDE`)، `banner_tbl`، `testimonial_tbl`، بخش `home` ِ `sitecontent` |
 | 37 | `V37__search.sql` | ۱۲.۱ | `productqm_tbl.searchName` با backfill، بخش `search` ِ `sitecontent` |
 | 38 | `V38__contact_newsletter.sql` | ۱۳.۲، ۱۳.۴ | `contactmessage_tbl`، `newslettersubscription_tbl` |
 | 39 | `V39__account_deletion.sql` | ۱۴.۱ | `user_tbl.deletedOn` و `phone` ِ `NULL`‌پذیر، `accountdeletionreason_tbl` |
@@ -6419,3 +6426,4 @@ kiva {
 | ۱ آبان ۱۴۰۵ | ۱۰.۳ | Phase 10 step 10.3 | صف پنل «موجود شد خبرم کن» (گروه‌ها، موجودی دقیق، فیلتر `inStock` در SQL، بدون موبایل) و «سؤال داری؟» (رنگ پیش‌فرض، فقط سه پیام‌رسان، `url` ِ کدشده با `?`/`&text=`، `responseHours`). سه تصمیم تازه (۲۶ تا ۲۸). دو خرابکاری قرمز. ۲۹۶۶ تست سبز |
 | ۱ آبان ۱۴۰۵ | ۱۰.۴ | Phase 10 step 10.4 | `STOCK_ALERTS_REVIEW.md` (دوازده خرابکاری، همه قرمز؛ یکی بعد از یه تست تازه)، `docs/FRONTEND_STOCK_ALERTS.md`. ۲۹۶۷ تست سبز، ۵ skip. فاز ۱۰ از طرف ریپو کامله؛ الگوی فراز، دور واقعی و merge منتظر تو |
 | ۱ آبان ۱۴۰۵ | ۱۱.۰ | Phase 11 step 11.0 | کانترکت 1.17.0 با هر ۱۱ ردیف ِ ۱۶.۷ و `required` ِ شِماهای بازاریابی؛ `DATE_RANGE_INVALID` به‌جای `ENDS_BEFORE_START` (تصمیم ۲۰)؛ متن سه کد تازه و `DATE_IN_FUTURE`. برنچ `marketing` از نوک فاز ۱۰ |
+| ۱ آبان ۱۴۰۵ | ۱۱.۱ | Phase 11 step 11.1 | کمپین: `V36` ِ کامل، دامنه، قفل `campaigns` با `EXCLUDE` به‌عنوان دیوار آخر، CRUD ِ پنل با لاگ، `campaignShowcase`. چهار تصمیم تازه (۲۱ تا ۲۴). چهار خرابکاری قرمز. ۲۹۷۸ تست سبز |

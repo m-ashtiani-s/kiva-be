@@ -14,7 +14,7 @@ object SiteContentTbl : LongIdTable(name = "sitecontent_tbl", columnName = "pId"
     val updatedOn = timestampWithTimeZone("updatedOn")
 }
 
-/** `sitecontent_tbl.document` as V31 wrote it; every key required. */
+/** `sitecontent_tbl.document` as V31 wrote it, with V36's `home`; every key required. */
 @Serializable
 data class SiteContentDocument(
     val brand: Brand,
@@ -26,7 +26,18 @@ data class SiteContentDocument(
     val productPerks: List<Perk>,
     val trustBadges: List<TrustBadge>,
     val footerLinks: List<FooterGroup>,
+    val home: Home,
 ) {
+    /** The home page's fixed sections (V36; roadmap phase 11, decision 15). */
+    @Serializable
+    data class Home(val hero: Hero, val features: List<Perk>, val howItWorks: List<Step>, val showcaseProductId: Long?, val showcaseMessenger: String)
+
+    @Serializable
+    data class Hero(val eyebrow: String, val title: String, val text: String, val primaryCta: Link, val secondaryCta: Link)
+
+    @Serializable
+    data class Step(val step: Int, val title: String, val text: String, val isSignature: Boolean)
+
     @Serializable
     data class Brand(val name: String, val slogan: String, val about: String, val logoUrl: String, val logoWhiteUrl: String, val faviconUrl: String)
 
@@ -58,5 +69,15 @@ data class SiteContentDocument(
         productPerks = productPerks.map { SiteContentQm.Perk(it.icon, it.title, it.subtitle) },
         trustBadges = trustBadges.map { SiteContentQm.TrustBadge(it.type, it.label, it.imageUrl, it.linkUrl) },
         footerLinks = footerLinks.map { group -> SiteContentQm.FooterGroup(group.group, group.links.map { SiteContentQm.Link(it.label, it.url) }) },
+        home = SiteContentQm.Home(
+            hero = SiteContentQm.Hero(
+                home.hero.eyebrow, home.hero.title, home.hero.text,
+                SiteContentQm.Link(home.hero.primaryCta.label, home.hero.primaryCta.url), SiteContentQm.Link(home.hero.secondaryCta.label, home.hero.secondaryCta.url),
+            ),
+            features = home.features.map { SiteContentQm.Perk(it.icon, it.title, it.subtitle) },
+            howItWorks = home.howItWorks.map { SiteContentQm.Step(it.step, it.title, it.text, it.isSignature) },
+            showcaseProductId = home.showcaseProductId,
+            showcaseMessenger = home.showcaseMessenger,
+        ),
     )
 }

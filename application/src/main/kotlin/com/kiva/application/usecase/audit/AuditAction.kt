@@ -67,6 +67,17 @@ enum class AuditAction {
     REVIEW_MODERATED,
     REVIEW_REPLIED,
     REVIEW_REPLY_DELETED,
+
+    // ---- marketing (phase 11) ----
+    CAMPAIGN_CREATED,
+    CAMPAIGN_UPDATED,
+    CAMPAIGN_DELETED,
+    BANNER_CREATED,
+    BANNER_UPDATED,
+    BANNER_DELETED,
+    TESTIMONIAL_CREATED,
+    TESTIMONIAL_UPDATED,
+    TESTIMONIAL_DELETED,
 }
 
 /** The kind of thing a panel write changed: the contract's AuditEntityType, value for value. */

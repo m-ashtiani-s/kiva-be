@@ -34,6 +34,13 @@ interface ProductQmRepository {
      */
     fun findCards(ids: List<ProductId>): List<ProductCardQm>
 
+    /**
+     * A campaign's products as the shop shows them (roadmap section 16.2, decision 4): those of [productIds] (null: every
+     * product) in the shop, discounted (CampaignShowcasePolicy.MIN_DISCOUNT_PERCENT or more) and with a color left, the
+     * biggest discount first, then the best selling, then the id; at most [limit]. Three reads whatever the number.
+     */
+    fun campaignShowcase(productIds: Set<ProductId>?, limit: Int): List<ProductCardQm>
+
     /** One product's page, if it is in the shop: a draft or an archived product is null, like one nobody has. */
     fun findDetail(ref: ProductRef): ProductDetailQm?
 

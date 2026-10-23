@@ -5,6 +5,8 @@ import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1StockAler
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminStockAlertUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminStockAlerts
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1ProductInquiry
+import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminMarketingUseCases
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminMarketing
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1MyDashboard
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1SharedWishlist
 import com.kiva.application.usecase.account.usecase.command.ConfirmPhoneChangeUc
@@ -331,6 +333,7 @@ fun Application.configureRouting() {
             webV1AdminReturns(AdminReturnUseCases(checkPanelAccessUc, get(), get(), get(), get(), get(), get()), mediaUrls)
             webV1AdminReviews(AdminReviewUseCases(checkPanelAccessUc, get(), get(), get(), get(), get()), mediaUrls)
             webV1AdminStockAlerts(AdminStockAlertUseCases(checkPanelAccessUc, get()), mediaUrls)
+            webV1AdminMarketing(AdminMarketingUseCases(checkPanelAccessUc, get(), get(), get(), get(), get()), mediaUrls)
             webV1AdminSettings(AdminSettingsUseCases(checkPanelAccessUc, get(), get()))
             webV1AdminDiscountCodes(AdminDiscountCodeUseCases(checkPanelAccessUc, get(), get(), get(), get(), get()))
             webV1AdminReports(AdminReportUseCases(checkPanelAccessUc, get()), mediaUrls)

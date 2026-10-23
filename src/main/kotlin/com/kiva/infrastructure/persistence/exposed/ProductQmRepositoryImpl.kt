@@ -12,6 +12,7 @@ import com.kiva.application.repository.ProductDetailQm
 import com.kiva.application.repository.ProductFacetsQm
 import com.kiva.application.repository.ProductFilter
 import com.kiva.application.repository.ProductQmRepository
+import com.kiva.domain.aggregate.campaign.model.policy.CampaignShowcasePolicy
 import com.kiva.application.repository.ProductQmRepository.NamedInSearch
 import com.kiva.application.repository.ProductRef
 import com.kiva.application.repository.VariantQm
@@ -116,6 +117,20 @@ class ProductQmRepositoryImpl : ProductQmRepository {
         val found = rows.map { it[ProductQmTbl.productId] }
         val colors = activeColorsOf(found)
         val ratings = ratingsOf(found)
+        return rows.map { cardOf(it, colors[it[ProductQmTbl.productId]].orEmpty(), ratings[it[ProductQmTbl.productId]]) }
+    }
+
+    override fun campaignShowcase(productIds: Set<ProductId>?, limit: Int): List<ProductCardQm> {
+        if (productIds != null && productIds.isEmpty()) return emptyList()
+        val rows = ProductQmTbl.selectAll().where {
+            val shown = (ProductQmTbl.status eq ProductStatus.ACTIVE) and
+                (ProductQmTbl.discountPercent greaterEq CampaignShowcasePolicy.MIN_DISCOUNT_PERCENT) and (ProductQmTbl.inStock eq true)
+            if (productIds == null) shown else shown and (ProductQmTbl.productId inList productIds.map { it.value })
+        }.orderBy(ProductQmTbl.discountPercent to SortOrder.DESC, ProductQmTbl.soldCount to SortOrder.DESC, ProductQmTbl.productId to SortOrder.ASC)
+            .limit(limit).toList()
+        val ids = rows.map { it[ProductQmTbl.productId] }
+        val colors = activeColorsOf(ids)
+        val ratings = ratingsOf(ids)
         return rows.map { cardOf(it, colors[it[ProductQmTbl.productId]].orEmpty(), ratings[it[ProductQmTbl.productId]]) }
     }
 

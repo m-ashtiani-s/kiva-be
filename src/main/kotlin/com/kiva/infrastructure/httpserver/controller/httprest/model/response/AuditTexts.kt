@@ -72,6 +72,15 @@ object AuditTexts {
             }
             AuditAction.REVIEW_REPLIED -> "پاسخ کیوا زیر نظری روی $name ثبت شد"
             AuditAction.REVIEW_REPLY_DELETED -> "پاسخ کیوا زیر نظری روی $name حذف شد"
+            AuditAction.CAMPAIGN_CREATED -> "کمپین $name ساخته شد"
+            AuditAction.CAMPAIGN_UPDATED -> "کمپین $name ویرایش شد"
+            AuditAction.CAMPAIGN_DELETED -> "کمپین $name حذف شد"
+            AuditAction.BANNER_CREATED -> "بنر $name ساخته شد"
+            AuditAction.BANNER_UPDATED -> "بنر $name ویرایش شد"
+            AuditAction.BANNER_DELETED -> "بنر $name حذف شد"
+            AuditAction.TESTIMONIAL_CREATED -> "پیام رضایت $name ثبت شد"
+            AuditAction.TESTIMONIAL_UPDATED -> "پیام رضایت $name ویرایش شد"
+            AuditAction.TESTIMONIAL_DELETED -> "پیام رضایت $name حذف شد"
         }
     }
 

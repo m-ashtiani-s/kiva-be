@@ -8,6 +8,17 @@ import com.kiva.domain.aggregate.stockalert.StockAlertDomainService
 import com.kiva.application.usecase.stockalert.usecase.query.ListMyStockAlertsUc
 import com.kiva.application.usecase.stockalert.usecase.query.FindAdminStockAlertGroupsUc
 import com.kiva.application.usecase.product.usecase.query.GetProductInquiryUc
+import com.kiva.infrastructure.persistence.exposed.CampaignRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.tbl.CampaignTbl
+import org.jetbrains.exposed.v1.jdbc.deleteAll
+import com.kiva.domain.aggregate.campaign.CampaignDomainService
+import com.kiva.application.usecase.campaign.CampaignProducts
+import com.kiva.application.usecase.campaign.CampaignShowcases
+import com.kiva.application.usecase.campaign.usecase.command.CreateCampaignUc
+import com.kiva.application.usecase.campaign.usecase.command.DeleteCampaignUc
+import com.kiva.application.usecase.campaign.usecase.command.UpdateCampaignUc
+import com.kiva.application.usecase.campaign.usecase.query.GetAdminCampaignUc
+import com.kiva.application.usecase.campaign.usecase.query.ListAdminCampaignsUc
 import com.kiva.application.usecase.stockalert.usecase.command.CancelMyStockAlertUc
 import com.kiva.application.usecase.stockalert.usecase.command.CreateStockAlertUc
 import com.kiva.application.usecase.stockalert.StockAlerts
@@ -403,6 +414,18 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
     val adminStockAlerts = AdminStockAlertUseCases(checkPanelAccess, FindAdminStockAlertGroupsUc(transactions, stockAlertRepository, productQm, colors, purchase.settings))
     val productInquiry = GetProductInquiryUc(transactions, productQm, colors, purchase.settings)
 
+    // --- marketing (phase 11) ---
+    val campaignRepository = CampaignRepositoryImpl()
+    val campaignShowcases = CampaignShowcases(productQm, categories, colors, purchase.settings)
+    val adminMarketing = AdminMarketingUseCases(
+        checkPanelAccess,
+        ListAdminCampaignsUc(transactions, campaignRepository, campaignShowcases, clock),
+        GetAdminCampaignUc(transactions, campaignRepository, campaignShowcases, clock),
+        CreateCampaignUc(transactions, campaignRepository, CampaignDomainService(campaignRepository), CampaignProducts(productQm), auditTrail, clock),
+        UpdateCampaignUc(transactions, campaignRepository, CampaignDomainService(campaignRepository), CampaignProducts(productQm), auditTrail, clock),
+        DeleteCampaignUc(transactions, campaignRepository, auditTrail, clock),
+    )
+
     // --- wishlist (phase 9) ---
     val wishlists = WishlistRepositoryImpl()
     val wishlistShares = WishlistShareRepositoryImpl()
@@ -559,6 +582,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
                     webV1StockAlerts(stockAlertUseCases, mediaUrls)
                     webV1AdminStockAlerts(adminStockAlerts, mediaUrls)
                     webV1ProductInquiry(productInquiry)
+                    webV1AdminMarketing(adminMarketing, mediaUrls)
                     webV1Addresses(purchase.addressUseCases)
                     webV1SharedWishlist(wishlist.getShared, mediaUrls)
                     // Back from the gateway and the result page, for paying what a change left owed (phase 3).
@@ -588,6 +612,8 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
             ProductRatingTbl.deleteWhere { ProductRatingTbl.productId inList reviewed }
             MediaTbl.deleteWhere { MediaTbl.uploadedBy inList userIds }
         }
+        // Campaigns belong to nobody: every one a test made goes (kiva_test only).
+        transaction(db) { CampaignTbl.deleteAll() }
         purchase.deleteWhatWasStored()
         transaction(db) {
             val userIds = UserTbl.select(UserTbl.id).where { UserTbl.phone like TEST_PHONES }.map { it[UserTbl.id].value }

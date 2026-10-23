@@ -22,7 +22,20 @@ data class SiteContentQm(
     val productPerks: List<Perk>,
     val trustBadges: List<TrustBadge>,
     val footerLinks: List<FooterGroup>,
+    val home: Home,
 ) {
+    /**
+     * The home page's fixed sections (roadmap phase 11, decision 15).
+     *
+     * @property showcaseProductId the product whose colors turn in the hero, or null for the newest in the shop.
+     * @property showcaseMessenger PhotoMessengerChannel's name (`TELEGRAM`).
+     */
+    data class Home(val hero: Hero, val features: List<Perk>, val howItWorks: List<Step>, val showcaseProductId: Long?, val showcaseMessenger: String)
+
+    data class Hero(val eyebrow: String, val title: String, val text: String, val primaryCta: Link, val secondaryCta: Link)
+
+    data class Step(val step: Int, val title: String, val text: String, val isSignature: Boolean)
+
     data class Brand(val name: String, val slogan: String, val about: String, val logoUrl: String, val logoWhiteUrl: String, val faviconUrl: String)
 
     data class PhotoTexts(val title: String, val description: String)
