@@ -98,6 +98,9 @@ import com.kiva.infrastructure.httpserver.controller.httprest.web.OTP_SEND_RATE_
 import com.kiva.infrastructure.httpserver.controller.httprest.web.PaymentUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.TRACKING_LOOKUP_RATE_LIMIT
 import com.kiva.infrastructure.httpserver.controller.httprest.web.CONTACT_RATE_LIMIT
+import com.kiva.infrastructure.httpserver.controller.httprest.web.NEWSLETTER_RATE_LIMIT
+import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminNewsletterUseCases
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminNewsletter
 import com.kiva.infrastructure.httpserver.controller.httprest.web.ContactUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Contact
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminSupportUseCases
@@ -207,6 +210,10 @@ fun Application.configureHttp(allowedOrigins: List<String> = emptyList(), truste
         }
         register(CONTACT_RATE_LIMIT) {
             rateLimiter(limit = ContactPolicy.MAX_PER_IP, refillPeriod = ContactPolicy.IP_WINDOW.toKotlinDuration())
+            requestKey { call -> call.request.origin.remoteAddress }
+        }
+        register(NEWSLETTER_RATE_LIMIT) {
+            rateLimiter(limit = ContactPolicy.MAX_SUBSCRIBES_PER_IP, refillPeriod = ContactPolicy.SUBSCRIBE_WINDOW.toKotlinDuration())
             requestKey { call -> call.request.origin.remoteAddress }
         }
     }
@@ -380,7 +387,8 @@ fun Application.configureRouting() {
             webV1Wishlist(WishlistUseCases(get(), get(), get(), get(), get(), get(), getCartUc, get(), get(), get()), mediaUrls, config.shop.siteUrl)
             webV1SharedWishlist(get(), mediaUrls)
             webV1Tracking(TrackingUseCases(get(), get(), get()), mediaUrls)
-            webV1Contact(ContactUseCases(get(), get()))
+            webV1Contact(ContactUseCases(get(), get(), get(), get()))
+            webV1AdminNewsletter(AdminNewsletterUseCases(checkPanelAccessUc, get()))
             webV1AdminSupport(AdminSupportUseCases(checkPanelAccessUc, get(), get()))
         }
     }

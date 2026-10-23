@@ -15,6 +15,11 @@ import com.kiva.infrastructure.persistence.exposed.tbl.TestimonialTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.ContactMessageTbl
 import com.kiva.infrastructure.persistence.exposed.ContactMessageRepositoryImpl
 import com.kiva.application.usecase.contact.usecase.command.CreateContactMessageUc
+import com.kiva.application.usecase.newsletter.usecase.command.SubscribeNewsletterUc
+import com.kiva.application.usecase.newsletter.usecase.command.UnsubscribeNewsletterUc
+import com.kiva.application.usecase.newsletter.usecase.query.FindNewsletterSubscriptionsUc
+import com.kiva.infrastructure.persistence.exposed.NewsletterSubscriptionRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.tbl.NewsletterSubscriptionTbl
 import com.kiva.application.usecase.contact.usecase.command.UpdateContactMessageUc
 import com.kiva.application.usecase.contact.usecase.query.FindAdminContactMessagesUc
 import com.kiva.application.usecase.contact.usecase.query.ListContactTopicsUc
@@ -471,8 +476,15 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
     )
     // --- contact and newsletter (phase 13) ---
     val contactMessages = ContactMessageRepositoryImpl()
-    val contact = ContactUseCases(ListContactTopicsUc(), CreateContactMessageUc(transactions, contactMessages, TicketCodeGenerator(), clock))
     val email = RecordingEmailSender()
+    val subscriptions = NewsletterSubscriptionRepositoryImpl()
+    val contact = ContactUseCases(
+        ListContactTopicsUc(),
+        CreateContactMessageUc(transactions, contactMessages, TicketCodeGenerator(), clock),
+        SubscribeNewsletterUc(transactions, subscriptions, email, SITE_URL, clock),
+        UnsubscribeNewsletterUc(transactions, subscriptions, clock),
+    )
+    val adminNewsletter = AdminNewsletterUseCases(checkPanelAccess, FindNewsletterSubscriptionsUc(transactions, subscriptions))
     val adminSupport = AdminSupportUseCases(
         checkPanelAccess,
         FindAdminContactMessagesUc(transactions, contactMessages, users),
@@ -659,6 +671,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
                     webV1Search(search, mediaUrls)
                     webV1Contact(contact)
                     webV1AdminSupport(adminSupport)
+                    webV1AdminNewsletter(adminNewsletter)
                     webV1Addresses(purchase.addressUseCases)
                     webV1SharedWishlist(wishlist.getShared, mediaUrls)
                     // Back from the gateway and the result page, for paying what a change left owed (phase 3).
@@ -694,6 +707,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
             BannerTbl.deleteAll()
             TestimonialTbl.deleteAll()
             ContactMessageTbl.deleteAll()
+            NewsletterSubscriptionTbl.deleteAll()
         }
         purchase.deleteWhatWasStored()
         transaction(db) {

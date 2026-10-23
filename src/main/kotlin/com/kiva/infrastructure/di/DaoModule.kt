@@ -7,6 +7,8 @@ import com.kiva.domain.aggregate.banner.repository.BannerRepository
 import com.kiva.domain.aggregate.testimonial.repository.TestimonialRepository
 import com.kiva.infrastructure.persistence.exposed.TestimonialRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ContactMessageRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.NewsletterSubscriptionRepositoryImpl
+import com.kiva.domain.aggregate.newsletter.repository.NewsletterSubscriptionRepository
 import com.kiva.domain.aggregate.contact.repository.ContactMessageRepository
 import com.kiva.infrastructure.persistence.exposed.BannerRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.StockAlertRepositoryImpl
@@ -162,6 +164,7 @@ val daoModule = module(createdAtStart = true) {
     single<BannerRepository> { BannerRepositoryImpl() }
     single<TestimonialRepository> { TestimonialRepositoryImpl() }
     single<ContactMessageRepository> { ContactMessageRepositoryImpl() }
+    single<NewsletterSubscriptionRepository> { NewsletterSubscriptionRepositoryImpl() }
     single<WishlistShareRepository> { WishlistShareRepositoryImpl() }
     single<WishlistShareTokenGenerator> { RandomWishlistShareTokens() }
     single<ReviewVoteRepository> { ReviewVoteRepositoryImpl() }

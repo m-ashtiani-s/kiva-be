@@ -15,4 +15,12 @@ object EmailTexts {
     /** A reply to [fullName]'s contact message [code]: the whole [reply], as the operator wrote it. */
     fun contactReplyBody(fullName: String, code: TicketCode, reply: String): String =
         "سلام $fullName،\n\n$reply\n\nکد پیگیری پیامت: ${code.value}\nاگه سؤال دیگه‌ای داری، همین‌جا جواب نده؛ از فرم «تماس با ما» تو سایت بنویس.\n\n$SIGNATURE"
+
+    /** The welcome mail of a new or returning newsletter subscriber (decision 13). */
+    fun newsletterWelcomeSubject(): String = "عضو خبرنامه‌ی کیوا شدی!"
+
+    /** With [unsubscribeLink], the one way out: one click on the site, no login. */
+    fun newsletterWelcomeBody(unsubscribeLink: String): String =
+        "سلام!\n\nعضو خبرنامه‌ی کیوا شدی؛ کیف‌های تازه، تخفیف‌ها و کمپین‌ها رو زودتر از همه برات می‌فرستیم.\n\n" +
+            "اگه نخواستی، هر وقت با این لینک لغو کن:\n$unsubscribeLink\n\n$SIGNATURE"
 }

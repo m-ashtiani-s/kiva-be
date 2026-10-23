@@ -3,6 +3,7 @@ package com.kiva.infrastructure.job
 import com.kiva.application.port.RequestHash
 import com.kiva.application.port.SmsKind
 import com.kiva.application.port.SmsSender
+import com.kiva.application.usecase.contact.usecase.command.DeleteOldContactDataUc
 import com.kiva.application.usecase.address.AddressFields
 import com.kiva.application.usecase.cart.CartCaller
 import com.kiva.application.usecase.cart.usecase.command.AddCartItemUc
@@ -64,6 +65,7 @@ class EngagementJobsOnDatabaseTest {
         FindDueStockAlertsUc(panel.transactions, repository),
         NotifyStockAlertUc(panel.transactions, repository, panel.productQm, panel.users, sender, PanelTestStack.SITE_URL, clock),
         DeleteOldStockAlertsUc(panel.transactions, repository, clock),
+        DeleteOldContactDataUc(panel.transactions, panel.contactMessages, panel.subscriptions, clock),
         sender,
         clock,
     )
@@ -111,7 +113,11 @@ class EngagementJobsOnDatabaseTest {
     @Test
     fun `the engagement's jobs and when they run`() {
         assertEquals(
-            listOf("notify-back-in-stock" to Schedule.Every(Duration.ofMinutes(5)), "delete-old-stock-alerts" to Schedule.DailyAt(LocalTime.of(4, 45), com.kiva.domain.aggregate.order.model.policy.ShopCalendar.ZONE)),
+            listOf(
+                "notify-back-in-stock" to Schedule.Every(Duration.ofMinutes(5)),
+                "delete-old-stock-alerts" to Schedule.DailyAt(LocalTime.of(4, 45), com.kiva.domain.aggregate.order.model.policy.ShopCalendar.ZONE),
+                "delete-old-contact-data" to Schedule.DailyAt(LocalTime.of(5, 0), com.kiva.domain.aggregate.order.model.policy.ShopCalendar.ZONE),
+            ),
             jobs.all().map { it.name to it.schedule },
         )
     }

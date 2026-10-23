@@ -83,7 +83,11 @@ fun infrastructureModule(config: AppConfig, database: Database) = module {
             findDueScheduledProducts = get(), publishScheduledProduct = get(), findSilentPhotoOrders = get(), approveSilentPhoto = get(),
         )
     }
-    single { EngagementJobs(findDueStockAlerts = get(), notifyStockAlert = get(), deleteOldStockAlerts = get(), smsSender = get(), clock = get()) }
+    single {
+        EngagementJobs(
+            findDueStockAlerts = get(), notifyStockAlert = get(), deleteOldStockAlerts = get(), deleteOldContactData = get(), smsSender = get(), clock = get(),
+        )
+    }
     single { JobScheduler(get<PurchaseJobs>().all() + get<PanelJobs>().all() + get<EngagementJobs>().all(), clock = get()) }
     // The adapters behind the gateways. A gateway without one here is never available, whatever the settings say.
     when (config.payment.provider) {

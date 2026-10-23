@@ -2,6 +2,7 @@ package com.kiva.infrastructure.job
 
 import com.kiva.application.port.SmsKind
 import com.kiva.application.port.SmsSender
+import com.kiva.application.usecase.contact.usecase.command.DeleteOldContactDataUc
 import com.kiva.application.usecase.stockalert.usecase.command.DeleteOldStockAlertsUc
 import com.kiva.application.usecase.stockalert.usecase.command.NotifyStockAlertUc
 import com.kiva.application.usecase.stockalert.usecase.query.FindDueStockAlertsUc
@@ -23,11 +24,13 @@ import kotlin.coroutines.cancellation.CancellationException
  * |---|---|
  * | «موجود شد»: telling the customers whose bag is back, by SMS | every 5 minutes, not 22:00 to 08:00 Tehran |
  * | deleting subscriptions ended more than 90 days ago | daily, 04:45 Tehran |
+ * | deleting old contact data: closed messages after a year, unsubscribed emails after 90 days (phase 13) | daily, 05:00 Tehran |
  */
 class EngagementJobs(
     private val findDueStockAlerts: FindDueStockAlertsUc,
     private val notifyStockAlert: NotifyStockAlertUc,
     private val deleteOldStockAlerts: DeleteOldStockAlertsUc,
+    private val deleteOldContactData: DeleteOldContactDataUc,
     private val smsSender: SmsSender,
     private val clock: Clock,
 ) {
@@ -40,6 +43,9 @@ class EngagementJobs(
         ScheduledJob("notify-back-in-stock", Schedule.Every(Duration.ofMinutes(5))) { notifyBackInStock() },
         ScheduledJob("delete-old-stock-alerts", Schedule.DailyAt(LocalTime.of(4, 45), ShopCalendar.ZONE)) {
             deleteOldStockAlerts.execute(DeleteOldStockAlertsUc.Cmd)
+        },
+        ScheduledJob("delete-old-contact-data", Schedule.DailyAt(LocalTime.of(5, 0), ShopCalendar.ZONE)) {
+            deleteOldContactData.execute(DeleteOldContactDataUc.Cmd)
         },
     )
 

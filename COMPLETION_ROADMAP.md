@@ -5331,7 +5331,7 @@ Route: 200
 | ۱۳.۱ | پورت ایمیل: لاگ و SMTP | M | ✅ |
 | ۱۳.۲ | موضوع‌ها و ثبت پیام تماس | M | ✅ |
 | ۱۳.۳ | پیام‌های تماس در پنل و پاسخ | M | ✅ |
-| ۱۳.۴ | خبرنامه | M | ⬜ |
+| ۱۳.۴ | خبرنامه | M | ✅ |
 | ۱۳.۵ | ریویو | S | ⬜ |
 
 ### ۱۸.۲ تصمیم‌های این فاز
@@ -5364,6 +5364,8 @@ Route: 200
 | 24 | متن ایمیل‌ها (تازه، گام ۱۳.۳) | `EmailTexts` در لایه‌ی application (`usecase/contact`)، نه HTTP: UseCase ایمیل رو خودش می‌نویسه. ایمیل پاسخ: «سلام {اسم}،»، متن کامل پاسخ، کد پیگیری، «همین‌جا جواب نده؛ از فرم تماس بنویس»، امضای کیوا. شکست فرستادن فقط WARN با **نوع** خطا، نه پیامش (پیام سرور ایمیل می‌تونه آدرس رو داشته باشه) | application به HTTP وابسته نیست |
 | 25 | شکل `PATCH` (تازه، گام ۱۳.۳) | دو کد فیلدی ِ تازه: `CONTACT_STATUS_INVALID` (روی `status`، و فیلتر `status` ِ لیست) و `REPLY_CHANNEL_INVALID`. `reply` ِ فقط فاصله یعنی «نفرستاده»؛ `internalNote: null` یا فقط فاصله پاکش می‌کنه، نیومده دست نمی‌خوره. کد ِ بدشکل یا ناشناخته ← `404 NOT_FOUND`. پاسخ ِ همون کانال دوباره هم یه تغییره (`repliedAt` تازه، دوباره فرستاده می‌شه، یه ردیف لاگ) | کانترکت کد این دو فیلد رو نداشت؛ پاک کردن یادداشت باید ممکن باشه |
 | 26 | جمله‌ی لاگ پاسخ (تازه، گام ۱۳.۳) | `changes`: `status` (از، به)، `replied` (`null` ← `true`) و `replyChannel` (`null` ← کانال) وقتی پاسخ رفت، `internalNote` فقط «عوض شد». جمله‌ی `AuditTexts`: پاسخ اول («… جواب داده شد (خبر با پیامک)» یا «با ایمیل»)، بعد وضعیت («بسته شد»، «در حال پیگیری شد»، «دوباره باز شد»)، وگرنه «یادداشت … عوض شد» | پنل باید از روی لاگ بفهمه چی شد، بی متن |
+| 27 | توکن لغو (تازه، گام ۱۳.۴) | توکن برای کل عمر ردیف می‌مونه: عضوی که برمی‌گرده همون توکن رو داره و لینک ایمیل‌های قبلی هم کار می‌کنه. برخورد اتفاقی ِ توکن با `INSERT … ON CONFLICT DO NOTHING` و کشیدن دوباره (حداکثر ۵ بار). ایمیل خوش‌آمد بعد از commit و در همون درخواست (مثل پیامک‌ها)؛ فرقِ زمانی ِ پاسخ ِ عضو تازه و قدیمی پذیرفته‌ست | لینک لغو ِ هر ایمیلی که رفته باید کار کنه |
+| 28 | شکل خبرنامه (تازه، گام ۱۳.۴) | بی `email` ← `FIELD_REQUIRED` روی `email`؛ بی `token` ← `FIELD_REQUIRED` روی `token`. فیلتر `status` ِ ناشناخته ← کد فیلدی ِ تازه‌ی `SUBSCRIPTION_STATUS_INVALID`؛ `q` حروف کوچک، حداکثر ۱۰۰ (`TEXT_TOO_LONG`)، با `%` و `_` ِ escape‌شده. سقف ۵ در ساعت برای هر IP در `ContactPolicy`، کنار نگه‌داری (۳۶۵ و ۹۰ روز). job ِ `delete-old-contact-data` ساعت ۵:۰۰ تهران، هر دو پاک کردن در یه تراکنش | کانترکت کد فیلتر رو نداشت |
 
 ### ۱۸.۳ تغییرات کد
 
@@ -5567,17 +5569,19 @@ Route: 200 با AdminContactMessage
 
 ---
 
-#### گام ۱۳.۴: خبرنامه · M ⬜
+#### گام ۱۳.۴: خبرنامه · M ✅
 
 **می‌سازی:** `V38` (بخش خبرنامه)؛ `NewsletterSubscription`، repository؛ سه UseCase؛ سقف `newsletter`؛ `DeleteOldContactDataUc` و job؛ routeها.
 
 وابسته به: ۱۳.۱
 
 **تموم شده یعنی:**
-- [ ] عضویت تازه ← `200` و ایمیل خوش‌آمد با لینک لغو؛ دوباره ← `200`، همون پیام، **بدون ایمیل**؛ `Sara@Example.com` و `sara@example.com` یه عضو.
-- [ ] لغو با توکن ← `UNSUBSCRIBED`؛ دوباره ← `204`؛ توکن ساختگی با الگوی درست ← `204`؛ توکن بی‌الگو ← `400`؛ عضویت دوباره بعد از لغو ← `ACTIVE` و ایمیل خوش‌آمد.
-- [ ] لیست پنل فقط برای `ADMIN`؛ `q = "exam"` پیدا می‌کنه.
-- [ ] job: پیام `CLOSED` ِ ۳۶۶ روزه و لغو ِ ۹۱ روزه پاک؛ `OPEN` ِ قدیمی نه.
+- [x] عضویت تازه ← `200` و ایمیل خوش‌آمد با لینک لغو؛ دوباره ← `200`، همون پیام، **بدون ایمیل**؛ `Sara@Example.com` و `sara@example.com` یه عضو.
+- [x] لغو با توکن ← `UNSUBSCRIBED`؛ دوباره ← `204`؛ توکن ساختگی با الگوی درست ← `204`؛ توکن بی‌الگو ← `400`؛ عضویت دوباره بعد از لغو ← `ACTIVE` و ایمیل خوش‌آمد.
+- [x] لیست پنل فقط برای `ADMIN`؛ `q = "exam"` پیدا می‌کنه.
+- [x] job: پیام `CLOSED` ِ ۳۶۶ روزه و لغو ِ ۹۱ روزه پاک؛ `OPEN` ِ قدیمی نه.
+
+**یادداشت پیاده‌سازی:** دو تصمیم تازه (۲۷ و ۲۸). جدول از قبل در `V38` (گام ۱۳.۲). دامنه‌ی `newsletter`: `NewsletterSubscription` (`subscribedAgain` با `Outcome`، `unsubscribed`)، `UnsubscribeToken` (`SecureRandom`، `toString` ِ بی‌مقدار)، `SubscriptionStatus`، `SubscriptionSource`، `NewsletterSubscriptionRepository`؛ `NewsletterSubscriptionRepositoryImpl`؛ `SubscribeNewsletterUc`، `UnsubscribeNewsletterUc`، `FindNewsletterSubscriptionsUc`، `DeleteOldContactDataUc` و job ِ `delete-old-contact-data` در `EngagementJobs`؛ متن‌های خوش‌آمد در `EmailTexts`؛ سقف `newsletter` در `RateLimit`؛ دو route در `webV1Contact.kt`، `webV1AdminNewsletter.kt`، `MessageHttpResponse`، `NewsletterSubscriptionHttpResponse`، `NewsletterTexts`. تست: `NewsletterSubscriptionTest` (۴)، `WebV1NewsletterOnDatabaseTest` (۷، از جمله پاک کردن شبانه)، و job ِ تازه در `EngagementJobsOnDatabaseTest`. ۱۳ خرابکاری (خوش‌آمد به عضو قدیمی، پاسخی که لو بده، برنگشتن ِ لغوشده، توکن بدشکل ← ۲۰۴، لغو ِ ذخیره‌نشده، `SUPPORT` در لیست، `q`، سقف IP، پاک شدن `OPEN`، نگه‌داری ِ کوتاه‌تر، ایمیل در لاگ، لینک بی توکن، توکن در `toString`) همه قرمز. کل مجموعه با `--rerun-tasks`: ۳۰۶۳ تست سبز، ۵ skip.
 
 ---
 
@@ -6484,3 +6488,4 @@ kiva {
 | ۱ آبان ۱۴۰۵ | ۱۳.۱ | Phase 13 step 13.1 | پورت ایمیل: `LogEmailSender` (پیش‌فرض) و `SmtpEmailSender` (Angus Mail)، `EmailConfig` با چک‌های بوت، README و `kiva.env.example`. ۱۳ خرابکاری قرمز. ۳۰۲۱ تست سبز، ۵ skip |
 | ۱ آبان ۱۴۰۵ | ۱۳.۲ | Phase 13 step 13.2 | فرم تماس: `V38`، دامنه‌ی `contact`، `GET /contact/topics` (کش) و `POST /contact/messages` با سقف IP و موبایل (قفل advisory). سه تصمیم تازه (۲۱ تا ۲۳). ۱۱ خرابکاری قرمز. ۳۰۴۰ تست سبز، ۵ skip |
 | ۱ آبان ۱۴۰۵ | ۱۳.۳ | Phase 13 step 13.3 | پیام‌های تماس در پنل: لیست با فیلتر، `PATCH` (وضعیت، یادداشت، پاسخ پیامکی بی متن یا ایمیلی با متن)، لاگ تغییرات بی متن، پیامک `sendContactReplied` با مسیر ۹ مرحله‌ای. سه تصمیم تازه (۲۴ تا ۲۶). ۱۲ خرابکاری قرمز. ۳۰۵۲ تست سبز، ۵ skip |
+| ۱ آبان ۱۴۰۵ | ۱۳.۴ | Phase 13 step 13.4 | خبرنامه: عضویت (همیشه همون `200`، ایمیل خوش‌آمد فقط برای تازه و برگشته)، لغو با توکن (همیشه `204`)، لیست ِ فقط `ADMIN`، سقف IP، job ِ پاک کردن داده‌ی تماس ِ قدیمی. دو تصمیم تازه (۲۷ و ۲۸). ۱۳ خرابکاری قرمز. ۳۰۶۳ تست سبز، ۵ skip |

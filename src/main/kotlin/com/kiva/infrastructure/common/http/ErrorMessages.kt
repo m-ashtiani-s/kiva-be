@@ -185,6 +185,7 @@ object ErrorMessages {
         "CONTACT_TOPIC_INVALID" to "موضوع پیام رو از لیست انتخاب کن",
         "CONTACT_STATUS_INVALID" to "وضعیت پیام باید OPEN، IN_PROGRESS یا CLOSED باشه",
         "REPLY_CHANNEL_INVALID" to "پاسخ یا با پیامک (SMS) می‌ره یا با ایمیل (EMAIL)",
+        "SUBSCRIPTION_STATUS_INVALID" to "وضعیت عضویت باید ACTIVE یا UNSUBSCRIBED باشه",
         "UNSUBSCRIBE_TOKEN_INVALID" to "این لینک لغو عضویت درست نیست",
         "SEARCH_QUERY_EMPTY" to "یه چیزی بنویس تا دنبالش بگردیم",
         "SEARCH_QUERY_TOO_LONG" to "متن جستجو حداکثر {maxLength} حرفه",

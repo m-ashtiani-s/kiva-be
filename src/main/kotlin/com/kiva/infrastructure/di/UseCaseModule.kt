@@ -20,6 +20,10 @@ import com.kiva.application.usecase.content.usecase.query.GetSiteStatsUc
 import com.kiva.application.usecase.search.usecase.query.SearchSuggestUc
 import com.kiva.application.usecase.search.usecase.query.GetSearchHintsUc
 import com.kiva.application.usecase.contact.usecase.command.CreateContactMessageUc
+import com.kiva.application.usecase.contact.usecase.command.DeleteOldContactDataUc
+import com.kiva.application.usecase.newsletter.usecase.command.SubscribeNewsletterUc
+import com.kiva.application.usecase.newsletter.usecase.command.UnsubscribeNewsletterUc
+import com.kiva.application.usecase.newsletter.usecase.query.FindNewsletterSubscriptionsUc
 import com.kiva.application.usecase.contact.usecase.command.UpdateContactMessageUc
 import com.kiva.application.usecase.contact.usecase.query.FindAdminContactMessagesUc
 import com.kiva.application.usecase.contact.usecase.query.ListContactTopicsUc
@@ -850,6 +854,14 @@ val useCaseModule = module(createdAtStart = true) {
     single { ListContactTopicsUc() }
     single { CreateContactMessageUc(transactionManager = get(), contactMessageRepository = get(), ticketCodeGenerator = get(), clock = get()) }
     single { FindAdminContactMessagesUc(transactionManager = get(), contactMessageRepository = get(), userRepository = get()) }
+    single {
+        SubscribeNewsletterUc(
+            transactionManager = get(), subscriptionRepository = get(), emailSender = get(), siteUrl = get<AppConfig>().shop.siteUrl, clock = get(),
+        )
+    }
+    single { UnsubscribeNewsletterUc(transactionManager = get(), subscriptionRepository = get(), clock = get()) }
+    single { FindNewsletterSubscriptionsUc(transactionManager = get(), subscriptionRepository = get()) }
+    single { DeleteOldContactDataUc(transactionManager = get(), contactMessageRepository = get(), subscriptionRepository = get(), clock = get()) }
     single {
         UpdateContactMessageUc(
             transactionManager = get(), contactMessageRepository = get(), userRepository = get(), auditTrail = get(), smsSender = get(),

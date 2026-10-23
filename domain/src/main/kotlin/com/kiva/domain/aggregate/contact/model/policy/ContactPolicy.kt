@@ -16,6 +16,14 @@ object ContactPolicy {
     const val MAX_PER_PHONE = 5
     val PHONE_WINDOW: Duration = Duration.ofHours(24)
 
+    /** The newsletter's limit per address (decision 14): the welcome mail can't be fired at others' addresses. */
+    const val MAX_SUBSCRIBES_PER_IP = 5
+    val SUBSCRIBE_WINDOW: Duration = Duration.ofHours(1)
+
+    /** How long a CLOSED message is kept after its last change, and an unsubscribed email after it left (decision 19). */
+    val KEEP_CLOSED: Duration = Duration.ofDays(365)
+    val KEEP_UNSUBSCRIBED: Duration = Duration.ofDays(90)
+
     /**
      * Null when one more message from this mobile is fine; else how long until the oldest of [recent] (the times of its
      * messages in the last [PHONE_WINDOW]) is out of the window.

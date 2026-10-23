@@ -3,6 +3,7 @@ package com.kiva.infrastructure.persistence.exposed
 import com.kiva.common.valueobject.IranianMobileNumber
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.contact.entity.ContactMessage
+import com.kiva.domain.aggregate.contact.model.valueobject.ContactStatus
 import com.kiva.domain.aggregate.contact.model.valueobject.TicketCode
 import com.kiva.domain.aggregate.contact.repository.ContactMessageRepository
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
@@ -19,7 +20,9 @@ import org.jetbrains.exposed.v1.core.TextColumnType
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greater
+import org.jetbrains.exposed.v1.core.less
 import org.jetbrains.exposed.v1.core.statements.UpdateBuilder
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insertIgnore
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -58,6 +61,9 @@ class ContactMessageRepositoryImpl : ContactMessageRepository {
         return ContactMessageTbl.selectAll().where { where }
             .paginate(pageable, NEWEST_FIRST, tiebreaker = ContactMessageTbl.id, tiebreakerOrder = SortOrder.DESC) { it.toMessage() }
     }
+
+    override fun deleteClosedBefore(before: Instant): Int =
+        ContactMessageTbl.deleteWhere { (ContactMessageTbl.status eq ContactStatus.CLOSED) and (ContactMessageTbl.updatedAt less before.utc()) }
 
     // A transaction-level advisory lock keyed by the mobile, a parameter so it never shows in the SQL log.
     override fun lockPhone(phone: IranianMobileNumber) {

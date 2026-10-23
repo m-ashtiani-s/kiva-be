@@ -25,6 +25,9 @@ interface ContactMessageRepository {
     /** The panel's list (decision 18): newest first, the newest id first among equals. */
     fun page(filter: Filter, pageable: Pageable): Page<ContactMessage>
 
+    /** Deletes the CLOSED messages last changed before [before] (decision 19); how many went. */
+    fun deleteClosedBefore(before: Instant): Int
+
     /** The panel's filters; null is any. */
     data class Filter(val status: ContactStatus?, val topic: ContactTopic?)
 

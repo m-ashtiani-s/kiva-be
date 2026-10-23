@@ -17,6 +17,18 @@ data class ContactMessageHttpRequest(
     override fun toString(): String = "ContactMessageHttpRequest(topic=$topic, orderCode=$orderCode)"
 }
 
+/** The body of `POST /newsletter/subscriptions` (contract NewsletterSubscribeRequest). The email: [toString] hides it. */
+@Serializable
+data class NewsletterSubscribeHttpRequest(val email: String? = null, val source: String? = null) {
+    override fun toString(): String = "NewsletterSubscribeHttpRequest(source=$source)"
+}
+
+/** The body of `POST /newsletter/subscriptions/unsubscribe`. The token is a secret: [toString] hides it. */
+@Serializable
+data class NewsletterUnsubscribeHttpRequest(val token: String? = null) {
+    override fun toString(): String = "NewsletterUnsubscribeHttpRequest(***)"
+}
+
 /**
  * The body of `PATCH /admin/contact-messages/{ticketCode}`: every field optional. [internalNote] sent as null clears it.
  * Texts: [toString] hides them.
