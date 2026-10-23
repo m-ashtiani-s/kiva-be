@@ -164,6 +164,13 @@ object ProductTexts {
         return (counted + flags).joinToString("، ").ifEmpty { "بدون جیب" }
     }
 
+    /**
+     * What «سؤال داری؟» puts in a messenger (roadmap section 15.6): «سلام، درباره «کیف دوشی ماهک» رنگ یاسی (کد KV-1001)
+     * سؤال دارم. می‌شه عکس/ویدیوی بیشتری بفرستید؟». [code] is the product's own (KV-1001), as its page shows it.
+     */
+    fun inquiryText(name: String, colorName: String, code: String): String =
+        "سلام، درباره «$name» رنگ $colorName (کد $code) سؤال دارم. می‌شه عکس/ویدیوی بیشتری بفرستید؟"
+
     // StockPolicy gives the number exactly when the status is LOW_STOCK.
     private fun shown(stock: StockInfo): String =
         (stock.shownQuantity ?: error("LOW_STOCK without a number: $stock")).toLong().toPersianNumber()

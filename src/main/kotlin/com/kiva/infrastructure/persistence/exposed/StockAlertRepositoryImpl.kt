@@ -1,5 +1,7 @@
 package com.kiva.infrastructure.persistence.exposed
 
+import com.kiva.common.pagination.Page
+import com.kiva.common.pagination.Pageable
 import com.kiva.common.repository.UniqueTakenException
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.product.model.valueobject.ProductId
@@ -9,8 +11,10 @@ import com.kiva.domain.aggregate.stockalert.model.valueobject.StockAlertId
 import com.kiva.domain.aggregate.stockalert.model.valueobject.StockAlertStatus
 import com.kiva.domain.aggregate.stockalert.repository.StockAlertIdGenerator
 import com.kiva.domain.aggregate.stockalert.repository.StockAlertRepository
+import com.kiva.domain.aggregate.stockalert.repository.WaitingGroup
 import com.kiva.infrastructure.common.persistence.refusedConstraint
 import com.kiva.infrastructure.persistence.exposed.tbl.StockAlertTbl
+import org.jetbrains.exposed.v1.core.IColumnType
 import org.jetbrains.exposed.v1.core.LongColumnType
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
@@ -115,6 +119,54 @@ class StockAlertRepositoryImpl : StockAlertRepository {
             .where { (StockAlertTbl.variantId inList variantIds.map { it.value }) and (StockAlertTbl.status eq StockAlertStatus.ACTIVE) }
             .groupBy(StockAlertTbl.variantId)
             .associate { VariantId.constructFromPersisted(it[StockAlertTbl.variantId]!!) to it[count].toInt() }
+    }
+
+    /**
+     * One statement for the rows and one for their count (roadmap section 15.6), both on the same groups. What can be
+     * sold is worked out in SQL, so the `inStock` filter keeps the paging right. A color taken out of the shop counts 0.
+     */
+    override fun waitingGroups(productId: ProductId?, inStock: Boolean?, pageable: Pageable): Page<WaitingGroup> {
+        val args = mutableListOf<Pair<IColumnType<*>, Any?>>()
+        val ofProduct = if (productId == null) "" else "AND a.\"productId\" = ?".also { args += LongColumnType() to productId.value }
+        val ofStock = when (inStock) {
+            null -> ""
+            true -> "WHERE g.available > 0"
+            false -> "WHERE g.available = 0"
+        }
+        // A subquery, not a WITH: Exposed reads a statement's rows only when it starts with SELECT.
+        val groups =
+            """
+            (SELECT a."productId", a."variantId", count(*) AS waiting, min(a."createdOn") AS oldest,
+                    COALESCE((SELECT sum(GREATEST(v."onHand" - v.reserved, 0)) FROM productvariantqm_tbl v
+                              WHERE v."productId" = a."productId" AND v."isActive"
+                                AND (a."variantId" IS NULL OR v."variantId" = a."variantId")), 0) AS available
+             FROM stockalert_tbl a
+             WHERE a.status = 'ACTIVE' $ofProduct
+             GROUP BY a."productId", a."variantId") g
+            """.trimIndent()
+        val transaction = TransactionManager.current()
+        val total = transaction.exec("SELECT count(*) FROM $groups $ofStock", args) { rs -> rs.next(); rs.getLong(1) } ?: 0L
+        val rows = mutableListOf<WaitingGroup>()
+        transaction.exec(
+            """
+            SELECT g."productId", g."variantId", g.waiting, g.oldest, g.available FROM $groups $ofStock
+            ORDER BY g.waiting DESC, g.oldest ASC, g."productId" ASC, g."variantId" ASC NULLS FIRST
+            LIMIT ? OFFSET ?
+            """.trimIndent(),
+            args + listOf(LongColumnType() to pageable.size.toLong(), LongColumnType() to pageable.offset),
+        ) { rs ->
+            while (rs.next()) {
+                val variantId = rs.getLong(2).takeUnless { rs.wasNull() }
+                rows += WaitingGroup(
+                    productId = ProductId.constructFromPersisted(rs.getLong(1)),
+                    variantId = variantId?.let { VariantId.constructFromPersisted(it) },
+                    waitingCount = rs.getInt(3),
+                    oldestOn = rs.getTimestamp(4).toInstant(),
+                    available = rs.getLong(5).toInt(),
+                )
+            }
+        }
+        return Page(rows, pageable.page, pageable.size, total)
     }
 
     override fun deleteEndedBefore(before: Instant): Int = StockAlertTbl.deleteWhere {

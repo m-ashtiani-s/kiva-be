@@ -1,5 +1,7 @@
 package com.kiva.domain.aggregate.stockalert.repository
 
+import com.kiva.common.pagination.Page
+import com.kiva.common.pagination.Pageable
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.product.model.valueobject.ProductId
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
@@ -45,12 +47,28 @@ interface StockAlertRepository {
     /** How many ACTIVE ones wait for each of [variantIds] (not «any color»): the panel's colors. */
     fun subscribersOf(variantIds: Collection<VariantId>): Map<VariantId, Int>
 
+    /**
+     * The panel's queue: the ACTIVE ones grouped by product and color (or «any color»), most waiting first, then the
+     * longest waiting; only [productId]'s when given; with [inStock], only the groups that can (true) or can't (false)
+     * be bought now. One page of [pageable].
+     */
+    fun waitingGroups(productId: ProductId?, inStock: Boolean?, pageable: Pageable): Page<WaitingGroup>
+
     /** Deletes the NOTIFIED and CANCELLED ones that ended before [before]; how many went. */
     fun deleteEndedBefore(before: Instant): Int
 
     /** Writes the subscription's change (its status and when). */
     fun save(alert: StockAlert)
 }
+
+/**
+ * The ACTIVE subscriptions of one product and color, as the panel counts them.
+ *
+ * @property variantId null: «any color».
+ * @property available what can be sold now (in stock minus reserved) of that color, or of all the product's active
+ *   colors for «any color»; 0 for a color taken out of the shop.
+ */
+data class WaitingGroup(val productId: ProductId, val variantId: VariantId?, val waitingCount: Int, val oldestOn: Instant, val available: Int)
 
 /** Hands out the ids of new subscriptions from the `stockalertid_seq` database sequence. */
 interface StockAlertIdGenerator {

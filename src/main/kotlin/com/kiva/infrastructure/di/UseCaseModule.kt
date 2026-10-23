@@ -4,6 +4,8 @@ import com.kiva.application.usecase.stockalert.StockAlertCounts
 import com.kiva.application.usecase.stockalert.usecase.command.DeleteOldStockAlertsUc
 import com.kiva.application.usecase.stockalert.usecase.command.NotifyStockAlertUc
 import com.kiva.application.usecase.stockalert.usecase.query.FindDueStockAlertsUc
+import com.kiva.application.usecase.stockalert.usecase.query.FindAdminStockAlertGroupsUc
+import com.kiva.application.usecase.product.usecase.query.GetProductInquiryUc
 import com.kiva.application.usecase.stockalert.usecase.query.ListMyStockAlertsUc
 import com.kiva.application.usecase.stockalert.usecase.command.CancelMyStockAlertUc
 import com.kiva.application.usecase.stockalert.usecase.command.CreateStockAlertUc
@@ -734,6 +736,12 @@ val useCaseModule = module(createdAtStart = true) {
         )
     }
     single { DeleteOldStockAlertsUc(transactionManager = get(), stockAlertRepository = get(), clock = get()) }
+    single {
+        FindAdminStockAlertGroupsUc(
+            transactionManager = get(), stockAlertRepository = get(), productQmRepository = get(), colorRepository = get(), shopSettingsRepository = get(),
+        )
+    }
+    single { GetProductInquiryUc(transactionManager = get(), productQmRepository = get(), colorRepository = get(), shopSettingsRepository = get()) }
 
     // --- wishlist (phase 9) ---
     single { WishlistHearts.of(get()) }

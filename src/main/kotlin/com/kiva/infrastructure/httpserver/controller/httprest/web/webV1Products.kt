@@ -8,6 +8,7 @@ import com.kiva.application.usecase.product.ProductFilterQuery
 import com.kiva.application.usecase.product.usecase.query.FindProductsUc
 import com.kiva.application.usecase.product.usecase.query.FindRelatedProductsUc
 import com.kiva.application.usecase.product.usecase.query.GetProductFacetsUc
+import com.kiva.application.usecase.product.usecase.query.GetProductInquiryUc
 import com.kiva.application.usecase.product.usecase.query.GetProductUc
 import com.kiva.application.usecase.product.usecase.query.ProductSorts
 import com.kiva.common.railway.unwrapOr
@@ -16,6 +17,7 @@ import com.kiva.infrastructure.common.http.respondFailure
 import com.kiva.infrastructure.common.http.respondResult
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.ProductDetailHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.ProductFacetsHttpResponse
+import com.kiva.infrastructure.httpserver.controller.httprest.model.response.ProductInquiryHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.ProductListHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.ProductSummaryHttpResponse
 import com.kiva.infrastructure.media.MediaUrls
@@ -90,6 +92,17 @@ private fun Route.webV1ProductRoutes(
             viewer = call.principal<AccessPrincipal>()?.userId,
         )
         call.respondResult(findRelatedProductsUc.execute(query)) { cards -> cards.map { ProductSummaryHttpResponse.from(it, filterColors = emptyList(), mediaUrls) } }
+    }
+}
+
+/**
+ * «سؤال داری؟» of a product page (contract tag `Product`; roadmap section 15.2, decision 18): public, no login read, and
+ * not cached (the links follow the settings at once). Mounted under `/api/v1`.
+ */
+fun Route.webV1ProductInquiry(getProductInquiryUc: GetProductInquiryUc) {
+    get("/products/{productId}/inquiry") {
+        val query = GetProductInquiryUc.Qry(productId = call.pathParameters["productId"].orEmpty(), color = call.request.queryParameters["color"])
+        call.respondResult(getProductInquiryUc.execute(query)) { ProductInquiryHttpResponse.from(it) }
     }
 }
 

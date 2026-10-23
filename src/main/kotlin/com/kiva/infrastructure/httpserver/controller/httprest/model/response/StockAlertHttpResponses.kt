@@ -1,5 +1,6 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.model.response
 
+import com.kiva.application.dto.AdminStockAlertGroupDto
 import com.kiva.application.dto.StockAlertDto
 import com.kiva.domain.aggregate.stockalert.model.valueobject.StockAlertStatus
 import com.kiva.infrastructure.media.MediaUrls
@@ -42,6 +43,32 @@ data class StockAlertHttpResponse(
             createdAt = alert.createdAt.toString(),
             notifiedAt = alert.notifiedAt?.toString(),
             message = StockAlertTexts.message(alert.status),
+        )
+    }
+}
+
+/** Contract schema `AdminStockAlertGroup`: every field always there; «any color» has `variantId`, `color` and `sku` null. */
+@Serializable
+data class AdminStockAlertGroupHttpResponse(
+    val product: ProductRefHttpResponse,
+    val variantId: Long?,
+    val color: ColorHttpResponse?,
+    val sku: String?,
+    val waitingCount: Int,
+    val oldestAt: String,
+    val stockStatus: String,
+    val availableQuantity: Int,
+) {
+    companion object {
+        fun from(group: AdminStockAlertGroupDto, urls: MediaUrls) = AdminStockAlertGroupHttpResponse(
+            product = ReviewHttpResponse.refOf(group.product, urls).copy(colorKey = group.color?.key?.value),
+            variantId = group.variantId,
+            color = group.color?.let { ColorHttpResponse(it.key.value, it.name.value, it.hex.value, it.isLight, it.sortOrder) },
+            sku = group.sku,
+            waitingCount = group.waitingCount,
+            oldestAt = group.oldestAt.toString(),
+            stockStatus = group.stockStatus.name,
+            availableQuantity = group.availableQuantity,
         )
     }
 }

@@ -6,6 +6,8 @@ import com.kiva.infrastructure.persistence.exposed.StockAlertIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.StockAlertRepositoryImpl
 import com.kiva.domain.aggregate.stockalert.StockAlertDomainService
 import com.kiva.application.usecase.stockalert.usecase.query.ListMyStockAlertsUc
+import com.kiva.application.usecase.stockalert.usecase.query.FindAdminStockAlertGroupsUc
+import com.kiva.application.usecase.product.usecase.query.GetProductInquiryUc
 import com.kiva.application.usecase.stockalert.usecase.command.CancelMyStockAlertUc
 import com.kiva.application.usecase.stockalert.usecase.command.CreateStockAlertUc
 import com.kiva.application.usecase.stockalert.StockAlerts
@@ -398,6 +400,8 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         ListMyStockAlertsUc(transactions, stockAlertRepository, stockAlertsView, clock),
         CancelMyStockAlertUc(transactions, stockAlertRepository, clock),
     )
+    val adminStockAlerts = AdminStockAlertUseCases(checkPanelAccess, FindAdminStockAlertGroupsUc(transactions, stockAlertRepository, productQm, colors, purchase.settings))
+    val productInquiry = GetProductInquiryUc(transactions, productQm, colors, purchase.settings)
 
     // --- wishlist (phase 9) ---
     val wishlists = WishlistRepositoryImpl()
@@ -553,6 +557,8 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
                     webV1Wishlist(wishlist, mediaUrls, SITE_URL)
                     webV1MyDashboard(dashboard)
                     webV1StockAlerts(stockAlertUseCases, mediaUrls)
+                    webV1AdminStockAlerts(adminStockAlerts, mediaUrls)
+                    webV1ProductInquiry(productInquiry)
                     webV1Addresses(purchase.addressUseCases)
                     webV1SharedWishlist(wishlist.getShared, mediaUrls)
                     // Back from the gateway and the result page, for paying what a change left owed (phase 3).

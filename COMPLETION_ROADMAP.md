@@ -4522,7 +4522,7 @@ Route: 200 با Cache-Control: no-store
 | ۱۰.۰ | کانترکت 1.16.0 | S | ✅ |
 | ۱۰.۱ | اشتراک: جدول، دامنه، ثبت، لیست، لغو و نشانه‌ها در صفحه‌ی محصول | M | ✅ |
 | ۱۰.۲ | job ِ «موجود شد» و پیامکش | M | ✅ |
-| ۱۰.۳ | صف پنل و «سؤال داری؟» | M | ⬜ |
+| ۱۰.۳ | صف پنل و «سؤال داری؟» | M | ✅ |
 | ۱۰.۴ | ریویو | S | ⬜ |
 
 ### ۱۵.۲ تصمیم‌های این فاز
@@ -4554,6 +4554,9 @@ Route: 200 با Cache-Control: no-store
 | 23 | `canSend` (تازه، گام ۱۰.۲) | `SmsSender.canSend(SmsKind)` با پیش‌فرض `true` در خود پورت (فقط `FarazSmsSender` جوابش رو از الگوی تنظیم‌شده می‌ده)؛ `SmsKind` فعلاً فقط `BACK_IN_STOCK` | سه فرستنده فقط یکی‌شون معنی «الگو نیست» رو داره |
 | 24 | موبایل و متن پیامک (تازه، گام ۱۰.۲) | موبایل حساب داخل همون تراکنش ِ `NOTIFIED` خونده می‌شه و پیامک بعد از commit می‌ره؛ کاربر حذف‌شده ← فقط WARN (اشتراک `NOTIFIED` می‌مونه). `NotifyStockAlertUc.shortName` اسم بیشتر از ۳۰ نویسه رو با «…» می‌بُره | قانون «پیامک بعد از commit» و تصمیم ۱۰ |
 | 25 | شمارنده‌ی پنل (تازه، گام ۱۰.۲) | `StockAlertCounts` (مثل `StockAlertFlags`) در `GetAdminProductUc`؛ `AdminVariant.stockAlertSubscribers` = اشتراک‌های `ACTIVE` ِ همون رنگ با یه خوندن | تصمیم ۱۷ |
+| 26 | موجودی در صف پنل (تازه، گام ۱۰.۳) | `availableQuantity` = `onHand − reserved` ِ رنگ‌های **فعال** (رنگ غیرفعال ← ۰)، بدون نگاه به وضعیت محصول؛ همین عدد پایه‌ی فیلتر `inStock` و `stockStatus` (`StockPolicy` با آستانه‌ی تنظیمات). گروه‌بندی و موجودی در یه SQL (زیرکوئری، نه `WITH`، چون Exposed فقط جواب دستوری رو می‌خونه که با `SELECT` شروع بشه) با یه شمارش جدا؛ tiebreaker ِ `productId` و `variantId` | صفحه‌بندی با فیلتر درست بمونه؛ «موجود دقیق» ِ کانترکت |
+| 27 | رنگ «سؤال داری؟» (تازه، گام ۱۰.۳) | رنگی که محصول الان نداره ← `400 COLOR_NOT_FOUND` (برخلاف صفحه‌ی محصول که به پیش‌فرض برمی‌گرده)؛ کلید بدشکل هم `400` روی `color`؛ شناسه‌ی بدشکل مسیر ← `404`. کد متن، کد خود محصوله (`KV-1001`)، نه کد رنگ | متن نباید رنگی رو بگه که فروشگاه نمی‌فروشه؛ کانترکت |
+| 28 | `responseHours` (تازه، گام ۱۰.۳) | از اولین سطر ساعت پشتیبانی که ساعت داره: «پاسخگویی ۹ تا ۲۱» (دقیقه فقط وقتی هست: «۲۱:۳۰»)؛ نبود ← `null`. route ِ «سؤال داری؟» تابع جدای `webV1ProductInquiry` در همون `webV1Products.kt`، بیرون از بلوک ورود اختیاری (عمومی، هیچ توکنی خونده نمی‌شه) | `ContentTexts`؛ تغییر امضای `webV1Products` پنج جا رو عوض می‌کرد |
 
 ### ۱۵.۳ تغییرات دامنه
 
@@ -4758,16 +4761,18 @@ url (تلگرام با آدرس https://t.me/kiva_shop) = https://t.me/kiva_shop
 
 ---
 
-#### گام ۱۰.۳: صف پنل و «سؤال داری؟» · M ⬜
+#### گام ۱۰.۳: صف پنل و «سؤال داری؟» · M ✅
 
 **می‌سازی:** `FindAdminStockAlertGroupsUc`، `GetProductInquiryUc`؛ `webV1AdminStockAlerts.kt` و route ِ «سؤال داری؟»؛ `ProductTexts.inquiryText`.
 
 وابسته به: ۱۰.۱
 
 **تموم شده یعنی:**
-- [ ] صف: سه گروه با ترتیب درست؛ «هر رنگی» با `variantId`، `color` و `sku` ِ `null` و `availableQuantity` = جمع؛ `inStock=false` فقط ناموجودها؛ هیچ موبایلی تو پاسخ نیست (تست روی متن خام JSON).
-- [ ] `OPERATOR` ← `403`.
-- [ ] «سؤال داری؟» بدون `color` ← رنگ پیش‌فرض؛ با رنگ غلط ← `400`؛ اینستاگرام تو `channels` نیست؛ `url` ِ کدشده درست (تست با decode)؛ آدرسی که `?` داره ← `&text=`.
+- [x] صف: سه گروه با ترتیب درست؛ «هر رنگی» با `variantId`، `color` و `sku` ِ `null` و `availableQuantity` = جمع؛ `inStock=false` فقط ناموجودها؛ هیچ موبایلی تو پاسخ نیست (تست روی متن خام JSON).
+- [x] `OPERATOR` ← `403`.
+- [x] «سؤال داری؟» بدون `color` ← رنگ پیش‌فرض؛ با رنگ غلط ← `400`؛ اینستاگرام تو `channels` نیست؛ `url` ِ کدشده درست (تست با decode)؛ آدرسی که `?` داره ← `&text=`.
+
+**یادداشت پیاده‌سازی:** سه تصمیم تازه (۲۶ تا ۲۸). `StockAlertRepository.waitingGroups` (گروه‌بندی، موجودی رنگ‌های فعال و فیلتر `inStock` در یه SQL، با شمارش جدا) و `WaitingGroup`؛ `FindAdminStockAlertGroupsUc` (`PRODUCT_ID_INVALID` و `BOOLEAN_INVALID` با هم، بعد چهار خوندن برای کل صفحه: گروه‌ها، `findBriefs`، `findVariants`، پالت و آستانه)؛ `webV1AdminStockAlerts.kt` (`[ADMIN, CATALOG_MANAGER]`، بدون لاگ تغییرات)؛ `GetProductInquiryUc` و `webV1ProductInquiry`؛ `ProductInquiryHttpResponse` و `MessengerLinkHttpResponse` (`url` با `?text=` یا `&text=` و `%20`)، `ProductTexts.inquiryText`، `ContentTexts.responseHours`. تست: `WebV1AdminStockAlertsOnDatabaseTest` (۵: ترتیب و شکل صف بدون هیچ موبایلی، فیلترها و خطاها، نقش‌ها، «سؤال داری؟» با رنگ پیش‌فرض و decode، رنگ پرسیده/غلط و `&text=` و ۴۰۴). خرابکاری: فیلتر `inStock=true` بی‌اثر ← «inStock=false only the sold-out groups …» قرمز؛ همیشه `?text=` ← «… a link with a query gets &text= …» قرمز. کل مجموعه با `--rerun-tasks`: ۲۹۶۶ تست، ۵ skip؛ یه شکست ِ بی‌ربط (`WebV1ShipmentOnDatabaseTest` › «… 50 times - never a deadlock»، timeout ِ یه دقیقه‌ای زیر بار کل مجموعه) که تنها دوباره سبز شد.
 
 ---
 
@@ -6405,3 +6410,4 @@ kiva {
 | ۳۰ مهر ۱۴۰۵ | ۱۰.۰ | Phase 10 step 10.0 | کانترکت 1.16.0 با هر ۱۱ ردیف ِ ۱۵.۸؛ متن کدهای تازه. برنچ `stock-alerts` از نوک فاز ۹ |
 | ۳۰ مهر ۱۴۰۵ | ۱۰.۱ | Phase 10 step 10.1 | «موجود شد خبرم کن»: `V35`، دامنه با قانون‌ها به ترتیب کانترکت، ثبت (فقط با ورود)، «اشتراک‌های من»، لغو، نشانه‌های صفحه‌ی محصول. سه تصمیم تازه (۲۰ تا ۲۲). پنج خرابکاری قرمز. ۲۹۵۲ تست سبز |
 | ۳۰ مهر ۱۴۰۵ | ۱۰.۲ | Phase 10 step 10.2 | job ِ «موجود شد» (هر ۵ دقیقه، بعد از commit پیامک، ساعت سکوت، بدون الگو اجرا نمی‌شه، ۲۰۰ در هر اجرا)، پاک‌سازی شبانه، مسیر کامل پیامک `KIVA_FARAZ_BACK_IN_STOCK_PATTERN`، شمارنده‌ی پنل. سه تصمیم تازه (۲۳ تا ۲۵). چهار خرابکاری قرمز. ۲۹۶۱ تست سبز |
+| ۱ آبان ۱۴۰۵ | ۱۰.۳ | Phase 10 step 10.3 | صف پنل «موجود شد خبرم کن» (گروه‌ها، موجودی دقیق، فیلتر `inStock` در SQL، بدون موبایل) و «سؤال داری؟» (رنگ پیش‌فرض، فقط سه پیام‌رسان، `url` ِ کدشده با `?`/`&text=`، `responseHours`). سه تصمیم تازه (۲۶ تا ۲۸). دو خرابکاری قرمز. ۲۹۶۶ تست سبز |

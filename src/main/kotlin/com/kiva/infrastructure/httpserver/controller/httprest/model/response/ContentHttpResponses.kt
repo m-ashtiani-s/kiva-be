@@ -5,8 +5,10 @@ import com.kiva.application.dto.FaqGroupDto
 import com.kiva.application.dto.FaqPageDto
 import com.kiva.application.dto.StaticPageDto
 import com.kiva.domain.aggregate.settings.entity.ShopSettings
+import com.kiva.domain.aggregate.settings.model.valueobject.SupportHours
 import com.kiva.infrastructure.common.http.toPersianNumber
 import kotlinx.serialization.Serializable
+import java.time.LocalTime
 
 /** Contract schema `StaticPage`: the page as the site shows it, its search engine fields filled in for the site. */
 @Serializable
@@ -109,6 +111,19 @@ object ContentTexts {
         .replace("{holdDays}", settings.reservationHoldDays.toLong().toPersianNumber())
         .replace("{returnWindowDays}", settings.returnWindowDays.toLong().toPersianNumber())
         .replace("{freeShippingThreshold}", settings.freeShippingThreshold.toman.toPersianNumber())
+
+    /**
+     * When the messengers answer, as «سؤال داری؟» shows it under each (decision 18): the hours of the first line of the
+     * support hours that has hours, «پاسخگویی ۹ تا ۲۱» (minutes only when there are: «۹:۳۰»). No such line: null.
+     */
+    fun responseHours(hours: List<SupportHours>): String? {
+        val line = hours.firstOrNull { it.from != null } ?: return null
+        // SupportHours has both or neither.
+        return "پاسخگویی ${clock(line.from ?: return null)} تا ${clock(line.to ?: return null)}"
+    }
+
+    private fun clock(time: LocalTime): String =
+        time.hour.toLong().toPersianNumber() + if (time.minute == 0) "" else ":" + time.minute.toString().padStart(2, '0').map { '۰' + (it - '0') }.joinToString("")
 
     /**
      * A support number as people read it, in Persian digits (decision 16): a landline as its area code and the rest

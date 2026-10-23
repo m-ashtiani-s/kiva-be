@@ -2,6 +2,9 @@ package com.kiva.infrastructure.httpserver
 
 import com.kiva.infrastructure.httpserver.controller.httprest.web.StockAlertUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1StockAlerts
+import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminStockAlertUseCases
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminStockAlerts
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1ProductInquiry
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1MyDashboard
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1SharedWishlist
 import com.kiva.application.usecase.account.usecase.command.ConfirmPhoneChangeUc
@@ -327,12 +330,14 @@ fun Application.configureRouting() {
             webV1AdminRefunds(AdminRefundUseCases(checkPanelAccessUc, get()))
             webV1AdminReturns(AdminReturnUseCases(checkPanelAccessUc, get(), get(), get(), get(), get(), get()), mediaUrls)
             webV1AdminReviews(AdminReviewUseCases(checkPanelAccessUc, get(), get(), get(), get(), get()), mediaUrls)
+            webV1AdminStockAlerts(AdminStockAlertUseCases(checkPanelAccessUc, get()), mediaUrls)
             webV1AdminSettings(AdminSettingsUseCases(checkPanelAccessUc, get(), get()))
             webV1AdminDiscountCodes(AdminDiscountCodeUseCases(checkPanelAccessUc, get(), get(), get(), get(), get()))
             webV1AdminReports(AdminReportUseCases(checkPanelAccessUc, get()), mediaUrls)
             webV1AdminContent(AdminContentUseCases(checkPanelAccessUc, get(), get(), get(), get(), get(), get(), get()), config.shop.siteUrl)
             webV1Catalog(listColorsUc, listMaterialsUc, listCategoriesUc, getCategoryUc, mediaUrls, config.shop.siteUrl)
             webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, config.shop.siteUrl, mediaUrls)
+            webV1ProductInquiry(get())
             webV1Geo(listProvincesUc, listCitiesOfProvinceUc)
             webV1Content(ContentUseCases(get(), get(), get()), config.shop.siteUrl)
             webV1Addresses(AddressUseCases(listMyAddressesUc, getMyAddressUc, addAddressUc, updateAddressUc, deleteAddressUc, setDefaultAddressUc))
