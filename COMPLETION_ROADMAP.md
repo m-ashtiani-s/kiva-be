@@ -4804,7 +4804,7 @@ url (تلگرام با آدرس https://t.me/kiva_shop) = https://t.me/kiva_shop
 |---|---|---|---|
 | ۱۱.۰ | کانترکت 1.17.0 | S | ✅ |
 | ۱۱.۱ | کمپین: جدول، دامنه و CRUD ِ پنل | M | ✅ |
-| ۱۱.۲ | کمپین در فروشگاه: `/campaigns/active`، فیلتر `campaign`، شمارنده‌ی صفحه‌ی محصول | M | ⬜ |
+| ۱۱.۲ | کمپین در فروشگاه: `/campaigns/active`، فیلتر `campaign`، شمارنده‌ی صفحه‌ی محصول | M | ✅ |
 | ۱۱.۳ | بنرها | M | ⬜ |
 | ۱۱.۴ | پیام‌های رضایت | M | ⬜ |
 | ۱۱.۵ | آمار سایت و خلاصه‌ی رضایت | S | ⬜ |
@@ -4839,6 +4839,7 @@ url (تلگرام با آدرس https://t.me/kiva_shop) = https://t.me/kiva_shop
 | 22 | ستون `productIds` (تازه، گام ۱۱.۱) | `BIGINT[]` با `cardinality ≤ 200` (مثل لیست‌های `discountcode_tbl`)، نه `JSONB` | یه شکل برای یه نوع داده در پروژه |
 | 23 | محصول‌های چند کمپین (تازه، گام ۱۱.۱) | `CampaignShowcases` (قانون ۱۵) همه‌ی کاندیدها رو با **یه** خوندن `campaignShowcase` می‌گیره (`productIds` ِ همه‌ی کمپین‌ها، یا همه وقتی یکی خالیه) و برای هر کمپین در حافظه فیلتر می‌کنه؛ لیست پنل، فرم، `/campaigns/active` و خانه همین رو صدا می‌زنن. محصول ِ `DRAFT` در `productIds` مجازه (بعد از انتشار نشون داده می‌شه)؛ فقط ناموجود و بایگانی ← `400` | بدون N+1 |
 | 24 | مدل `sitecontent` (تازه، گام ۱۱.۱) | چون `SiteContentDocument` سخت‌گیرانه خونده می‌شه، کلید `home` ِ `V36` همون گام به مدل (و `SiteContentQm.home`) اضافه می‌شه، نه در ۱۱.۶. متن‌های خانه از `index.html` ِ پروتوتایپ (سه مرحله‌ی «چطور کار می‌کنیم»؛ «رزرو {holdDays} روزه» و «{returnWindowDays} روز ضمانت بازگشت» با جای‌گذاری تنظیمات) | کلید ناشناخته `/config` رو می‌شکست |
+| 25 | `LiveCampaign` (تازه، گام ۱۱.۲) | مثل `WishlistHearts` یه `fun interface` با `NONE`: `scope(filter, now)` فیلتر `campaign` رو به `campaignProductIds` (و `onSale`) تبدیل می‌کنه و `showing(productId, discounted, now)` نشونه‌ی صفحه‌ی محصول رو می‌ده. لیست **و** شمارنده‌های فیلتر (`facets`) هر دو با فیلتر محدودشده حساب می‌شن. کمپینی که الان نیست ← `campaignProductIds` ِ خالی ← لیست خالی. چیپ `campaign` (و عنوان لیست) فقط وقتی کمپین فعاله؛ `onSale` ِ ضمنی چیپ نمی‌گیره | شمارنده‌ها با لیست یکی بمونن |
 
 ### ۱۶.۳ تغییرات دامنه
 
@@ -5054,17 +5055,19 @@ Route: respondResultCacheable؛ همه‌ی کارت‌ها با isWishlisted = 
 
 ---
 
-#### گام ۱۱.۲: کمپین در فروشگاه · M ⬜
+#### گام ۱۱.۲: کمپین در فروشگاه · M ✅
 
 **می‌سازی:** `GetActiveCampaignUc`؛ فیلتر `campaign` در `ProductFilters` و `FindProductsUc`؛ `ProductDetail.campaign` در `GetProductUc`.
 
 وابسته به: ۱۱.۱
 
 **تموم شده یعنی:**
-- [ ] قبل از `startsAt` و بعد از `endsAt` ← `204`؛ وسطش ← کمپین با محصول‌های تخفیف‌دار و موجود به ترتیب درصد.
-- [ ] `productIds` ِ خالی ← همه‌ی تخفیف‌دارها؛ با سه شناسه که یکیش تخفیف نداره ← دو تا.
-- [ ] `GET /products?campaign=paeez-1405` همون مجموعه با ناموجودها ته لیست؛ `slug` ِ کمپین تموم‌شده ← لیست خالی.
-- [ ] صفحه‌ی محصول تخفیف‌دار ِ کمپین ← `campaign` پر؛ بعد از `endsAt` ← `null`؛ **قیمت‌ها قبل و بعد از کمپین یکی‌ان** (تست صریح).
+- [x] قبل از `startsAt` و بعد از `endsAt` ← `204`؛ وسطش ← کمپین با محصول‌های تخفیف‌دار و موجود به ترتیب درصد.
+- [x] `productIds` ِ خالی ← همه‌ی تخفیف‌دارها؛ با سه شناسه که یکیش تخفیف نداره ← دو تا.
+- [x] `GET /products?campaign=paeez-1405` همون مجموعه با ناموجودها ته لیست؛ `slug` ِ کمپین تموم‌شده ← لیست خالی.
+- [x] صفحه‌ی محصول تخفیف‌دار ِ کمپین ← `campaign` پر؛ بعد از `endsAt` ← `null`؛ **قیمت‌ها قبل و بعد از کمپین یکی‌ان** (تست صریح).
+
+**یادداشت پیاده‌سازی:** یه تصمیم تازه (۲۵). `GetActiveCampaignUc` و `webV1Home.kt` (فعلاً `/campaigns/active`، بدون کش، `204`)؛ `LiveCampaign`؛ `ProductFilterQuery.campaign` ← `ProductFilter.campaign` و `campaignProductIds` (شکل غلط ← `400 SLUG_INVALID` روی `campaign`)؛ `FindProductsUc` (عنوان و چیپ کمپین)، `GetProductFacetsUc`، `GetProductUc` (`ProductDetail.campaign`). تست: `WebV1CampaignsInShopOnDatabaseTest` (۴). خرابکاری: بدون `onSale` ِ ضمنی و بدون «کمپین غیرفعال ← هیچ» ← «GET products with the campaign …» قرمز؛ بدون پایان بازه در `findLiveAt` ← سه تست قرمز؛ بدون شرط تخفیف برای شمارنده ← «a discounted product of the campaign …» قرمز؛ بدون «موجود» در `campaignShowcase` ← «204 before it starts …» و تست پنل قرمز. اسکریپت خرابکاری یه باگ داشت (چند `--tests` روی یه task فقط آخری رو اجرا می‌کرد)؛ درست شد و همه دوباره رفتن. کل مجموعه با `--rerun-tasks`: ۲۹۸۲ تست سبز، ۵ skip.
 
 ---
 
@@ -6427,3 +6430,4 @@ kiva {
 | ۱ آبان ۱۴۰۵ | ۱۰.۴ | Phase 10 step 10.4 | `STOCK_ALERTS_REVIEW.md` (دوازده خرابکاری، همه قرمز؛ یکی بعد از یه تست تازه)، `docs/FRONTEND_STOCK_ALERTS.md`. ۲۹۶۷ تست سبز، ۵ skip. فاز ۱۰ از طرف ریپو کامله؛ الگوی فراز، دور واقعی و merge منتظر تو |
 | ۱ آبان ۱۴۰۵ | ۱۱.۰ | Phase 11 step 11.0 | کانترکت 1.17.0 با هر ۱۱ ردیف ِ ۱۶.۷ و `required` ِ شِماهای بازاریابی؛ `DATE_RANGE_INVALID` به‌جای `ENDS_BEFORE_START` (تصمیم ۲۰)؛ متن سه کد تازه و `DATE_IN_FUTURE`. برنچ `marketing` از نوک فاز ۱۰ |
 | ۱ آبان ۱۴۰۵ | ۱۱.۱ | Phase 11 step 11.1 | کمپین: `V36` ِ کامل، دامنه، قفل `campaigns` با `EXCLUDE` به‌عنوان دیوار آخر، CRUD ِ پنل با لاگ، `campaignShowcase`. چهار تصمیم تازه (۲۱ تا ۲۴). چهار خرابکاری قرمز. ۲۹۷۸ تست سبز |
+| ۱ آبان ۱۴۰۵ | ۱۱.۲ | Phase 11 step 11.2 | کمپین در فروشگاه: `/campaigns/active`، فیلتر `campaign` در لیست و شمارنده‌ها، شمارنده‌ی صفحه‌ی محصول؛ قیمت‌ها دست‌نخورده. یه تصمیم تازه (۲۵). پنج خرابکاری قرمز. ۲۹۸۲ تست سبز |

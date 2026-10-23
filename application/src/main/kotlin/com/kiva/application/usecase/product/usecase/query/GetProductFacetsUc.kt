@@ -2,6 +2,7 @@ package com.kiva.application.usecase.product.usecase.query
 
 import com.kiva.application.dto.ProductFacetsDto
 import com.kiva.application.repository.ProductQmRepository
+import com.kiva.application.usecase.campaign.LiveCampaign
 import com.kiva.application.usecase.product.ProductFilterQuery
 import com.kiva.application.usecase.product.ProductFilters
 import com.kiva.common.logging.getLogger
@@ -34,6 +35,7 @@ class GetProductFacetsUc(
     private val colorRepository: ColorRepository,
     private val materialRepository: MaterialRepository,
     private val clock: Clock,
+    private val liveCampaign: LiveCampaign = LiveCampaign.NONE,
 ) : QueryUseCase<GetProductFacetsUc.Qry, ProductFacetsDto, GetProductFacetsUc.Failure> {
 
     private val logger = getLogger()
@@ -47,7 +49,8 @@ class GetProductFacetsUc(
         val filter = ProductFilters.parse(query.filters, now).unwrapOr { return Result.failure(Failure.InvalidInput(it.problems)) }
 
         return transactionManager.inTransaction {
-            val counts = productQmRepository.facets(filter, now)
+            // Counted among the same products as the list: the running campaign's, when `?campaign=` names it.
+            val counts = productQmRepository.facets(liveCampaign.scope(filter, now).first, now)
 
             Result.success(
                 ProductFacetsDto(

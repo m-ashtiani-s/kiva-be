@@ -12,7 +12,7 @@ import kotlinx.serialization.Serializable
 /**
  * Contract schema `ProductDetail`: every field of the card (ProductSummary), then the page's own.
  *
- * Not sent yet: `tags`, `perks` and `campaign` (nothing keeps them yet), and the media `id`s (they come
+ * Not sent yet: `tags` and `perks` (nothing keeps them yet), and the media `id`s (they come
  * with uploads). `ratingSummary` is required, so it goes out empty until reviews exist.
  */
 @Serializable
@@ -51,6 +51,7 @@ data class ProductDetailHttpResponse(
     val breadcrumbs: List<BreadcrumbHttpResponse>,
     val ratingSummary: RatingSummaryHttpResponse,
     val stockAlert: ProductStockAlertHttpResponse?,
+    val campaign: ProductCampaignHttpResponse?,
     val policies: ProductPoliciesHttpResponse,
     val shareUrl: String,
     val seo: SeoMetaHttpResponse,
@@ -105,6 +106,7 @@ data class ProductDetailHttpResponse(
                 ),
                 ratingSummary = RatingSummaryHttpResponse.from(detail.card.rating),
                 stockAlert = detail.stockAlert?.let { ProductStockAlertHttpResponse(it.subscribed, it.alertId) },
+                campaign = detail.campaign?.let { ProductCampaignHttpResponse(it.slug, it.title, it.endsAt.toString()) },
                 policies = ProductPoliciesHttpResponse(returnable = detail.returnable, reservable = detail.reservable, maxPerOrder = detail.maxPerOrder),
                 shareUrl = pageUrl,
                 seo = SeoMetaHttpResponse(title = "${detail.card.name} | کیوا", description = detail.shortDescription, canonicalUrl = pageUrl),

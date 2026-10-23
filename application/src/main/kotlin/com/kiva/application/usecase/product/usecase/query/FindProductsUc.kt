@@ -6,6 +6,7 @@ import com.kiva.application.dto.ProductCardDto
 import com.kiva.application.dto.ProductListDto
 import com.kiva.application.repository.ProductFilter
 import com.kiva.application.repository.ProductQmRepository
+import com.kiva.application.usecase.campaign.LiveCampaign
 import com.kiva.application.usecase.product.ProductCards
 import com.kiva.application.usecase.product.ProductFilterQuery
 import com.kiva.application.usecase.product.ProductFilters
@@ -45,6 +46,7 @@ class FindProductsUc(
     private val clock: Clock,
     private val shopSettingsRepository: ShopSettingsRepository,
     private val wishlistHearts: WishlistHearts = WishlistHearts.NONE,
+    private val liveCampaign: LiveCampaign = LiveCampaign.NONE,
 ) : QueryUseCase<FindProductsUc.Qry, ProductListDto, FindProductsUc.Failure> {
 
     private val logger = getLogger()
@@ -66,7 +68,9 @@ class FindProductsUc(
         val filter = ProductFilters.parse(query.filters, now).unwrapOr { return Result.failure(Failure.InvalidInput(it.problems)) }
 
         return transactionManager.inTransaction {
-            val page = productQmRepository.find(filter, query.pageable)
+            // `?campaign=`: only the running campaign's discounted products, or none (phase 11, decision 5).
+            val (scoped, campaign) = liveCampaign.scope(filter, now)
+            val page = productQmRepository.find(scoped, query.pageable)
             // All three lists are short (8 categories, 13 colors, 12 materials) and one page needs many of them.
             val categories = categoryRepository.findAll().associateBy { it.slug }
             val palette = colorRepository.findAll().associateBy { it.key }
@@ -78,7 +82,8 @@ class FindProductsUc(
             Result.success(
                 ProductListDto(
                     page = Page(wishlistHearts.mark(cards.items, query.viewer), cards.page, cards.size, cards.totalItems),
-                    applied = appliedOf(query.filters, filter, categories, palette, materials),
+                    applied = appliedOf(query.filters, filter, categories, palette, materials)
+                        .copy(campaign = campaign?.let { ProductListDto.CampaignRef(it.slug.value, it.title) }),
                 ),
             )
         }

@@ -1,6 +1,8 @@
 package com.kiva.application.usecase.product.usecase.query
 
 import com.kiva.application.usecase.stockalert.StockAlertFlags
+import com.kiva.application.usecase.campaign.LiveCampaign
+import com.kiva.domain.aggregate.campaign.model.policy.CampaignShowcasePolicy
 import com.kiva.common.valueobject.UserId
 import com.kiva.application.usecase.wishlist.WishlistHearts
 import com.kiva.application.dto.ProductDetailDto
@@ -43,6 +45,7 @@ class GetProductUc(
     private val shopSettingsRepository: ShopSettingsRepository,
     private val wishlistHearts: WishlistHearts = WishlistHearts.NONE,
     private val stockAlertFlags: StockAlertFlags = StockAlertFlags.NONE,
+    private val liveCampaign: LiveCampaign = LiveCampaign.NONE,
 ) : QueryUseCase<GetProductUc.Qry, ProductDetailDto, GetProductUc.Failure> {
 
     private val logger = getLogger()
@@ -91,6 +94,8 @@ class GetProductUc(
                     maxPerOrder = product.card.maxPerOrder.value,
                     publishedAt = product.publishedOn,
                     updatedAt = product.updatedOn,
+                    campaign = liveCampaign.showing(product.card.productId, card.price.discountPercent >= CampaignShowcasePolicy.MIN_DISCOUNT_PERCENT, now)
+                        ?.let { ProductDetailDto.CampaignBadge(it.slug.value, it.title, it.window.endsAt) },
                 )
             Result.success(stockAlertFlags.mark(page, query.viewer))
         }

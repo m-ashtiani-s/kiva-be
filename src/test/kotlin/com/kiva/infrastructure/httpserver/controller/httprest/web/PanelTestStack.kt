@@ -13,6 +13,8 @@ import com.kiva.infrastructure.persistence.exposed.tbl.CampaignTbl
 import org.jetbrains.exposed.v1.jdbc.deleteAll
 import com.kiva.domain.aggregate.campaign.CampaignDomainService
 import com.kiva.application.usecase.campaign.CampaignProducts
+import com.kiva.application.usecase.campaign.LiveCampaign
+import com.kiva.application.usecase.campaign.usecase.query.GetActiveCampaignUc
 import com.kiva.application.usecase.campaign.CampaignShowcases
 import com.kiva.application.usecase.campaign.usecase.command.CreateCampaignUc
 import com.kiva.application.usecase.campaign.usecase.command.DeleteCampaignUc
@@ -417,6 +419,8 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
     // --- marketing (phase 11) ---
     val campaignRepository = CampaignRepositoryImpl()
     val campaignShowcases = CampaignShowcases(productQm, categories, colors, purchase.settings)
+    val liveCampaign = LiveCampaign.of(campaignRepository)
+    val home = HomeUseCases(GetActiveCampaignUc(transactions, campaignRepository, campaignShowcases, clock))
     val adminMarketing = AdminMarketingUseCases(
         checkPanelAccess,
         ListAdminCampaignsUc(transactions, campaignRepository, campaignShowcases, clock),
@@ -458,10 +462,10 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
 
     /** The shop's own product use cases, as the app wires them. */
     inner class ShopProducts {
-        val find = FindProductsUc(transactions, productQm, categories, colors, materials, clock, purchase.settings, WishlistHearts.of(wishlists))
-        val facets = GetProductFacetsUc(transactions, productQm, categories, colors, materials, clock)
+        val find = FindProductsUc(transactions, productQm, categories, colors, materials, clock, purchase.settings, WishlistHearts.of(wishlists), liveCampaign)
+        val facets = GetProductFacetsUc(transactions, productQm, categories, colors, materials, clock, liveCampaign)
         val related = FindRelatedProductsUc(transactions, productQm, categories, colors, clock, purchase.settings, WishlistHearts.of(wishlists))
-        val get = GetProductUc(transactions, productQm, categories, materials, colors, clock, purchase.settings, WishlistHearts.of(wishlists), StockAlertFlags.of(stockAlertRepository))
+        val get = GetProductUc(transactions, productQm, categories, materials, colors, clock, purchase.settings, WishlistHearts.of(wishlists), StockAlertFlags.of(stockAlertRepository), liveCampaign)
     }
     val shopProducts = ShopProducts()
 
@@ -583,6 +587,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
                     webV1AdminStockAlerts(adminStockAlerts, mediaUrls)
                     webV1ProductInquiry(productInquiry)
                     webV1AdminMarketing(adminMarketing, mediaUrls)
+                    webV1Home(home, mediaUrls)
                     webV1Addresses(purchase.addressUseCases)
                     webV1SharedWishlist(wishlist.getShared, mediaUrls)
                     // Back from the gateway and the result page, for paying what a change left owed (phase 3).

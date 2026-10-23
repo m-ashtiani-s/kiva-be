@@ -42,6 +42,7 @@ data class ProductFilterQuery(
     val materials: List<String> = emptyList(),
     val occasions: List<String> = emptyList(),
     val ids: List<String> = emptyList(),
+    val campaign: String? = null,
 )
 
 /**
@@ -59,7 +60,7 @@ object ProductFilters {
 
     /** @param now the request's moment, for `isNew`. */
     fun parse(query: ProductFilterQuery, now: Instant): Result<ProductFilter, Invalid> = Result.zip(
-        Result.zip(wordsOf(query.q), idsOf(query.ids), ::InputProblems) { words, ids -> words to ids },
+        Result.zip(wordsOf(query.q), idsOf(query.ids), campaignOf(query.campaign), ::InputProblems) { words, ids, campaign -> Triple(words, ids, campaign) },
         Result.zip(
             each(query.categories, "category") { Slug.makeNew(it) },
             each(query.colors, "color") { ColorKey.makeNew(it) },
@@ -73,7 +74,7 @@ object ProductFilters {
         ) { bagTypes, occasions -> bagTypes to occasions },
         priceRangeOf(query.minPrice, query.maxPrice),
         { problems -> Invalid(problems.flattenGroups()) },
-    ) { (words, ids), (categories, colors, materials), (bagTypes, occasions), price ->
+    ) { (words, ids, campaign), (categories, colors, materials), (bagTypes, occasions), price ->
         ProductFilter(
             words = words,
             categories = categories.toSet(),
@@ -87,7 +88,14 @@ object ProductFilters {
             materials = materials.toSet(),
             occasions = occasions.toSet(),
             ids = ids,
+            campaign = campaign,
         )
+    }
+
+    /** `?campaign=` (decision 5 of phase 11): a slug, or SLUG_INVALID; empty is none. */
+    private fun campaignOf(raw: String?): Result<Slug?, ResultFailure> {
+        val text = raw?.trim()?.ifEmpty { null } ?: return Result.success(null)
+        return Slug.makeNew(text).forField("campaign")
     }
 
     /** The search text in words, normalized like the read model's searchText: «كيف» typed on an Arabic keyboard finds «کیف». */

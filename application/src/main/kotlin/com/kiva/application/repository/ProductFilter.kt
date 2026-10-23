@@ -20,6 +20,8 @@ import java.time.Instant
  * @property inStock only products with at least one active color left to sell.
  * @property newAt only products still «جدید» at this moment.
  * @property ids only these products, in this order (recently viewed, compare); the requested sort is not used.
+ * @property campaign the campaign asked for (`?campaign=`), as given; the use case turns it into [campaignProductIds].
+ * @property campaignProductIds only these products (null: not narrowed; empty: none at all, for a campaign not running).
  */
 data class ProductFilter(
     val words: List<String> = emptyList(),
@@ -34,4 +36,6 @@ data class ProductFilter(
     val materials: Set<Slug> = emptySet(),
     val occasions: Set<Occasion> = emptySet(),
     val ids: List<ProductId> = emptyList(),
+    val campaign: Slug? = null,
+    val campaignProductIds: Set<ProductId>? = null,
 )

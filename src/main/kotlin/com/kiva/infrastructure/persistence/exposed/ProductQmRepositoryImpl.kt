@@ -153,6 +153,8 @@ class ProductQmRepositoryImpl : ProductQmRepository {
             if (filter.materials.isNotEmpty()) add(ProductQmTbl.materialSlug inList filter.materials.map { it.value })
             if (filter.occasions.isNotEmpty()) add(Overlaps(ProductQmTbl.occasions, filter.occasions.map { it.name }))
             if (filter.ids.isNotEmpty()) add(ProductQmTbl.productId inList filter.ids.map { it.value })
+            // A campaign that isn't running gives nothing: an id no product has.
+            filter.campaignProductIds?.let { ids -> add(ProductQmTbl.productId inList ids.map { it.value }.ifEmpty { listOf(0L) }) }
         }
         return conditions.reduce { all, next -> all and next }
     }

@@ -28,12 +28,14 @@ data class ProductListHttpResponse(
             val applied = list.applied
             val page = list.page.toHttpResponse { ProductSummaryHttpResponse.from(it, filterColors = applied.colors.map { color -> color.key }, urls) }
             val oneCategory = applied.categories.singleOrNull()
+            val campaign = applied.campaign
 
             return ProductListHttpResponse(
                 items = page.items,
                 meta = page.meta,
                 // As the prototype: a single category names the page, otherwise the sale view or the whole shop.
                 title = when {
+                    campaign != null -> campaign.title
                     oneCategory != null -> oneCategory.name
                     applied.onSale && applied.categories.isEmpty() -> "تخفیف‌خورده‌ها"
                     else -> "فروشگاه کیوا"
@@ -51,6 +53,7 @@ data class ProductListHttpResponse(
 
         /** One chip per filter value, in the prototype's order; a chip names the value it removes. */
         private fun chipsOf(applied: ProductListDto.AppliedFilters): List<AppliedFilterHttpResponse> = buildList {
+            applied.campaign?.let { add(AppliedFilterHttpResponse("campaign", it.slug, it.title)) }
             applied.q?.let { add(AppliedFilterHttpResponse("q", it, "جستجو: «$it»")) }
             applied.categories.forEach { add(AppliedFilterHttpResponse("category", it.slug, it.name)) }
             applied.colors.forEach { add(AppliedFilterHttpResponse("color", it.key, it.name, swatchHex = it.hex)) }

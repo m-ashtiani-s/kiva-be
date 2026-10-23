@@ -121,6 +121,7 @@ private fun Parameters.productFilters() = ProductFilterQuery(
     materials = list("material"),
     occasions = list("occasion"),
     ids = list("ids"),
+    campaign = this["campaign"],
 )
 
 /** `category=shoulder,cross` as the contract sends it, or the parameter repeated; empty pieces are dropped. */

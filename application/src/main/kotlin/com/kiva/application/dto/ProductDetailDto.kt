@@ -30,7 +30,12 @@ data class ProductDetailDto(
     val updatedAt: Instant,
     /** The viewer's «any color» subscription (phase 10); a guest: not subscribed. Null only where nobody asked (the panel). */
     val stockAlert: StockAlertFlag? = null,
+    /** The running campaign showing this discounted product (phase 11, decision 6), for the countdown; else null. */
+    val campaign: CampaignBadge? = null,
 ) {
+    /** `ProductDetail.campaign`. */
+    data class CampaignBadge(val slug: String, val title: String, val endsAt: Instant)
+
     /** `ProductDetail.stockAlert`: the viewer waits for any color of the product, with that subscription's id. */
     data class StockAlertFlag(val subscribed: Boolean, val alertId: Long?)
 

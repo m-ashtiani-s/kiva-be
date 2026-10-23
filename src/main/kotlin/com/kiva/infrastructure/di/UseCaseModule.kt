@@ -14,6 +14,8 @@ import com.kiva.application.usecase.stockalert.StockAlerts
 import com.kiva.domain.aggregate.stockalert.StockAlertDomainService
 import com.kiva.domain.aggregate.campaign.CampaignDomainService
 import com.kiva.application.usecase.campaign.CampaignProducts
+import com.kiva.application.usecase.campaign.LiveCampaign
+import com.kiva.application.usecase.campaign.usecase.query.GetActiveCampaignUc
 import com.kiva.application.usecase.campaign.CampaignShowcases
 import com.kiva.application.usecase.campaign.usecase.command.CreateCampaignUc
 import com.kiva.application.usecase.campaign.usecase.command.DeleteCampaignUc
@@ -431,6 +433,7 @@ val useCaseModule = module(createdAtStart = true) {
             clock = get(),
             shopSettingsRepository = get(),
             wishlistHearts = get(),
+            liveCampaign = get(),
         )
     }
     single {
@@ -441,6 +444,7 @@ val useCaseModule = module(createdAtStart = true) {
             colorRepository = get(),
             materialRepository = get(),
             clock = get(),
+            liveCampaign = get(),
         )
     }
     single {
@@ -466,6 +470,7 @@ val useCaseModule = module(createdAtStart = true) {
             shopSettingsRepository = get(),
             wishlistHearts = get(),
             stockAlertFlags = get(),
+            liveCampaign = get(),
         )
     }
 
@@ -768,6 +773,8 @@ val useCaseModule = module(createdAtStart = true) {
         )
     }
     single { DeleteCampaignUc(transactionManager = get(), campaignRepository = get(), auditTrail = get(), clock = get()) }
+    single { LiveCampaign.of(get()) }
+    single { GetActiveCampaignUc(transactionManager = get(), campaignRepository = get(), campaignShowcases = get(), clock = get()) }
 
     // --- wishlist (phase 9) ---
     single { WishlistHearts.of(get()) }
