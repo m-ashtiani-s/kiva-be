@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: KIVA Store API — کیوا
-  version: 1.18.0
+  version: 1.19.0
   contact:
     name: KIVA Engineering
     email: support@kiva.ir
@@ -234,6 +234,7 @@ info:
     | جمع‌آوری مرجوعی | SMS | کد مرجوعی + اسم حامل؛ با `notifyCustomer` |
     | مرجوعی بسته شد | SMS | کد مرجوعی + «جزئیات تو حسابت»؛ با `notifyCustomer`. **بدون** دلیل بستن |
     | درخواست تغییر بررسی شد | SMS | کد سفارش + «جزئیات در صفحه‌ی سفارش»؛ با `notifyCustomer`. **بدون `note`**: متن آزاد پیامک نداریم، `note` در `feedback.resolution` و تایم‌لاین دیده می‌شود |
+    | پاسخ پیام تماس | SMS | فقط خبر و کد پیگیری («پشتیبانی کیوا به پیامت (CT-…) رسیدگی کرد…»)؛ **متن پاسخ را نمی‌برد** (الگوهای پیامک متن آزاد نمی‌گیرند)؛ اپراتور خودش تماس می‌گیرد یا در پیام‌رسان می‌نویسد |
     | موجود شد | SMS | اسم محصول (حداکثر ۳۰ نویسه) + لینک صفحه‌اش به رنگ موجودشده؛ یه کار زمان‌بندی‌شده تا ۵ دقیقه بعد از موجود شدن، از هر راهی، می‌فرسته؛ نه بین ۲۲ تا ۸ صبح تهران؛ هر اشتراک فقط یه بار |
 
     ## ۶. نگاشت صفحه‌ها به endpointها
@@ -530,19 +531,28 @@ paths:
       tags: [Content]
       operationId: listContactTopics
       summary: "موضوعات فرم تماس"
+      description: 'پنج موضوع با برچسب فارسی. با `ETag` و `Cache-Control: public, max-age=300` کش می‌شود؛ `If-None-Match` برابر ← `304`.'
       responses:
         '200':
           description: OK
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
           content:
             application/json:
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/ContactTopicOption' }
+        '304':
+          description: تغییری نکرده (`If-None-Match` همان `ETag` فعلی است)؛ بدون بدنه
   /contact/messages:
     post:
       tags: [Content]
       operationId: createContactMessage
-      summary: "ارسال پیام فرم تماس — خروجی کد پیگیری (CT-xxxx)"
+      summary: "ارسال پیام فرم تماس — خروجی کد پیگیری (CT- و ۶ رقم)"
+      description: |
+        ورود اختیاری (اگر وارد شده، پیام به حسابش وصل می‌شود؛ توکن نامعتبر `401`). قانون‌های فیلدها در `ContactMessageRequest`، همه با هم (`400`).
+        `orderCode` فقط مرجع است و مالکیتش چک نمی‌شود. سقف: ۵ پیام در ساعت برای هر IP و ۵ پیام در ۲۴ ساعت برای هر موبایل ← `429 RATE_LIMITED`
+        با `Retry-After` و `meta.retryAfterSeconds`. خبری به پشتیبانی فرستاده نمی‌شود؛ پنل با `status=OPEN` صف را می‌بیند.
       security: [{}, { bearerAuth: [] }]
       requestBody:
         required: true
@@ -556,34 +566,38 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ContactMessageResponse' }
         '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
   /newsletter/subscriptions:
     post:
       tags: [Content]
       operationId: subscribeNewsletter
       summary: "عضویت در خبرنامه‌ی ایمیلی (فوتر)"
+      description: |
+        **همیشه `200`** با همان پیام («عضو خبرنامه کیوا شدی!»)، چه تازه، چه از قبل عضو، چه برگشته از لغو؛ پاسخ لو نمی‌دهد ایمیل عضو بوده یا نه.
+        ایمیل با حروف کوچک ذخیره می‌شود (`Sara@Example.com` و `sara@example.com` یک عضوند). فقط عضو تازه یا برگشته یک ایمیل خوش‌آمد با لینک لغو
+        (`/newsletter/unsubscribe?token=nl_…`) می‌گیرد. سقف: ۵ درخواست در ساعت برای هر IP ← `429`.
       requestBody:
         required: true
         content:
           application/json:
             schema: { $ref: '#/components/schemas/NewsletterSubscribeRequest' }
       responses:
-        '201':
-          description: عضو شد
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/MessageResponse' }
         '200':
-          description: قبلاً عضو بوده (برای جلوگیری از افشای اطلاعات، پیام موفق برمی‌گردد)
+          description: عضو شد (یا از قبل بود)
           content:
             application/json:
               schema: { $ref: '#/components/schemas/MessageResponse' }
         '400': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
   /newsletter/subscriptions/unsubscribe:
     post:
       tags: [Content]
       operationId: unsubscribeNewsletter
-      summary: "لغو عضویت خبرنامه با توکن لینک ایمیل [پیشنهادی]"
+      summary: "لغو عضویت خبرنامه با توکن لینک ایمیل"
+      description: |
+        `token` باید `nl_` و ۳۲ حرف و رقم لاتین باشد (`400 UNSUBSCRIBE_TOKEN_INVALID` روی `token`). ناشناخته یا از قبل لغوشده هم `204` (بی‌تغییر):
+        پاسخ لو نمی‌دهد توکنی بوده یا نه.
       requestBody:
         required: true
         content:
@@ -4772,7 +4786,9 @@ paths:
       x-roles: [ADMIN]
       operationId: adminListNewsletterSubscriptions
       summary: "مشترکین خبرنامه (تازه‌ترین اول)"
-      description: فقط `ADMIN`، چون ایمیل‌ها اطلاعات شخصی‌اند. شمار مشترکین فعال = `meta.totalItems` با `status=ACTIVE`.
+      description: |
+        فقط `ADMIN`، چون ایمیل‌ها اطلاعات شخصی‌اند. شمار مشترکین فعال = `meta.totalItems` با `status=ACTIVE`. ترتیب: `subscribedAt` نزولی.
+        `q` بخشی از ایمیل (حروف کوچک). فرستادن خبرنامه با ابزار بیرونی است؛ این‌جا فقط لیست است. لغوشده‌ها ۹۰ روز بعد پاک می‌شوند.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: status
@@ -5137,6 +5153,7 @@ paths:
       x-roles: [ADMIN, SUPPORT]
       operationId: adminListContactMessages
       summary: "پیام‌های فرم تماس"
+      description: تازه‌ترین اول، با فیلتر `status` و `topic` (مقدار ناشناخته ← `400`). پیام‌های `CLOSED` ِ قدیمی‌تر از ۳۶۵ روز (از `updatedAt`) پاک می‌شوند.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: status
@@ -5168,6 +5185,13 @@ paths:
       x-roles: [ADMIN, SUPPORT]
       operationId: adminUpdateContactMessage
       summary: "تغییر وضعیت/پاسخ پیام تماس (پاسخ از طریق پیامک یا ایمیل ارسال می‌شود)"
+      description: |
+        همه‌ی فیلدها اختیاری؛ `{}` ← `200` بی‌تغییر. `reply` (۲ تا ۱۰۰۰، متن ساده) و `replyChannel` با هم (یکی بی دیگری ← `400 REPLY_CHANNEL_REQUIRED`
+        یا `400 REPLY_REQUIRED`). وضعیت هر به هر مجاز است و فقط وقتی `status` آمده عوض می‌شود. هر `reply` ِ تازه جای قبلی را می‌گیرد و دوباره فرستاده می‌شود.
+        `internalNote` (حداکثر ۱۰۰۰) جایگزین می‌شود و هیچ‌وقت به مشتری نمی‌رسد.
+        * `replyChannel = SMS`: **متن پاسخ پیامک نمی‌شود**؛ فقط یک پیامک خبر با کد پیگیری می‌رود (بخش پیامک‌ها) و اپراتور خودش تماس می‌گیرد.
+        * `replyChannel = EMAIL`: متن کامل پاسخ ایمیل می‌شود؛ پیام بدون `email` ← `400 EMAIL_NOT_AVAILABLE` روی `replyChannel`.
+        پیامک و ایمیل بعد از ذخیره می‌روند و شکستشان کار را برنمی‌گرداند. هر تغییر یک ردیف `CONTACT_MESSAGE_UPDATED` (بدون متن پاسخ و یادداشت).
       security: [{ bearerAuth: [] }]
       parameters:
         - name: ticketCode
@@ -5182,9 +5206,9 @@ paths:
               type: object
               properties:
                 status: { type: string, enum: [OPEN, IN_PROGRESS, CLOSED] }
-                reply: { type: string, maxLength: 1000 }
+                reply: { type: string, minLength: 2, maxLength: 1000 }
                 replyChannel: { type: string, enum: [SMS, EMAIL] }
-                internalNote: { type: string, maxLength: 1000 }
+                internalNote: { type: string, maxLength: 1000, nullable: true }
       responses:
         '200':
           description: OK
@@ -5846,6 +5870,9 @@ components:
         - CAMPAIGN_OVERLAP
         - IMAGE_REQUIRED
         - SEARCH_QUERY_EMPTY
+        - EMAIL_NOT_AVAILABLE
+        - REPLY_CHANNEL_REQUIRED
+        - REPLY_REQUIRED
         - CTA_INCOMPLETE
         - PRODUCT_IN_STOCK
         - WISHLIST_LIMIT_REACHED
@@ -8251,24 +8278,26 @@ components:
       enum: [ORDER_FOLLOWUP, PRODUCT_QUESTION, RETURN, COLLABORATION, OTHER]
     ContactTopicOption:
       type: object
+      required: [value, label, requiresOrderCode]
       properties:
         value: { $ref: '#/components/schemas/ContactTopic' }
-        label: { type: string, example: پیگیری سفارش }
-        requiresOrderCode: { type: boolean, description: فیلد «شماره سفارش (اختیاری)» نمایش داده شود, example: true }
+        label: { type: string, description: '«پیگیری سفارش»، «سؤال درباره‌ی محصول»، «مرجوعی»، «همکاری»، «سایر»', example: پیگیری سفارش }
+        requiresOrderCode: { type: boolean, description: 'فیلد اختیاری «شماره سفارش» نمایش داده شود (اجباری نیست): `ORDER_FOLLOWUP` و `RETURN`', example: true }
     ContactMessageRequest:
       type: object
       required: [topic, fullName, phone, message]
       properties:
         topic: { $ref: '#/components/schemas/ContactTopic' }
         fullName: { type: string, minLength: 3, maxLength: 80, example: سارا محمدی }
-        phone: { $ref: '#/components/schemas/PhoneNumber' }
-        email: { type: string, format: email, nullable: true }
-        orderCode: { type: string, allOf: [{ $ref: '#/components/schemas/OrderCode' }], nullable: true }
-        message: { type: string, minLength: 10, maxLength: 600, example: سلام، سفارشم هنوز عکسش برام ارسال نشده. }
+        phone: { type: string, description: 'موبایل `09…` (ارقام فارسی هم)', example: '09123456789' }
+        email: { type: string, format: email, nullable: true, description: 'با حروف کوچک ذخیره می‌شود' }
+        orderCode: { type: string, nullable: true, description: '`KV-` و رقم‌ها (`kv-218340` و ارقام فارسی هم)؛ فقط مرجع، مالکیتش چک نمی‌شود', example: KV-218340 }
+        message: { type: string, minLength: 10, maxLength: 600, description: متن ساده؛ خط تازه نگه داشته می‌شود, example: سلام، سفارشم هنوز عکسش برام ارسال نشده. }
     ContactMessageResponse:
       type: object
+      required: [ticketCode, createdAt, message]
       properties:
-        ticketCode: { type: string, example: CT-4821 }
+        ticketCode: { type: string, description: '`CT-` و ۶ رقم تصادفی', example: CT-482113 }
         createdAt: { type: string, format: date-time }
         message: { type: string, example: پیامت رسید! به زودی از طریق پیامک باهات تماس می‌گیریم. }
     NewsletterSubscribeRequest:
@@ -8276,7 +8305,7 @@ components:
       required: [email]
       properties:
         email: { type: string, format: email, example: sara@example.com }
-        source: { type: string, example: footer }
+        source: { type: string, maxLength: 30, description: 'حروف کوچک لاتین، رقم، `_` و `-`؛ غیر از این نادیده (`null`)', example: footer }
     NewsletterSubscription:
       type: object
       description: یک مشترک خبرنامه در پنل (`GET /admin/newsletter/subscriptions`)
@@ -9262,8 +9291,9 @@ components:
         reply: { type: string, nullable: true, minLength: 2, maxLength: 1000, description: 'ثبت هم‌زمان پاسخ کیوا؛ فقط با `APPROVE` (با `REJECT` ← `REPLY_REQUIRES_APPROVAL`)' }
     AdminContactMessage:
       type: object
+      required: [ticketCode, topic, fullName, phone, email, orderCode, message, status, reply, replyChannel, repliedAt, repliedBy, internalNote, userId, createdAt, updatedAt]
       properties:
-        ticketCode: { type: string, example: CT-4821 }
+        ticketCode: { type: string, example: CT-482113 }
         topic: { $ref: '#/components/schemas/ContactTopic' }
         fullName: { type: string }
         phone: { $ref: '#/components/schemas/PhoneNumber' }
@@ -9272,6 +9302,9 @@ components:
         message: { type: string }
         status: { type: string, enum: [OPEN, IN_PROGRESS, CLOSED] }
         reply: { type: string, nullable: true }
+        replyChannel: { type: string, enum: [SMS, EMAIL], nullable: true }
+        repliedAt: { type: string, format: date-time, nullable: true }
+        repliedBy: { type: string, nullable: true, description: 'اسم نمایشی اپراتوری که آخرین پاسخ را داد (اسم کامل، وگرنه موبایل ماسک‌شده)' }
         internalNote: { type: string, nullable: true }
         userId: { type: integer, nullable: true }
         createdAt: { type: string, format: date-time }
