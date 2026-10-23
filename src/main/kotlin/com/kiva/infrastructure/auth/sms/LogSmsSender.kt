@@ -3,6 +3,7 @@ package com.kiva.infrastructure.auth.sms
 import com.kiva.application.port.SmsSender
 import com.kiva.common.logging.getLogger
 import com.kiva.common.valueobject.IranianMobileNumber
+import com.kiva.domain.aggregate.contact.model.valueobject.TicketCode
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpPurpose
@@ -74,5 +75,9 @@ class LogSmsSender : SmsSender {
 
     override suspend fun sendBackInStock(to: IranianMobileNumber, productName: String, link: String) {
         logger.warn("SMS to ${to.masked()}: «$productName» is back, $link")
+    }
+
+    override suspend fun sendContactReplied(to: IranianMobileNumber, ticketCode: TicketCode) {
+        logger.warn("SMS to ${to.masked()}: support replied to ${ticketCode.value}")
     }
 }

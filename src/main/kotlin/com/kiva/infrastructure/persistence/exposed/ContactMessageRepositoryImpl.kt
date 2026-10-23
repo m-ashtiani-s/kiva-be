@@ -8,7 +8,13 @@ import com.kiva.domain.aggregate.contact.repository.ContactMessageRepository
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
 import com.kiva.domain.aggregate.user.model.valueobject.Email
 import com.kiva.infrastructure.persistence.exposed.tbl.ContactMessageTbl
+import com.kiva.common.pagination.Page
+import com.kiva.common.pagination.Pageable
+import com.kiva.infrastructure.common.persistence.SortOrders
+import com.kiva.infrastructure.common.persistence.paginate
+import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.TextColumnType
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
@@ -18,6 +24,7 @@ import org.jetbrains.exposed.v1.jdbc.insertIgnore
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
+import org.jetbrains.exposed.v1.jdbc.update
 import java.time.Instant
 import java.time.ZoneOffset
 
@@ -34,6 +41,23 @@ class ContactMessageRepositoryImpl : ContactMessageRepository {
 
     override fun find(ticketCode: TicketCode): ContactMessage? =
         ContactMessageTbl.selectAll().where { ContactMessageTbl.ticketCode eq ticketCode.value }.singleOrNull()?.toMessage()
+
+    override fun lockFind(ticketCode: TicketCode): ContactMessage? =
+        ContactMessageTbl.selectAll().where { ContactMessageTbl.ticketCode eq ticketCode.value }.forUpdate().singleOrNull()?.toMessage()
+
+    override fun save(message: ContactMessage) {
+        ContactMessageTbl.update({ ContactMessageTbl.ticketCode eq message.ticketCode.value }) { it.fill(message) }
+    }
+
+    override fun page(filter: ContactMessageRepository.Filter, pageable: Pageable): Page<ContactMessage> {
+        val conditions = listOfNotNull(
+            filter.status?.let { ContactMessageTbl.status eq it },
+            filter.topic?.let { ContactMessageTbl.topic eq it },
+        )
+        val where: Op<Boolean> = conditions.fold(Op.TRUE as Op<Boolean>) { all, one -> all and one }
+        return ContactMessageTbl.selectAll().where { where }
+            .paginate(pageable, NEWEST_FIRST, tiebreaker = ContactMessageTbl.id, tiebreakerOrder = SortOrder.DESC) { it.toMessage() }
+    }
 
     // A transaction-level advisory lock keyed by the mobile, a parameter so it never shows in the SQL log.
     override fun lockPhone(phone: IranianMobileNumber) {
@@ -82,4 +106,8 @@ class ContactMessageRepositoryImpl : ContactMessageRepository {
     )
 
     private fun Instant.utc() = atOffset(ZoneOffset.UTC)
+
+    private companion object {
+        val NEWEST_FIRST: SortOrders = mapOf("newest" to listOf(ContactMessageTbl.createdAt to SortOrder.DESC))
+    }
 }

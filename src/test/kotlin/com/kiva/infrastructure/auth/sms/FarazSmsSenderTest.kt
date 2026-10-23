@@ -5,6 +5,7 @@ import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.read.ListAppender
 import com.kiva.common.valueobject.IranianMobileNumber
+import com.kiva.domain.aggregate.contact.model.valueobject.TicketCode
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpPurpose
@@ -153,6 +154,7 @@ class FarazSmsSenderTest {
             sms.sendReturnRejected(sara, ReturnCode.constructFromPersisted("RT-1012"))
             sms.sendReturnPickup(sara, ReturnCode.constructFromPersisted("RT-1012"), "TIPAX_NAME")
             sms.sendReturnClosed(sara, ReturnCode.constructFromPersisted("RT-1012"))
+            sms.sendContactReplied(sara, TicketCode.constructFromPersisted("CT-482113"))
         }
 
         assertTrue(sent.isEmpty())
@@ -165,6 +167,7 @@ class FarazSmsSenderTest {
             photosSentPattern = "pH0t05ent1", refundCompletedPattern = "r3fund0ne1", orderCancelledPattern = "c4ncel1ed1",
             orderShippedPattern = "sh1pped001", orderDeliveredPattern = "de1ivered1", changeResolvedPattern = "ch4nged001",
             returnApprovedPattern = "rtApproved", returnRejectedPattern = "rtRejected", returnPickupPattern = "rtPickup01", returnClosedPattern = "rtClosed01",
+            contactRepliedPattern = "ctReplied1",
         )
         runBlocking {
             val sms = sender(withAll)
@@ -180,6 +183,7 @@ class FarazSmsSenderTest {
             sms.sendReturnRejected(sara, ReturnCode.constructFromPersisted("RT-1012"))
             sms.sendReturnPickup(sara, ReturnCode.constructFromPersisted("RT-1012"), "TIPAX_NAME")
             sms.sendReturnClosed(sara, ReturnCode.constructFromPersisted("RT-1012"))
+            sms.sendContactReplied(sara, TicketCode.constructFromPersisted("CT-482113"))
         }
 
         assertEquals(
@@ -193,6 +197,7 @@ class FarazSmsSenderTest {
                 """{"code":"rtApproved","attributes":{"code":"RT-1012"}}""", """{"code":"rtRejected","attributes":{"code":"RT-1012"}}""",
                 """{"code":"rtPickup01","attributes":{"code":"RT-1012","carrier":"TIPAX_NAME"}}""",
                 """{"code":"rtClosed01","attributes":{"code":"RT-1012"}}""",
+                """{"code":"ctReplied1","attributes":{"code":"CT-482113"}}""",
             ),
             sent.map { (_, body) -> JsonObject(body.filterKeys { it == "code" || it == "attributes" }).toString() },
         )

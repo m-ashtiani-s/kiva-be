@@ -81,6 +81,21 @@ object AuditTexts {
             AuditAction.TESTIMONIAL_CREATED -> "پیام رضایت $name ثبت شد"
             AuditAction.TESTIMONIAL_UPDATED -> "پیام رضایت $name ویرایش شد"
             AuditAction.TESTIMONIAL_DELETED -> "پیام رضایت $name حذف شد"
+            AuditAction.CONTACT_MESSAGE_UPDATED -> contactMessageUpdated(name, changes)
+        }
+    }
+
+    /** A reply first (and how it went), then a new status; otherwise the note. */
+    private fun contactMessageUpdated(name: String, changes: List<AuditChange>): String {
+        val channel = changes.firstOrNull { it.field == "replyChannel" }?.to
+        val status = changes.firstOrNull { it.field == "status" }?.to
+        return when {
+            channel == "SMS" -> "به پیام تماس $name جواب داده شد (خبر با پیامک)"
+            channel == "EMAIL" -> "به پیام تماس $name با ایمیل جواب داده شد"
+            status == "CLOSED" -> "پیام تماس $name بسته شد"
+            status == "IN_PROGRESS" -> "پیام تماس $name در حال پیگیری شد"
+            status == "OPEN" -> "پیام تماس $name دوباره باز شد"
+            else -> "یادداشت پیام تماس $name عوض شد"
         }
     }
 

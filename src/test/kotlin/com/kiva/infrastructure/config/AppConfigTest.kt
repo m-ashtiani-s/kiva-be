@@ -233,6 +233,8 @@ class AppConfigTest {
                 "kiva.sms.faraz.returnPickupPattern" to "rtPickup01", "kiva.sms.faraz.returnClosedPattern" to "rtClosed01",
             ).sms.faraz?.let { listOf(it.returnApprovedPattern, it.returnRejectedPattern, it.returnPickupPattern, it.returnClosedPattern) },
         )
+        assertEquals(null, settings.contactRepliedPattern)
+        assertEquals("ctReplied1", read(*faraz, "kiva.sms.faraz.contactRepliedPattern" to "ctReplied1").sms.faraz?.contactRepliedPattern)
         assertEquals(null, read().sms.faraz, "the log provider has no Faraz settings")
     }
 

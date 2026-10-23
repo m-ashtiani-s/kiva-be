@@ -78,6 +78,9 @@ enum class AuditAction {
     TESTIMONIAL_CREATED,
     TESTIMONIAL_UPDATED,
     TESTIMONIAL_DELETED,
+
+    /** Phase 13: a contact message's status, note or reply; `changes` never keep the reply's or the note's text. */
+    CONTACT_MESSAGE_UPDATED,
 }
 
 /** The kind of thing a panel write changed: the contract's AuditEntityType, value for value. */

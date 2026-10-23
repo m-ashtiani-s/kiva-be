@@ -177,6 +177,7 @@ data class SmsConfig(val provider: SmsProvider, val faraz: FarazSmsConfig? = nul
                     returnPickupPattern = optional("returnPickupPattern"),
                     returnClosedPattern = optional("returnClosedPattern"),
                     backInStockPattern = optional("backInStockPattern"),
+                    contactRepliedPattern = optional("contactRepliedPattern"),
                 ),
             )
         }

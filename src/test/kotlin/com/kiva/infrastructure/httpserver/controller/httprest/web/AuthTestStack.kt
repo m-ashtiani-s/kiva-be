@@ -23,6 +23,7 @@ import com.kiva.application.usecase.cart.usecase.query.GetCartUc
 import com.kiva.application.usecase.discount.Discounts
 import com.kiva.application.usecase.reservation.Reservations
 import com.kiva.common.valueobject.IranianMobileNumber
+import com.kiva.domain.aggregate.contact.model.valueobject.TicketCode
 import com.kiva.domain.aggregate.cart.CartDomainService
 import com.kiva.domain.aggregate.discount.DiscountDomainService
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
@@ -201,6 +202,9 @@ class RecordingSmsSender : SmsSender {
     /** «جمع‌آوری مرجوعی» messages, as (phone, return code, carrier's name). */
     val returnPickups: MutableList<Triple<IranianMobileNumber, ReturnCode, String>> = Collections.synchronizedList(mutableListOf())
 
+    /** «پشتیبانی رسیدگی کرد» messages, as (phone, contact message's code). */
+    val contactReplied: MutableList<Pair<IranianMobileNumber, TicketCode>> = Collections.synchronizedList(mutableListOf())
+
     data class Shipped(val to: IranianMobileNumber, val orderCode: OrderCode, val carrierName: String, val trackingCode: String)
 
     @Volatile
@@ -277,5 +281,10 @@ class RecordingSmsSender : SmsSender {
     override suspend fun sendBackInStock(to: IranianMobileNumber, productName: String, link: String) {
         check(!down) { "the SMS provider is down" }
         backInStock += Triple(to, productName, link)
+    }
+
+    override suspend fun sendContactReplied(to: IranianMobileNumber, ticketCode: TicketCode) {
+        check(!down) { "the SMS provider is down" }
+        contactReplied += to to ticketCode
     }
 }

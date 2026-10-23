@@ -1,6 +1,7 @@
 package com.kiva.application.port
 
 import com.kiva.common.valueobject.IranianMobileNumber
+import com.kiva.domain.aggregate.contact.model.valueobject.TicketCode
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpPurpose
@@ -103,6 +104,13 @@ interface SmsSender {
      * never sent twice). Throws like [sendCode].
      */
     suspend fun sendBackInStock(to: IranianMobileNumber, productName: String, link: String)
+
+    /**
+     * «پشتیبانی به پیامت رسیدگی کرد» (phase 13): support replied to the contact message [ticketCode]. Only that, never the
+     * reply's text (no free text in an SMS, roadmap section 1, row 14): the operator calls or writes in a messenger. Sent
+     * after the commit; when it fails, only the log knows. Throws like [sendCode].
+     */
+    suspend fun sendContactReplied(to: IranianMobileNumber, ticketCode: TicketCode)
 
     /**
      * Whether an SMS of [kind] can go at all: an optional one whose pattern isn't set can't. A job that would use up

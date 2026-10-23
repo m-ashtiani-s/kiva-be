@@ -5330,7 +5330,7 @@ Route: 200
 | ۱۳.۰ | کانترکت 1.19.0 | S | ✅ |
 | ۱۳.۱ | پورت ایمیل: لاگ و SMTP | M | ✅ |
 | ۱۳.۲ | موضوع‌ها و ثبت پیام تماس | M | ✅ |
-| ۱۳.۳ | پیام‌های تماس در پنل و پاسخ | M | ⬜ |
+| ۱۳.۳ | پیام‌های تماس در پنل و پاسخ | M | ✅ |
 | ۱۳.۴ | خبرنامه | M | ⬜ |
 | ۱۳.۵ | ریویو | S | ⬜ |
 
@@ -5361,6 +5361,9 @@ Route: 200
 | 21 | موضوع ناشناخته (تازه، گام ۱۳.۲) | کد فیلدی ِ تازه‌ی `CONTACT_TOPIC_INVALID` روی `topic` («موضوع پیام رو از لیست انتخاب کن»)؛ اسم کوتاه یا متن کوتاه با `TEXT_TOO_SHORT` (`meta.minLength`)، بلند با `TEXT_TOO_LONG`، نویسه‌ی کنترلی با `TEXT_INVALID` | کانترکت کدی برای موضوع نداشت؛ بقیه کدهای مشترک ِ فرم‌ها |
 | 22 | فیلدهای خالی و فاصله‌ها (تازه، گام ۱۳.۲) | `email` و `orderCode` ِ خالی (`""` یا فقط فاصله) یعنی «نفرستاده» (فیلد خالی ِ فرم)، نه خطا. حروف فارسی ِ متن پیام خط به خط یکی می‌شن تا خط تازه بمونه؛ تب و فاصله‌های پشت‌سرهم یه فاصله‌ان | فرم فیلد خالی رو `""` می‌فرسته؛ `normalizePersianLetters` روی کل متن خط تازه رو هم فاصله می‌کرد |
 | 23 | سقف موبایل زیر بار (تازه، گام ۱۳.۲) | شمارش پیام‌های یه موبایل پشت یه قفل advisory ِ تراکنشی با کلید همون موبایل (پارامتر، پس تو لاگ SQL نیست): دو پیام هم‌زمان پشت هم شمرده می‌شن. `V38` یکجا در ۱۳.۲ نوشته شد (جدول خبرنامه هم، که از ۱۳.۴ به کار میاد)، با اسم برای CHECKهای چندستونی | بدون قفل، هشت پیام ِ هم‌زمان همه از سقف رد می‌شدن؛ یه migration ِ commit‌شده دیگه عوض نمی‌شه |
+| 24 | متن ایمیل‌ها (تازه، گام ۱۳.۳) | `EmailTexts` در لایه‌ی application (`usecase/contact`)، نه HTTP: UseCase ایمیل رو خودش می‌نویسه. ایمیل پاسخ: «سلام {اسم}،»، متن کامل پاسخ، کد پیگیری، «همین‌جا جواب نده؛ از فرم تماس بنویس»، امضای کیوا. شکست فرستادن فقط WARN با **نوع** خطا، نه پیامش (پیام سرور ایمیل می‌تونه آدرس رو داشته باشه) | application به HTTP وابسته نیست |
+| 25 | شکل `PATCH` (تازه، گام ۱۳.۳) | دو کد فیلدی ِ تازه: `CONTACT_STATUS_INVALID` (روی `status`، و فیلتر `status` ِ لیست) و `REPLY_CHANNEL_INVALID`. `reply` ِ فقط فاصله یعنی «نفرستاده»؛ `internalNote: null` یا فقط فاصله پاکش می‌کنه، نیومده دست نمی‌خوره. کد ِ بدشکل یا ناشناخته ← `404 NOT_FOUND`. پاسخ ِ همون کانال دوباره هم یه تغییره (`repliedAt` تازه، دوباره فرستاده می‌شه، یه ردیف لاگ) | کانترکت کد این دو فیلد رو نداشت؛ پاک کردن یادداشت باید ممکن باشه |
+| 26 | جمله‌ی لاگ پاسخ (تازه، گام ۱۳.۳) | `changes`: `status` (از، به)، `replied` (`null` ← `true`) و `replyChannel` (`null` ← کانال) وقتی پاسخ رفت، `internalNote` فقط «عوض شد». جمله‌ی `AuditTexts`: پاسخ اول («… جواب داده شد (خبر با پیامک)» یا «با ایمیل»)، بعد وضعیت («بسته شد»، «در حال پیگیری شد»، «دوباره باز شد»)، وگرنه «یادداشت … عوض شد» | پنل باید از روی لاگ بفهمه چی شد، بی متن |
 
 ### ۱۸.۳ تغییرات کد
 
@@ -5547,18 +5550,20 @@ Route: 200 با AdminContactMessage
 
 ---
 
-#### گام ۱۳.۳: پیام‌های تماس در پنل و پاسخ · M ⬜
+#### گام ۱۳.۳: پیام‌های تماس در پنل و پاسخ · M ✅
 
 **می‌سازی:** `FindAdminContactMessagesUc`، `UpdateContactMessageUc`؛ `SmsSender.sendContactReplied` (مسیر ۹ مرحله‌ای بخش ۲۴)؛ `webV1AdminSupport.kt`؛ لاگ تغییرات.
 
 وابسته به: ۱۳.۱، ۱۳.۲
 
 **تموم شده یعنی:**
-- [ ] فیلترها؛ `{}` ← `200` بدون ردیف لاگ.
-- [ ] پاسخ پیامکی ← پیامک ضبط‌شده با `code` و **بدون متن پاسخ**؛ پاسخ ایمیلی ← ایمیل ضبط‌شده با متن؛ ایمیلی برای پیام بی‌ایمیل ← `400`.
-- [ ] `reply` بدون `replyChannel` ← `400`؛ `repliedAt` و `repliedBy` پر.
-- [ ] لاگ تغییرات متن پاسخ و یادداشت رو نداره.
-- [ ] `OPERATOR` و `CONTENT_EDITOR` ← `403`.
+- [x] فیلترها؛ `{}` ← `200` بدون ردیف لاگ.
+- [x] پاسخ پیامکی ← پیامک ضبط‌شده با `code` و **بدون متن پاسخ**؛ پاسخ ایمیلی ← ایمیل ضبط‌شده با متن؛ ایمیلی برای پیام بی‌ایمیل ← `400`.
+- [x] `reply` بدون `replyChannel` ← `400`؛ `repliedAt` و `repliedBy` پر.
+- [x] لاگ تغییرات متن پاسخ و یادداشت رو نداره.
+- [x] `OPERATOR` و `CONTENT_EDITOR` ← `403`.
+
+**یادداشت پیاده‌سازی:** سه تصمیم تازه (۲۴ تا ۲۶). `ContactMessageChange` (شکل ِ `PATCH`، همه‌ی خطاها با هم)، `ContactMessage.updated` (بی‌تغییر ← `null`)، `ContactMessageRepository.lockFind`/`save`/`page`؛ `FindAdminContactMessagesUc` (اسم ِ اپراتور با `ActorNameDto`)، `UpdateContactMessageUc` (قفل ردیف، `EMAIL_NOT_AVAILABLE`، یه ردیف `CONTACT_MESSAGE_UPDATED`، بعد از commit پیامک یا ایمیل، شکست فقط WARN)؛ `EmailTexts`؛ `AdminContactMessageDto`؛ `webV1AdminSupport.kt`، `UpdateContactMessageHttpRequest` (`internalNote` با `Patch`)، `AdminContactMessageHttpResponse`؛ `AuditAction.CONTACT_MESSAGE_UPDATED` و جمله‌اش. پیامک `sendContactReplied` با مسیر کامل ۹ مرحله‌ای (پورت، `LogSmsSender`، `FarazSmsConfig.contactRepliedPattern`، `KIVA_FARAZ_CONTACT_REPLIED_PATTERN` در `application.conf` و `kiva.env.example`، `FarazSmsSender` با WARN ِ بی‌الگو، `RecordingSmsSender`، تست‌ها، README، جدول الگوهای `LAUNCH.md`). تست: `ContactMessageChangeTest` (۴)، `WebV1AdminContactMessagesOnDatabaseTest` (۸)، و الگوی تازه در `FarazSmsSenderTest` و `AppConfigTest`. ۱۲ خرابکاری (کانال‌ها، چک ایمیل، ذخیره‌ی بی‌تغییر، متن پاسخ یا یادداشت در لاگ، شکست پیامک، نقش `OPERATOR`، فیلتر وضعیت، پاسخ بی کانال، وضعیت ِ نفرستاده، `repliedAt` ِ پاسخ دوم، ترتیب) همه قرمز. کل مجموعه با `--rerun-tasks`: ۳۰۵۲ تست سبز، ۵ skip.
 
 ---
 
@@ -6478,3 +6483,4 @@ kiva {
 | ۱ آبان ۱۴۰۵ | ۱۳.۰ | Phase 13 step 13.0 | کانترکت 1.19.0 با هر ۹ ردیف ِ ۱۸.۸ و `required` ِ شِماهای تماس؛ متن سه کد تازه و `UNSUBSCRIBE_TOKEN_INVALID`. برنچ `contact` از نوک فاز ۱۲ |
 | ۱ آبان ۱۴۰۵ | ۱۳.۱ | Phase 13 step 13.1 | پورت ایمیل: `LogEmailSender` (پیش‌فرض) و `SmtpEmailSender` (Angus Mail)، `EmailConfig` با چک‌های بوت، README و `kiva.env.example`. ۱۳ خرابکاری قرمز. ۳۰۲۱ تست سبز، ۵ skip |
 | ۱ آبان ۱۴۰۵ | ۱۳.۲ | Phase 13 step 13.2 | فرم تماس: `V38`، دامنه‌ی `contact`، `GET /contact/topics` (کش) و `POST /contact/messages` با سقف IP و موبایل (قفل advisory). سه تصمیم تازه (۲۱ تا ۲۳). ۱۱ خرابکاری قرمز. ۳۰۴۰ تست سبز، ۵ skip |
+| ۱ آبان ۱۴۰۵ | ۱۳.۳ | Phase 13 step 13.3 | پیام‌های تماس در پنل: لیست با فیلتر، `PATCH` (وضعیت، یادداشت، پاسخ پیامکی بی متن یا ایمیلی با متن)، لاگ تغییرات بی متن، پیامک `sendContactReplied` با مسیر ۹ مرحله‌ای. سه تصمیم تازه (۲۴ تا ۲۶). ۱۲ خرابکاری قرمز. ۳۰۵۲ تست سبز، ۵ skip |

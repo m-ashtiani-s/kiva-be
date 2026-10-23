@@ -15,6 +15,8 @@ import com.kiva.infrastructure.persistence.exposed.tbl.TestimonialTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.ContactMessageTbl
 import com.kiva.infrastructure.persistence.exposed.ContactMessageRepositoryImpl
 import com.kiva.application.usecase.contact.usecase.command.CreateContactMessageUc
+import com.kiva.application.usecase.contact.usecase.command.UpdateContactMessageUc
+import com.kiva.application.usecase.contact.usecase.query.FindAdminContactMessagesUc
 import com.kiva.application.usecase.contact.usecase.query.ListContactTopicsUc
 import com.kiva.domain.aggregate.contact.TicketCodeGenerator
 import com.kiva.infrastructure.persistence.exposed.TestimonialRepositoryImpl
@@ -470,6 +472,12 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
     // --- contact and newsletter (phase 13) ---
     val contactMessages = ContactMessageRepositoryImpl()
     val contact = ContactUseCases(ListContactTopicsUc(), CreateContactMessageUc(transactions, contactMessages, TicketCodeGenerator(), clock))
+    val email = RecordingEmailSender()
+    val adminSupport = AdminSupportUseCases(
+        checkPanelAccess,
+        FindAdminContactMessagesUc(transactions, contactMessages, users),
+        UpdateContactMessageUc(transactions, contactMessages, users, auditTrail, sms, email, clock),
+    )
 
     val adminMarketing = AdminMarketingUseCases(
         checkPanelAccess,
@@ -650,6 +658,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
                     webV1Home(home, mediaUrls, SITE_URL)
                     webV1Search(search, mediaUrls)
                     webV1Contact(contact)
+                    webV1AdminSupport(adminSupport)
                     webV1Addresses(purchase.addressUseCases)
                     webV1SharedWishlist(wishlist.getShared, mediaUrls)
                     // Back from the gateway and the result page, for paying what a change left owed (phase 3).

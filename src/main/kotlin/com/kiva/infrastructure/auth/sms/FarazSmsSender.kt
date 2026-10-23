@@ -4,6 +4,7 @@ import com.kiva.application.port.SmsKind
 import com.kiva.application.port.SmsSender
 import com.kiva.common.logging.getLogger
 import com.kiva.common.valueobject.IranianMobileNumber
+import com.kiva.domain.aggregate.contact.model.valueobject.TicketCode
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpPurpose
@@ -50,6 +51,7 @@ import kotlin.coroutines.cancellation.CancellationException
  * | «جمع‌آوری مرجوعی» | [FarazSmsConfig.returnPickupPattern], optional | `code`, `carrier` (its name) |
  * | «مرجوعی بسته شد» | [FarazSmsConfig.returnClosedPattern], optional | `code` |
  * | «موجود شد» | [FarazSmsConfig.backInStockPattern], optional; without it the job tells nobody | `product`, `link` |
+ * | «پشتیبانی رسیدگی کرد» | [FarazSmsConfig.contactRepliedPattern], optional | `code` (the contact message's, `CT-482113`) |
  *
  * A message without its pattern is not sent, and a WARN says so: the panel approves each pattern before it can be used,
  * and the code that sends the message goes on all the same (the phone still changes, the order is still paid).
@@ -86,6 +88,7 @@ class FarazSmsSender(private val config: FarazSmsConfig, engine: HttpClientEngin
         if (config.returnPickupPattern == null) logger.warn("Faraz SMS: no pattern for «جمع‌آوری مرجوعی» (KIVA_FARAZ_RETURN_PICKUP_PATTERN); it won't be sent")
         if (config.returnClosedPattern == null) logger.warn("Faraz SMS: no pattern for «مرجوعی بسته شد» (KIVA_FARAZ_RETURN_CLOSED_PATTERN); it won't be sent")
         if (config.backInStockPattern == null) logger.warn("Faraz SMS: no pattern for «موجود شد» (KIVA_FARAZ_BACK_IN_STOCK_PATTERN); the stock alerts wait")
+        if (config.contactRepliedPattern == null) logger.warn("Faraz SMS: no pattern for «پشتیبانی رسیدگی کرد» (KIVA_FARAZ_CONTACT_REPLIED_PATTERN); it won't be sent")
     }
 
     /** How long to wait for the provider: to connect, and for the whole call. */
@@ -164,6 +167,11 @@ class FarazSmsSender(private val config: FarazSmsConfig, engine: HttpClientEngin
         send("«موجود شد»", pattern, to, mapOf("product" to productName, "link" to link))
     }
 
+    override suspend fun sendContactReplied(to: IranianMobileNumber, ticketCode: TicketCode) {
+        val pattern = config.contactRepliedPattern ?: return notSent("«پشتیبانی رسیدگی کرد» of ${ticketCode.value}", to)
+        send("«پشتیبانی رسیدگی کرد» of ${ticketCode.value}", pattern, to, mapOf("code" to ticketCode.value))
+    }
+
     override fun canSend(kind: SmsKind): Boolean = when (kind) {
         SmsKind.BACK_IN_STOCK -> config.backInStockPattern != null
     }
@@ -173,7 +181,8 @@ class FarazSmsSender(private val config: FarazSmsConfig, engine: HttpClientEngin
             "phoneChangedPattern=${config.phoneChangedPattern}, orderPaidPattern=${config.orderPaidPattern}, photosSentPattern=${config.photosSentPattern}, refundCompletedPattern=${config.refundCompletedPattern}, " +
             "orderCancelledPattern=${config.orderCancelledPattern}, orderShippedPattern=${config.orderShippedPattern}, orderDeliveredPattern=${config.orderDeliveredPattern}, " +
             "changeResolvedPattern=${config.changeResolvedPattern}, returnApprovedPattern=${config.returnApprovedPattern}, " +
-            "returnRejectedPattern=${config.returnRejectedPattern}, returnPickupPattern=${config.returnPickupPattern}, returnClosedPattern=${config.returnClosedPattern}, backInStockPattern=${config.backInStockPattern})"
+            "returnRejectedPattern=${config.returnRejectedPattern}, returnPickupPattern=${config.returnPickupPattern}, returnClosedPattern=${config.returnClosedPattern}, backInStockPattern=${config.backInStockPattern}, " +
+            "contactRepliedPattern=${config.contactRepliedPattern})"
 
     // ============ inside ============
 
@@ -247,6 +256,7 @@ class FarazSmsSender(private val config: FarazSmsConfig, engine: HttpClientEngin
  * @property returnPickupPattern optional; its variables are `code` and `carrier`.
  * @property returnClosedPattern optional; its variable is `code`.
  * @property backInStockPattern optional; its variables are `product` and `link`.
+ * @property contactRepliedPattern optional; its variable is `code` (the contact message's).
  */
 class FarazSmsConfig(
     val baseUrl: String,
@@ -266,6 +276,7 @@ class FarazSmsConfig(
     val returnPickupPattern: String? = null,
     val returnClosedPattern: String? = null,
     val backInStockPattern: String? = null,
+    val contactRepliedPattern: String? = null,
 ) {
     init {
         require(baseUrl.matches(Regex("https?://[^/\\s]+(/[^\\s]*)?")) && !baseUrl.endsWith("/")) {
@@ -276,6 +287,7 @@ class FarazSmsConfig(
         listOfNotNull(
             codePattern, phoneChangedPattern, orderPaidPattern, photosSentPattern, refundCompletedPattern, orderCancelledPattern, orderShippedPattern, orderDeliveredPattern,
             changeResolvedPattern, returnApprovedPattern, returnRejectedPattern, returnPickupPattern, returnClosedPattern, backInStockPattern,
+            contactRepliedPattern,
         ).forEach { pattern ->
             require(pattern.matches(Regex("[A-Za-z0-9_-]{2,64}"))) { "A Faraz SMS pattern code must be letters and digits, was '$pattern'" }
         }
@@ -285,7 +297,8 @@ class FarazSmsConfig(
         "FarazSmsConfig(baseUrl=$baseUrl, apiKey=<hidden>, lineNumber=$lineNumber, codePattern=$codePattern, " +
             "phoneChangedPattern=$phoneChangedPattern, orderPaidPattern=$orderPaidPattern, photosSentPattern=$photosSentPattern, refundCompletedPattern=$refundCompletedPattern, orderCancelledPattern=$orderCancelledPattern, " +
             "orderShippedPattern=$orderShippedPattern, orderDeliveredPattern=$orderDeliveredPattern, changeResolvedPattern=$changeResolvedPattern, " +
-            "returnApprovedPattern=$returnApprovedPattern, returnRejectedPattern=$returnRejectedPattern, returnPickupPattern=$returnPickupPattern, returnClosedPattern=$returnClosedPattern, backInStockPattern=$backInStockPattern)"
+            "returnApprovedPattern=$returnApprovedPattern, returnRejectedPattern=$returnRejectedPattern, returnPickupPattern=$returnPickupPattern, returnClosedPattern=$returnClosedPattern, backInStockPattern=$backInStockPattern, " +
+            "contactRepliedPattern=$contactRepliedPattern)"
 }
 
 /** The provider didn't take the SMS. Its message has no key, code or whole number in it. */

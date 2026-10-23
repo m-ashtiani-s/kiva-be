@@ -1,7 +1,9 @@
 package com.kiva.domain.aggregate.contact.entity
 
+import com.kiva.common.patch.applyTo
 import com.kiva.common.valueobject.IranianMobileNumber
 import com.kiva.common.valueobject.UserId
+import com.kiva.domain.aggregate.contact.model.ContactMessageChange
 import com.kiva.domain.aggregate.contact.model.ContactMessageDraft
 import com.kiva.domain.aggregate.contact.model.valueobject.ContactStatus
 import com.kiva.domain.aggregate.contact.model.valueobject.ContactTopic
@@ -46,6 +48,29 @@ class ContactMessage private constructor(
     }
 
     override fun toString(): String = "ContactMessage(${ticketCode.value}, $topic, $status)"
+
+    /**
+     * The message after [change] by [by] (decision 9), or null when it would stay as it is: no save, no change log row.
+     * The status changes only when sent; the note is replaced (or cleared); a reply always changes it, replacing the
+     * last one, at [now]: it is sent again.
+     */
+    fun updated(change: ContactMessageChange, by: UserId, now: Instant): ContactMessage? {
+        val status = change.status ?: this.status
+        val note = change.internalNote.applyTo(internalNote)
+        val reply = change.reply
+        if (status == this.status && note == internalNote && reply == null) return null
+        return ContactMessage(
+            ticketCode, topic, fullName, phone, email, orderCode, message, status,
+            reply = reply?.text ?: this.reply,
+            replyChannel = reply?.channel ?: replyChannel,
+            repliedAt = if (reply != null) now else repliedAt,
+            repliedBy = if (reply != null) by else repliedBy,
+            internalNote = note,
+            userId = userId,
+            createdAt = createdAt,
+            updatedAt = now,
+        )
+    }
 
     companion object {
         /** A new message, OPEN (decision 2). */

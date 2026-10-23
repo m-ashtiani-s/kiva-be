@@ -100,6 +100,8 @@ import com.kiva.infrastructure.httpserver.controller.httprest.web.TRACKING_LOOKU
 import com.kiva.infrastructure.httpserver.controller.httprest.web.CONTACT_RATE_LIMIT
 import com.kiva.infrastructure.httpserver.controller.httprest.web.ContactUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Contact
+import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminSupportUseCases
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminSupport
 import com.kiva.domain.aggregate.contact.model.policy.ContactPolicy
 import com.kiva.infrastructure.httpserver.controller.httprest.web.TrackingUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.devFakeGateway
@@ -379,6 +381,7 @@ fun Application.configureRouting() {
             webV1SharedWishlist(get(), mediaUrls)
             webV1Tracking(TrackingUseCases(get(), get(), get()), mediaUrls)
             webV1Contact(ContactUseCases(get(), get()))
+            webV1AdminSupport(AdminSupportUseCases(checkPanelAccessUc, get(), get()))
         }
     }
 }

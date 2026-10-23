@@ -375,9 +375,10 @@ diff <(grep -oE '^[A-Z_]+=' /opt/kiva/conf/kiva.env | sort) <(grep -oE '^[A-Z_]+
 | `KIVA_FARAZ_RETURN_PICKUP_PATTERN` (فاز ۷) | `code`، `carrier` | «بسته‌ی مرجوعی %code% رو %carrier% ازت تحویل می‌گیره؛ زمانش تو حسابت.» |
 | `KIVA_FARAZ_RETURN_CLOSED_PATTERN` (فاز ۷) | `code` | «مرجوعی %code% بسته شد؛ جزئیات تو حسابت.» |
 | `KIVA_FARAZ_BACK_IN_STOCK_PATTERN` (فاز ۱۰) | `product`، `link` | «%product% موجود شد! %link%» |
+| `KIVA_FARAZ_CONTACT_REPLIED_PATTERN` (فاز ۱۳) | `code` | «پشتیبانی کیوا به پیامت (%code%) رسیدگی کرد؛ به زودی باهات تماس می‌گیریم یا تو پیام‌رسان پیام می‌دیم.» |
 | `KIVA_FARAZ_ALERT_PATTERN` (گام ۶.۸) | `what` | «هشدار کیوا: %what%» |
 
-الگوهای فازهای بعد («موجود شد»، پاسخ تماس) با همون فازها اضافه می‌شن.
+الگوی هر پیامک ِ فاز بعدی با همون فاز به این جدول اضافه می‌شه.
 
 **۳. آدرس‌های رهگیری.** در پنل، تنظیمات ← روش‌های ارسال: آدرس رهگیری تیپاکس و پست رو با یه کد واقعی در سایت خودشون امتحان کن و اگه لازمه اصلاح کن (`{code}` جای کد).
 

@@ -20,6 +20,8 @@ import com.kiva.application.usecase.content.usecase.query.GetSiteStatsUc
 import com.kiva.application.usecase.search.usecase.query.SearchSuggestUc
 import com.kiva.application.usecase.search.usecase.query.GetSearchHintsUc
 import com.kiva.application.usecase.contact.usecase.command.CreateContactMessageUc
+import com.kiva.application.usecase.contact.usecase.command.UpdateContactMessageUc
+import com.kiva.application.usecase.contact.usecase.query.FindAdminContactMessagesUc
 import com.kiva.application.usecase.contact.usecase.query.ListContactTopicsUc
 import com.kiva.domain.aggregate.contact.TicketCodeGenerator
 import com.kiva.application.usecase.content.usecase.query.GetHomePageUc
@@ -847,6 +849,13 @@ val useCaseModule = module(createdAtStart = true) {
     single { TicketCodeGenerator() }
     single { ListContactTopicsUc() }
     single { CreateContactMessageUc(transactionManager = get(), contactMessageRepository = get(), ticketCodeGenerator = get(), clock = get()) }
+    single { FindAdminContactMessagesUc(transactionManager = get(), contactMessageRepository = get(), userRepository = get()) }
+    single {
+        UpdateContactMessageUc(
+            transactionManager = get(), contactMessageRepository = get(), userRepository = get(), auditTrail = get(), smsSender = get(),
+            emailSender = get(), clock = get(),
+        )
+    }
 
     // --- wishlist (phase 9) ---
     single { WishlistHearts.of(get()) }
