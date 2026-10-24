@@ -81,6 +81,11 @@ enum class AuditAction {
 
     /** Phase 13: a contact message's status, note or reply; `changes` never keep the reply's or the note's text. */
     CONTACT_MESSAGE_UPDATED,
+
+    // ---- the blog (phase 15): `changes` keep the blocks only as «changed» and how many ----
+    BLOG_POST_CREATED,
+    BLOG_POST_UPDATED,
+    BLOG_POST_DELETED,
 }
 
 /** The kind of thing a panel write changed: the contract's AuditEntityType, value for value. */
@@ -108,4 +113,5 @@ enum class AuditEntityType {
     REVIEW,
     CONTACT_MESSAGE,
     USER,
+    BLOG_POST,
 }

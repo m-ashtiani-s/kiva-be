@@ -5839,7 +5839,7 @@ Route: 200 application/pdf با هدرهای تصمیم ۱۶
 |---|---|---|---|
 | ۱۵.۰ | کانترکت 1.21.0 | S | ✅ |
 | ۱۵.۱ | دسته‌ها، نویسنده‌ها و دامنه‌ی مقاله | M | ✅ |
-| ۱۵.۲ | نوشتن مقاله در پنل (ساخت، ویرایش، حذف، لیست و جزئیات پنل) | L | ⬜ |
+| ۱۵.۲ | نوشتن مقاله در پنل (ساخت، ویرایش، حذف، لیست و جزئیات پنل) | L | ✅ |
 | ۱۵.۳ | دسته‌ها، لیست و صفحه‌ی مقاله در فروشگاه | M | ⬜ |
 | ۱۵.۴ | مقاله‌های مرتبط و «مفید بود؟» | S | ⬜ |
 | ۱۵.۵ | ریویو و جمع‌بندی کل سند | M | ⬜ |
@@ -6046,18 +6046,20 @@ Route: 204
 
 ---
 
-#### گام ۱۵.۲: نوشتن مقاله در پنل · L ⬜
+#### گام ۱۵.۲: نوشتن مقاله در پنل · L ✅
 
 **می‌سازی:** شش UseCase ِ پنل؛ `webV1AdminBlog.kt`؛ `AdminBlogPostHttpResponse`؛ لاگ تغییرات؛ خط `deleteVotesOfUser` در `AccountEraser`.
 
 وابسته به: ۱۵.۱
 
 **تموم شده یعنی:**
-- [ ] ساخت پیش‌نویس ← `201` با `status = DRAFT`؛ تو لیست پنل هست، تو فروشگاه نه.
-- [ ] `<script>` و `onerror` در `html` ِ پاراگراف پاک می‌شن، `/products?onSale=true` می‌مونه (ردیف ۴ ِ بخش ۳).
-- [ ] `slug` ِ تکراری ← `409`؛ `slug = "123"` ← `400`؛ محصول `DRAFT` در بلوک ← `400` با `blocks.3.productId`.
-- [ ] منتخب کردن مقاله‌ی دوم ← اولی دیگه منتخب نیست.
-- [ ] `OPERATOR` ← `403` روی هر شش route.
+- [x] ساخت پیش‌نویس ← `201` با `status = DRAFT`؛ تو لیست پنل هست (تو فروشگاه نه: گام ۱۵.۳).
+- [x] `<script>` و `onerror` در `html` ِ پاراگراف پاک می‌شن، `/products?onSale=true` می‌مونه (ردیف ۴ ِ بخش ۳).
+- [x] `slug` ِ تکراری ← `409`؛ `slug = "123"` ← `400`؛ محصول `DRAFT` در بلوک ← `400` با `blocks.3.productId`.
+- [x] منتخب کردن مقاله‌ی دوم ← اولی دیگه منتخب نیست.
+- [x] `OPERATOR` ← `403` روی هر پنج route ِ پنل (`GET` لیست، `GET` یکی، `POST`، `PUT`، `DELETE`).
+
+**یادداشت پیاده‌سازی:** یه migration ِ تازه: `V41__blog_audit_log.sql` قید `entityType` ِ `auditlog_tbl` رو با `BLOG_POST` از نو می‌سازه (`V40` در ۱۵.۱ commit شده بود و این جا افتاده بود؛ بخش ۲۱). UseCaseها: `CreateBlogPostUc`، `UpdateBlogPostUc`، `DeleteBlogPostUc`، `GetAdminBlogPostUc`، `FindAdminBlogPostsUc`؛ سرویس‌های مشترک `BlogPostWriting` (دسته، نویسنده یا پیش‌فرض، مدیا با `MediaAttachments` ِ `BLOG`/فقط عکس، محصول‌های منتشرشده؛ و `changes` ِ لاگ با بلوک‌ها فقط «عوض شد» و تعداد) و `BlogPosts` (خلاصه، صفحه، نمای پنل و ردیف‌های لیست، هر کدوم با چند کوئری برای همه، بدون N+1؛ `searchTextOf`)؛ `BlogPostInput` (`draftOf`، `SaveBlogPostFailure`، `postIdOf`). رقابت slug با `UniqueTakenException` ← `409`. HTTP: `webV1AdminBlog.kt`، `BlogPostHttpRequest`، `BlogHttpResponses` (`AdminBlogPostHttpResponse` با همه‌ی فیلدهای `BlogPostDetail`، سئوی ساخته‌ی سرور با `jsonLd` ِ `Article`)، `BlogTexts`؛ متن لاگ سه کار تازه در `AuditTexts`. `AccountEraser` خط تازه‌ی `deleteVotesOfUser` (ردیف تست حذف حساب با route ِ «مفید بود؟» در ۱۵.۴). تست: `WebV1AdminBlogOnDatabaseTest` (۹).
 
 ---
 
@@ -6128,6 +6130,7 @@ Route: 204
 | 38 | `V38__contact_newsletter.sql` | ۱۳.۲، ۱۳.۴ | `contactmessage_tbl`، `newslettersubscription_tbl` |
 | 39 | `V39__account_deletion.sql` | ۱۴.۱ | `user_tbl.deletedOn` و `phone` ِ `NULL`‌پذیر، `accountdeletionreason_tbl` |
 | 40 | `V40__blog.sql` | ۱۵.۱ | `blogcategory_tbl` و `blogauthor_tbl` (با seed)، `blogpost_tbl`، `blogfeedback_tbl` |
+| 41 | `V41__blog_audit_log.sql` | ۱۵.۲ | `BLOG_POST` در قید `entityType` ِ `auditlog_tbl` (جا افتاده از `V40`) |
 
 **دقت:** یه migration که بخش‌هاش مال چند گامه (مثل `V31`، `V36`) در **اولین** گامی که بهش نیاز داره کامل نوشته می‌شه، نه تیکه‌تیکه در چند commit (چون commit‌شده ویرایش نمی‌شه). گام‌های بعدی فقط از جدول‌هاش استفاده می‌کنن.
 
@@ -6524,3 +6527,4 @@ kiva {
 | ۲ آبان ۱۴۰۵ | ۱۴.۴ | Phase 14 step 14.4 | `ACCOUNT_CLOSURE_REVIEW.md` (۱۸ خرابکاری، همه قرمز)، `docs/FRONTEND_ACCOUNT.md` و متن حریم خصوصی. ۳۱۴۲ تست سبز، ۵ skip. فاز ۱۴ از طرف ریپو کامله؛ دور واقعی و merge منتظر تو |
 | ۲ آبان ۱۴۰۵ | ۱۵.۰ | Phase 15 step 15.0 | کانترکت 1.21.0 با هر ده ردیف ِ ۲۰.۷ و شِمای `AdminBlogPost`؛ متن شش کد تازه. یه تصمیم تازه (۱۹). برنچ `blog` از نوک فاز ۱۴ |
 | ۲ آبان ۱۴۰۵ | ۱۵.۱ | Phase 15 step 15.1 | `V40` (با seed ِ پنج دسته و «تیم کیوا»)، دامنه‌ی `blog` (بلوک‌ها، فرم، مقاله، سیاست) و چهار repository. ۳۳ تست تازه سبز |
+| ۲ آبان ۱۴۰۵ | ۱۵.۲ | Phase 15 step 15.2 | پنج route ِ پنل بلاگ، `BlogPosts` و `BlogPostWriting`، لاگ تغییرات (`V41` برای `BLOG_POST`)، خط بلاگ در `AccountEraser`. ۹ تست تازه سبز |

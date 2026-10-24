@@ -1,5 +1,12 @@
 package com.kiva.infrastructure.di
 
+import com.kiva.application.usecase.blog.BlogPostWriting
+import com.kiva.application.usecase.blog.BlogPosts
+import com.kiva.application.usecase.blog.usecase.command.CreateBlogPostUc
+import com.kiva.application.usecase.blog.usecase.command.DeleteBlogPostUc
+import com.kiva.application.usecase.blog.usecase.command.UpdateBlogPostUc
+import com.kiva.application.usecase.blog.usecase.query.FindAdminBlogPostsUc
+import com.kiva.application.usecase.blog.usecase.query.GetAdminBlogPostUc
 import com.kiva.application.usecase.order.usecase.query.GetMyInvoiceUc
 import com.kiva.application.usecase.stockalert.StockAlertCounts
 import com.kiva.application.usecase.stockalert.usecase.command.DeleteOldStockAlertsUc
@@ -623,6 +630,7 @@ val useCaseModule = module(createdAtStart = true) {
             contactMessageRepository = get(),
             newsletterSubscriptionRepository = get(),
             reviewRepository = get(),
+            blogFeedbackRepository = get(),
         )
     }
     single {
@@ -912,6 +920,38 @@ val useCaseModule = module(createdAtStart = true) {
             campaignRepository = get(), campaignShowcases = get(), testimonialRepository = get(), testimonials = get(), clock = get(),
         )
     }
+
+    // --- blog (phase 15) ---
+    single {
+        BlogPosts(
+            blogPostRepository = get(),
+            blogCategoryRepository = get(),
+            blogAuthorRepository = get(),
+            blogFeedbackRepository = get(),
+            mediaRepository = get(),
+            productQmRepository = get(),
+            categoryRepository = get(),
+            colorRepository = get(),
+            shopSettingsRepository = get(),
+            adminCustomerRepository = get(),
+        )
+    }
+    single { BlogPostWriting(blogCategoryRepository = get(), blogAuthorRepository = get(), mediaAttachments = get(), productQmRepository = get()) }
+    single {
+        CreateBlogPostUc(
+            transactionManager = get(), blogPostRepository = get(), blogPostWriting = get(), blogPosts = get(), mediaAttachments = get(),
+            sanitizer = get(), auditTrail = get(), clock = get(),
+        )
+    }
+    single {
+        UpdateBlogPostUc(
+            transactionManager = get(), blogPostRepository = get(), blogPostWriting = get(), blogPosts = get(), mediaAttachments = get(),
+            sanitizer = get(), auditTrail = get(), clock = get(),
+        )
+    }
+    single { DeleteBlogPostUc(transactionManager = get(), blogPostRepository = get(), auditTrail = get(), clock = get()) }
+    single { GetAdminBlogPostUc(transactionManager = get(), blogPostRepository = get(), blogPosts = get(), clock = get()) }
+    single { FindAdminBlogPostsUc(transactionManager = get(), blogPostRepository = get(), blogCategoryRepository = get(), blogPosts = get(), clock = get()) }
 
     // --- contact and newsletter (phase 13) ---
     single { TicketCodeGenerator() }

@@ -1,6 +1,8 @@
 package com.kiva.infrastructure.httpserver
 
+import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminBlogUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.StockAlertUseCases
+import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminBlog
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1StockAlerts
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminStockAlertUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminStockAlerts
@@ -391,6 +393,7 @@ fun Application.configureRouting() {
             webV1Tracking(TrackingUseCases(get(), get(), get()), mediaUrls)
             webV1Contact(ContactUseCases(get(), get(), get(), get()))
             webV1AdminNewsletter(AdminNewsletterUseCases(checkPanelAccessUc, get()))
+            webV1AdminBlog(AdminBlogUseCases(checkPanelAccessUc, get(), get(), get(), get(), get()), config.shop.siteUrl, mediaUrls)
             webV1AdminSupport(AdminSupportUseCases(checkPanelAccessUc, get(), get()))
         }
     }

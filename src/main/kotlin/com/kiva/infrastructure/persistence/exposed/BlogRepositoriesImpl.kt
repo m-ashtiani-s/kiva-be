@@ -89,6 +89,16 @@ class BlogFeedbackRepositoryImpl : BlogFeedbackRepository {
         return BlogFeedbackRepository.Stats(byAnswer[true] ?: 0, byAnswer[false] ?: 0)
     }
 
+    override fun statsOfAll(postIds: Collection<BlogPostId>): Map<BlogPostId, BlogFeedbackRepository.Stats> {
+        if (postIds.isEmpty()) return emptyMap()
+        val count = BlogFeedbackTbl.voterKey.count()
+        return BlogFeedbackTbl.select(BlogFeedbackTbl.postId, BlogFeedbackTbl.helpful, count)
+            .where { BlogFeedbackTbl.postId inList postIds.map { it.value } }
+            .groupBy(BlogFeedbackTbl.postId, BlogFeedbackTbl.helpful)
+            .groupBy({ BlogPostId.constructFromPersisted(it[BlogFeedbackTbl.postId]) }, { it[BlogFeedbackTbl.helpful] to it[count].toInt() })
+            .mapValues { (_, answers) -> BlogFeedbackRepository.Stats(answers.firstOrNull { it.first }?.second ?: 0, answers.firstOrNull { !it.first }?.second ?: 0) }
+    }
+
     override fun lastComments(postId: BlogPostId, limit: Int): List<BlogFeedbackRepository.Comment> =
         BlogFeedbackTbl.select(BlogFeedbackTbl.comment, BlogFeedbackTbl.createdOn)
             .where { (BlogFeedbackTbl.postId eq postId.value) and BlogFeedbackTbl.comment.isNotNull() }

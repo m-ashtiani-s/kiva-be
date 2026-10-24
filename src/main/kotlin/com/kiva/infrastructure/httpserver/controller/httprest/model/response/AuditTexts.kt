@@ -82,6 +82,14 @@ object AuditTexts {
             AuditAction.TESTIMONIAL_UPDATED -> "پیام رضایت $name ویرایش شد"
             AuditAction.TESTIMONIAL_DELETED -> "پیام رضایت $name حذف شد"
             AuditAction.CONTACT_MESSAGE_UPDATED -> contactMessageUpdated(name, changes)
+            AuditAction.BLOG_POST_CREATED -> "مقاله‌ی $name نوشته شد"
+            AuditAction.BLOG_POST_UPDATED -> when (changes.firstOrNull { it.field == "status" }?.to) {
+                "PUBLISHED" -> "مقاله‌ی $name منتشر شد"
+                "ARCHIVED" -> "مقاله‌ی $name بایگانی شد"
+                "DRAFT" -> "مقاله‌ی $name به پیش‌نویس برگشت"
+                else -> "مقاله‌ی $name ویرایش شد"
+            }
+            AuditAction.BLOG_POST_DELETED -> "مقاله‌ی $name حذف شد"
         }
     }
 

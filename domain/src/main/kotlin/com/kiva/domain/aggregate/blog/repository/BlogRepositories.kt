@@ -99,6 +99,9 @@ interface BlogFeedbackRepository {
 
     fun statsOf(postId: BlogPostId): Stats
 
+    /** The stats of every post of [postIds] in one read; a post with no vote is missing. */
+    fun statsOfAll(postIds: Collection<BlogPostId>): Map<BlogPostId, Stats>
+
     /** The last [limit] comments of «no», newest first, without who wrote them. */
     fun lastComments(postId: BlogPostId, limit: Int): List<Comment>
 

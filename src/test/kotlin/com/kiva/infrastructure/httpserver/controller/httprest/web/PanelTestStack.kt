@@ -1,8 +1,20 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
 import com.kiva.application.usecase.account.usecase.query.CheckAccountLiveUc
+import com.kiva.application.usecase.blog.BlogPostWriting
+import com.kiva.application.usecase.blog.BlogPosts
+import com.kiva.application.usecase.blog.usecase.command.CreateBlogPostUc
+import com.kiva.application.usecase.blog.usecase.command.DeleteBlogPostUc
+import com.kiva.application.usecase.blog.usecase.command.UpdateBlogPostUc
+import com.kiva.application.usecase.blog.usecase.query.FindAdminBlogPostsUc
+import com.kiva.application.usecase.blog.usecase.query.GetAdminBlogPostUc
 import com.kiva.application.usecase.stockalert.StockAlertCounts
 import com.kiva.infrastructure.httpserver.auth.asAccountCheck
+import com.kiva.infrastructure.persistence.exposed.BlogAuthorRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.BlogCategoryRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.BlogFeedbackRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.BlogPostRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.tbl.BlogPostTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.StockAlertTbl
 import com.kiva.infrastructure.persistence.exposed.StockAlertIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.StockAlertRepositoryImpl
@@ -491,6 +503,22 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         UnsubscribeNewsletterUc(transactions, subscriptions, clock),
     )
     val adminNewsletter = AdminNewsletterUseCases(checkPanelAccess, FindNewsletterSubscriptionsUc(transactions, subscriptions))
+
+    // --- the blog (phase 15) ---
+    val blogPostRepository = BlogPostRepositoryImpl()
+    val blogPosts = BlogPosts(
+        blogPostRepository, BlogCategoryRepositoryImpl(), BlogAuthorRepositoryImpl(), BlogFeedbackRepositoryImpl(), mediaRepository, productQm, categories, colors,
+        ShopSettingsRepositoryImpl(), AdminCustomerRepositoryImpl(),
+    )
+    private val blogPostWriting = BlogPostWriting(BlogCategoryRepositoryImpl(), BlogAuthorRepositoryImpl(), mediaAttachments, productQm)
+    val adminBlog = AdminBlogUseCases(
+        checkPanelAccess,
+        FindAdminBlogPostsUc(transactions, blogPostRepository, BlogCategoryRepositoryImpl(), blogPosts, clock),
+        GetAdminBlogPostUc(transactions, blogPostRepository, blogPosts, clock),
+        CreateBlogPostUc(transactions, blogPostRepository, blogPostWriting, blogPosts, mediaAttachments, JsoupHtmlSanitizer, auditTrail, clock),
+        UpdateBlogPostUc(transactions, blogPostRepository, blogPostWriting, blogPosts, mediaAttachments, JsoupHtmlSanitizer, auditTrail, clock),
+        DeleteBlogPostUc(transactions, blogPostRepository, auditTrail, clock),
+    )
     val adminSupport = AdminSupportUseCases(
         checkPanelAccess,
         FindAdminContactMessagesUc(transactions, contactMessages, users),
@@ -678,6 +706,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
                     webV1Contact(contact)
                     webV1AdminSupport(adminSupport)
                     webV1AdminNewsletter(adminNewsletter)
+                    webV1AdminBlog(adminBlog, SITE_URL, mediaUrls)
                     webV1Addresses(purchase.addressUseCases)
                     // The account, for deleting it with everything of the later phases in it (phase 14).
                     webV1Me(purchase.auth.meUseCases)
@@ -716,6 +745,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
             TestimonialTbl.deleteAll()
             ContactMessageTbl.deleteAll()
             NewsletterSubscriptionTbl.deleteAll()
+            BlogPostTbl.deleteAll()
         }
         purchase.deleteWhatWasStored()
         transaction(db) {

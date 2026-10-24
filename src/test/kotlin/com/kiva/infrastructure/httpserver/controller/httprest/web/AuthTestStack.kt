@@ -52,6 +52,7 @@ import com.kiva.infrastructure.persistence.exposed.AddressBookRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.AdminCustomerRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.AuditTrailImpl
 import com.kiva.infrastructure.persistence.exposed.AuthSessionRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.BlogFeedbackRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.CartRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ContactMessageRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.DiscountCodeRepositoryImpl
@@ -132,7 +133,7 @@ class AuthTestStack(val clock: MutableClock, maxSmsPerHour: Int = 300, val otpCo
     val activeOrdersCheck = ActiveOrdersCheck(OrderQmRepositoryImpl(), RefundRepositoryImpl())
     val accountEraser = AccountEraser(
         AddressBookRepositoryImpl(), CartRepositoryImpl(), WishlistRepositoryImpl(), WishlistShareRepositoryImpl(), StockAlertRepositoryImpl(),
-        IdempotencyStoreImpl(), ContactMessageRepositoryImpl(), NewsletterSubscriptionRepositoryImpl(), ReviewRepositoryImpl(),
+        IdempotencyStoreImpl(), ContactMessageRepositoryImpl(), NewsletterSubscriptionRepositoryImpl(), ReviewRepositoryImpl(), BlogFeedbackRepositoryImpl(),
     )
     val requestAccountDeletion = RequestAccountDeletionUc(transactions, users, activeOrdersCheck, otpIssuer, sms, clock)
     val deleteMyAccount = DeleteMyAccountUc(
