@@ -1,5 +1,6 @@
 package com.kiva.infrastructure.di
 
+import com.kiva.application.usecase.order.usecase.query.GetMyInvoiceUc
 import com.kiva.application.usecase.stockalert.StockAlertCounts
 import com.kiva.application.usecase.stockalert.usecase.command.DeleteOldStockAlertsUc
 import com.kiva.application.usecase.stockalert.usecase.command.NotifyStockAlertUc
@@ -449,6 +450,18 @@ val useCaseModule = module(createdAtStart = true) {
     single { FindSilentPhotoOrdersUc(transactionManager = get(), orderQmRepository = get(), clock = get()) }
     single { ApproveSilentPhotosUc(transactionManager = get(), orderRepository = get(), clock = get()) }
     single { GetMyOrderUc(transactionManager = get(), orderByCode = get(), orderDetails = get(), reviewMarks = get(), shopSettingsRepository = get(), clock = get()) }
+    single {
+        GetMyInvoiceUc(
+            transactionManager = get(),
+            orderByCode = get(),
+            orderDetails = get(),
+            shopSettingsRepository = get(),
+            siteContentRepository = get(),
+            invoiceRenderer = get(),
+            siteUrl = get<AppConfig>().shop.siteUrl,
+            clock = get(),
+        )
+    }
     single { CartBulkAdd(cartCommands = get(), cartDomainService = get()) }
     single { ReorderUc(transactionManager = get(), orderQmRepository = get(), cartBulkAdd = get()) }
     single { GetOrderSummaryUc(transactionManager = get(), orderQmRepository = get(), shopSettingsRepository = get(), reservations = get(), clock = get()) }

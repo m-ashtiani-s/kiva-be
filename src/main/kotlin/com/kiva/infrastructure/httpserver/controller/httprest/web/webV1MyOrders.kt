@@ -4,6 +4,7 @@ import com.kiva.application.usecase.cart.usecase.query.GetCartUc
 import com.kiva.application.usecase.order.usecase.command.CancelMyOrderUc
 import com.kiva.application.usecase.order.usecase.command.ReorderUc
 import com.kiva.application.usecase.order.usecase.command.SubmitMediaFeedbackUc
+import com.kiva.application.usecase.order.usecase.query.GetMyInvoiceUc
 import com.kiva.application.usecase.order.usecase.query.GetMyOrderMediaUc
 import com.kiva.application.usecase.order.usecase.query.GetMyOrderUc
 import com.kiva.application.usecase.order.usecase.query.ListMyOrdersUc
@@ -29,10 +30,14 @@ import com.kiva.infrastructure.httpserver.controller.httprest.model.response.Reo
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.ReservationInfoHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.TrackingDayGroupHttpResponse
 import com.kiva.infrastructure.media.MediaUrls
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.auth.authenticate
 import io.ktor.server.request.receive
+import io.ktor.server.response.header
 import io.ktor.server.response.respond
+import io.ktor.server.response.respondBytes
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
@@ -48,6 +53,7 @@ class MyOrderUseCases(
     val submitMediaFeedback: SubmitMediaFeedbackUc,
     val cancelMyOrder: CancelMyOrderUc,
     val listMyTracking: ListMyTrackingUc,
+    val getMyInvoice: GetMyInvoiceUc,
 )
 
 /** The path parameter every order route names its order by. */
@@ -70,6 +76,15 @@ fun Route.webV1MyOrders(useCases: MyOrderUseCases, mediaUrls: MediaUrls) {
         get("/me/orders/{$ORDER_CODE}") {
             val query = GetMyOrderUc.Qry(call.accessPrincipal().userId, call.parameters[ORDER_CODE].orEmpty())
             call.respondResult(useCases.getMyOrder.execute(query)) { OrderDetailHttpResponse.from(it, mediaUrls) }
+        }
+
+        // The purchase receipt (phase 14): a PDF to save, named by the order, never kept by a cache on the way.
+        get("/me/orders/{$ORDER_CODE}/invoice") {
+            val query = GetMyInvoiceUc.Qry(call.accessPrincipal().userId, call.parameters[ORDER_CODE].orEmpty())
+            val invoice = useCases.getMyInvoice.execute(query).unwrapOr { return@get call.respondFailure(it) }
+            call.response.header(HttpHeaders.ContentDisposition, "attachment; filename=\"kiva-${invoice.code}.pdf\"")
+            call.response.header(HttpHeaders.CacheControl, "private, no-store")
+            call.respondBytes(invoice.pdf, ContentType.Application.Pdf)
         }
 
         // The photos before shipping, for the lightbox: the batch sent, never the operator's draft.

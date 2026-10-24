@@ -41,6 +41,8 @@ dependencies {
     implementation(libs.ktor.server.forwarded.header)
     implementation(libs.jsoup)
     implementation(libs.angus.mail)
+    implementation(libs.pdfbox)
+    implementation(libs.icu4j)
     implementation(libs.ktor.serialization.kotlinx.json)
     // The payment gateway (Zarinpal), called server to server.
     implementation(libs.ktor.client.core)

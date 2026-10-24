@@ -14,6 +14,8 @@ mockk = "1.14.11"
 testcontainers = "2.0.5"
 jsoup = "1.23.2"
 angusMail = "2.0.3"
+pdfbox = "3.0.8"
+icu4j = "79.1"
 
 [libraries]
 # --- Ktor server ---
@@ -56,6 +58,10 @@ jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 
 # --- Email ---
 angus-mail = { module = "org.eclipse.angus:angus-mail", version.ref = "angusMail" }
+
+# --- The purchase receipt PDF (step 14.3): PDFBox draws, ICU4J shapes and orders the Persian text ---
+pdfbox = { module = "org.apache.pdfbox:pdfbox", version.ref = "pdfbox" }
+icu4j = { module = "com.ibm.icu:icu4j", version.ref = "icu4j" }
 
 # --- Logging / concurrency ---
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }

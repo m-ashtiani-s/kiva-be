@@ -6,6 +6,7 @@ import com.kiva.application.dto.PreShipmentMediaDto
 import com.kiva.application.usecase.order.usecase.command.ReorderUc
 import com.kiva.domain.aggregate.order.model.valueobject.OrderTotalsView
 import com.kiva.infrastructure.common.http.PageMetaHttpResponse
+import com.kiva.infrastructure.httpserver.API_V1
 import com.kiva.infrastructure.media.MediaUrls
 import kotlinx.serialization.Serializable
 
@@ -98,7 +99,8 @@ data class OrderDetailHttpResponse(
                 customerNote = order.customerNote,
                 gift = order.gift?.let { OrderGiftHttpResponse(wrap = false, message = it.message) },
                 returns = order.returns.map { ReturnRequestHttpResponse.from(it, urls) },
-                invoiceUrl = null,
+                // Once it was paid, a cancelled or returned order too (roadmap phase 14, decision 13).
+                invoiceUrl = "$API_V1/me/orders/${order.summary.code}/invoice".takeIf { order.summary.paidOn != null },
                 refunds = order.refunds.map(RefundHttpResponse::from),
             )
         }

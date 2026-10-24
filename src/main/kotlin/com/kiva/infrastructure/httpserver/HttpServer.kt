@@ -239,6 +239,8 @@ fun Application.configureHttp(allowedOrigins: List<String> = emptyList(), truste
         exposeHeader(CART_TOKEN_HEADER)
         exposeHeader(HttpHeaders.ETag)
         exposeHeader(HttpHeaders.RetryAfter)
+        // The receipt's file name (phase 14): the page names the download after it.
+        exposeHeader(HttpHeaders.ContentDisposition)
         // The browser may reuse an allowed preflight for this long instead of asking before every call.
         maxAgeInSeconds = 600
     }
@@ -379,7 +381,7 @@ fun Application.configureRouting() {
                 PaymentUseCases(handleGatewayCallbackUc, getPaymentResultUc, startPaymentAttemptUc, startPaymentUc, getPaymentInitUc),
                 config.payment.resultUrl,
             )
-            webV1MyOrders(MyOrderUseCases(listMyOrdersUc, getMyOrderUc, reorderUc, getCartUc, getMyReservationUc, get(), get(), get(), get()), mediaUrls)
+            webV1MyOrders(MyOrderUseCases(listMyOrdersUc, getMyOrderUc, reorderUc, getCartUc, getMyReservationUc, get(), get(), get(), get(), get()), mediaUrls)
             webV1MyUploads(uploadMediaUc, mediaStorage::newUploadFile, mediaUrls)
             webV1MyReturns(MyReturnUseCases(get(), get(), get()), mediaUrls)
             webV1Reviews(ReviewUseCases(get(), get(), get(), get(), get()), mediaUrls)

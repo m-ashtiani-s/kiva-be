@@ -32,6 +32,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.jsonArray
@@ -233,7 +234,8 @@ class WebV1MyOrdersOnDatabaseTest {
         assertEquals("قبل از ارسال، از کیفت عکس و ویدیو می‌گیریم و توی بله برات می‌فرستیم؛ یه نسخه هم همین‌جا قرار می‌گیره.", photos.text("waitingMessage"))
         assertEquals("بعد از تحویل به پست معمولی این‌جا نمایش داده می‌شه", order.obj("shipment").text("waitingMessage"))
         assertEquals("زنگ نزنید", order.text("customerNote"))
-        assertEquals(listOf(JsonArray(emptyList()), JsonNull), listOf(order["returns"], order["invoiceUrl"]))
+        // Paid, so its receipt is there (phase 14, decision 13).
+        assertEquals(listOf(JsonArray(emptyList()), JsonPrimitive("/api/v1/me/orders/${orders.paid.value}/invoice")), listOf(order["returns"], order["invoiceUrl"]))
 
         val failed = call(bearer, "/me/orders/${orders.failed.value}").json()
         assertEquals(

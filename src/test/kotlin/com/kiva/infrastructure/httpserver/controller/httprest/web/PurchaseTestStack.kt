@@ -1,6 +1,11 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
+import com.kiva.application.dto.InvoiceDto
+import com.kiva.application.port.InvoiceRenderer
+import com.kiva.application.usecase.order.usecase.query.GetMyInvoiceUc
 import com.kiva.application.usecase.wishlist.WishlistHearts
+import com.kiva.infrastructure.pdf.PdfBoxInvoiceRenderer
+import com.kiva.infrastructure.persistence.exposed.SiteContentRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.WishlistRepositoryImpl
 import com.kiva.application.usecase.wishlist.usecase.command.MoveCartItemToWishlistUc
 import com.kiva.application.usecase.review.ReviewMarks
@@ -123,6 +128,7 @@ import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
+import java.util.Collections
 import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
@@ -225,6 +231,9 @@ class PurchaseTestStack(val clock: MutableClock) {
         orderQm, orders, payments, redemptions, stock, inventories, refunds, RefundIdGeneratorImpl(), RefundDomainService(RefundIdGeneratorImpl()),
     )
 
+    /** The purchase receipt's renderer, the real one; a test may look at what it was given. */
+    val invoiceRenderer = RecordingInvoiceRenderer()
+
     val myOrderUseCases = MyOrderUseCases(
         ListMyOrdersUc(transactions, orderQm, settings, reservations, orderDetails, reviewMarks, clock),
         GetMyOrderUc(transactions, orderByCode, orderDetails, reviewMarks, settings, clock),
@@ -235,6 +244,7 @@ class PurchaseTestStack(val clock: MutableClock) {
         SubmitMediaFeedbackUc(transactions, orderByCode, orderQm, orders, offers, clock),
         CancelMyOrderUc(transactions, orderByCode, orderCancellation, users, orderNotices, clock),
         ListMyTrackingUc(transactions, orderQm, settings),
+        GetMyInvoiceUc(transactions, orderByCode, orderDetails, settings, SiteContentRepositoryImpl(), invoiceRenderer, "https://kiva.ir", clock),
     )
 
     val trackingUseCases = TrackingUseCases(
@@ -339,4 +349,11 @@ class PurchaseTestStack(val clock: MutableClock) {
         // Payments stay: their log is append-only, and their orders' ids are never handed out again.
         auth.deleteTestUsers()
     }
+}
+
+/** The real receipt renderer, remembering every receipt it was given. */
+class RecordingInvoiceRenderer(private val real: InvoiceRenderer = PdfBoxInvoiceRenderer()) : InvoiceRenderer {
+    val rendered: MutableList<InvoiceDto> = Collections.synchronizedList(mutableListOf())
+
+    override fun render(invoice: InvoiceDto): ByteArray = real.render(invoice).also { rendered += invoice }
 }

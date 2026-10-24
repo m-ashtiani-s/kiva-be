@@ -1,5 +1,6 @@
 package com.kiva.infrastructure.di
 
+import com.kiva.application.port.InvoiceRenderer
 import com.kiva.infrastructure.job.EngagementJobs
 import com.kiva.application.port.AccessTokens
 import com.kiva.application.port.HtmlText
@@ -27,6 +28,7 @@ import com.kiva.infrastructure.config.AppConfig
 import com.kiva.infrastructure.config.SmsProvider
 import com.kiva.infrastructure.payment.FakePaymentGateway
 import com.kiva.infrastructure.payment.PaymentProvider
+import com.kiva.infrastructure.pdf.PdfBoxInvoiceRenderer
 import org.jetbrains.exposed.v1.jdbc.Database
 import com.kiva.infrastructure.job.JobScheduler
 import com.kiva.infrastructure.payment.ZarinpalGateway
@@ -76,6 +78,8 @@ fun infrastructureModule(config: AppConfig, database: Database) = module {
     single { DiskMediaStorage(config.media.root) }
     single<MediaStorage> { get<DiskMediaStorage>() }
     single<MediaProcessor> { VipsFfmpegMediaProcessor(config.media) }
+    // The purchase receipt (phase 14): PDFBox with the fonts of the resources, read once.
+    single<InvoiceRenderer> { PdfBoxInvoiceRenderer() }
     single { MediaUrls(config.media.publicBaseUrl) }
     single {
         PanelJobs(
