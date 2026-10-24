@@ -57,7 +57,7 @@ class GetMyDashboardUc(
     override suspend fun execute(query: Qry): Result<Dashboard, Failure> {
         logger.info("GetMyDashboardUc.execute userId=${query.userId.value}")
         return transactionManager.inTransaction {
-            val user = userRepository.findById(query.userId) ?: return@inTransaction Result.failure(Failure.AccountGone)
+            val user = userRepository.findById(query.userId)?.takeUnless { it.isDeleted } ?: return@inTransaction Result.failure(Failure.AccountGone)
             val byStatus = orderQmRepository.countByStatusOfCustomer(query.userId)
             Result.success(
                 Dashboard(

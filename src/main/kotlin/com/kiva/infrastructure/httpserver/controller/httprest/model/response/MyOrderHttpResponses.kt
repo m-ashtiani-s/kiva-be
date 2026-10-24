@@ -143,17 +143,20 @@ data class OrderItemHttpResponse(
     }
 }
 
-/** Contract schema `AddressSnapshot`. Personal data: [toString] shows none of it. */
+/**
+ * Contract schema `AddressSnapshot`. Personal data: [toString] shows none of it. An erased order's (its account deleted)
+ * has only the province and the city; the rest is null.
+ */
 @Serializable
 data class OrderAddressHttpResponse(
     val provinceName: String,
     val cityName: String,
-    val addressLine: String,
+    val addressLine: String?,
     val plaque: String?,
     val unit: String?,
-    val postalCode: String,
-    val recipientName: String,
-    val recipientPhone: String,
+    val postalCode: String?,
+    val recipientName: String?,
+    val recipientPhone: String?,
     val fullText: String,
 ) {
     override fun toString(): String = "OrderAddressHttpResponse(****)"
@@ -246,7 +249,7 @@ data class PreShipmentMediaHttpResponse(
     val status: String,
     val channel: String,
     val channelName: String,
-    val phone: String,
+    val phone: String?,
     val username: String?,
     val note: String?,
     val sentAt: String?,

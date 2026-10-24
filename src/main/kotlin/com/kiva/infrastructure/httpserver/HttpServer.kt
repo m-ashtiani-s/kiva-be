@@ -340,7 +340,7 @@ fun Application.configureRouting() {
                 config.http.allowedOrigins,
                 mediaUrls,
             )
-            webV1Me(MeUseCases(getMeUc, updateMyProfileUc, requestPhoneChangeUc, confirmPhoneChangeUc))
+            webV1Me(MeUseCases(getMeUc, updateMyProfileUc, requestPhoneChangeUc, confirmPhoneChangeUc, get(), get()))
             webV1MyDashboard(get())
             webV1StockAlerts(StockAlertUseCases(get(), get(), get()), mediaUrls)
             webV1AdminCustomers(AdminCustomerUseCases(checkPanelAccessUc, findCustomersUc, getCustomerUc, get(), setUserRolesUc))

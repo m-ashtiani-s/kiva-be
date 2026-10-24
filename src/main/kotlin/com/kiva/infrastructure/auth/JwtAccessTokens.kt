@@ -50,7 +50,7 @@ class JwtAccessTokens(secret: ByteArray, clock: Clock = Clock.systemUTC()) : Acc
             .withSubject(user.id.value.toString())
             .withClaim(SESSION_CLAIM, session.id.value.toString())
             .withClaim(ROLES_CLAIM, user.roles.values.map { it.name })
-            .withClaim(PHONE_CLAIM, user.phone.value)
+            .withClaim(PHONE_CLAIM, user.activePhone.value)
             .withIssuedAt(issuedAt)
             .withExpiresAt(issuedAt.plus(SessionPolicy.ACCESS_TOKEN_LIFETIME))
             .sign(algorithm)

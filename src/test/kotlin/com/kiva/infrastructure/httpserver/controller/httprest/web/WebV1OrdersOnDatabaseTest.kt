@@ -717,7 +717,7 @@ class WebV1OrdersOnDatabaseTest {
         assertEquals(before.lines, after.lines)
         assertEquals(before.address, after.address)
         assertEquals(1_450_000, after.lines.single().priceTag.price.toman)
-        assertEquals("خیابان ولیعصر، کوچه نسترن", after.address.line.value)
+        assertEquals("خیابان ولیعصر، کوچه نسترن", after.address.line?.value)
         val stored = transaction(purchase.db) { purchase.orders.get(after.orderId)!! }
         assertEquals(before.lines, stored.lines)
     }

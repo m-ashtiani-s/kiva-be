@@ -1,5 +1,6 @@
 package com.kiva.infrastructure.httpserver
 
+import com.kiva.application.usecase.account.usecase.query.CheckAccountLiveUc
 import com.kiva.application.usecase.admin.usecase.command.CheckPanelAccessUc
 import com.kiva.common.valueobject.IranianMobileNumber
 import com.kiva.common.valueobject.UserId
@@ -7,6 +8,7 @@ import com.kiva.domain.aggregate.session.entity.AuthSession
 import com.kiva.domain.aggregate.session.model.valueobject.SessionDevice
 import com.kiva.domain.aggregate.user.model.valueobject.Roles
 import com.kiva.infrastructure.auth.RandomSessionTokens
+import com.kiva.infrastructure.httpserver.auth.asAccountCheck
 import com.kiva.infrastructure.persistence.exposed.tbl.AuthSessionTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.RefreshTokenTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.UserTbl
@@ -99,7 +101,7 @@ class RouteGuardsTest {
             this.install(KoinIsolated) { modules(appModules(appConfig, TestDatabase.database)) }
             configureHttp()
             tokens = get()
-            configureAuthentication(get())
+            configureAuthentication(get(), get<CheckAccountLiveUc>().asAccountCheck())
             configureRouting()
             endpoints = endpointsOf(this)
         }
@@ -240,7 +242,7 @@ class RouteGuardsTest {
             val checkPanelAccess = CheckPanelAccessUc(
                 ExposedTransactionManager(db), AuthSessionRepositoryImpl(), UserRepositoryImpl(), SecurityEventLogImpl(), MutableClock(Instant.EPOCH),
             )
-            configureAuthentication(JwtAccessTokens(ByteArray(32) { 8 }))
+            configureAuthentication(JwtAccessTokens(ByteArray(32) { 8 })) { true }
             routing { route(API_V1) { requireRoles(checkPanelAccess, Role.ADMIN) { put("/admin/customers/{customerId}/roles") {} } } }
             endpoints = endpointsOf(this)
         }

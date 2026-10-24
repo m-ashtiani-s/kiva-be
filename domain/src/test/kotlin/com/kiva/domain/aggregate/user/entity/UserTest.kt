@@ -324,6 +324,84 @@ class UserTest {
         }
     }
 
+    @Nested
+    inner class Erasing {
+        private val later = now.plusSeconds(3600)
+
+        /** A staff member with a whole profile, as deleting would find them once their roles were taken. */
+        private fun fullUser(): User = newUser()
+            .updated(
+                ProfilePatch(
+                    firstName = Patch.Set("سارا"), lastName = Patch.Set("محمدی"), email = Patch.Set("sara@example.com"),
+                    birthDate = Patch.Set(LocalDate.of(1995, 4, 12)), gender = Patch.Set("FEMALE"), defaultMessenger = Patch.Set("TELEGRAM"),
+                    defaultMessengerPhone = Patch.Set("09121112233"), marketingSmsOptIn = Patch.Set(true),
+                ),
+            )
+            .setPanelRoles(listOf(OPERATOR), admin).getOrNull()!!
+
+        @Test
+        fun `erasing empties the phone and every personal field, keeps CUSTOMER only and says when`() {
+            val erased = fullUser().erase(later)
+
+            assertNull(erased.phone)
+            assertEquals(listOf(null, null, null, null), listOf(erased.firstName, erased.lastName, erased.email, erased.birthDate))
+            assertEquals(Gender.UNSPECIFIED, erased.gender)
+            assertEquals(listOf(null, null), listOf(erased.defaultMessenger, erased.defaultMessengerPhone))
+            assertFalse(erased.marketingSmsOptIn)
+            assertEquals(Roles.CUSTOMER_ONLY, erased.roles)
+            assertEquals(later, erased.deletedOn)
+            assertTrue(erased.isDeleted)
+        }
+
+        @Test
+        fun `the id, when it was made and the version stay, so the orders' references and the save still hold`() {
+            val user = fullUser()
+
+            val erased = user.erase(later)
+
+            assertEquals(listOf(user.id, user.createdOn, user.version), listOf(erased.id, erased.createdOn, erased.version))
+        }
+
+        @Test
+        fun `erasing a deleted account again changes nothing - not even when`() {
+            val once = fullUser().erase(later)
+
+            assertEquals(later, once.erase(later.plusSeconds(60)).deletedOn)
+        }
+
+        @Test
+        fun `a live account is not deleted and has its phone`() {
+            val user = newUser()
+
+            assertFalse(user.isDeleted)
+            assertEquals(phone, user.activePhone)
+        }
+
+        @Test
+        fun `asking a deleted account for its phone, or moving it to another phone, is a bug - it stops`() {
+            val erased = newUser().erase(later)
+
+            assertFailsWith<IllegalStateException> { erased.activePhone }
+            assertFailsWith<IllegalStateException> { erased.changePhone(IranianMobileNumber.constructFromPersisted("09351234567")) }
+        }
+
+        @Test
+        fun `stored data with a phone and deletedOn, or with neither, is a bug - it stops`() {
+            val roles = Roles.CUSTOMER_ONLY
+            assertFailsWith<IllegalArgumentException> {
+                User.constructFromPersisted(UserId.constructFromPersisted(1024), phone, null, null, null, null, Gender.UNSPECIFIED, null, null, false, roles, now, 0, deletedOn = later)
+            }
+            assertFailsWith<IllegalArgumentException> {
+                User.constructFromPersisted(UserId.constructFromPersisted(1024), null, null, null, null, null, Gender.UNSPECIFIED, null, null, false, roles, now, 0, deletedOn = null)
+            }
+        }
+
+        @Test
+        fun `a deleted account prints its id only`() {
+            assertEquals("User(id=1024)", fullUser().erase(later).toString())
+        }
+    }
+
     @Test
     fun `toString shows the id and no personal data`() {
         val user = newUser().updated(ProfilePatch(firstName = Patch.Set("سارا")))

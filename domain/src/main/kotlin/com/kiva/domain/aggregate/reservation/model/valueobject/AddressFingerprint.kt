@@ -25,11 +25,15 @@ class AddressFingerprint private constructor(private val bytes: ByteArray) {
     companion object {
         const val LENGTH = 32
 
-        /** Every part of [address] a courier reads, each on its own line, so no two addresses run into one. */
+        /**
+         * Every part of [address] a courier reads, each on its own line, so no two addresses run into one. Only an order
+         * being paid joins a group, so an erased address (its account deleted) here is a bug.
+         */
         fun of(address: AddressSnapshot): AddressFingerprint {
+            check(!address.isErased) { "An erased address joins no reservation group" }
             val text = listOf(
-                address.provinceName, address.cityName, address.line.value, address.plaque?.value.orEmpty(), address.unit?.value.orEmpty(),
-                address.postalCode.value, address.recipientName.value, address.recipientPhone.value,
+                address.provinceName, address.cityName, address.line?.value, address.plaque?.value.orEmpty(), address.unit?.value.orEmpty(),
+                address.postalCode?.value, address.recipientName?.value, address.recipientPhone?.value,
             ).joinToString("\n")
             return AddressFingerprint(MessageDigest.getInstance("SHA-256").digest(text.toByteArray(Charsets.UTF_8)))
         }

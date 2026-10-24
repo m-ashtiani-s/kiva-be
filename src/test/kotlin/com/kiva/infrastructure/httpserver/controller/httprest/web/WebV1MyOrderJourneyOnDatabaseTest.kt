@@ -282,7 +282,7 @@ class WebV1MyOrderJourneyOnDatabaseTest {
         val kept = panel.paidOrders.paid(sara.user.id, nila[0])
         val dropped = panel.paidOrders.paid(sara.user.id, nila[1])
         val admin = panel.callerWith(Role.ADMIN)
-        suspend fun customerRow() = client.get("$API_V1/admin/customers?q=${sara.user.phone.value}") { header(HttpHeaders.Authorization, admin.bearer) }
+        suspend fun customerRow() = client.get("$API_V1/admin/customers?q=${sara.user.activePhone.value}") { header(HttpHeaders.Authorization, admin.bearer) }
             .json().objects("items").single()
         suspend fun payableOf(code: OrderCode) = page(code, sara).obj("totals").text("payable")!!.toLong()
         val both = payableOf(kept) + payableOf(dropped)

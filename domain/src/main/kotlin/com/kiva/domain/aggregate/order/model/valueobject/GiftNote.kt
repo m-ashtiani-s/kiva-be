@@ -24,6 +24,9 @@ class GiftNote private constructor(val message: String?, val hidePrices: Boolean
 
     override fun toString(): String = "GiftNote(message=${if (message == null) "none" else "***"}, hidePrices=$hidePrices)"
 
+    /** Without its message, erased with its customer's account (decision 2 of phase 14); whether prices are hidden stays. */
+    fun erased(): GiftNote = GiftNote(null, hidePrices)
+
     companion object {
         /** From the contract's PlaceOrderRequest.gift. */
         const val MESSAGE_MAX_LENGTH = 200

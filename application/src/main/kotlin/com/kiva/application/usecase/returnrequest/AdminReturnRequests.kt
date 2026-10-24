@@ -47,7 +47,7 @@ class AdminReturnRequests(
                 customer = AdminReturnRequestDto.Customer(
                     id = ret.userId.value,
                     fullName = account?.let { listOfNotNull(it.firstName?.value, it.lastName?.value).joinToString(" ").ifEmpty { null } },
-                    phone = account?.phone?.value ?: order.address.recipientPhone.value,
+                    phone = account?.phone?.value ?: order.address.recipientPhone?.value,
                 ),
                 receipt = receipt?.let { AdminReturnRequestDto.Receipt(it.lines.map { line -> AdminReturnRequestDto.Line(line.lineId, line.received, line.restock) }, it.note?.value) },
                 allowedTransitions = ret.allowedTransitions(hasOpenRefund = ofOrder.any { it.isOpenFor(ret) }),

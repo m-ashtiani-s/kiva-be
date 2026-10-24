@@ -102,9 +102,9 @@ class RefreshSessionUc(
         }
     }
 
-    /** An access token with the user's roles as they are now; null if the user no longer exists. */
+    /** An access token with the user's roles as they are now; null if the user no longer exists or was deleted. */
     private fun issue(session: AuthSession, refreshToken: String?, now: Instant): Outcome.Refreshed? {
-        val user = userRepository.findById(session.userId) ?: return null
+        val user = userRepository.findById(session.userId)?.takeUnless { it.isDeleted } ?: return null
         val accessToken = accessTokens.issue(user, session, now)
         return Outcome.Refreshed(
             IssuedSession(

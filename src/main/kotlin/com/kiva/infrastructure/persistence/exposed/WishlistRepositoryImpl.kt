@@ -78,6 +78,8 @@ class WishlistRepositoryImpl : WishlistRepository {
             .map { ProductId.constructFromPersisted(it[WishlistItemTbl.productId]) }.toSet()
     }
 
+    override fun deleteAllOf(userId: UserId): Int = WishlistItemTbl.deleteWhere { WishlistItemTbl.userId eq userId.value }
+
     override fun deleteProduct(productId: ProductId) {
         WishlistItemTbl.deleteWhere { WishlistItemTbl.productId eq productId.value }
     }

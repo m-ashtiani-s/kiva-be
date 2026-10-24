@@ -27,7 +27,7 @@ class GetMeUc(
     override suspend fun execute(query: Qry): Result<UserDto, Failure> {
         logger.info("GetMeUc.execute user=${query.userId.value}")
         return transactionManager.inTransaction {
-            val user = userRepository.findById(query.userId) ?: return@inTransaction Result.failure(Failure.AccountGone)
+            val user = userRepository.findById(query.userId)?.takeUnless { it.isDeleted } ?: return@inTransaction Result.failure(Failure.AccountGone)
             Result.success(UserDto.from(user))
         }
     }

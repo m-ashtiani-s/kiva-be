@@ -136,7 +136,7 @@ class PanelOrdersLogScanOnDatabaseTest {
 
         assertTrue(log.any { it.loggerName == "Exposed" }, "the SQL log was caught")
         assertTrue(log.any { "ShipOrderUc" in it.loggerName }, "the use cases' own lines were caught")
-        val phones = listOf(sara.user.phone.value, recipient.recipientPhone, MESSENGER_PHONE, STRANGER)
+        val phones = listOf(sara.user.activePhone.value, recipient.recipientPhone, MESSENGER_PHONE, STRANGER)
         val leaks = leaksIn(log, phones, texts = listOf(IP, recipient.recipientName, NOTE, STATUS_NOTE, CANCEL_NOTE, BANK_REFERENCE, REFUND_NOTE))
         assertTrue(leaks.isEmpty(), leaks.joinToString("\n") { (what, line) -> "$what in: $line" })
     }
@@ -186,7 +186,7 @@ class PanelOrdersLogScanOnDatabaseTest {
         }
 
         assertTrue(log.any { "ResolveChangeRequestUc" in it.loggerName }, "the use cases' own lines were caught")
-        val leaks = leaksIn(log, listOf(sara.user.phone.value, MESSENGER_PHONE), texts = listOf(IP, PaidOrders.Destination.TEHRAN.recipientName, ASK_NOTE, REJECT_NOTE, APPLY_NOTE))
+        val leaks = leaksIn(log, listOf(sara.user.activePhone.value, MESSENGER_PHONE), texts = listOf(IP, PaidOrders.Destination.TEHRAN.recipientName, ASK_NOTE, REJECT_NOTE, APPLY_NOTE))
         assertTrue(leaks.isEmpty(), leaks.joinToString("\n") { (what, line) -> "$what in: $line" })
     }
 
@@ -210,12 +210,12 @@ class PanelOrdersLogScanOnDatabaseTest {
                 }
                 assertEquals(HttpStatusCode.OK, page.status, page.bodyAsText())
                 assertTrue(ADDRESS_LINE in page.bodyAsText(), "the page has the address")
-                assertEquals(HttpStatusCode.OK, client.get("$API_V1/admin/customers?q=${sara.user.phone.value}") { header(HttpHeaders.Authorization, support.bearer) }.status)
+                assertEquals(HttpStatusCode.OK, client.get("$API_V1/admin/customers?q=${sara.user.activePhone.value}") { header(HttpHeaders.Authorization, support.bearer) }.status)
             }
         }
 
         assertTrue(log.any { "GetCustomerDetailUc" in it.loggerName }, "the use case's own lines were caught")
-        val leaks = leaksIn(log, listOf(sara.user.phone.value, recipient.recipientPhone, MESSENGER_PHONE), texts = listOf(IP, recipient.recipientName, ADDRESS_LINE))
+        val leaks = leaksIn(log, listOf(sara.user.activePhone.value, recipient.recipientPhone, MESSENGER_PHONE), texts = listOf(IP, recipient.recipientName, ADDRESS_LINE))
         assertTrue(leaks.isEmpty(), leaks.joinToString("\n") { (what, line) -> "$what in: $line" })
     }
 

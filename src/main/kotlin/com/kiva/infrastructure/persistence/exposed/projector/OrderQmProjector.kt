@@ -17,6 +17,7 @@ import com.kiva.domain.aggregate.order.entity.event.OrderLineRemoved
 import com.kiva.domain.aggregate.order.entity.event.OrderLineReplaced
 import com.kiva.domain.aggregate.order.entity.event.OrderPaid
 import com.kiva.domain.aggregate.order.entity.event.OrderPaymentFailed
+import com.kiva.domain.aggregate.order.entity.event.OrderPersonalDataErased
 import com.kiva.domain.aggregate.order.entity.event.OrderPhotosApproved
 import com.kiva.domain.aggregate.order.entity.event.OrderPhotosAttached
 import com.kiva.domain.aggregate.order.entity.event.OrderPhotosSent
@@ -75,6 +76,9 @@ import java.time.ZoneOffset
  *
  * For the panel's report (roadmap section 9.3) it also keeps when the order's first photos were sent and whether its
  * customer ever asked for a change: later batches and a change resolved either way leave both as they are.
+ *
+ * An erasure (OrderPersonalDataErased, phase 14) blanks the same fields the order blanks, and its search text is made
+ * again without the recipient: the order is found by its code and city only. Its customer doesn't see it: no entry.
  *
  * Runs inside the caller's transaction; it never opens one itself.
  */
@@ -216,6 +220,25 @@ object OrderQmProjector {
                     if (event.outcome.settlesReturn) it[OrderQmTbl.returnSettled] = true
                 }
             }
+            is OrderPersonalDataErased -> erase(event)
+        }
+    }
+
+    /** The row as the erased order is: what the order's apply blanks, blanked here, and the search text made again. */
+    private fun erase(event: OrderPersonalDataErased) {
+        val row = OrderQmTbl.select(OrderQmTbl.code, OrderQmTbl.address, OrderQmTbl.messenger, OrderQmTbl.gift)
+            .where { OrderQmTbl.orderId eq event.orderId.value }
+            .singleOrNull()
+            ?: error("${event.type.value} of order ${event.orderId.value}, which the read model doesn't have")
+        val address = row[OrderQmTbl.address].toDomain().erased()
+        val messenger = row[OrderQmTbl.messenger].toDomain().erased()
+        val gift = row[OrderQmTbl.gift]?.toDomain()?.erased()
+        change(event) { _, it ->
+            it[OrderQmTbl.address] = AddressSnapshotPayload(address)
+            it[OrderQmTbl.messenger] = PreShipmentMessengerPayload(messenger)
+            it[OrderQmTbl.gift] = gift?.let(::GiftNotePayload)
+            it[OrderQmTbl.customerNote] = null
+            it[OrderQmTbl.searchText] = searchTextOf(row[OrderQmTbl.code], null, null, address.cityName)
         }
     }
 
@@ -235,9 +258,12 @@ object OrderQmProjector {
     private fun lineOf(orderId: Long, lineId: Int): OrderLinePayload =
         linesOf(orderId).firstOrNull { it.lineId == lineId } ?: error("Line $lineId of order $orderId is not in the read model")
 
-    /** What the order's search finds it by: its code, the recipient's name and phone, and the city, normalized. */
-    fun searchTextOf(code: String, recipientName: String, recipientPhone: String, cityName: String): String =
-        "$code $recipientName $recipientPhone $cityName".normalizePersian()
+    /**
+     * What the order's search finds it by: its code, the recipient's name and phone, and the city, normalized. An erased
+     * order has no recipient: its code and city only.
+     */
+    fun searchTextOf(code: String, recipientName: String?, recipientPhone: String?, cityName: String): String =
+        listOfNotNull(code, recipientName, recipientPhone, cityName).joinToString(" ").normalizePersian()
 
     private fun insert(event: OrderPlaced) {
         OrderQmTbl.insert {
@@ -262,7 +288,7 @@ object OrderQmProjector {
             it[gift] = event.gift?.let(::GiftNotePayload)
             it[customerNote] = event.customerNote?.value
             it[updatedOn] = event.occurredOn.utc()
-            it[searchText] = event.address.let { address -> searchTextOf(event.code.value, address.recipientName.value, address.recipientPhone.value, address.cityName) }
+            it[searchText] = event.address.let { address -> searchTextOf(event.code.value, address.recipientName?.value, address.recipientPhone?.value, address.cityName) }
             it[photoStatus] = PhotoStatus.WAITING
             it[photoEverSent] = false
             it[photos] = OrderPhotosQm.NONE

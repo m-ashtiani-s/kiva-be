@@ -73,7 +73,7 @@ class WebV1ProductsTest {
         environment { config = MapApplicationConfig() }
         application {
             configureHttp()
-            configureAuthentication(JwtAccessTokens(ByteArray(32) { 7 }))
+            configureAuthentication(JwtAccessTokens(ByteArray(32) { 7 })) { true }
             routing { route(API_V1) { webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, siteUrl = "https://kiva.ir", mediaUrls = testMediaUrls) } }
         }
         block()

@@ -7,8 +7,19 @@ import java.time.Instant
 
 /** Where users are kept: one row each, with a version for optimistic locking. */
 interface UserRepository {
+    /** The user, a deleted one ([User.isDeleted]) too: whoever needs a live account checks it. */
     fun findById(id: UserId): User?
 
+    /**
+     * The user with their row locked until the transaction ends (`FOR UPDATE`): deleting the account holds it, so nothing
+     * else saves the account meanwhile (roadmap section 19.6, the last of DELETE /me's locks).
+     */
+    fun lockAndFind(id: UserId): User?
+
+    /** Whether the account [id] was deleted; null when there is no such account. One column, for every logged-in request. */
+    fun isDeleted(id: UserId): Boolean?
+
+    /** The live account with [phone]: a deleted one has none. */
     fun findByPhone(phone: IranianMobileNumber): User?
 
     /**

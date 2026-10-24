@@ -31,4 +31,7 @@ interface WishlistRepository {
 
     /** Takes [productId] out of every list: an archived product never comes back. */
     fun deleteProduct(productId: ProductId)
+
+    /** Removes every item of [userId], for deleting the account (roadmap phase 14, AccountEraser); how many went. */
+    fun deleteAllOf(userId: UserId): Int
 }

@@ -57,6 +57,9 @@ interface StockAlertRepository {
     /** Deletes the NOTIFIED and CANCELLED ones that ended before [before]; how many went. */
     fun deleteEndedBefore(before: Instant): Int
 
+    /** Removes every alert of [userId], in any status, for deleting the account (roadmap phase 14, AccountEraser); how many went. */
+    fun deleteAllOf(userId: UserId): Int
+
     /** Writes the subscription's change (its status and when). */
     fun save(alert: StockAlert)
 }

@@ -39,6 +39,9 @@ interface CartRepository {
      */
     fun delete(cart: Cart)
 
+    /** Removes the cart of [userId] with its lines, for deleting the account (roadmap phase 14, AccountEraser); false when there was none. */
+    fun deleteOfUser(userId: UserId): Boolean
+
     /**
      * Removes the guests' carts untouched since [untouchedSince], and the empty ones untouched since
      * [emptyUntouchedSince]; never a customer's. A cart in use at that moment is locked and touched by its command, so

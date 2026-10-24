@@ -127,8 +127,10 @@ import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.isNotNull
 import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.like
+import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.jdbc.deleteAll
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.select
@@ -278,10 +280,12 @@ class PurchaseTestStack(val clock: MutableClock) {
         environment { config = MapApplicationConfig() }
         application {
             configureHttp(listOf(ORIGIN))
-            configureAuthentication(auth.accessTokens)
+            configureAuthentication(auth.accessTokens, auth.accountCheck)
             routing {
                 route(API_V1) {
                     webV1Auth(auth.authUseCases, listOf(ORIGIN), testMediaUrls)
+                    // The account, for deleting it while an order is being placed (phase 14).
+                    webV1Me(auth.meUseCases)
                     webV1Cart(cartUseCases, testMediaUrls)
                     webV1Addresses(addressUseCases)
                     webV1Checkout(checkoutUseCases, testMediaUrls)
@@ -322,7 +326,7 @@ class PurchaseTestStack(val clock: MutableClock) {
 
     fun deleteWhatWasStored() {
         transaction(db) {
-            val userIds = UserTbl.select(UserTbl.id).where { UserTbl.phone like "0990%" }.map { it[UserTbl.id].value }
+            val userIds = UserTbl.select(UserTbl.id).where { (UserTbl.phone like "0990%") or UserTbl.deletedOn.isNotNull() }.map { it[UserTbl.id].value }
             val orderIds = OrderQmTbl.select(OrderQmTbl.orderId).where { OrderQmTbl.userId inList userIds }.map { it[OrderQmTbl.orderId] }
             EventStoreTbl.deleteWhere { (aggregateName eq "ORDER") and (aggregateId inList orderIds.map { it.toString() }) }
             OrderQmTbl.deleteWhere { orderId inList orderIds }

@@ -96,6 +96,9 @@ class CartRepositoryImpl : CartRepository {
         insertLines(cartId, wanted.values.filter { it.itemId !in stored })
     }
 
+    // The lines go with it, as with delete.
+    override fun deleteOfUser(userId: UserId): Boolean = CartTbl.deleteWhere { CartTbl.userId eq userId.value } > 0
+
     // The lines go with it: cartitem_tbl's foreign key is ON DELETE CASCADE.
     override fun delete(cart: Cart) {
         CartTbl.deleteWhere { publicId eq cart.publicId.value }

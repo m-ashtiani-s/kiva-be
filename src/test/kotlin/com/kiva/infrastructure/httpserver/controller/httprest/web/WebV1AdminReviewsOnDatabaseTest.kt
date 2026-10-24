@@ -235,7 +235,7 @@ class WebV1AdminReviewsOnDatabaseTest {
         assertEquals(ContractSchemas.propertiesOf("Review") + setOf("customerId", "contact"), items.first().keys)
         assertEquals("2", all.text("pendingCount"))
         assertEquals("samira@example.com", items.last().text("contact"))
-        assertEquals(customer(2).user.phone.value, items[1].text("contact"))
+        assertEquals(customer(2).user.activePhone.value, items[1].text("contact"))
         assertEquals(customer(2).user.id.value.toString(), items[1].text("customerId"))
 
         fun JsonObject.ids() = getValue("items").jsonArray.map { it.jsonObject.text("id") }

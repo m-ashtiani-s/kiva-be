@@ -78,7 +78,7 @@ data class AdminReturnRequestHttpResponse(
 
 /** The return's customer (`AdminReturnRequest.customer`), as their account is now. Personal data: [toString] shows the id only. */
 @Serializable
-data class AdminReturnCustomerHttpResponse(val id: Long, val fullName: String?, val phone: String) {
+data class AdminReturnCustomerHttpResponse(val id: Long, val fullName: String?, val phone: String?) {
     override fun toString(): String = "AdminReturnCustomerHttpResponse(id=$id)"
 }
 

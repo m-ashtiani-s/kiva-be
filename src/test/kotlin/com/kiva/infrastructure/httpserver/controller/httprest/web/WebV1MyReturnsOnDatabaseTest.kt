@@ -81,7 +81,7 @@ class WebV1MyReturnsOnDatabaseTest {
     private fun customer(n: Int) = panel.caller(PanelTestStack.phone(900 + n))
 
     /** [who] with a session started now: one from before a jump of the clock is over. */
-    private fun fresh(who: PanelTestStack.Caller) = panel.caller(who.user.phone.value)
+    private fun fresh(who: PanelTestStack.Caller) = panel.caller(who.user.activePhone.value)
 
     private suspend fun HttpResponse.json(): JsonObject = Json.parseToJsonElement(bodyAsText()).jsonObject
 

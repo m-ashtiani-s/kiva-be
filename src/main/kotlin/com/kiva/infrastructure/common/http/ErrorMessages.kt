@@ -231,6 +231,8 @@ object ErrorMessages {
         "MESSENGER_NOTE_INVALID" to "توضیح برای عکس علامت نامعتبر داره",
         "CUSTOMER_NOTE_TOO_LONG" to "توضیح سفارش حداکثر {maxLength} حرفه",
         "CUSTOMER_NOTE_INVALID" to "توضیح سفارش علامت نامعتبر داره",
+        "DELETION_REASON_TOO_LONG" to "دلیل حذف حساب حداکثر {maxLength} حرفه",
+        "DELETION_REASON_INVALID" to "دلیل حذف حساب علامت نامعتبر داره",
         "GIFT_MESSAGE_TOO_LONG" to "پیام هدیه حداکثر {maxLength} حرفه",
         "GIFT_MESSAGE_INVALID" to "پیام هدیه علامت نامعتبر داره",
         "PRICE_RANGE_INVALID" to "حداقل قیمت نمی‌تونه از حداکثر قیمت بیشتر باشه",

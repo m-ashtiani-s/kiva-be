@@ -1,9 +1,10 @@
 package com.kiva.domain.aggregate.contact.repository
 
-import com.kiva.common.valueobject.IranianMobileNumber
-import com.kiva.domain.aggregate.contact.entity.ContactMessage
 import com.kiva.common.pagination.Page
 import com.kiva.common.pagination.Pageable
+import com.kiva.common.valueobject.IranianMobileNumber
+import com.kiva.common.valueobject.UserId
+import com.kiva.domain.aggregate.contact.entity.ContactMessage
 import com.kiva.domain.aggregate.contact.model.valueobject.ContactStatus
 import com.kiva.domain.aggregate.contact.model.valueobject.ContactTopic
 import com.kiva.domain.aggregate.contact.model.valueobject.TicketCode
@@ -27,6 +28,12 @@ interface ContactMessageRepository {
 
     /** Deletes the CLOSED messages last changed before [before] (decision 19); how many went. */
     fun deleteClosedBefore(before: Instant): Int
+
+    /**
+     * Removes every message sent while logged in as [userId], in any status, for deleting the account (roadmap phase 14,
+     * AccountEraser); how many went. A guest's message carries no account, so it is not found here.
+     */
+    fun deleteAllOf(userId: UserId): Int
 
     /** The panel's filters; null is any. */
     data class Filter(val status: ContactStatus?, val topic: ContactTopic?)

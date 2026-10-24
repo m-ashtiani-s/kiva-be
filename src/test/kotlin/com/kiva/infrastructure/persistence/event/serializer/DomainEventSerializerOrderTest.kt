@@ -400,6 +400,17 @@ class DomainEventSerializerOrderTest {
             }
         """.trimIndent()
 
+        private val orderPersonalDataErasedJson = """
+            {
+              "id": "5d0f3a2c-8b1e-4c7d-9a6f-000000000040",
+              "orderId": 42,
+              "sequence": 14,
+              "occurredOn": "2026-10-12T08:00:00.123456789Z",
+              "occurredByUserId": 7,
+              "reason": "ACCOUNT_DELETED"
+            }
+        """.trimIndent()
+
         private val stored = listOf(
             OrderEventSamples.orderPlaced to orderPlacedJson,
             OrderEventSamples.orderPaymentFailed to orderPaymentFailedJson,
@@ -423,6 +434,7 @@ class DomainEventSerializerOrderTest {
             OrderEventSamples.orderReturnRequested to orderReturnRequestedJson,
             OrderEventSamples.orderReturnReceived to orderReturnReceivedJson,
             OrderEventSamples.orderReturnEnded to orderReturnEndedJson,
+            OrderEventSamples.orderPersonalDataErased to orderPersonalDataErasedJson,
         )
 
         @Test

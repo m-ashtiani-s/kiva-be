@@ -1,6 +1,8 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
+import com.kiva.application.usecase.account.usecase.query.CheckAccountLiveUc
 import com.kiva.application.usecase.stockalert.StockAlertCounts
+import com.kiva.infrastructure.httpserver.auth.asAccountCheck
 import com.kiva.infrastructure.persistence.exposed.tbl.StockAlertTbl
 import com.kiva.infrastructure.persistence.exposed.StockAlertIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.StockAlertRepositoryImpl
@@ -46,6 +48,8 @@ import com.kiva.application.usecase.banner.usecase.command.UpdateBannerUc
 import com.kiva.application.usecase.banner.usecase.query.GetAdminBannerUc
 import com.kiva.application.usecase.banner.usecase.query.ListAdminBannersUc
 import com.kiva.application.usecase.banner.usecase.query.ListBannersUc
+import org.jetbrains.exposed.v1.core.isNotNull
+import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.jdbc.deleteAll
 import com.kiva.domain.aggregate.campaign.CampaignDomainService
 import com.kiva.application.usecase.campaign.CampaignProducts
@@ -287,6 +291,8 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
     val auditTrail = AuditTrailImpl()
 
     val checkPanelAccess = CheckPanelAccessUc(transactions, sessions, users, events, clock)
+    /** The access token check's question to the database: is the account still there and not deleted? */
+    val accountCheck = CheckAccountLiveUc(transactions, users).asAccountCheck()
 
     // --- the customers page (login phase), the first panel routes ---
     val findCustomers = FindCustomersUc(transactions, AdminCustomerRepositoryImpl(), OrderQmRepositoryImpl())
@@ -633,7 +639,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         environment { config = MapApplicationConfig() }
         application {
             configureHttp(trustedProxyHops = trustedProxyHops)
-            configureAuthentication(accessTokens)
+            configureAuthentication(accessTokens, accountCheck)
             routing {
                 route(API_V1) {
                     webV1AdminCustomers(AdminCustomerUseCases(checkPanelAccess, findCustomers, getCustomer, getCustomerDetail, setUserRoles))
@@ -673,6 +679,8 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
                     webV1AdminSupport(adminSupport)
                     webV1AdminNewsletter(adminNewsletter)
                     webV1Addresses(purchase.addressUseCases)
+                    // The account, for deleting it with everything of the later phases in it (phase 14).
+                    webV1Me(purchase.auth.meUseCases)
                     webV1SharedWishlist(wishlist.getShared, mediaUrls)
                     // Back from the gateway and the result page, for paying what a change left owed (phase 3).
                     webV1Payments(purchase.paymentUseCases, PaymentConfig.DEFAULT.resultUrl)
@@ -690,7 +698,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         callers.clear()
         // First the uploads and orders of the test users, found by their phones before the users go.
         transaction(db) {
-            val userIds = UserTbl.select(UserTbl.id).where { UserTbl.phone like TEST_PHONES }.map { it[UserTbl.id].value }
+            val userIds = UserTbl.select(UserTbl.id).where { (UserTbl.phone like TEST_PHONES) or UserTbl.deletedOn.isNotNull() }.map { it[UserTbl.id].value }
             // Their reviews, and the ratings of the products they reviewed (votes go with their reviews).
             val reviewed = ReviewTbl.select(ReviewTbl.productId).where { ReviewTbl.userId inList userIds }.map { it[ReviewTbl.productId] }.distinct()
             ReviewVoteTbl.deleteWhere { ReviewVoteTbl.userId inList userIds }
@@ -711,13 +719,14 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         }
         purchase.deleteWhatWasStored()
         transaction(db) {
-            val userIds = UserTbl.select(UserTbl.id).where { UserTbl.phone like TEST_PHONES }.map { it[UserTbl.id].value }
+            val userIds = UserTbl.select(UserTbl.id).where { (UserTbl.phone like TEST_PHONES) or UserTbl.deletedOn.isNotNull() }.map { it[UserTbl.id].value }
             val sessionIds = AuthSessionTbl.select(AuthSessionTbl.id).where { AuthSessionTbl.userId inList userIds }.map { it[AuthSessionTbl.id].value }
             RefreshTokenTbl.deleteWhere { RefreshTokenTbl.sessionId inList sessionIds }
             AuthSessionTbl.deleteWhere { AuthSessionTbl.userId inList userIds }
             OtpChallengeTbl.deleteWhere { OtpChallengeTbl.phone like TEST_PHONES }
             MediaTbl.deleteWhere { MediaTbl.uploadedBy inList userIds }
-            UserTbl.deleteWhere { UserTbl.phone like TEST_PHONES }
+            // A deleted account has no phone any more; only tests delete accounts in kiva_test.
+            UserTbl.deleteWhere { (UserTbl.phone like TEST_PHONES) or UserTbl.deletedOn.isNotNull() }
         }
         if (Files.exists(mediaRoot)) Files.walk(mediaRoot).use { paths -> paths.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists) }
     }

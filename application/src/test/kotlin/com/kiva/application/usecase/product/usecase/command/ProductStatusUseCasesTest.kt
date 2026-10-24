@@ -220,6 +220,7 @@ class ProductStatusUseCasesTest {
         override fun visibleIdsOf(userId: UserId): List<ProductId> = error("not used")
         override fun countVisible(userId: UserId): Int = error("not used")
         override fun idsAmong(userId: UserId, productIds: Collection<ProductId>): Set<ProductId> = error("not used")
+        override fun deleteAllOf(userId: UserId): Int = error("not used")
     }
 
     @Nested

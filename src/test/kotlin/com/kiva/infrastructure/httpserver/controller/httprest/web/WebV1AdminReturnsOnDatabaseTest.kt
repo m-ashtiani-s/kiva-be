@@ -137,7 +137,7 @@ class WebV1AdminReturnsOnDatabaseTest {
         assertEquals(clock.now.toString(), ret.text("decidedAt"))
         listOf("receipt", "suggestedRefund", "rejectionReason", "pickup", "refund").forEach { assertEquals(JsonNull, ret[it], it) }
         val customer = ret.getValue("customer").jsonObject
-        assertEquals(listOf(sara.userId.toString(), sara.user.phone.value), listOf(customer.text("id"), customer.text("phone")))
+        assertEquals(listOf(sara.userId.toString(), sara.user.activePhone.value), listOf(customer.text("id"), customer.text("phone")))
         assertEquals("RETURN_REQUESTED", adminOrderStatus(code), "approving doesn't move the order")
         assertEquals(listOf(sara.user.phone to codeOf(returnId)), sms.returnsApproved.toList())
         val rows = auditOf(returnId)

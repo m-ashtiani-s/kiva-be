@@ -44,6 +44,7 @@ class AddressUseCasesTest {
         override fun save(book: AddressBook) {
             stored[book.userId] = book.addresses
         }
+        override fun deleteAllOf(userId: UserId): Int = error("not used")
     }
 
     private val geo = object : GeoRepository {

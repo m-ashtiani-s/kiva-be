@@ -18,6 +18,7 @@ import com.kiva.domain.aggregate.order.entity.event.OrderLineRemoved
 import com.kiva.domain.aggregate.order.entity.event.OrderLineReplaced
 import com.kiva.domain.aggregate.order.entity.event.OrderPaid
 import com.kiva.domain.aggregate.order.entity.event.OrderPaymentFailed
+import com.kiva.domain.aggregate.order.entity.event.OrderPersonalDataErased
 import com.kiva.domain.aggregate.order.entity.event.OrderPhotosApproved
 import com.kiva.domain.aggregate.order.entity.event.OrderPhotosAttached
 import com.kiva.domain.aggregate.order.entity.event.OrderPhotosSent
@@ -59,6 +60,7 @@ import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderL
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderLineReplacedPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderPaidPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderPaymentFailedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderPersonalDataErasedPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderPhotosApprovedPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderPhotosAttachedPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderPhotosSentPayload
@@ -190,6 +192,7 @@ object DomainEventSerializer {
         is OrderReturnRequested -> json.encodeToString(OrderReturnRequestedPayload(event))
         is OrderReturnReceived -> json.encodeToString(OrderReturnReceivedPayload(event))
         is OrderReturnEnded -> json.encodeToString(OrderReturnEndedPayload(event))
+        is OrderPersonalDataErased -> json.encodeToString(OrderPersonalDataErasedPayload(event))
     }
 
     fun deserializeOrder(payload: String, payloadVersion: Int, eventType: String): OrderDomainEvent {
@@ -218,6 +221,7 @@ object DomainEventSerializer {
             OrderReturnRequested.TYPE.value -> json.decodeFromString<OrderReturnRequestedPayload>(payload)
             OrderReturnReceived.TYPE.value -> json.decodeFromString<OrderReturnReceivedPayload>(payload)
             OrderReturnEnded.TYPE.value -> json.decodeFromString<OrderReturnEndedPayload>(payload)
+            OrderPersonalDataErased.TYPE.value -> json.decodeFromString<OrderPersonalDataErasedPayload>(payload)
             else -> error("Unknown order event type '$eventType'")
         }
         return eventPayload.toDomainEvent()

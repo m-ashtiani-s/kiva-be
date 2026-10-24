@@ -142,6 +142,12 @@ class ReviewRepositoryImpl : ReviewRepository {
         ReviewTbl.select(ReviewTbl.productId).where { (ReviewTbl.userId eq userId.value) and (ReviewTbl.status inList LIVE) }
             .map { ProductId.constructFromPersisted(it[ReviewTbl.productId]) }.toSet()
 
+    override fun anonymizeAllOf(userId: UserId): Int =
+        ReviewTbl.update({ ReviewTbl.userId eq userId.value }) {
+            it[authorName] = null
+            it[contact] = null
+        }
+
     override fun save(review: Review) = writing(review) {
         val updated = ReviewTbl.update({ (ReviewTbl.reviewId eq review.id.value) and (ReviewTbl.version eq review.version) }) {
             changes(review, it)

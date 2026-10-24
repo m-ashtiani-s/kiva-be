@@ -274,9 +274,12 @@ class PlaceOrderUc(
         val now = clock.instant()
         val settings = shopSettingsRepository.get()
 
-        val cart = cartRepository.lockForUser(userId)?.takeIf { it.lines.isNotEmpty() } ?: return Result.failure(Failure.CartEmpty)
+        val lockedCart = cartRepository.lockForUser(userId)
+        // Read under the cart's lock, which deleting the account takes first (roadmap phase 14, decision 9): an account
+        // deleted meanwhile is gone (401), not an empty cart.
+        val user = userRepository.findById(userId)?.takeUnless { it.isDeleted } ?: return Result.failure(Failure.AccountGone)
+        val cart = lockedCart?.takeIf { it.lines.isNotEmpty() } ?: return Result.failure(Failure.CartEmpty)
         val destination = destinationOf(input.address, userId, now).unwrapOr { return Result.failure(it) }
-        val user = userRepository.findById(userId) ?: return Result.failure(Failure.AccountGone)
         val messenger = messengerOf(input).unwrapOr { return Result.failure(it) }
 
         val offers = offerQmRepository.findOffers(cart.lines.map { it.variantId })
@@ -326,7 +329,8 @@ class PlaceOrderUc(
 
         destination.bookToSave?.let(addressBookRepository::save)
         if (input.messenger?.saveAsDefault == true && (user.defaultMessenger != messenger.channel || user.defaultMessengerPhone != messenger.phone)) {
-            userRepository.save(user.keepMessenger(messenger.channel, messenger.phone))
+            // A messenger made at this checkout always has its number; only an erased order's has none.
+            userRepository.save(user.keepMessenger(messenger.channel, checkNotNull(messenger.phone)))
         }
         cart.clear(now)
         cartRepository.save(cart)
@@ -335,7 +339,7 @@ class PlaceOrderUc(
             "PlaceOrderUc: order ${order.code.value} of user ${userId.value} placed with ${order.lines.size} lines, payable ${order.totals.payable.toman}, " +
                 "payment ${payment?.publicId?.value ?: "none, paid at once"}",
         )
-        return Result.success(Outcome(PlacedOrder(order.code, payment?.publicId), paidAtOnceTo = if (payment == null) user.phone else null))
+        return Result.success(Outcome(PlacedOrder(order.code, payment?.publicId), paidAtOnceTo = if (payment == null) user.activePhone else null))
     }
 
     /**

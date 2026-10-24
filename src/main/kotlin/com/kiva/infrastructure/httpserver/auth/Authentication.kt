@@ -4,6 +4,8 @@ import com.auth0.jwt.JWTVerifier
 import com.auth0.jwt.exceptions.JWTVerificationException
 import com.auth0.jwt.exceptions.TokenExpiredException
 import com.auth0.jwt.interfaces.Payload
+import com.kiva.application.usecase.account.usecase.query.CheckAccountLiveUc
+import com.kiva.common.railway.Result
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.session.model.valueobject.SessionId
 import com.kiva.domain.aggregate.user.model.valueobject.Role
@@ -53,7 +55,8 @@ data class AccessPrincipal(val userId: UserId, val sessionId: SessionId, val rol
 /**
  * The access token check, as Ktor's `jwt` authentication with our verifier: the algorithm and key are fixed, then
  * issuer, audience and time. A refused token is a 401 problem that says why: TOKEN_EXPIRED when only its time ran out
- * (the client refreshes and tries again), UNAUTHORIZED for anything else (no token, a forged or broken one).
+ * (the client refreshes and tries again), UNAUTHORIZED for anything else (no token, a forged or broken one, or one of an
+ * account deleted since: [isAccountLive] asks the database on every request, roadmap phase 14, decision 10).
  *
  * Where it applies:
  * - `authenticate(ACCESS)`: a login is needed (`/me`, checkout).
@@ -61,15 +64,18 @@ data class AccessPrincipal(val userId: UserId, val sessionId: SessionId, val rol
  *   401, so the client refreshes instead of being treated as a guest without noticing.
  * - requireRoles: the panel, which is `authenticate(ACCESS)` plus a check of the session and roles in the database.
  */
-fun Application.configureAuthentication(accessTokens: JwtAccessTokens) {
+fun Application.configureAuthentication(accessTokens: JwtAccessTokens, isAccountLive: suspend (UserId) -> Boolean) {
     install(Authentication) {
         jwt(ACCESS) {
             verifier(accessTokens.verifier)
-            validate { credential -> AccessPrincipal.from(credential.payload) }
+            validate { credential -> AccessPrincipal.from(credential.payload)?.takeIf { isAccountLive(it.userId) } }
             challenge { _, _ -> call.respondAuthProblem(call.whyRejected(accessTokens.verifier)) }
         }
     }
 }
+
+/** The account check of [configureAuthentication], made of the use case that answers it. */
+fun CheckAccountLiveUc.asAccountCheck(): suspend (UserId) -> Boolean = { userId -> execute(CheckAccountLiveUc.Qry(userId)) is Result.Success }
 
 /** The caller of a route inside `authenticate(ACCESS)`. Outside one there is none: that is a bug in the route. */
 fun ApplicationCall.accessPrincipal(): AccessPrincipal =

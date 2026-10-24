@@ -21,7 +21,7 @@ data class AdminReturnRequestDto(
     override fun toString(): String = "AdminReturnRequestDto(id=${ret.id}, status=${ret.status})"
 
     /** The customer's account as it is now. Personal data: [toString] shows the id only. */
-    data class Customer(val id: Long, val fullName: String?, val phone: String) {
+    data class Customer(val id: Long, val fullName: String?, val phone: String?) {
         override fun toString(): String = "Customer(id=$id)"
     }
 

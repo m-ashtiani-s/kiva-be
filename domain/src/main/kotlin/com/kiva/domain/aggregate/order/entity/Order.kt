@@ -20,6 +20,7 @@ import com.kiva.domain.aggregate.order.entity.event.OrderLineRemoved
 import com.kiva.domain.aggregate.order.entity.event.OrderLineReplaced
 import com.kiva.domain.aggregate.order.entity.event.OrderPaid
 import com.kiva.domain.aggregate.order.entity.event.OrderPaymentFailed
+import com.kiva.domain.aggregate.order.entity.event.OrderPersonalDataErased
 import com.kiva.domain.aggregate.order.entity.event.OrderPhotosApproved
 import com.kiva.domain.aggregate.order.entity.event.OrderPhotosAttached
 import com.kiva.domain.aggregate.order.entity.event.OrderPhotosSent
@@ -42,6 +43,7 @@ import com.kiva.domain.aggregate.order.model.valueobject.ChangeRequest
 import com.kiva.domain.aggregate.order.model.valueobject.ChangeTarget
 import com.kiva.domain.aggregate.order.model.valueobject.ChangeType
 import com.kiva.domain.aggregate.order.model.valueobject.CustomerNote
+import com.kiva.domain.aggregate.order.model.valueobject.ErasureReason
 import com.kiva.domain.aggregate.order.model.valueobject.GiftNote
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCancellationInfo
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
@@ -104,6 +106,8 @@ import kotlin.properties.Delegates
  * - a return (phase 7, roadmap section 12.4): asked for only while DELIVERED, within [returnableUntil], never after a
  *   return of it was closed or refunded ([returnSettled]), so one at a time; of its returnable lines only, each once, never
  *   more than was bought; RETURNED only when the open return's parcel arrived, REFUNDED only after that.
+ * - its personal data (phase 14, roadmap section 19.3) is erased once, with nothing else changed: the address down to its
+ *   province and city, the messenger to its channel, no customer note, no gift message.
  *
  * What it can't know: its stock (the Inventory of each color holds it for the order, by its [code]), its payments and
  * refunds (rows of their own: RefundDomainService counts what is refundable), its reservation group's state, whether
@@ -714,6 +718,24 @@ class Order private constructor() : EventSourceEntity<OrderDomainEvent>() {
         return Result.success(this)
     }
 
+    // ============ deleting the account (phase 14) ============
+
+    /** Its personal data was erased ([erasePersonalData]). */
+    val isErased: Boolean get() = address.isErased
+
+    /**
+     * Erases what is personal of the order, for [reason] (decision 2 of phase 14): the recipient, their phone, the
+     * address line, plaque, unit and postal code (the province and city stay, for the reports), the messenger's number,
+     * handle and note (its channel stays), the customer note and the gift message. Its money, lines, tracking code and
+     * dates stay. Whatever its status: whether its customer may delete their account (no active order) is the use
+     * case's question. Erasing an erased order again records nothing.
+     */
+    fun erasePersonalData(reason: ErasureReason, by: UserId, now: Instant): Result<Order, Nothing> {
+        if (isErased) return Result.success(this)
+        raiseEvent(OrderPersonalDataErased(id, nextSequence(), now, by, reason))
+        return Result.success(this)
+    }
+
     /** [variantId] of [productId] fits a [type] change of [line]: another color of its product (COLOR), or of another product (MODEL). */
     private fun fitsChange(type: ChangeType, line: OrderLine, productId: ProductId, variantId: VariantId): Boolean = when (type) {
         ChangeType.COLOR -> productId == line.productId && variantId != line.variantId
@@ -848,6 +870,12 @@ class Order private constructor() : EventSourceEntity<OrderDomainEvent>() {
                 openReturnId = null
                 returnSettled = returnSettled || event.outcome.settlesReturn
                 status = if (event.outcome == ReturnOutcome.REFUNDED) OrderStatus.REFUNDED else OrderStatus.DELIVERED
+            }
+            is OrderPersonalDataErased -> {
+                address = address.erased()
+                messenger = messenger.erased()
+                customerNote = null
+                gift = gift?.erased()
             }
         }
     }

@@ -32,5 +32,8 @@ interface NewsletterSubscriptionRepository {
     /** Deletes those UNSUBSCRIBED before [before] (decision 19); how many went. */
     fun deleteUnsubscribedBefore(before: Instant): Int
 
+    /** Removes the subscriber of [email], in any status, for deleting the account (roadmap phase 14, AccountEraser); false when there was none. */
+    fun delete(email: Email): Boolean
+
     data class Filter(val status: SubscriptionStatus?, val q: String?)
 }

@@ -118,8 +118,8 @@ class ConfirmPhoneChangeUc(
             if (session == null || session.userId != command.userId || !session.isActiveAt(now)) {
                 return@inTransaction Result.failure(Failure.SessionGone)
             }
-            val user = userRepository.findById(command.userId) ?: return@inTransaction Result.failure(Failure.SessionGone)
-            if (input.newPhone == user.phone) return@inTransaction Result.failure(Failure.InvalidInput(listOf(User.ChangePhoneFailure.SameAsCurrent)))
+            val user = userRepository.findById(command.userId)?.takeUnless { it.isDeleted } ?: return@inTransaction Result.failure(Failure.SessionGone)
+            if (input.newPhone == user.activePhone) return@inTransaction Result.failure(Failure.InvalidInput(listOf(User.ChangePhoneFailure.SameAsCurrent)))
 
             tryCodes(user, input, command.ip, now)?.let { return@inTransaction Result.success(it) }
 
@@ -133,7 +133,7 @@ class ConfirmPhoneChangeUc(
                 logger.info("ConfirmPhoneChangeUc: ${e.message}")
                 return@inTransaction Result.failure(Failure.PhoneTaken)
             }
-            Result.success(Outcome.Changed(startOver(user, moved, device, command.ip, now), user.phone, input.newPhone))
+            Result.success(Outcome.Changed(startOver(user, moved, device, command.ip, now), user.activePhone, input.newPhone))
         }.unwrapOr { return Result.failure(it) }
 
         return when (outcome) {
@@ -152,18 +152,18 @@ class ConfirmPhoneChangeUc(
      */
     private fun tryCodes(user: User, input: Input, ip: String?, now: Instant): Outcome? {
         // Locked in the order of their phones, so two requests about the same two codes can't wait for each other.
-        val (current, new) = if (user.phone.value < input.newPhone.value) {
-            val current = otpChallengeRepository.findOpenForUpdate(user.phone, OtpPurpose.PHONE_CHANGE_CURRENT)
+        val (current, new) = if (user.activePhone.value < input.newPhone.value) {
+            val current = otpChallengeRepository.findOpenForUpdate(user.activePhone, OtpPurpose.PHONE_CHANGE_CURRENT)
             current to otpChallengeRepository.findOpenForUpdate(input.newPhone, OtpPurpose.PHONE_CHANGE_NEW)
         } else {
             val new = otpChallengeRepository.findOpenForUpdate(input.newPhone, OtpPurpose.PHONE_CHANGE_NEW)
-            otpChallengeRepository.findOpenForUpdate(user.phone, OtpPurpose.PHONE_CHANGE_CURRENT) to new
+            otpChallengeRepository.findOpenForUpdate(user.activePhone, OtpPurpose.PHONE_CHANGE_CURRENT) to new
         }
-        lockedNow(user.phone, input.newPhone, now)?.let { return Outcome.CodeRefused(it) }
+        lockedNow(user.activePhone, input.newPhone, now)?.let { return Outcome.CodeRefused(it) }
 
         // A code of another user, or one that allows another new phone, is no code for this change.
         val currentAttempt = current?.takeIf { it.userId == user.id && it.authorizesPhone == input.newPhone }
-            ?.let { it.attempt(otpCodes.hash(input.currentCode, it.salt, OtpPurpose.PHONE_CHANGE_CURRENT, user.phone), now) }
+            ?.let { it.attempt(otpCodes.hash(input.currentCode, it.salt, OtpPurpose.PHONE_CHANGE_CURRENT, user.activePhone), now) }
         val newAttempt = new?.takeIf { it.userId == user.id }
             ?.let { it.attempt(otpCodes.hash(input.newCode, it.salt, OtpPurpose.PHONE_CHANGE_NEW, input.newPhone), now) }
 
@@ -185,7 +185,7 @@ class ConfirmPhoneChangeUc(
                 )
             }
         }
-        lockedNow(user.phone, input.newPhone, now)?.let { locked ->
+        lockedNow(user.activePhone, input.newPhone, now)?.let { locked ->
             securityEventLog.record(SecurityEvent(SecurityEventType.OTP_LOCKED, now, userId = user.id, ip = ip, detail = mapOf("until" to now.plus(locked.refusal.retryAfter).toString())))
             return Outcome.CodeRefused(locked)
         }
@@ -215,10 +215,10 @@ class ConfirmPhoneChangeUc(
         securityEventLog.record(
             SecurityEvent(
                 SecurityEventType.PHONE_CHANGED, now, userId = after.id, sessionId = session.id, ip = ip,
-                detail = mapOf("from" to before.phone.masked(), "to" to after.phone.masked(), "sessionsEnded" to ended),
+                detail = mapOf("from" to before.activePhone.masked(), "to" to after.activePhone.masked(), "sessionsEnded" to ended),
             ),
         )
-        logger.info("ConfirmPhoneChangeUc: user ${after.id.value} moved from ${before.phone.masked()} to ${after.phone.masked()}; $ended session(s) ended")
+        logger.info("ConfirmPhoneChangeUc: user ${after.id.value} moved from ${before.activePhone.masked()} to ${after.activePhone.masked()}; $ended session(s) ended")
         return IssuedSession(
             userId = after.id,
             isNewUser = false,

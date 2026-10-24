@@ -13,12 +13,16 @@ import com.kiva.domain.aggregate.user.model.valueobject.Role
  */
 interface AdminCustomerRepository {
 
-    /** The users that match [search], newest account first. */
+    /** The users that match [search], newest account first; a deleted account never (roadmap phase 14, decision 12). */
     fun find(search: CustomerSearch, pageable: Pageable): Page<User>
 
+    /** The account, a deleted one too ([User.isDeleted]): an order of it still names it, as «حساب حذف‌شده». */
     fun findById(id: UserId): User?
 
-    /** The accounts of [ids] there are, in one read (the panel's order queue names a whole page at once). */
+    /**
+     * The accounts of [ids] there are, deleted ones too, in one read (the panel's order queue names a whole page at
+     * once).
+     */
     fun findAll(ids: Collection<UserId>): Map<UserId, User>
 
     /**

@@ -20,7 +20,8 @@ import com.kiva.domain.aggregate.geo.repository.GeoRepository
 /**
  * A customer's page in the panel (`GET /admin/customers/{customerId}`; ADMIN, SUPPORT): the profile, every address of
  * the book (the default first, written out as the book writes them), and the last [RECENT_ORDERS] orders in any status
- * (roadmap phase 4, decision 16). An id that isn't a number, or that nobody has, is 404. Reading is not logged (the
+ * (roadmap phase 4, decision 16). An id that isn't a number, that nobody has, or of a deleted account (phase 14,
+ * decision 12) is 404. Reading is not logged (the
  * contract), and nothing personal goes into the application log: ids only.
  */
 class GetCustomerDetailUc(
@@ -41,7 +42,7 @@ class GetCustomerDetailUc(
         val id = query.customerId.toLongOrNull()?.let { UserId.makeNew(it).getOrNull() } ?: return Result.failure(Failure.NotFound)
 
         return transactionManager.inTransaction {
-            val user = adminCustomerRepository.findById(id) ?: return@inTransaction Result.failure(Failure.NotFound)
+            val user = adminCustomerRepository.findById(id)?.takeUnless { it.isDeleted } ?: return@inTransaction Result.failure(Failure.NotFound)
             val addresses = geoRepository.addressDtosOf(addressBookRepository.find(user.id).addresses.defaultFirst())
             val recent = orderQmRepository.recentOfCustomer(user.id, RECENT_ORDERS).map { AdminOrderItems.itemOf(it, user) }
             Result.success(

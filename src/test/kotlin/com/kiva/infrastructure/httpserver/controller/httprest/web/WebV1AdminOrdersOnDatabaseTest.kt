@@ -97,11 +97,11 @@ class WebV1AdminOrdersOnDatabaseTest {
         clock.advance(Duration.ofMinutes(1))
         val second = orders.paid(sara.user.id, nila[2])
 
-        val queue = codes("q=${sara.user.phone.value}")
+        val queue = codes("q=${sara.user.activePhone.value}")
         assertEquals(listOf(second, first).values(), queue)
-        assertEquals(listOf(unpaid.value), codes("q=${sara.user.phone.value}&status=PENDING_PAYMENT"))
-        assertEquals(listOf(first, second).values(), codes("q=${sara.user.phone.value}&sort=oldest"))
-        assertEquals(setOf(unpaid.value, first.value, second.value), codes("q=${sara.user.phone.value}&status=PENDING_PAYMENT,PROCESSING").toSet())
+        assertEquals(listOf(unpaid.value), codes("q=${sara.user.activePhone.value}&status=PENDING_PAYMENT"))
+        assertEquals(listOf(first, second).values(), codes("q=${sara.user.activePhone.value}&sort=oldest"))
+        assertEquals(setOf(unpaid.value, first.value, second.value), codes("q=${sara.user.activePhone.value}&status=PENDING_PAYMENT,PROCESSING").toSet())
     }
 
     @Test
@@ -110,7 +110,7 @@ class WebV1AdminOrdersOnDatabaseTest {
         orders.place(sara.user.id, nila[0])
         orders.paid(sara.user.id, nila[1])
         orders.paid(sara.user.id, nila[2])
-        val phone = sara.user.phone.value
+        val phone = sara.user.activePhone.value
 
         val all = call("/admin/orders?q=$phone").json()["statusCounts"]!!.jsonObject
         val oneTab = call("/admin/orders?q=$phone&status=PROCESSING").json()["statusCounts"]!!.jsonObject
@@ -131,7 +131,7 @@ class WebV1AdminOrdersOnDatabaseTest {
         assertEquals(listOf(code.value), codes("q=${code.value}"))
         assertEquals(listOf(code.value), codes("q=${code.value.removePrefix("KV-")}"))
         assertEquals(listOf(code.value), codes("q=${code.value.lowercase()}"))
-        assertEquals(listOf(code.value), codes("q=${maryam.user.phone.value}"))
+        assertEquals(listOf(code.value), codes("q=${maryam.user.activePhone.value}"))
         assertEquals(listOf(code.value), codes("q=${PaidOrders.Destination.ISFAHAN.recipientPhone}"))
         assertEquals(listOf(code.value), codes("q=مریم رضایی"))
         assertEquals(listOf(code.value), codes("q=رضا کریمی"))
@@ -146,7 +146,7 @@ class WebV1AdminOrdersOnDatabaseTest {
         val byPost = orders.paid(sara.user.id, nila[0])
         val byTipax = orders.paid(sara.user.id, nila[1], shippingMethod = "TIPAX")
         val held = orders.paid(sara.user.id, mahakBlack, reserve = true, addressId = home)
-        val phone = sara.user.phone.value
+        val phone = sara.user.activePhone.value
 
         assertEquals(listOf(byTipax.value), codes("q=$phone&shippingMethod=TIPAX"))
         assertEquals(listOf(held.value), codes("q=$phone&reserved=true"))
@@ -166,7 +166,7 @@ class WebV1AdminOrdersOnDatabaseTest {
         clock.advance(Duration.between(clock.now, Instant.parse("2026-10-15T22:00:00Z")))
         val sara = customer(6)
         val code = orders.paid(sara.user.id, nila[0])
-        val phone = sara.user.phone.value
+        val phone = sara.user.activePhone.value
 
         assertEquals(listOf(code.value), codes("q=$phone&from=2026-10-16&to=2026-10-16"))
         assertEquals(emptyList(), codes("q=$phone&from=2026-10-15&to=2026-10-15"))
@@ -214,7 +214,7 @@ class WebV1AdminOrdersOnDatabaseTest {
         assertEquals(listOf("CANCELLED"), order.array("allowedTransitions").map { it.jsonPrimitive.content })
         val customer = order["customer"]!!.jsonObject
         assertEquals("مریم رضایی", customer.text("fullName"))
-        assertEquals(maryam.user.phone.value, customer.text("phone"))
+        assertEquals(maryam.user.activePhone.value, customer.text("phone"))
         assertEquals(1, customer["ordersCount"]!!.jsonPrimitive.int)
         assertNull(order.text("shipmentGroup"))
         assertEquals(emptyList(), order.array("draftItems"))

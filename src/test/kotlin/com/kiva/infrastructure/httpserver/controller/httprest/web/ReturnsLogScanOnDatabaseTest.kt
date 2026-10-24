@@ -118,7 +118,7 @@ class ReturnsLogScanOnDatabaseTest {
         assertTrue(log.any { it.loggerName == "Exposed" }, "the SQL log was caught")
         assertTrue(log.any { "ReceiveReturnUc" in it.loggerName } && log.any { "CreateReturnUc" in it.loggerName }, "the use cases' own lines were caught")
         val texts = listOf(IP, DESCRIPTION, INSTRUCTIONS, PICKUP_NOTE, RECEIPT_NOTE, REFUND_REASON, BANK_REFERENCE, REFUND_NOTE, REJECTION, CLOSE_REASON)
-        val leaks = leaksIn(log, listOf(sara.user.phone.value, PaidOrders.Destination.TEHRAN.recipientPhone), texts)
+        val leaks = leaksIn(log, listOf(sara.user.activePhone.value, PaidOrders.Destination.TEHRAN.recipientPhone), texts)
         assertTrue(leaks.isEmpty(), leaks.joinToString("\n") { (what, line) -> "$what in: $line" })
     }
 

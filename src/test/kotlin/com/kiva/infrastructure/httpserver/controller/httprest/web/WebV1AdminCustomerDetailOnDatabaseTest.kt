@@ -134,7 +134,7 @@ class WebV1AdminCustomerDetailOnDatabaseTest {
         panel.caller(PanelTestStack.phone(703))
 
         val operators = client.get("$API_V1/admin/customers?role=OPERATOR&size=100") { header(HttpHeaders.Authorization, support.bearer) }.json()
-        assertEquals(listOf(operator.user.phone.value), operators.getValue("items").jsonArray.map { it.jsonObject.text("phone") })
+        assertEquals(listOf(operator.user.activePhone.value), operators.getValue("items").jsonArray.map { it.jsonObject.text("phone") })
         val everyone = client.get("$API_V1/admin/customers?role=CUSTOMER&size=100") { header(HttpHeaders.Authorization, support.bearer) }.json()
         assertTrue(everyone.getValue("items").jsonArray.size >= 3)
         val unknown = client.get("$API_V1/admin/customers?role=WIZARD") { header(HttpHeaders.Authorization, support.bearer) }
@@ -163,7 +163,7 @@ class WebV1AdminCustomerDetailOnDatabaseTest {
             environment { config = MapApplicationConfig() }
             application {
                 configureHttp(trustedProxyHops = 0)
-                configureAuthentication(panel.accessTokens)
+                configureAuthentication(panel.accessTokens, panel.accountCheck)
                 routing { route(API_V1) { webV1AdminCustomers(useCases) } }
             }
             repeat(10) { round ->

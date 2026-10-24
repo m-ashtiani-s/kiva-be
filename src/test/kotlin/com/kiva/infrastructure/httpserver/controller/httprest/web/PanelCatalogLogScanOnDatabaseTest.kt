@@ -87,7 +87,7 @@ class PanelCatalogLogScanOnDatabaseTest {
     @Test
     fun `an upload, a category, a product with its colors and stock, its edits and the change log leave nothing personal in the log`() {
         val manager = stack.caller(PanelTestStack.phone(77), Role.ADMIN, Role.CATALOG_MANAGER, name = "سپیده کاتالوگی")
-        val phone = manager.user.phone.value
+        val phone = manager.user.activePhone.value
         val categoryId = transaction(db) { CategoryRepositoryImpl().findBySlug(Slug.constructFromPersisted("shoulder"))!!.id.value }
         val materialId = transaction(db) { MaterialRepositoryImpl().findAll().first().id.value }
         var productId = ""

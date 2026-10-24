@@ -37,7 +37,7 @@ class AskedReturns(private val panel: PanelTestStack, private val clock: Mutable
     fun operator(): PanelTestStack.Caller = shippedOrders.operator()
 
     /** [who] with a session started now: one from before a jump of the clock is over. */
-    fun fresh(who: PanelTestStack.Caller): PanelTestStack.Caller = panel.caller(who.user.phone.value)
+    fun fresh(who: PanelTestStack.Caller): PanelTestStack.Caller = panel.caller(who.user.activePhone.value)
 
     /** An order of [who] of [variants] (one each), taken to DELIVERED by the panel: returnable for 7 days from now. */
     suspend fun ApplicationTestBuilder.delivered(who: PanelTestStack.Caller, vararg variants: Long): OrderCode {

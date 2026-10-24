@@ -152,7 +152,7 @@ class WebV1CartOnDatabaseTest {
         environment { config = MapApplicationConfig() }
         application {
             configureHttp(listOf(ORIGIN))
-            configureAuthentication(stack.accessTokens)
+            configureAuthentication(stack.accessTokens, stack.accountCheck)
             routing {
                 route(API_V1) {
                     webV1Auth(stack.authUseCases, listOf(ORIGIN), testMediaUrls)

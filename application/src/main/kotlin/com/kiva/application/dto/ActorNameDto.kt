@@ -16,17 +16,17 @@ sealed interface ActorNameDto {
         override fun toString() = "Person(***)"
     }
 
-    /** An account removed since: a user id nobody has any more. */
+    /** An account removed or deleted since: a user id nobody has any more. */
     data object Unknown : ActorNameDto
 
     companion object {
         /** @param user the account of [id], or null when there is none (any more). */
         fun of(id: UserId, user: User?): ActorNameDto = when {
             id == UserId.SYSTEM -> System
-            user == null -> Unknown
+            user == null || user.isDeleted -> Unknown
             else -> Person(
                 fullName = listOfNotNull(user.firstName?.value, user.lastName?.value).joinToString(" ").ifEmpty { null },
-                maskedPhone = user.phone.masked(),
+                maskedPhone = user.activePhone.masked(),
             )
         }
     }

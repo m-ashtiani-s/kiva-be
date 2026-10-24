@@ -69,6 +69,8 @@ class ListDailyShipmentsUc(
                 val from = day.atStartOfDay(ShopCalendar.ZONE).toInstant()
                 val until = day.plusDays(1).atStartOfDay(ShopCalendar.ZONE).toInstant()
                 orderQmRepository.findInDailyList(from, until)
+                    // A deleted account's parcel has no recipient to mask: it leaves the list (roadmap phase 14).
+                    .filterNot { it.address.isErased }
                     .groupBy { it.shipment!!.trackingCode }
                     .values
                     .map { orders -> parcelOf(orders, settings) }
@@ -84,8 +86,8 @@ class ListDailyShipmentsUc(
         val first = orders.minBy { it.orderId.value }
         val parcel = first.shipment!!
         val method = settings.shippingMethods.firstOrNull { it.code == first.shippingMethod }
-        val name = first.address.recipientName.value
-        val phone = first.address.recipientPhone
+        val name = checkNotNull(first.address.recipientName).value
+        val phone = checkNotNull(first.address.recipientPhone)
         return DailyShipmentDto(
             id = first.orderId.value,
             recipientMasked = DailyShipmentMask.name(name),

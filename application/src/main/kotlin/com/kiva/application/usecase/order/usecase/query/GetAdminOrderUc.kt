@@ -67,7 +67,7 @@ class GetAdminOrderUc(
             customer = AdminOrderDto.Customer(
                 id = order.userId.value,
                 fullName = account?.let { listOfNotNull(it.firstName?.value, it.lastName?.value).joinToString(" ").ifEmpty { null } },
-                phone = account?.phone?.value ?: order.address.recipientPhone.value,
+                phone = account?.phone?.value ?: order.address.recipientPhone?.value,
                 ordersCount = orderQmRepository.purchasesOf(listOf(order.userId))[order.userId]?.ordersCount ?: 0,
             ),
             shipmentGroup = group?.let {

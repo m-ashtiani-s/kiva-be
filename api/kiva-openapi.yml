@@ -1876,7 +1876,7 @@ paths:
         کد را اول از `POST /me/deletion/request` بگیر (هدف `DELETE_ACCOUNT`؛ کد ورود این‌جا پذیرفته نمی‌شود و برعکس).
         ترتیب چک‌ها: شکل بدنه (`400`)؛ کارمند (هر نقش پنل) ← `422 STAFF_ACCOUNT_CANNOT_BE_DELETED` (اول ادمین نقش‌ها را بردارد)؛
         سفارش جاری ← `422 ACCOUNT_HAS_ACTIVE_ORDERS` با `meta.orderCodes`؛ **بعد** کد (پس کدی که به‌خاطر سفارش جاری رد شد مصرف نمی‌شود).
-        «سفارش جاری»: سفارشی در `PENDING_PAYMENT`، `RESERVED`، `PROCESSING`، `PHOTO_SENT`، `CHANGE_REQUESTED`، `SHIPPED`،
+        «سفارش جاری»: سفارشی در `PENDING_PAYMENT`، `PAYMENT_FAILED` (هنوز پرداخت‌شدنی)، `RESERVED`، `PROCESSING`، `PHOTO_SENT`، `CHANGE_REQUESTED`، `SHIPPED`،
         `RETURN_REQUESTED` یا `RETURNED`؛ یا سفارش با مانده‌ی پرداخت‌نشده؛ یا استرداد `PENDING`/`PROCESSING`.
 
         با حذف:
@@ -7325,7 +7325,7 @@ components:
           description: '`CHANGE_REQUESTED` فقط تا رسیدگی اپراتور؛ بعدش دوباره `WAITING` (عکس تازه)'
         channel: { $ref: '#/components/schemas/PhotoMessengerChannel' }
         channelName: { type: string, example: بله }
-        phone: { $ref: '#/components/schemas/PhoneNumber' }
+        phone: { type: string, nullable: true, allOf: [{ $ref: '#/components/schemas/PhoneNumber' }], description: '`null` فقط برای سفارش بی‌نام (حساب حذف‌شده؛ `username` و `note` هم `null`)' }
         username: { type: string, nullable: true, description: 'شناسه‌ی مشتری در همان پیام‌رسان، اگر در تسویه داده؛ اپراتور به آن می‌فرستد', example: '@sara_m' }
         note: { type: string, nullable: true, example: از داخل کیف هم عکس بگیرید }
         sentAt: { type: string, format: date-time, nullable: true }
@@ -8805,8 +8805,8 @@ components:
         code: { $ref: '#/components/schemas/OrderCode' }
         placedAt: { type: string, format: date-time }
         status: { $ref: '#/components/schemas/OrderStatus' }
-        customerName: { type: string, example: سارا محمدی }
-        customerPhone: { $ref: '#/components/schemas/PhoneNumber' }
+        customerName: { type: string, nullable: true, example: سارا محمدی, description: 'اسم حساب، وگرنه اسم گیرنده؛ `null` برای سفارش بی‌نام (حساب حذف‌شده)' }
+        customerPhone: { type: string, nullable: true, allOf: [{ $ref: '#/components/schemas/PhoneNumber' }], description: '`null` برای سفارش بی‌نام (حساب حذف‌شده)' }
         city: { type: string, example: تهران }
         itemsCount: { type: integer }
         payable: { $ref: '#/components/schemas/Money' }

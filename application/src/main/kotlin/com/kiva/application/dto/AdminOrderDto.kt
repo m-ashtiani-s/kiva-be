@@ -16,8 +16,8 @@ data class AdminOrderListDto(val page: Page<Item>, val statusCounts: Map<OrderSt
     /**
      * One row (AdminOrderListItem). Personal data: [toString] shows the code and status only.
      *
-     * @property customerName the account's name, otherwise the recipient's.
-     * @property customerPhone the account's phone.
+     * @property customerName the account's name, otherwise the recipient's; null for an erased order (its account deleted).
+     * @property customerPhone the account's phone; null for an erased order.
      * @property reservationExpiresAt the end of its reservation group while the group still holds.
      * @property shipmentGroupCode its reservation group's code (`SG-3021`), held or let go.
      * @property mediaCount the photos of the last batch sent, otherwise of the draft.
@@ -26,8 +26,8 @@ data class AdminOrderListDto(val page: Page<Item>, val statusCounts: Map<OrderSt
         val code: String,
         val placedOn: Instant,
         val status: OrderStatus,
-        val customerName: String,
-        val customerPhone: String,
+        val customerName: String?,
+        val customerPhone: String?,
         val city: String,
         val itemsCount: Int,
         val payable: Money,
@@ -64,7 +64,7 @@ data class AdminOrderDto(
      * @property fullName null when the customer gave none.
      * @property ordersCount their paid orders, cancelled ones included.
      */
-    data class Customer(val id: Long, val fullName: String?, val phone: String, val ordersCount: Int) {
+    data class Customer(val id: Long, val fullName: String?, val phone: String?, val ordersCount: Int) {
         override fun toString(): String = "Customer(id=$id)"
     }
 

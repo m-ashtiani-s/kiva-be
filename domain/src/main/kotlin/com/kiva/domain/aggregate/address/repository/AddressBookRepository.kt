@@ -15,4 +15,7 @@ interface AddressBookRepository {
 
     /** Writes what changed since [lockAndFind]: new addresses, changed ones and the ones removed. */
     fun save(book: AddressBook)
+
+    /** Removes every address of [userId], for deleting the account (roadmap phase 14, AccountEraser); how many went. */
+    fun deleteAllOf(userId: UserId): Int
 }

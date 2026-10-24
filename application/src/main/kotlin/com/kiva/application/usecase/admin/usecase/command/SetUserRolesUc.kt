@@ -77,7 +77,8 @@ class SetUserRolesUc(
                 logger.info("SetUserRolesUc: user ${command.actor.userId.value} is no longer an ADMIN")
                 return@inTransaction Result.failure(Failure.NoLongerAdmin)
             }
-            val user = userRepository.findById(customerId) ?: return@inTransaction Result.failure(Failure.NotFound)
+            // A deleted account is no customer any more (roadmap phase 14, decision 12): it gets no role.
+            val user = userRepository.findById(customerId)?.takeUnless { it.isDeleted } ?: return@inTransaction Result.failure(Failure.NotFound)
             val updated = user.setPanelRoles(roles, command.actor.userId)
                 .unwrapOr { return@inTransaction Result.failure(Failure.OwnRoles) }
             if (Role.ADMIN in user.roles && Role.ADMIN !in updated.roles && userRepository.countAdmins() <= 1) {

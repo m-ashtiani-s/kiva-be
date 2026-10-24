@@ -240,4 +240,23 @@ class WebV1AdminCustomersOnDatabaseTest {
         assertEquals("سارا محمدی", sara["fullName"]?.jsonPrimitive?.content)
         assertEquals(listOf("CUSTOMER"), sara.roles())
     }
+
+    @Test
+    fun `a deleted account is no customer - not in the list, not by its old phone, its page and its roles 404`() = stack.app {
+        account(phone(30), Role.ADMIN)
+        val admin = login(phone(30)).accessToken
+        val gone = account(phone(31), name = "سارا محمدی")
+        account(phone(32))
+        transaction(db) { users.save(users.findById(UserId.constructFromPersisted(gone))!!.erase(clock.now)) }
+
+        assertEquals(listOf(phone(32), phone(30)), customers(admin, q = "0990").phones())
+        val all = customers(admin, size = 100)
+        assertEquals(HttpStatusCode.OK, all.status, all.bodyAsText())
+        val everyone = all.json()["items"]?.jsonArray?.map { it.jsonObject["id"]?.jsonPrimitive?.content }.orEmpty()
+        assertTrue(gone.toString() !in everyone, "the whole list has the deleted account")
+        assertTrue(customers(admin, q = phone(31)).phones().isEmpty())
+        assertTrue(customers(admin, q = "سارا").phones().isEmpty())
+        assertEquals(HttpStatusCode.NotFound, client.get("$API_V1/admin/customers/$gone") { header(HttpHeaders.Authorization, "Bearer $admin") }.status)
+        assertEquals(HttpStatusCode.NotFound, setRoles(admin, gone, """{"roles":["OPERATOR"]}""").status)
+    }
 }

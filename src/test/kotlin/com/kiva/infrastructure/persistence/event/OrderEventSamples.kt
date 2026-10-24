@@ -34,6 +34,7 @@ import com.kiva.domain.aggregate.order.entity.event.OrderPhotosSent
 import com.kiva.domain.aggregate.order.entity.event.OrderPlaced
 import com.kiva.domain.aggregate.order.entity.event.OrderRefunded
 import com.kiva.domain.aggregate.order.entity.event.OrderReleasedFromReservation
+import com.kiva.domain.aggregate.order.entity.event.OrderPersonalDataErased
 import com.kiva.domain.aggregate.order.entity.event.OrderReturnEnded
 import com.kiva.domain.aggregate.order.entity.event.OrderReturnReceived
 import com.kiva.domain.aggregate.order.entity.event.OrderReturnRequested
@@ -44,6 +45,7 @@ import com.kiva.domain.aggregate.order.model.valueobject.CancelReason
 import com.kiva.domain.aggregate.order.model.valueobject.CancelledBy
 import com.kiva.domain.aggregate.order.model.valueobject.ChangeType
 import com.kiva.domain.aggregate.order.model.valueobject.CustomerNote
+import com.kiva.domain.aggregate.order.model.valueobject.ErasureReason
 import com.kiva.domain.aggregate.order.model.valueobject.GiftNote
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
 import com.kiva.domain.aggregate.order.model.valueobject.OrderId
@@ -241,10 +243,13 @@ object OrderEventSamples {
 
     val orderReturnEnded = OrderReturnEnded(order, sequence(13), at, operator, rt1012, ReturnOutcome.REFUNDED, id = eventId(32))
 
+    /** Sara deletes her account: the order stays, without her name, phone or address (phase 14). */
+    val orderPersonalDataErased = OrderPersonalDataErased(order, sequence(14), at, sara, ErasureReason.ACCOUNT_DELETED, id = eventId(40))
+
     val onePerKind: List<OrderDomainEvent> = listOf(
         orderPlaced, orderPaymentFailed, orderPaid, orderExpired, orderReleasedFromReservation, orderPhotosAttached, orderPhotosSent, orderPhotosApproved,
         orderShipped, orderShipmentCorrected, orderDelivered, orderCancelled, orderRefunded, orderChangeRequested, orderChangeRejected, orderLineReplaced,
-        orderLineRemoved, orderChangeApplied, orderBalancePaid, orderReturnRequested, orderReturnReceived, orderReturnEnded,
+        orderLineRemoved, orderChangeApplied, orderBalancePaid, orderReturnRequested, orderReturnReceived, orderReturnEnded, orderPersonalDataErased,
     )
 
     /** A new address that wasn't saved, without plaque or unit; no messenger handle or note; no customer note or gift; nothing to pay. */

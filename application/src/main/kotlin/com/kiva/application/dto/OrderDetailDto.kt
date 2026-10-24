@@ -61,16 +61,19 @@ data class OrderDetailDto(
 
     data class Color(val key: String, val name: String, val hex: String, val isLight: Boolean, val sortOrder: Int)
 
-    /** Where it goes, as it was when placed. Personal data: [toString] shows none of it. */
+    /**
+     * Where it goes, as it was when placed. Personal data: [toString] shows none of it. Of an erased order (its account
+     * deleted, roadmap phase 14) only the province and the city are left.
+     */
     data class Address(
         val provinceName: String,
         val cityName: String,
-        val addressLine: String,
+        val addressLine: String?,
         val plaque: String?,
         val unit: String?,
-        val postalCode: String,
-        val recipientName: String,
-        val recipientPhone: String,
+        val postalCode: String?,
+        val recipientName: String?,
+        val recipientPhone: String?,
     ) {
         override fun toString(): String = "Address(****)"
     }
@@ -91,8 +94,11 @@ data class OrderDetailDto(
         val cardMask: String?,
     )
 
-    /** Where the photos before shipping go; [username] is the customer's handle there. Personal data: [toString] shows the channel only. */
-    data class Messenger(val channel: MessengerChannel, val phone: String, val username: String?, val note: String?) {
+    /**
+     * Where the photos before shipping go; [username] is the customer's handle there. Personal data: [toString] shows the
+     * channel only. Of an erased order only the channel is left.
+     */
+    data class Messenger(val channel: MessengerChannel, val phone: String?, val username: String?, val note: String?) {
         override fun toString(): String = "Messenger(channel=$channel)"
     }
 

@@ -229,7 +229,7 @@ class WebV1AdminPagesOnDatabaseTest {
             environment { config = MapApplicationConfig() }
             application {
                 configureHttp(trustedProxyHops = 0)
-                configureAuthentication(panel.accessTokens)
+                configureAuthentication(panel.accessTokens, panel.accountCheck)
                 routing { route(API_V1) { webV1AdminContent(useCases, PanelTestStack.SITE_URL) } }
             }
             repeat(10) { round ->

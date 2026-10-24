@@ -113,7 +113,7 @@ class ReturnsMigrationTest {
 
     @Test
     fun `a return's refund needs its source, and a RETURN refund its return`() {
-        val withoutSource = assertFailsWith<ExposedSQLException> { insertRefund("MANUAL", 12) }
+        val withoutSource = assertFailsWith<ExposedSQLException> { insertRefund("MANUAL", NO_SUCH_RETURN) }
         val withoutReturn = assertFailsWith<ExposedSQLException> { insertRefund("RETURN", null) }
 
         listOf(withoutSource, withoutReturn).forEach { assertEquals("refund_return_source_check", (it.cause as? PSQLException)?.serverErrorMessage?.constraint) }
@@ -121,11 +121,16 @@ class ReturnsMigrationTest {
 
     @Test
     fun `one refund of a return that isn't FAILED at a time - after a FAILED one another goes in`() {
-        insertRefund("RETURN", 12, status = "FAILED")
-        insertRefund("RETURN", 12)
+        insertRefund("RETURN", NO_SUCH_RETURN, status = "FAILED")
+        insertRefund("RETURN", NO_SUCH_RETURN)
 
-        val refused = assertFailsWith<ExposedSQLException> { insertRefund("RETURN", 12) }
+        val refused = assertFailsWith<ExposedSQLException> { insertRefund("RETURN", NO_SUCH_RETURN) }
 
         assertEquals("refund_one_live_per_return_idx", (refused.cause as? PSQLException)?.serverErrorMessage?.constraint)
+    }
+
+    private companion object {
+        /** A return id no real return of another test takes (they come from the sequence): refund_tbl has no foreign key. */
+        const val NO_SUCH_RETURN = 990_012L
     }
 }

@@ -197,6 +197,12 @@ class OrderQmRepositoryImpl : OrderQmRepository {
             .orderBy(OrderQmTbl.shippedOn to SortOrder.DESC, OrderQmTbl.orderId to SortOrder.ASC)
             .map { it.toOrderQm() }
 
+    override fun findAllOfCustomer(userId: UserId): List<OrderQm> =
+        OrderQmTbl.selectAll()
+            .where { OrderQmTbl.userId eq userId.value }
+            .orderBy(OrderQmTbl.orderId to SortOrder.ASC)
+            .map { it.toOrderQm() }
+
     override fun findDeliveredOfCustomer(userId: UserId): List<OrderQm> =
         OrderQmTbl.selectAll()
             .where { (OrderQmTbl.userId eq userId.value) and OrderQmTbl.deliveredOn.isNotNull() and (OrderQmTbl.status neq OrderStatus.CANCELLED) }

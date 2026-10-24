@@ -39,6 +39,20 @@ class UserRepositoryImpl : UserRepository {
             .singleOrNull()
             ?.toUser()
 
+    override fun lockAndFind(id: UserId): User? =
+        UserTbl.selectAll()
+            .where { UserTbl.id eq id.value }
+            .forUpdate()
+            .singleOrNull()
+            ?.toUser()
+
+    override fun isDeleted(id: UserId): Boolean? =
+        UserTbl.select(UserTbl.deletedOn)
+            .where { UserTbl.id eq id.value }
+            .singleOrNull()
+            ?.let { it[UserTbl.deletedOn] != null }
+
+    /** A deleted account has no phone, so it is never found by one. */
     override fun findByPhone(phone: IranianMobileNumber): User? =
         UserTbl.selectAll()
             .where { UserTbl.phone eq phone.value }
@@ -80,7 +94,7 @@ class UserRepositoryImpl : UserRepository {
             }
         } catch (e: ExposedSQLException) {
             val refusal = (e.cause as? PSQLException)?.serverErrorMessage
-            if (refusal?.constraint == UserTbl.PHONE_KEY) throw PhoneTakenException(user.phone, e)
+            if (refusal?.constraint == UserTbl.PHONE_KEY) throw PhoneTakenException(user.activePhone, e)
             throw e
         }
         if (updated == 0) throw ConcurrentChangeException(AGGREGATE_NAME, EventAggregateId.of(user.id.value))
@@ -102,7 +116,7 @@ class UserRepositoryImpl : UserRepository {
 
     /** Everything a user can change after registering; the id and createdOn never change. */
     private fun UpdateBuilder<*>.writeChangeable(user: User) {
-        this[UserTbl.phone] = user.phone.value
+        this[UserTbl.phone] = user.phone?.value
         this[UserTbl.firstName] = user.firstName?.value
         this[UserTbl.lastName] = user.lastName?.value
         this[UserTbl.email] = user.email?.value
@@ -112,6 +126,7 @@ class UserRepositoryImpl : UserRepository {
         this[UserTbl.defaultMessengerPhone] = user.defaultMessengerPhone?.value
         this[UserTbl.marketingSmsOptIn] = user.marketingSmsOptIn
         this[UserTbl.roles] = user.roles.values.map { it.name }
+        this[UserTbl.deletedOn] = user.deletedOn?.atOffset(ZoneOffset.UTC)
     }
 
     private fun nextId(): UserId =
@@ -133,7 +148,7 @@ class UserRepositoryImpl : UserRepository {
 internal fun ResultRow.toUser(): User =
     User.constructFromPersisted(
         id = UserId.constructFromPersisted(this[UserTbl.id].value),
-        phone = IranianMobileNumber.constructFromPersisted(this[UserTbl.phone]),
+        phone = this[UserTbl.phone]?.let(IranianMobileNumber::constructFromPersisted),
         firstName = this[UserTbl.firstName]?.let(PersonName::constructFromPersisted),
         lastName = this[UserTbl.lastName]?.let(PersonName::constructFromPersisted),
         email = this[UserTbl.email]?.let(Email::constructFromPersisted),
@@ -145,4 +160,5 @@ internal fun ResultRow.toUser(): User =
         roles = Roles.constructFromPersisted(this[UserTbl.roles].map(Role::valueOf)),
         createdOn = this[UserTbl.createdOn].toInstant(),
         version = this[UserTbl.version],
+        deletedOn = this[UserTbl.deletedOn]?.toInstant(),
     )

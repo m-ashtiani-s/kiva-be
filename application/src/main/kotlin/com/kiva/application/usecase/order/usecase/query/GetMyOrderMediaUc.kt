@@ -38,7 +38,7 @@ class GetMyOrderMediaUc(
         return transactionManager.inTransaction {
             val order = orderByCode.findOfCustomer(query.userId, query.orderCode) ?: return@inTransaction Result.failure(Failure.OrderNotFound)
             val photos = PreShipmentMediaDto.of(order, orderDetails.mediaOf(listOf(order.copy(photoDraft = emptyList()))))
-            Result.success(MyOrderMedia(photos.copy(draft = emptyList()), order.messenger.let { OrderDetailDto.Messenger(it.channel, it.phone.value, it.username, it.note) }))
+            Result.success(MyOrderMedia(photos.copy(draft = emptyList()), order.messenger.let { OrderDetailDto.Messenger(it.channel, it.phone?.value, it.username, it.note) }))
         }
     }
 

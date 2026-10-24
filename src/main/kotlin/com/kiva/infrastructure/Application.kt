@@ -1,9 +1,11 @@
 package com.kiva.infrastructure
 
+import com.kiva.application.usecase.account.usecase.query.CheckAccountLiveUc
 import com.kiva.application.usecase.auth.usecase.command.BootstrapAdminUc
 import com.kiva.infrastructure.auth.JwtAccessTokens
 import com.kiva.infrastructure.config.AppConfig
 import com.kiva.infrastructure.di.appModules
+import com.kiva.infrastructure.httpserver.auth.asAccountCheck
 import com.kiva.infrastructure.httpserver.auth.configureAuthentication
 import com.kiva.infrastructure.httpserver.configureHttp
 import com.kiva.infrastructure.httpserver.configureRouting
@@ -56,7 +58,7 @@ fun Application.start() {
     config.auth.bootstrapAdminPhone?.let { phone -> runBlocking { get<BootstrapAdminUc>().execute(BootstrapAdminUc.Cmd(phone)) } }
 
     configureHttp(config.http.allowedOrigins, config.http.trustedProxyHops)
-    configureAuthentication(get<JwtAccessTokens>())
+    configureAuthentication(get<JwtAccessTokens>(), get<CheckAccountLiveUc>().asAccountCheck())
     configureRouting()
 
     if (config.jobs.enabled) {

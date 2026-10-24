@@ -38,10 +38,11 @@ class AdminCustomerRepositoryImpl : AdminCustomerRepository {
 
     /**
      * The phone exactly, or every word somewhere in the phone or a name. A `%` or `_` typed is taken as itself. Names are
-     * stored normalized, and the words come normalized the same way, so «علي» finds «علی».
+     * stored normalized, and the words come normalized the same way, so «علي» finds «علی». Never a deleted account.
      */
     private fun conditionOf(search: CustomerSearch): Op<Boolean> {
         val conditions = buildList<Op<Boolean>> {
+            add(UserTbl.notDeleted())
             search.phone?.let { add(UserTbl.phone eq it.value) }
             search.role?.let { add(UserTbl.hasRole(it)) }
             search.words.forEach { word ->
@@ -49,7 +50,7 @@ class AdminCustomerRepositoryImpl : AdminCustomerRepository {
                 add((UserTbl.phone like pattern) or (UserTbl.firstName.lowerCase() like pattern) or (UserTbl.lastName.lowerCase() like pattern))
             }
         }
-        return conditions.reduceOrNull { all, next -> all and next } ?: Op.TRUE
+        return conditions.reduce { all, next -> all and next }
     }
 
     private fun containing(word: String): LikePattern = LikePattern("%", ESCAPE) + LikePattern.ofLiteral(word, ESCAPE) + "%"

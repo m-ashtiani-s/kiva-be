@@ -33,6 +33,9 @@ interface IdempotencyStore {
     /** Forgets the keys recorded before [before]; a request repeated after that runs again. Returns how many went. */
     fun deleteRecordedBefore(before: Instant): Int
 
+    /** Forgets every key of [userId], for deleting the account (roadmap phase 14, AccountEraser); how many went. */
+    fun deleteAllOf(userId: UserId): Int
+
     companion object {
         /** How long a key is kept (contract): a repeat after this is a new request. */
         val KEPT_FOR: Duration = Duration.ofHours(24)

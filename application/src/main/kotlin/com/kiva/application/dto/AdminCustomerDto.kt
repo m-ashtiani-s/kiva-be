@@ -26,9 +26,10 @@ data class AdminCustomerDto(
     val createdOn: Instant,
 ) {
     companion object {
+        /** [user] is a live account: the panel never lists a deleted one (roadmap phase 14, decision 12). */
         fun from(user: User, purchases: OrderQmRepository.Purchases?) = AdminCustomerDto(
             id = user.id.value,
-            phone = user.phone.value,
+            phone = user.activePhone.value,
             fullName = listOfNotNull(user.firstName?.value, user.lastName?.value).joinToString(" ").ifEmpty { null },
             email = user.email?.value,
             ordersCount = purchases?.ordersCount ?: 0,

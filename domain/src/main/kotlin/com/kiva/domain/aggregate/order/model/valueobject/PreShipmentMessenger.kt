@@ -12,18 +12,21 @@ import com.kiva.domain.aggregate.user.model.valueobject.MessengerChannel
  * kiva's signature step. Required to place an order; a missing channel or a wrong number is the use case's 422
  * (MESSENGER_REQUIRED, MESSENGER_PHONE_INVALID), so they arrive here already typed. Only the free texts are checked here.
  *
- * Personal data: [toString] shows the channel only.
+ * Personal data: [toString] shows the channel only. When its customer deletes their account it is [erased]: the
+ * channel stays (the panel's reports count it), the number and the texts go (roadmap phase 14, decision 2).
  *
+ * @property phone the number on that messenger; null only once [erased].
  * @property username the handle on that messenger («@sara_m»), optional ([OptionalText]).
  * @property note «توضیح برای عکس», optional ([OptionalText]).
  */
 class PreShipmentMessenger private constructor(
     val channel: MessengerChannel,
-    val phone: IranianMobileNumber,
+    val phone: IranianMobileNumber?,
     val username: String?,
     val note: String?,
 ) {
     init {
+        require(phone != null || (username == null && note == null)) { "An erased messenger keeps no texts" }
         require(username == null || OptionalText.isValid(username, USERNAME_MAX_LENGTH)) { "Invalid messenger username of length ${username?.length}" }
         require(note == null || OptionalText.isValid(note, NOTE_MAX_LENGTH)) { "Invalid messenger note of length ${note?.length}" }
     }
@@ -34,6 +37,12 @@ class PreShipmentMessenger private constructor(
     override fun hashCode(): Int = listOf(channel, phone, username, note).hashCode()
 
     override fun toString(): String = "PreShipmentMessenger(channel=$channel)"
+
+    /** Erased with its customer's account (decision 2 of phase 14). */
+    val isErased: Boolean get() = phone == null
+
+    /** The channel alone; erasing it again changes nothing. */
+    fun erased(): PreShipmentMessenger = PreShipmentMessenger(channel, null, null, null)
 
     companion object {
         /** From the contract's PlaceOrderRequest.preShipmentMessenger. */
@@ -65,8 +74,8 @@ class PreShipmentMessenger private constructor(
             return if (problems.isEmpty()) Result.success(checkedUsername to checkedNote) else Result.failure(Invalid(problems))
         }
 
-        /** For values read back from storage. Still checked by `init`. */
-        fun constructFromPersisted(channel: MessengerChannel, phone: IranianMobileNumber, username: String?, note: String?): PreShipmentMessenger =
+        /** For values read back from storage (an erased one without its [phone]). Still checked by `init`. */
+        fun constructFromPersisted(channel: MessengerChannel, phone: IranianMobileNumber?, username: String?, note: String?): PreShipmentMessenger =
             PreShipmentMessenger(channel, phone, username, note)
     }
 

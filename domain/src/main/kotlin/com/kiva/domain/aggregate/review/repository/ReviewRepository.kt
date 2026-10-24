@@ -65,6 +65,13 @@ interface ReviewRepository {
      * Throws ConcurrentChangeException when someone saved it in the meantime, UniqueTakenException when it went live
      * again while another of its author and product is.
      */
+    /**
+     * Makes every review of [userId] anonymous, for deleting the account (roadmap phase 14, AccountEraser): no author name
+     * («کاربر کیوا» is shown) and no contact. The text, the rating and the photos stay, and the review stays where it
+     * is (approved ones on the product's page). How many there were.
+     */
+    fun anonymizeAllOf(userId: UserId): Int
+
     fun save(review: Review)
 
     /** The public list's filters: [rating] stars only, only with photos, only by verified buyers. */

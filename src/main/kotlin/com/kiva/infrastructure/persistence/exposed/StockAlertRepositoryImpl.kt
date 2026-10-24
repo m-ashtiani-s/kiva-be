@@ -169,6 +169,8 @@ class StockAlertRepositoryImpl : StockAlertRepository {
         return Page(rows, pageable.page, pageable.size, total)
     }
 
+    override fun deleteAllOf(userId: UserId): Int = StockAlertTbl.deleteWhere { StockAlertTbl.userId eq userId.value }
+
     override fun deleteEndedBefore(before: Instant): Int = StockAlertTbl.deleteWhere {
         val at = before.utc()
         ((StockAlertTbl.status eq StockAlertStatus.NOTIFIED) and (StockAlertTbl.notifiedOn less at)) or

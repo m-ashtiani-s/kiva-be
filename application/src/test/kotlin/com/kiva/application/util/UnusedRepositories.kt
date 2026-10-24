@@ -99,6 +99,8 @@ abstract class UnusedMaterialRepository : MaterialRepository {
 /** [UserRepository] where every call fails until a test overrides it. */
 abstract class UnusedUserRepository : UserRepository {
     override fun findById(id: UserId): User? = unused()
+    override fun lockAndFind(id: UserId): User? = unused()
+    override fun isDeleted(id: UserId): Boolean? = unused()
     override fun findByPhone(phone: IranianMobileNumber): User? = unused()
     override fun findOrRegister(phone: IranianMobileNumber, now: Instant): FoundOrRegistered = unused()
     override fun save(user: User): Unit = unused()

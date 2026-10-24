@@ -96,6 +96,12 @@ interface OrderQmRepository {
      */
     fun findInDailyList(from: Instant, until: Instant): List<OrderQm>
 
+    /**
+     * Every order of the customer, in any status, the oldest first: what deleting their account looks at and makes
+     * anonymous (roadmap phase 14). A customer has a handful, so no page.
+     */
+    fun findAllOfCustomer(userId: UserId): List<OrderQm>
+
     /** The customer's delivered orders that weren't cancelled since, the latest delivered first: what a review may be linked to. */
     fun findDeliveredOfCustomer(userId: UserId): List<OrderQm>
 

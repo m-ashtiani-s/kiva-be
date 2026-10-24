@@ -143,7 +143,7 @@ class WebV1AdminStockAlertsOnDatabaseTest {
 
         assertEquals(HttpStatusCode.OK, response.status, response.bodyAsText())
         val raw = response.bodyAsText()
-        people.forEach { assertFalse(raw.contains(it.user.phone.value) || raw.contains(it.user.phone.masked()), "a subscriber's phone in the queue") }
+        people.forEach { assertFalse(raw.contains(it.user.activePhone.value) || raw.contains(it.user.activePhone.masked()), "a subscriber's phone in the queue") }
         val body = response.json()
         val items = body.getValue("items").jsonArray.map { it.jsonObject }
         assertEquals(ContractSchemas.propertiesOf("AdminStockAlertGroup"), items.first().keys)

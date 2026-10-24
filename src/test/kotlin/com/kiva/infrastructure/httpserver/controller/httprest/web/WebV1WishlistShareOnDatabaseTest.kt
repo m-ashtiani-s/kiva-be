@@ -141,7 +141,7 @@ class WebV1WishlistShareOnDatabaseTest {
         assertEquals(listOf(nila.toString()), items.map { it.text("id") })
         assertEquals(JsonNull, items.single()["isWishlisted"])
         val text = answer.bodyAsText()
-        assertTrue(named.user.phone.value !in text && named.user.phone.value.drop(1) !in text, "no phone in the answer")
+        assertTrue(named.user.activePhone.value !in text && named.user.activePhone.value.drop(1) !in text, "no phone in the answer")
         assertTrue("محمدی" !in text, "no last name")
         transaction(db) { ProductQmTbl.update({ ProductQmTbl.productId eq mahak }) { it[status] = ProductStatus.ACTIVE } }
 

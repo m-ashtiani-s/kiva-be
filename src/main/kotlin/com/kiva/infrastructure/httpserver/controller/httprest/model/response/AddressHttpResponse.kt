@@ -63,9 +63,10 @@ data class LocationHttpResponse(val lat: Double, val lng: Double) {
 object AddressTexts {
     /**
      * «تهران، تهران، خیابان ولیعصر، کوچه نسترن، پلاک ۱۲، واحد ۴»: the plaque and unit only when given, with Persian
-     * digits like every text made for display. The address line is shown exactly as the customer wrote it.
+     * digits like every text made for display. The address line is shown exactly as the customer wrote it. An erased
+     * order's address (no line) is «استان، شهر» only.
      */
-    fun fullText(provinceName: String, cityName: String, addressLine: String, plaque: String?, unit: String?): String =
+    fun fullText(provinceName: String, cityName: String, addressLine: String?, plaque: String?, unit: String?): String =
         listOfNotNull(
             provinceName,
             cityName,

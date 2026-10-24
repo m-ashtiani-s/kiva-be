@@ -71,13 +71,13 @@ class OrderDetails(
             },
             address = order.address.let {
                 OrderDetailDto.Address(
-                    it.provinceName, it.cityName, it.line.value, it.plaque?.value, it.unit?.value, it.postalCode.value, it.recipientName.value,
-                    it.recipientPhone.value,
+                    it.provinceName, it.cityName, it.line?.value, it.plaque?.value, it.unit?.value, it.postalCode?.value, it.recipientName?.value,
+                    it.recipientPhone?.value,
                 )
             },
             totals = order.totalsView,
             payment = latest?.let { paymentOf(it, settings) },
-            messenger = order.messenger.let { OrderDetailDto.Messenger(it.channel, it.phone.value, it.username, it.note) },
+            messenger = order.messenger.let { OrderDetailDto.Messenger(it.channel, it.phone?.value, it.username, it.note) },
             photos = PreShipmentMediaDto.of(order, media),
             timeline = order.timeline.map { OrderDetailDto.TimelineEntry(it.kind, it.status, it.at, it.failureReason, it.note, it.amount) },
             customerNote = order.customerNote?.value,

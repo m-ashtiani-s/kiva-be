@@ -63,6 +63,7 @@ import com.kiva.domain.aggregate.reservation.repository.ReservationGroupIdGenera
 import com.kiva.domain.aggregate.reservation.repository.ReservationGroupRepository
 import com.kiva.domain.aggregate.session.repository.AuthSessionRepository
 import com.kiva.domain.aggregate.settings.repository.ShopSettingsRepository
+import com.kiva.domain.aggregate.user.repository.AccountDeletionReasonRepository
 import com.kiva.domain.aggregate.user.repository.UserRepository
 import com.kiva.infrastructure.cart.RandomCartIds
 import com.kiva.infrastructure.media.RandomMediaIds
@@ -119,6 +120,7 @@ import com.kiva.infrastructure.persistence.exposed.SecurityEventLogImpl
 import com.kiva.infrastructure.persistence.exposed.ShopSettingsRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.SiteContentRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.StaticPageRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.AccountDeletionReasonRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.UserRepositoryImpl
 import org.koin.dsl.module
 
@@ -138,6 +140,7 @@ val daoModule = module(createdAtStart = true) {
     single<ProductQmRepository> { ProductQmRepositoryImpl() }
     single<InventoryAdjustmentQmRepository> { InventoryAdjustmentQmRepositoryImpl() }
     single<UserRepository> { UserRepositoryImpl() }
+    single<AccountDeletionReasonRepository> { AccountDeletionReasonRepositoryImpl() }
     single<OtpChallengeRepository> { OtpChallengeRepositoryImpl() }
     single<AuthSessionRepository> { AuthSessionRepositoryImpl() }
     single<SecurityEventLog> { SecurityEventLogImpl() }

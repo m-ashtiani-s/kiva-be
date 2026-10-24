@@ -29,8 +29,8 @@ data class AdminOrderListItemHttpResponse(
     val code: String,
     val placedAt: String,
     val status: String,
-    val customerName: String,
-    val customerPhone: String,
+    val customerName: String?,
+    val customerPhone: String?,
     val city: String,
     val itemsCount: Int,
     val payable: Long,
@@ -152,7 +152,7 @@ data class AdminOrderHttpResponse(
 
 /** The order's customer (`AdminOrder.customer`). Personal data: [toString] shows the id only. */
 @Serializable
-data class AdminOrderCustomerHttpResponse(val id: Long, val fullName: String?, val phone: String, val ordersCount: Int) {
+data class AdminOrderCustomerHttpResponse(val id: Long, val fullName: String?, val phone: String?, val ordersCount: Int) {
     override fun toString(): String = "AdminOrderCustomerHttpResponse(id=$id)"
 }
 

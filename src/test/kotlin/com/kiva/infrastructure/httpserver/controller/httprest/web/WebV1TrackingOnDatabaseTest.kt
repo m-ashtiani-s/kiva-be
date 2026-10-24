@@ -107,16 +107,16 @@ class WebV1TrackingOnDatabaseTest {
         assertEquals(1, body["preShipmentMedia"]!!.jsonObject["preview"]!!.jsonArray.size)
         assertNotNull(body.text("loginHint"))
         listOf("address", "payable", "totals", "items", "recipient").forEach { assertFalse("\"$it\"" in raw, "$it in $raw") }
-        listOf("رضا", "کریمی", "خیابان ولیعصر", PaidOrders.Destination.ISFAHAN.recipientPhone, sara.user.phone.value).forEach { assertFalse(it in raw, "$it in $raw") }
+        listOf("رضا", "کریمی", "خیابان ولیعصر", PaidOrders.Destination.ISFAHAN.recipientPhone, sara.user.activePhone.value).forEach { assertFalse(it in raw, "$it in $raw") }
 
-        assertEquals(HttpStatusCode.OK, lookup(code.value, sara.user.phone.value).status, "the buyer's phone")
-        assertEquals(HttpStatusCode.OK, lookup(code.value.removePrefix("KV-"), sara.user.phone.value).status, "digits only")
+        assertEquals(HttpStatusCode.OK, lookup(code.value, sara.user.activePhone.value).status, "the buyer's phone")
+        assertEquals(HttpStatusCode.OK, lookup(code.value.removePrefix("KV-"), sara.user.activePhone.value).status, "digits only")
         val persian = code.value.lowercase().map { if (it in '0'..'9') '۰' + (it - '0') else it }.joinToString("")
-        assertEquals(HttpStatusCode.OK, lookup(persian, sara.user.phone.value).status, "kv- and Persian digits")
+        assertEquals(HttpStatusCode.OK, lookup(persian, sara.user.activePhone.value).status, "kv- and Persian digits")
 
         val otherPhone = lookup(code.value, "09350000000")
-        val notPaid = lookup(unpaid.value, sara.user.phone.value)
-        val malformed = lookup("KV-12", sara.user.phone.value)
+        val notPaid = lookup(unpaid.value, sara.user.activePhone.value)
+        val malformed = lookup("KV-12", sara.user.activePhone.value)
         assertEquals(listOf(HttpStatusCode.NotFound, HttpStatusCode.NotFound, HttpStatusCode.NotFound), listOf(otherPhone.status, notPaid.status, malformed.status))
         assertEquals("TRACKING_NOT_FOUND", otherPhone.json().text("code"))
         assertEquals(otherPhone.withoutTrace(), notPaid.withoutTrace())

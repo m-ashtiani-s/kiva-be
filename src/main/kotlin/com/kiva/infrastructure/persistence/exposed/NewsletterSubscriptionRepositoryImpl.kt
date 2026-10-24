@@ -63,6 +63,8 @@ class NewsletterSubscriptionRepositoryImpl : NewsletterSubscriptionRepository {
             .paginate(pageable, NEWEST_FIRST, tiebreaker = NewsletterSubscriptionTbl.id, tiebreakerOrder = SortOrder.DESC) { it.toSubscription() }
     }
 
+    override fun delete(email: Email): Boolean = NewsletterSubscriptionTbl.deleteWhere { NewsletterSubscriptionTbl.email eq email.value } > 0
+
     override fun deleteUnsubscribedBefore(before: Instant): Int =
         NewsletterSubscriptionTbl.deleteWhere {
             (NewsletterSubscriptionTbl.status eq SubscriptionStatus.UNSUBSCRIBED) and (NewsletterSubscriptionTbl.unsubscribedAt less before.utc())

@@ -117,7 +117,7 @@ class WebV1StockAlertsOnDatabaseTest {
         assertEquals(HttpStatusCode.Created, made.status, made.bodyAsText())
         val alert = made.json()
         assertEquals(ContractSchemas.propertiesOf("StockAlert"), alert.keys)
-        assertEquals(listOf("ACTIVE", "SMS", sara.user.phone.masked(), bag.variant("lilac").toString(), "lilac", "هر وقت موجود شد، بهت پیامک می‌دیم"),
+        assertEquals(listOf("ACTIVE", "SMS", sara.user.activePhone.masked(), bag.variant("lilac").toString(), "lilac", "هر وقت موجود شد، بهت پیامک می‌دیم"),
             listOf(alert.text("status"), alert.text("channel"), alert.text("phoneMasked"), alert.text("variantId"), alert.getValue("color").jsonObject.text("key"), alert.text("message")))
         assertEquals(HttpStatusCode.Conflict, subscribe(bag, sara, bag.variant("lilac")).status)
         val inStock = subscribe(bag, sara, bag.variant("black"))

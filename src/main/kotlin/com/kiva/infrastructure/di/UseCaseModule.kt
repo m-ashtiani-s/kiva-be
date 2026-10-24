@@ -58,8 +58,13 @@ import com.kiva.application.usecase.wishlist.usecase.query.GetSharedWishlistUc
 import com.kiva.application.usecase.wishlist.usecase.command.RevokeWishlistShareUc
 import com.kiva.application.usecase.wishlist.usecase.command.ShareMyWishlistUc
 import com.kiva.application.usecase.account.usecase.command.ConfirmPhoneChangeUc
+import com.kiva.application.usecase.account.usecase.command.DeleteMyAccountUc
+import com.kiva.application.usecase.account.usecase.command.RequestAccountDeletionUc
 import com.kiva.application.usecase.account.usecase.command.RequestPhoneChangeUc
 import com.kiva.application.usecase.account.usecase.command.UpdateMyProfileUc
+import com.kiva.application.usecase.account.AccountEraser
+import com.kiva.application.usecase.account.ActiveOrdersCheck
+import com.kiva.application.usecase.account.usecase.query.CheckAccountLiveUc
 import com.kiva.application.usecase.account.usecase.query.GetMeUc
 import com.kiva.application.usecase.address.usecase.command.AddAddressUc
 import com.kiva.application.usecase.address.usecase.command.DeleteAddressUc
@@ -591,6 +596,52 @@ val useCaseModule = module(createdAtStart = true) {
 
     // --- account ---
     single { GetMeUc(transactionManager = get(), userRepository = get()) }
+    single { CheckAccountLiveUc(transactionManager = get(), userRepository = get()) }
+    // Deleting the account (phase 14): what an active order is, and what goes with the account.
+    single { ActiveOrdersCheck(orderQmRepository = get(), refundRepository = get()) }
+    single {
+        AccountEraser(
+            addressBookRepository = get(),
+            cartRepository = get(),
+            wishlistRepository = get(),
+            wishlistShareRepository = get(),
+            stockAlertRepository = get(),
+            idempotencyStore = get(),
+            contactMessageRepository = get(),
+            newsletterSubscriptionRepository = get(),
+            reviewRepository = get(),
+        )
+    }
+    single {
+        RequestAccountDeletionUc(
+            transactionManager = get(),
+            userRepository = get(),
+            activeOrdersCheck = get(),
+            otpIssuer = get(),
+            smsSender = get(),
+            clock = get(),
+        )
+    }
+    single {
+        DeleteMyAccountUc(
+            transactionManager = get(),
+            cartRepository = get(),
+            wishlistRepository = get(),
+            addressBookRepository = get(),
+            reservationGroupRepository = get(),
+            userRepository = get(),
+            orderQmRepository = get(),
+            activeOrdersCheck = get(),
+            otpChallengeRepository = get(),
+            otpCodes = get(),
+            orderRepository = get(),
+            accountEraser = get(),
+            authSessionRepository = get(),
+            accountDeletionReasonRepository = get(),
+            securityEventLog = get(),
+            clock = get(),
+        )
+    }
     single { UpdateMyProfileUc(transactionManager = get(), userRepository = get(), clock = get()) }
     single {
         RequestPhoneChangeUc(

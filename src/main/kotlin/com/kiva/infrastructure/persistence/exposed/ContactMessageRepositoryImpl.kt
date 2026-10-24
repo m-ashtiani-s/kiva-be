@@ -62,6 +62,8 @@ class ContactMessageRepositoryImpl : ContactMessageRepository {
             .paginate(pageable, NEWEST_FIRST, tiebreaker = ContactMessageTbl.id, tiebreakerOrder = SortOrder.DESC) { it.toMessage() }
     }
 
+    override fun deleteAllOf(userId: UserId): Int = ContactMessageTbl.deleteWhere { ContactMessageTbl.userId eq userId.value }
+
     override fun deleteClosedBefore(before: Instant): Int =
         ContactMessageTbl.deleteWhere { (ContactMessageTbl.status eq ContactStatus.CLOSED) and (ContactMessageTbl.updatedAt less before.utc()) }
 
