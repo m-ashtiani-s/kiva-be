@@ -7,6 +7,9 @@ import com.kiva.application.usecase.blog.usecase.command.DeleteBlogPostUc
 import com.kiva.application.usecase.blog.usecase.command.UpdateBlogPostUc
 import com.kiva.application.usecase.blog.usecase.query.FindAdminBlogPostsUc
 import com.kiva.application.usecase.blog.usecase.query.GetAdminBlogPostUc
+import com.kiva.application.usecase.blog.usecase.query.GetBlogPostUc
+import com.kiva.application.usecase.blog.usecase.query.ListBlogCategoriesUc
+import com.kiva.application.usecase.blog.usecase.query.ListBlogPostsUc
 import com.kiva.application.usecase.order.usecase.query.GetMyInvoiceUc
 import com.kiva.application.usecase.stockalert.StockAlertCounts
 import com.kiva.application.usecase.stockalert.usecase.command.DeleteOldStockAlertsUc
@@ -952,6 +955,9 @@ val useCaseModule = module(createdAtStart = true) {
     single { DeleteBlogPostUc(transactionManager = get(), blogPostRepository = get(), auditTrail = get(), clock = get()) }
     single { GetAdminBlogPostUc(transactionManager = get(), blogPostRepository = get(), blogPosts = get(), clock = get()) }
     single { FindAdminBlogPostsUc(transactionManager = get(), blogPostRepository = get(), blogCategoryRepository = get(), blogPosts = get(), clock = get()) }
+    single { ListBlogCategoriesUc(transactionManager = get(), blogPosts = get(), clock = get()) }
+    single { ListBlogPostsUc(transactionManager = get(), blogPostRepository = get(), blogCategoryRepository = get(), blogPosts = get(), clock = get()) }
+    single { GetBlogPostUc(transactionManager = get(), blogPostRepository = get(), blogPosts = get(), clock = get()) }
 
     // --- contact and newsletter (phase 13) ---
     single { TicketCodeGenerator() }

@@ -8,6 +8,9 @@ import com.kiva.application.usecase.blog.usecase.command.DeleteBlogPostUc
 import com.kiva.application.usecase.blog.usecase.command.UpdateBlogPostUc
 import com.kiva.application.usecase.blog.usecase.query.FindAdminBlogPostsUc
 import com.kiva.application.usecase.blog.usecase.query.GetAdminBlogPostUc
+import com.kiva.application.usecase.blog.usecase.query.GetBlogPostUc
+import com.kiva.application.usecase.blog.usecase.query.ListBlogCategoriesUc
+import com.kiva.application.usecase.blog.usecase.query.ListBlogPostsUc
 import com.kiva.application.usecase.stockalert.StockAlertCounts
 import com.kiva.infrastructure.httpserver.auth.asAccountCheck
 import com.kiva.infrastructure.persistence.exposed.BlogAuthorRepositoryImpl
@@ -519,6 +522,11 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         UpdateBlogPostUc(transactions, blogPostRepository, blogPostWriting, blogPosts, mediaAttachments, JsoupHtmlSanitizer, auditTrail, clock),
         DeleteBlogPostUc(transactions, blogPostRepository, auditTrail, clock),
     )
+    val blog = BlogUseCases(
+        ListBlogCategoriesUc(transactions, blogPosts, clock),
+        ListBlogPostsUc(transactions, blogPostRepository, BlogCategoryRepositoryImpl(), blogPosts, clock),
+        GetBlogPostUc(transactions, blogPostRepository, blogPosts, clock),
+    )
     val adminSupport = AdminSupportUseCases(
         checkPanelAccess,
         FindAdminContactMessagesUc(transactions, contactMessages, users),
@@ -707,6 +715,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
                     webV1AdminSupport(adminSupport)
                     webV1AdminNewsletter(adminNewsletter)
                     webV1AdminBlog(adminBlog, SITE_URL, mediaUrls)
+                    webV1Blog(blog, SITE_URL, mediaUrls)
                     webV1Addresses(purchase.addressUseCases)
                     // The account, for deleting it with everything of the later phases in it (phase 14).
                     webV1Me(purchase.auth.meUseCases)
