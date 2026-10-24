@@ -5838,7 +5838,7 @@ Route: 200 application/pdf با هدرهای تصمیم ۱۶
 | گام | عنوان | اندازه | وضعیت |
 |---|---|---|---|
 | ۱۵.۰ | کانترکت 1.21.0 | S | ✅ |
-| ۱۵.۱ | دسته‌ها، نویسنده‌ها و دامنه‌ی مقاله | M | ⬜ |
+| ۱۵.۱ | دسته‌ها، نویسنده‌ها و دامنه‌ی مقاله | M | ✅ |
 | ۱۵.۲ | نوشتن مقاله در پنل (ساخت، ویرایش، حذف، لیست و جزئیات پنل) | L | ⬜ |
 | ۱۵.۳ | دسته‌ها، لیست و صفحه‌ی مقاله در فروشگاه | M | ⬜ |
 | ۱۵.۴ | مقاله‌های مرتبط و «مفید بود؟» | S | ⬜ |
@@ -6032,15 +6032,17 @@ Route: 204
 
 ---
 
-#### گام ۱۵.۱: دسته‌ها، نویسنده‌ها و دامنه‌ی مقاله · M ⬜
+#### گام ۱۵.۱: دسته‌ها، نویسنده‌ها و دامنه‌ی مقاله · M ✅
 
 **می‌سازی:** `V40__blog.sql` (با seed ِ دسته‌ها و نویسنده)؛ ۲۰.۳؛ repositoryها.
 
 وابسته به: ۱۵.۰
 
 **تموم شده یعنی:**
-- [ ] تست واحد هر نوع بلوک (درست، ناقص، فیلد بی‌ربط نادیده)، `anchor` ها، `toc`، زمان مطالعه‌ی خودکار، `excerpt` ِ جایگزین.
-- [ ] `isVisibleAt`: پیش‌نویس، منتشر با زمان گذشته، منتشر با زمان آینده، بایگانی.
+- [x] تست واحد هر نوع بلوک (درست، ناقص، فیلد بی‌ربط نادیده)، `anchor` ها، `toc`، زمان مطالعه‌ی خودکار، `excerpt` ِ جایگزین.
+- [x] `isVisibleAt`: پیش‌نویس، منتشر با زمان گذشته، منتشر با زمان آینده، بایگانی.
+
+**یادداشت پیاده‌سازی:** `V40` عین ۲۰.۴، با اسم قید `blogpost_slug_key` برای رقابت slug، `CHECK` ِ متن خالی برای `excerpt`/`lead`/`comment`، ایندکس نظرهای «مفید نبود»، و seed ِ پنج دسته‌ی نمونه‌ی kiva-fe (`buying-guide`، `style`، `care`، `materials`، `behind-the-scenes`؛ پیش‌نمونه «متریال» رو هم داشت) و نویسنده‌ی پیش‌فرض «تیم کیوا» (سؤال باز ۱۳). دامنه‌ی `blog`: `BlogValues` (`BlogPostId`، `BlogCategoryId`، `BlogAuthorId`، `BlogPostStatus`، `BlogTag` با `normalizePersian`، `CoverBackground`)، `BlogBlock` (هفت نوع، `TextOrHtml`) و `BlogBlocks.makeNew` (همه‌ی خطاها با هم روی `blocks.{i}.{field}`)، `BlogPolicy` (زمان مطالعه، خلاصه‌ی جایگزین بدون HTML)، `BlogPostDraft` (فرم کامل، مثل `PageDraft`)، `BlogPost` (`create`/`rewrite` با قانون تاریخ انتشار، `isVisibleAt`، `isScheduledAt`، `toc`، `unfeatured`)، `BlogCategory`، `BlogAuthor` و چهار repository (`unfeatureAllExcept`، `pagePublic`، `featured`، `related`، `countVisibleByCategory`، `upsert` ِ رأی). بلوک‌ها در JSONB با `BlogBlockPayload` (فقط فیلدهای همون نوع). تست: `BlogBlocksTest` (۷)، `BlogPostTest` (۱۴)، `BlogRepositoriesImplTest` (۱۲، از جمله قید یک منتخب، دیده شدن، فیلترها، مرتبط‌ها و قید `voterKey` که IP ِ خام رو رد می‌کنه).
 
 ---
 
@@ -6521,3 +6523,4 @@ kiva {
 | ۲ آبان ۱۴۰۵ | ۱۴.۳ | Phase 14 step 14.3 | رسید خرید PDF: PDFBox 3.0.8، ICU4J 79.1، Vazirmatn، `PersianShaping` ِ خودمون (ICU حروف فارسی رو شکل نمی‌ده)، تصویر طلایی. سه تصمیم تازه (۲۱ تا ۲۳) |
 | ۲ آبان ۱۴۰۵ | ۱۴.۴ | Phase 14 step 14.4 | `ACCOUNT_CLOSURE_REVIEW.md` (۱۸ خرابکاری، همه قرمز)، `docs/FRONTEND_ACCOUNT.md` و متن حریم خصوصی. ۳۱۴۲ تست سبز، ۵ skip. فاز ۱۴ از طرف ریپو کامله؛ دور واقعی و merge منتظر تو |
 | ۲ آبان ۱۴۰۵ | ۱۵.۰ | Phase 15 step 15.0 | کانترکت 1.21.0 با هر ده ردیف ِ ۲۰.۷ و شِمای `AdminBlogPost`؛ متن شش کد تازه. یه تصمیم تازه (۱۹). برنچ `blog` از نوک فاز ۱۴ |
+| ۲ آبان ۱۴۰۵ | ۱۵.۱ | Phase 15 step 15.1 | `V40` (با seed ِ پنج دسته و «تیم کیوا»)، دامنه‌ی `blog` (بلوک‌ها، فرم، مقاله، سیاست) و چهار repository. ۳۳ تست تازه سبز |

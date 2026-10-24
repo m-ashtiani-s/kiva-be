@@ -1,5 +1,13 @@
 package com.kiva.infrastructure.di
 
+import com.kiva.domain.aggregate.blog.repository.BlogAuthorRepository
+import com.kiva.domain.aggregate.blog.repository.BlogCategoryRepository
+import com.kiva.domain.aggregate.blog.repository.BlogFeedbackRepository
+import com.kiva.domain.aggregate.blog.repository.BlogPostRepository
+import com.kiva.infrastructure.persistence.exposed.BlogAuthorRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.BlogCategoryRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.BlogFeedbackRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.BlogPostRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.StockAlertIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.CampaignRepositoryImpl
 import com.kiva.domain.aggregate.campaign.repository.CampaignRepository
@@ -141,6 +149,12 @@ val daoModule = module(createdAtStart = true) {
     single<InventoryAdjustmentQmRepository> { InventoryAdjustmentQmRepositoryImpl() }
     single<UserRepository> { UserRepositoryImpl() }
     single<AccountDeletionReasonRepository> { AccountDeletionReasonRepositoryImpl() }
+
+    // --- blog (phase 15) ---
+    single<BlogPostRepository> { BlogPostRepositoryImpl() }
+    single<BlogCategoryRepository> { BlogCategoryRepositoryImpl() }
+    single<BlogAuthorRepository> { BlogAuthorRepositoryImpl() }
+    single<BlogFeedbackRepository> { BlogFeedbackRepositoryImpl() }
     single<OtpChallengeRepository> { OtpChallengeRepositoryImpl() }
     single<AuthSessionRepository> { AuthSessionRepositoryImpl() }
     single<SecurityEventLog> { SecurityEventLogImpl() }
