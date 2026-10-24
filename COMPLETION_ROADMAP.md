@@ -5837,7 +5837,7 @@ Route: 200 application/pdf با هدرهای تصمیم ۱۶
 
 | گام | عنوان | اندازه | وضعیت |
 |---|---|---|---|
-| ۱۵.۰ | کانترکت 1.21.0 | S | ⬜ |
+| ۱۵.۰ | کانترکت 1.21.0 | S | ✅ |
 | ۱۵.۱ | دسته‌ها، نویسنده‌ها و دامنه‌ی مقاله | M | ⬜ |
 | ۱۵.۲ | نوشتن مقاله در پنل (ساخت، ویرایش، حذف، لیست و جزئیات پنل) | L | ⬜ |
 | ۱۵.۳ | دسته‌ها، لیست و صفحه‌ی مقاله در فروشگاه | M | ⬜ |
@@ -5866,6 +5866,7 @@ Route: 200 application/pdf با هدرهای تصمیم ۱۶
 | 16 | کش | دسته‌ها، لیست، صفحه‌ی مقاله و مرتبط‌ها با `respondResultCacheable` (کانترکت: بلاگ ۵ دقیقه). پیش‌نویس و زمان‌بندی‌شده هیچ‌وقت در پاسخ عمومی نیستن، پس کش داده‌ی منتشرنشده لو نمی‌ده؛ مقاله‌ی زمان‌بندی‌شده تا ۵ دقیقه بعد از زمانش دیده می‌شه | — |
 | 17 | لاگ تغییرات | `BLOG_POST_CREATED`، `BLOG_POST_UPDATED` (`changes`: فیلدهای عوض‌شده؛ `blocks` فقط «عوض شد» و تعداد)، `BLOG_POST_DELETED`؛ مقدار تازه‌ی `BLOG_POST` در `AuditEntityType` | بخش ۵.۱ |
 | 18 | حذف حساب | بلاگ داده‌ی شخصی کاربر نداره جز رأی `u:{userId}`؛ `AccountEraser` (فاز ۱۴) رأی‌های اون کاربر رو به `ip:` ِ بی‌نام تبدیل نمی‌کنه بلکه **پاک** می‌کنه (قانون بخش ۴.۱۰) | — |
+| 19 | (تازه، گام ۱۵.۰) انتشار دوباره | `PUT` با `status = PUBLISHED` و `publishedAt` ِ خالی روی مقاله‌ای که از قبل منتشر بوده، تاریخ انتشار قبلی رو نگه می‌داره؛ فقط اولین انتشار «الان» می‌گیره | ویرایش یه غلط املایی نباید مقاله‌ی قدیمی رو به بالای مجله ببره |
 
 ### ۲۰.۳ تغییرات دامنه
 
@@ -6016,16 +6017,18 @@ Route: 204
 | 7 | `GET /blog/posts/{postId}/related` | ترتیب، «خودش نه»، `limit` حداقل ۱ | تصمیم ۱۳ |
 | 8 | `POST /blog/posts/{postId}/feedback` | «یه رأی برای هر کاربر یا IP، رأی دوباره جایگزین»، «`comment` فقط با `helpful = false`»، `429` | تصمیم ۱۴ |
 | 9 | `AuditEntityType` | `BLOG_POST` | تصمیم ۱۷ |
-| 10 | `ErrorCode` | `BLOG_CATEGORY_NOT_FOUND`، `BLOG_AUTHOR_NOT_FOUND` | — |
+| 10 | `ErrorCode` | `BLOG_CATEGORY_NOT_FOUND`، `BLOG_AUTHOR_NOT_FOUND` (و در گام ۱۵.۰ چهار کد فیلد: `BLOG_BLOCK_TYPE_INVALID`، `BLOG_BLOCK_TEXT_OR_HTML`، `BLOG_POST_STATUS_INVALID`، `BLOG_TAG_EMPTY`) | — |
 
 ### ۲۰.۸ گام‌ها
 
-#### گام ۱۵.۰: کانترکت 1.21.0 · S ⬜
+#### گام ۱۵.۰: کانترکت 1.21.0 · S ✅
 
 **می‌سازی:** برنچ `blog`؛ ردیف‌های ۲۰.۷؛ متن کدهای تازه.
 
 **تموم شده یعنی:**
-- [ ] کانترکت معتبر؛ `RouteGuardsTest` دو route ِ تازه رو هم می‌شناسه؛ `ErrorMessagesTest` سبز.
+- [x] کانترکت معتبر؛ `RouteGuardsTest` دو route ِ تازه رو هم می‌شناسه؛ `ErrorMessagesTest` سبز.
+
+**یادداشت پیاده‌سازی:** برنچ `blog` از نوک فاز ۱۴ (`97b9cf0`). کانترکت 1.21.0 با هر ده ردیف ِ ۲۰.۷: دو مسیر خوندنی ِ تازه‌ی پنل با `x-roles: [ADMIN, CONTENT_EDITOR]` و شِمای `AdminBlogPost` (با `status`، `scheduled`، `createdAt`، `createdBy`، `updatedBy`، `unavailableProductIds`، `feedbackComments`)؛ پاسخ `POST`/`PUT` همون شِما با `409 DUPLICATE_SLUG`؛ همه‌ی اندازه‌ها، قانون هر نوع بلوک، وضعیت و زمان‌بندی، «فقط یه منتخب» و «`canonicalUrl`/`ogImageUrl`/`jsonLd` ِ ورودی نادیده» در توضیح ساخت؛ `cover` ِ `nullable` و `excerpt` ِ جایگزین در `BlogPostSummary`؛ ترتیب و معنی `q`/`tag` و حذف منتخب از شمارش در لیست؛ `postCount` ِ فقط دیده‌شده‌ها؛ «فقط منتشرشده و رسیده»، حذف بلوک محصول برداشته‌شده و `shareLinks` در صفحه‌ی مقاله؛ ترتیب و `limit` (حداقل ۱) در مرتبط‌ها؛ یه رأی برای هر کاربر یا IP و `429` در «مفید بود؟»؛ `BLOG_POST` در `AuditEntityType`؛ دو کد تازه‌ی `ErrorCode` و چهار کد ِ فیلد. چیزی که برای ساخت `PUBLISHED` ِ دوباره تصمیم شد: بدون `publishedAt` تاریخ قبلی ِ مقاله‌ی از قبل منتشرشده می‌مونه (تصمیم ۱۹ ِ این فاز). YAML معتبر، ۱۳۶۶ `$ref` همه پیدا؛ `ErrorMessagesTest` و `RouteGuardsTest` سبز.
 
 ---
 
@@ -6517,3 +6520,4 @@ kiva {
 | ۲ آبان ۱۴۰۵ | ۱۴.۱ و ۱۴.۲ | Phase 14 steps 14.1 and 14.2 | دامنه‌ی حذف (`V39`، `User.erase`، `OrderPersonalDataErased`، `AccountEraser`، `ActiveOrdersCheck`، چک حساب در هر درخواست) و دو مرحله‌ی حذف. چهار تصمیم تازه (۱۷ تا ۲۰). یه کامیت: فایل‌های مشترک (پشته‌های تست، DI) جدا کامپایل نمی‌شدن |
 | ۲ آبان ۱۴۰۵ | ۱۴.۳ | Phase 14 step 14.3 | رسید خرید PDF: PDFBox 3.0.8، ICU4J 79.1، Vazirmatn، `PersianShaping` ِ خودمون (ICU حروف فارسی رو شکل نمی‌ده)، تصویر طلایی. سه تصمیم تازه (۲۱ تا ۲۳) |
 | ۲ آبان ۱۴۰۵ | ۱۴.۴ | Phase 14 step 14.4 | `ACCOUNT_CLOSURE_REVIEW.md` (۱۸ خرابکاری، همه قرمز)، `docs/FRONTEND_ACCOUNT.md` و متن حریم خصوصی. ۳۱۴۲ تست سبز، ۵ skip. فاز ۱۴ از طرف ریپو کامله؛ دور واقعی و merge منتظر تو |
+| ۲ آبان ۱۴۰۵ | ۱۵.۰ | Phase 15 step 15.0 | کانترکت 1.21.0 با هر ده ردیف ِ ۲۰.۷ و شِمای `AdminBlogPost`؛ متن شش کد تازه. یه تصمیم تازه (۱۹). برنچ `blog` از نوک فاز ۱۴ |

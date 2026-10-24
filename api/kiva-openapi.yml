@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: KIVA Store API — کیوا
-  version: 1.20.0
+  version: 1.21.0
   contact:
     name: KIVA Engineering
     email: support@kiva.ir
@@ -2883,6 +2883,9 @@ paths:
       tags: [Blog]
       operationId: listBlogCategories
       summary: "دسته‌بندی‌های مجله (چیپ‌های بالای صفحه)"
+      description: |
+        همه‌ی دسته‌ها به ترتیب نمایش. `postCount` فقط مقاله‌هایی که الان در مجله دیده می‌شوند (`PUBLISHED` و رسیده به `publishedAt`)؛
+        دسته‌ها با SQL ساخته می‌شوند و endpoint ِ پنل ندارند. کش ۵ دقیقه (`ETag`، `304`).
       responses:
         '200':
           description: OK
@@ -2896,7 +2899,12 @@ paths:
       tags: [Blog]
       operationId: listBlogPosts
       summary: "لیست مقاله‌ها + مقاله‌ی منتخب سردبیر"
-      description: "`featured` فقط در صفحه‌ی اول و وقتی با فیلتر فعلی منطبق باشد برگردانده می‌شود و از `items` حذف است."
+      description: |
+        فقط مقاله‌های دیده‌شده (`PUBLISHED` با `publishedAt` ِ گذشته)، جدیدترین `publishedAt` اول (هم‌زمان‌ها: شناسه‌ی بزرگ‌تر اول).
+        `category` = slug ِ دسته (ناشناخته ← لیست خالی، نه خطا). `q` (حداکثر ۱۰۰): هر کلمه باید در عنوان، خلاصه، برچسب‌ها یا اسم دسته باشد
+        (نرمال‌شده: «ي» و «ی» یکی). `tag`: برابری با یکی از برچسب‌ها بعد از همان نرمال‌سازی.
+        `featured` فقط در صفحه‌ی اول و وقتی با فیلتر فعلی منطبق باشد برگردانده می‌شود؛ در آن صورت از `items` **و از شمارش `meta`** حذف است.
+        هیچ مقاله‌ای ← `items` خالی و `emptyMessage`. کش ۵ دقیقه (`ETag`، `304`).
       parameters:
         - name: category
           in: query
@@ -2904,6 +2912,7 @@ paths:
         - name: q
           in: query
           schema: { type: string, maxLength: 100 }
+          description: 'بیشتر از ۱۰۰ ← `400 SEARCH_QUERY_TOO_LONG`'
         - name: tag
           in: query
           schema: { type: string }
@@ -2911,6 +2920,7 @@ paths:
         - name: size
           in: query
           schema: { type: integer, minimum: 1, maximum: 30, default: 9 }
+          description: 'بیرون از ۱ تا ۳۰ ← `400 PAGE_SIZE_INVALID`'
       responses:
         '200':
           description: OK
@@ -2923,6 +2933,11 @@ paths:
       tags: [Blog]
       operationId: getBlogPost
       summary: "مقاله با بلوک‌های محتوا (تیتر، پاراگراف، نقل‌قول، نکته‌ی کیوا، محصول درون‌متنی) و فهرست مطالب"
+      description: |
+        `idOrSlug`: فقط رقم ← شناسه، وگرنه slug (slug همیشه حداقل یک حرف دارد). فقط مقاله‌ی `PUBLISHED` که به `publishedAt` اش رسیده؛
+        پیش‌نویس، بایگانی، زمان‌بندی‌شده و ناموجود ← `404 NOT_FOUND`. بلوک `PRODUCT` ای که محصولش دیگر در فروشگاه نیست **حذف** می‌شود.
+        `shareUrl` = `seo.canonicalUrl`؛ `shareLinks` پیام‌رسان‌های فروشگاه با متن «{عنوان} {shareUrl}». کارت‌های محصول بدون قلب
+        (`isWishlisted = null`، پاسخ کش می‌شود). کش ۵ دقیقه (`ETag`، `304`)؛ مقاله‌ی زمان‌بندی‌شده تا ۵ دقیقه بعد از زمانش دیده می‌شود.
       parameters:
         - name: idOrSlug
           in: path
@@ -2940,6 +2955,9 @@ paths:
       tags: [Blog]
       operationId: getRelatedBlogPosts
       summary: "مقاله‌های مرتبط (اول هم‌دسته)"
+      description: |
+        مقاله باید دیده شود (وگرنه `404 NOT_FOUND`). اول هم‌دسته‌ها، بعد بقیه، هر دو جدیدترین `publishedAt` اول؛ خود مقاله هرگز.
+        `limit` بیرون از ۱ تا ۱۲ ← `400 NUMBER_OUT_OF_RANGE` روی `limit`. کش ۵ دقیقه.
       parameters:
         - name: postId
           in: path
@@ -2947,7 +2965,7 @@ paths:
           schema: { type: integer }
         - name: limit
           in: query
-          schema: { type: integer, default: 3, maximum: 12 }
+          schema: { type: integer, default: 3, minimum: 1, maximum: 12 }
       responses:
         '200':
           description: OK
@@ -2963,6 +2981,10 @@ paths:
       tags: [Blog]
       operationId: sendBlogFeedback
       summary: "«این مطلب مفید بود؟» آره / نه چندان"
+      description: |
+        مقاله باید دیده شود (وگرنه `404 NOT_FOUND`). **یک رأی برای هر کاربر واردشده، یا برای هر IP ِ مهمان**؛ رأی دوباره همان رأی را
+        جایگزین می‌کند. خود IP ذخیره نمی‌شود (فقط hash ِ آن با یک راز سرور). `comment` (متن ساده، حداکثر ۳۰۰) فقط با `helpful = false`
+        نگه داشته می‌شود و فقط پنل آن را می‌بیند. بیش از ۳۰ رأی در ساعت از یک IP ← `429 RATE_LIMITED`.
       security: [{}, { bearerAuth: [] }]
       parameters:
         - name: postId
@@ -2977,12 +2999,13 @@ paths:
               type: object
               required: [helpful]
               properties:
-                helpful: { type: boolean }
-                comment: { type: string, maxLength: 300, description: "[پیشنهادی] توضیح وقتی مفید نبود" }
+                helpful: { type: boolean, description: 'نیامده ← `400 FIELD_REQUIRED`' }
+                comment: { type: string, maxLength: 300, description: "توضیح وقتی مفید نبود؛ با `helpful = true` نادیده" }
       responses:
         '204': { $ref: '#/components/responses/NoContent' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
 
   # ================================================================
   #  ADMIN — CATALOG   (roles: ADMIN, CATALOG_MANAGER)
@@ -4863,6 +4886,21 @@ paths:
       x-roles: [ADMIN, CONTENT_EDITOR]
       operationId: adminCreateBlogPost
       summary: "ساخت مقاله"
+      description: |
+        شکل (همه‌ی خطاها با هم، با مسیر فیلد): `title` ۱ تا ۱۲۰؛ `slug` مثل slug ِ محصول (حداقل یک حرف) و حداکثر ۱۰۰؛ `excerpt` حداکثر ۳۰۰
+        (خالی ← ۱۶۰ نویسه‌ی اول `lead` یا اولین پاراگراف)؛ `lead` متن ساده حداکثر ۶۰۰؛ `coverBackground` `#RRGGBB`؛ `readingMinutes` ۱ تا ۶۰ یا
+        `null` (خودکار: کلمه‌های `lead` و بلوک‌ها ÷ ۲۰۰، حداقل ۱)؛ `tags` حداکثر ۱۰ تا، هر کدام ۱ تا ۳۰ (نرمال‌شده، تکراری حذف)؛ `seo.title` ≤ ۷۰ و
+        `seo.description` ≤ ۱۷۰ (`canonicalUrl`، `ogImageUrl` و `jsonLd` ِ ورودی نادیده: سرور می‌سازد).
+        `blocks` ۱ تا ۱۰۰؛ از هر بلوک فقط فیلدهای نوع خودش نگه داشته می‌شود: `HEADING` `text` ۱ تا ۱۲۰؛ `PARAGRAPH` دقیقاً یکی از `text`
+        (متن ساده ≤ ۲۰۰۰) یا `html` (`HtmlString`، پاک‌شده ≤ ۵۰۰۰؛ هر دو ← `BLOG_BLOCK_TEXT_OR_HTML`)؛ `QUOTE` `text` ۱ تا ۵۰۰؛ `TIP` `title` ≤ ۶۰
+        (خالی ← «نکته کیوا») و `text` یا `html` مثل پاراگراف؛ `PRODUCT` `productId` ِ محصولی که در فروشگاه است (وگرنه `PRODUCT_NOT_FOUND`)؛
+        `IMAGE` `imageMediaId` (purpose ِ `BLOG`، فقط عکس) و `text` ِ اختیاری ≤ ۲۰۰ به‌عنوان زیرنویس؛ `LIST` `items` ۱ تا ۲۰، هر کدام ۱ تا ۳۰۰.
+        خطای هر بلوک روی `blocks.{i}.{field}`؛ `anchor` ِ تیترها را سرور می‌سازد (`s0`، `s1`، …).
+        بعد: `categoryId` ناموجود ← `400 BLOG_CATEGORY_NOT_FOUND`؛ `authorId` (نیامده ← نویسنده‌ی پیش‌فرض) ناموجود ← `400 BLOG_AUTHOR_NOT_FOUND`؛
+        کاور و عکس‌ها ← `400 MEDIA_*`؛ slug ِ گرفته‌شده (به‌جز خود همین مقاله) ← `409 DUPLICATE_SLUG`.
+        وضعیت: نیامده ← `DRAFT`. دیده شدن = `PUBLISHED` و `publishedAt ≤ الان`. `PUBLISHED` بدون `publishedAt` ← الان (یا همان تاریخ قبلی، اگر
+        مقاله از قبل منتشر بوده)؛ `publishedAt` ِ آینده = زمان‌بندی (`scheduled = true`). `ARCHIVED` پنهان ولی نگه داشته.
+        `isFeatured = true` منتخب ِ قبلی را برمی‌دارد (همیشه حداکثر یکی). `PUT` جایگزینی کامل است.
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -4874,16 +4912,80 @@ paths:
           description: OK
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/BlogPostDetail' }
+              schema: { $ref: '#/components/schemas/AdminBlogPost' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: "`DUPLICATE_SLUG`"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+    get:
+      tags: [Admin · Content]
+      x-roles: [ADMIN, CONTENT_EDITOR]
+      operationId: adminListBlogPosts
+      summary: "همه‌ی مقاله‌ها برای پنل (پیش‌نویس، زمان‌بندی‌شده، منتشرشده، بایگانی)"
+      description: |
+        جدیدترین ویرایش (`updatedAt`) اول. `status` یکی از سه وضعیت؛ `q` همان جستجوی متن ِ `GET /blog/posts`؛ `category` = slug.
+        هر ردیف `AdminBlogPost` **بدون محتوا** است (`blocks` و `toc` خالی، برای سبکی)؛ برای فرم ویرایش `GET /admin/blog/posts/{postId}`.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [DRAFT, PUBLISHED, ARCHIVED] }
+          description: 'ناشناخته ← `400 BLOG_POST_STATUS_INVALID`'
+        - name: q
+          in: query
+          schema: { type: string, maxLength: 100 }
+        - name: category
+          in: query
+          schema: { type: string }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/AdminBlogPost' }
+                  meta: { $ref: '#/components/schemas/PageMeta' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
   /admin/blog/posts/{postId}:
+    get:
+      tags: [Admin · Content]
+      x-roles: [ADMIN, CONTENT_EDITOR]
+      operationId: adminGetBlogPost
+      summary: "یک مقاله با همه‌ی محتوا برای فرم ویرایش، هشدار محصول‌های برداشته‌شده و نظرهای «مفید نبود»"
+      description: 'ناموجود یا شناسه‌ی بدشکل ← `404 NOT_FOUND`.'
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminBlogPost' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
     put:
       tags: [Admin · Content]
       x-roles: [ADMIN, CONTENT_EDITOR]
       operationId: adminUpdateBlogPost
       summary: "ویرایش مقاله"
+      description: 'همان قانون‌های `POST /admin/blog/posts`؛ ناموجود ← `404 NOT_FOUND`. جایگزینی کامل (همه‌ی بلوک‌ها از نو).'
       security: [{ bearerAuth: [] }]
       parameters:
         - name: postId
@@ -4900,16 +5002,22 @@ paths:
           description: OK
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/BlogPostDetail' }
+              schema: { $ref: '#/components/schemas/AdminBlogPost' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: "`DUPLICATE_SLUG`"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
     delete:
       tags: [Admin · Content]
       x-roles: [ADMIN, CONTENT_EDITOR]
       operationId: adminDeleteBlogPost
       summary: "حذف مقاله"
+      description: 'واقعاً پاک می‌شود (با رأی‌های «مفید بود؟»)؛ برای پنهان کردن و نگه داشتن `ARCHIVED`. ناموجود ← `404 NOT_FOUND`.'
       security: [{ bearerAuth: [] }]
       parameters:
         - name: postId
@@ -5959,6 +6067,13 @@ components:
         - REVIEW_NOT_FOUND
         - REVIEW_PURCHASE_NOT_DELIVERED
         - OWN_REVIEW_VOTE
+        # --- بلاگ (فاز ۱۵) ---
+        - BLOG_CATEGORY_NOT_FOUND
+        - BLOG_AUTHOR_NOT_FOUND
+        - BLOG_BLOCK_TYPE_INVALID
+        - BLOG_BLOCK_TEXT_OR_HTML
+        - BLOG_POST_STATUS_INVALID
+        - BLOG_TAG_EMPTY
       example: DISCOUNT_MIN_SUBTOTAL_NOT_MET
 
     # ============ MEDIA ============
@@ -8426,9 +8541,9 @@ components:
         id: { type: integer, example: 1 }
         slug: { type: string, example: bag-by-body-shape }
         title: { type: string, example: راهنمای انتخاب کیف بر اساس فرم بدن }
-        excerpt: { type: string, example: قد، فرم شانه و سبک زندگیت تعیین می‌کنه چه کیفی بهت میاد. }
+        excerpt: { type: string, description: 'خلاصه‌ی خود مقاله، وگرنه ۱۶۰ نویسه‌ی اول `lead` یا اولین پاراگراف', example: قد، فرم شانه و سبک زندگیت تعیین می‌کنه چه کیفی بهت میاد. }
         category: { $ref: '#/components/schemas/BlogCategory' }
-        cover: { $ref: '#/components/schemas/MediaAsset' }
+        cover: { type: object, nullable: true, allOf: [{ $ref: '#/components/schemas/MediaAsset' }], description: 'کاور نگذاشته ← `null` (ایلاستریشن با `coverBackground`)' }
         coverBackground: { type: string, nullable: true, description: رنگ پس‌زمینه‌ی کاور ایلاستریشنی, example: '#E4D9F3' }
         readingMinutes: { type: integer, example: 6 }
         publishedAt: { type: string, format: date-time }
@@ -8495,6 +8610,32 @@ components:
           items: { $ref: '#/components/schemas/BlogPostSummary' }
         meta: { $ref: '#/components/schemas/PageMeta' }
         emptyMessage: { type: string, nullable: true, example: مقاله‌ای با این مشخصات پیدا نشد. }
+    AdminBlogPost:
+      description: |
+        مقاله در پنل: همه‌ی `BlogPostDetail` به‌علاوه‌ی وضعیت و چیزهای ویرایش. در لیست پنل `blocks` و `toc` خالی‌اند.
+        بلوک `PRODUCT` ِ محصولی که دیگر در فروشگاه نیست این‌جا می‌ماند (`product = null`) و شناسه‌اش در `unavailableProductIds` است؛
+        فروشگاه آن بلوک را نشان نمی‌دهد.
+      allOf:
+        - $ref: '#/components/schemas/BlogPostDetail'
+        - type: object
+          required: [status, scheduled, createdAt, unavailableProductIds, feedbackComments]
+          properties:
+            status: { type: string, enum: [DRAFT, PUBLISHED, ARCHIVED] }
+            scheduled: { type: boolean, description: '`PUBLISHED` با `publishedAt` ِ آینده: هنوز در مجله دیده نمی‌شود' }
+            createdAt: { type: string, format: date-time }
+            createdBy: { type: string, description: 'اسم کامل، وگرنه موبایل ماسک‌شده، یا «سیستم»' }
+            updatedBy: { type: string }
+            unavailableProductIds:
+              type: array
+              items: { type: integer }
+            feedbackComments:
+              type: array
+              description: '۵۰ نظر آخر «مفید نبود»، جدیدترین اول؛ بدون هیچ شناسه‌ای از رأی‌دهنده'
+              items:
+                type: object
+                properties:
+                  comment: { type: string }
+                  createdAt: { type: string, format: date-time }
 
     # ============ ADMIN · CATALOG ============
     ProductMediaInput:
@@ -9183,11 +9324,12 @@ components:
                 items: { type: string }
               productId: { type: integer, nullable: true }
               imageMediaId: { type: string, nullable: true }
+            description: 'فیلدهای نوع‌های دیگر (و `anchor`) نادیده'
         tags:
           type: array
           items: { type: string }
         isFeatured: { type: boolean }
-        status: { type: string, enum: [DRAFT, PUBLISHED, ARCHIVED] }
+        status: { type: string, enum: [DRAFT, PUBLISHED, ARCHIVED], description: 'نیامده ← `DRAFT`' }
         publishedAt: { type: string, format: date-time, nullable: true }
         seo: { $ref: '#/components/schemas/SeoMeta' }
     AdminSettings:
@@ -9436,7 +9578,7 @@ components:
     AuditEntityType:
       type: string
       description: 'نوع چیزی که در پنل تغییر کرد. `MEDIA` استفاده نمی‌شود: آپلود مدیا در لاگ تغییرات ثبت نمی‌شود.'
-      enum: [PRODUCT, VARIANT, INVENTORY, MEDIA, CATEGORY, COLOR, MATERIAL, ORDER, RETURN, REFUND, DISCOUNT_CODE, CAMPAIGN, BANNER, ANNOUNCEMENT, TESTIMONIAL, FAQ, PAGE, SETTINGS, REVIEW, CONTACT_MESSAGE, USER]
+      enum: [PRODUCT, VARIANT, INVENTORY, MEDIA, CATEGORY, COLOR, MATERIAL, ORDER, RETURN, REFUND, DISCOUNT_CODE, CAMPAIGN, BANNER, ANNOUNCEMENT, TESTIMONIAL, FAQ, PAGE, SETTINGS, REVIEW, CONTACT_MESSAGE, USER, BLOG_POST]
     AuditLogEntry:
       type: object
       description: یک ردیف لاگ تغییرات پنل
