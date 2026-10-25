@@ -77,6 +77,8 @@ import kotlin.test.assertTrue
  *    token, wherever it lives: `/checkout`, `/orders`, `/payments/...` and `/cart/merge` are covered the day they exist.
  * 4. Every endpoint under `/api/v1/admin` refuses a real panel session whose roles aren't among its own (403): a staff
  *    member of another panel role, or a plain customer where every staff role is allowed.
+ * 5. Every operation of the contract has its route (roadmap phase 15, step 15.5): nothing the frontends were promised is
+ *    missing, the panel's included.
  */
 class RouteGuardsTest {
 
@@ -152,6 +154,15 @@ class RouteGuardsTest {
         val open = guarded.filter { answersWithoutLogin(it) }
 
         assertEquals(emptyList(), open, "These answer without a login")
+    }
+
+    @Test
+    fun `every operation of the contract has a route`() = withTheApp { endpoints ->
+        val contract = contractOperations()
+        assertTrue(contract.size > 130 && "GET /blog/posts/{}" in contract, "Read only ${contract.size} operations; the parser is broken")
+        val routes = endpoints.map { "${it.method.value} ${it.path.removePrefix(API_V1).anyParameter()}" }.toSet()
+
+        assertEquals(emptyList(), contract.filter { it !in routes }, "The contract has these, the app doesn't")
     }
 
     /** Calls [endpoint] with no Authorization header (a JSON `{}` body where it takes one); true unless it answers 401. */
@@ -271,6 +282,19 @@ class RouteGuardsTest {
         }
         return roles
     }
+
+    /** `METHOD /path` of every operation of the contract, its parameters all `{}` (a route may name one differently). */
+    private fun contractOperations(): List<String> {
+        val operations = mutableListOf<String>()
+        var path: String? = null
+        File("api/kiva-openapi.yml").readLines().forEach { line ->
+            PATH.matchEntire(line)?.let { path = it.groupValues[1] }
+            METHOD.matchEntire(line)?.let { operations += "${it.groupValues[1].uppercase()} ${path!!.anyParameter()}" }
+        }
+        return operations
+    }
+
+    private fun String.anyParameter() = replace(Regex("\\{[^}]+}"), "{}")
 
     /**
      * `METHOD /path` of every operation of the contract that needs a login: `security: [{ bearerAuth: [] }]` exactly.

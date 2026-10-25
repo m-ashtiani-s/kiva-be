@@ -90,11 +90,11 @@
 
 | فاز | گام‌ها | وضعیت |
 |---|---|---|
-| ۱ | ۱.۰ تا ۱.۱۰ | ⬜ |
-| ۲ | ۲.۰ تا ۲.۱۱ | ⬜ |
-| ۳ | ۳.۰ تا ۳.۵ | ⬜ |
-| ۴ | ۴.۰ تا ۴.۵ | ⬜ |
-| ۵ | ۵.۰ تا ۵.۵ | ⬜ |
+| ۱ | ۱.۰ تا ۱.۱۰ | 🔧 ریپو آماده؛ merge با تو (`PANEL_CATALOG_REVIEW.md`) |
+| ۲ | ۲.۰ تا ۲.۱۱ | 🔧 ریپو آماده؛ merge با تو (`PANEL_ORDERS_REVIEW.md`) |
+| ۳ | ۳.۰ تا ۳.۵ | 🔧 ریپو آماده؛ merge با تو (`CHANGE_REQUESTS_REVIEW.md`) |
+| ۴ | ۴.۰ تا ۴.۵ | 🔧 ریپو آماده؛ merge با تو (`PANEL_SETTINGS_REVIEW.md`) |
+| ۵ | ۵.۰ تا ۵.۵ | 🔧 ریپو آماده؛ merge با تو (`CONTENT_REVIEW.md`) |
 | ۶ | ۶.۱ تا ۶.۹ | 🔧 ریپو آماده؛ اجرای روی سرور با تو (`LAUNCH.md`) |
 | ۷ | ۷.۰ تا ۷.۶ | 🔧 ریپو آماده؛ الگوهای فراز، دور واقعی و merge با تو (`RETURNS_REVIEW.md`) |
 | ۸ | ۸.۰ تا ۸.۶ | 🔧 ریپو آماده؛ دور واقعی و merge با تو (`REVIEWS_REVIEW.md`) |
@@ -102,9 +102,9 @@
 | ۱۰ | ۱۰.۰ تا ۱۰.۴ | 🔧 ریپو آماده؛ الگوی فراز، دور واقعی و merge با تو (`STOCK_ALERTS_REVIEW.md`) |
 | ۱۱ | ۱۱.۰ تا ۱۱.۷ | 🔧 ریپو آماده؛ دور واقعی و merge با تو (`MARKETING_REVIEW.md`) |
 | ۱۲ | ۱۲.۰ تا ۱۲.۳ | 🔧 ریپو آماده؛ nginx، دور واقعی و merge با تو (`SEARCH_REVIEW.md`) |
-| ۱۳ | ۱۳.۰ تا ۱۳.۵ | ⬜ |
+| ۱۳ | ۱۳.۰ تا ۱۳.۵ | 🔧 ریپو آماده؛ دور واقعی و merge با تو (`CONTACT_REVIEW.md`) |
 | ۱۴ | ۱۴.۰ تا ۱۴.۴ | 🔧 ریپو آماده؛ دور واقعی، رسید با گوشی و merge با تو (`ACCOUNT_CLOSURE_REVIEW.md`) |
-| ۱۵ | ۱۵.۰ تا ۱۵.۵ | ⬜ |
+| ۱۵ | ۱۵.۰ تا ۱۵.۵ | 🔧 ریپو آماده؛ `KIVA_BLOG_VOTER_PEPPER` روی سرور، دور واقعی و merge با تو (`BLOG_REVIEW.md`) |
 
 جدول گام‌های هر فاز اول بخش همون فازه.
 
@@ -269,6 +269,34 @@
 | 19 | خطای منطقه‌ی زمانی | «امروز» ِ رهگیری روزانه، بازه‌ی گزارش یا فیلتر تاریخ لاگ به وقت UTC حساب بشه | همه‌ی «روز»ها با `ShopCalendar.ZONE` (تهران)، و تست مرز ساعت ۲۰:۳۰ ِ UTC | ۱.۱، ۲.۹، ۴.۴ |
 | 20 | فرم پنل کار مشتری رو خراب کنه | تغییر قیمت یا غیرفعال کردن رنگ در لحظه‌ی خرید | ترتیب قفل بخش ۱۱ ِ خرید (ردیف محصول، بعد رنگ‌ها) برای هر نویسنده‌ی تازه‌ی read model. ثبت سفارش read model رو داخل تراکنش دوباره می‌خونه (از قبل) | ۱.۵ و ۱.۷ |
 | 21 | پرداخت مانده دو بار | مشتری مانده رو دو بار می‌پردازه | همون نگهبان‌های پرداخت (`IdempotencyGuard`، قفل همه‌ی تلاش‌ها، «یک موفق برای هر بدهی») | ۳.۲ |
+
+### ۳.۱ تست نگهبان هر ردیف
+
+جمع‌بندی گام ۱۵.۵: جلوی هر ردیف تست‌هایی که اگه دفاعش برداشته بشه قرمز می‌شن (`کلاس › اسم تست`؛ اسم‌های بلند با `…` کوتاه شدن). همه‌شون در خرابکاری‌های عمدی ِ ریویوی فاز خودشون امتحان شدن.
+
+| # | تست‌ها |
+|---|---|
+| 1 | `RouteGuardsTest › every admin endpoint takes exactly the roles of its x-roles in the contract`، `› every admin endpoint refuses a panel session without one of its roles`؛ `WebV1AdminProductWritesOnDatabaseTest › an OPERATOR is 403 on both writes, and nothing is stored`؛ `WebV1AdminSettingsOnDatabaseTest › SUPPORT and OPERATOR are 403, for reading and for saving` |
+| 2 | `WebV1AdminCustomerDetailOnDatabaseTest › two admins taking ADMIN from each other at once - …`؛ `SetUserRolesLastAdminTest › taking ADMIN from the only one is 422 ROLE_CHANGE_NOT_ALLOWED …`، `› the one changing roles is read again under the lock - …` |
+| 3 | `WebV1AdminMediaOnDatabaseTest › an HEVC video is 415 with the hint H264 - a GIF, an SVG or a program named jpg too`، `› the client's file name is nowhere - not on the disk, not in the row`؛ `MediaInfrastructureTest › a file over the cap is cut off the moment it passes it - never read whole`، `› a path that would leave the media root is refused, not followed`؛ `WebV1MyUploadsOnDatabaseTest › a photo of 9 MB is 413 …` |
+| 4 | `JsoupHtmlSanitizerTest › what could run in the page goes`؛ `WebV1AdminProductWritesOnDatabaseTest › a description is kept without script, on-handlers or javascript links - …`؛ `WebV1AdminPagesOnDatabaseTest › script, on-handlers and javascript links go - …`؛ `WebV1AdminBlogOnDatabaseTest › a paragraph's script and onerror are cleaned out - a relative link stays` |
+| 5 | `UpdateProductUcTest › a stale version is 412 CHANGED_BY_SOMEONE_ELSE with the current ETag, …`؛ `WebV1AdminProductWritesOnDatabaseTest › PUT with the current If-Match is 200 and one step up - a stale one is 412 …`؛ `UpdateProductUcOnDatabaseTest › two saves of one version at the same moment, 10 times - …` |
+| 6 | `WebV1AdminRefundsOnDatabaseTest › two refunds that fit alone but not together, opened at once 20 times - …`، `› a refund opens PENDING, expected in 72 hours - more than is refundable is 400 …`؛ `RefundDomainServiceTest › paid 2,000,000 with a PENDING refund of 500,000 and a FAILED one of 300,000 …` |
+| 7 | `WebV1ShipmentOnDatabaseTest › an operator cancels while another ships, 20 times - …`؛ `OrderAfterPaymentTest › only a PHOTO_SENT order ships - …`؛ `OrderChangeRequestTest › it doesn't ship while something is owed - 422 BALANCE_DUE with the amount` |
+| 8 | `WebV1ChangeResolutionOnDatabaseTest › the last bag of a color - a change to it and a purchase of it at once, 20 times …`، `› A swaps Nila for Mahak while B swaps Mahak for Nila, at once, 20 times …`؛ `InventoryDomainServiceTest › a new color with too few left is QUANTITY_EXCEEDS_STOCK …` |
+| 9 | `WebV1OrderCancellationOnDatabaseTest › the customer and an operator cancel at once, 20 times - …`؛ `InventoryDomainServiceTest › releasing gives every line back, in lock order, and a second release gives nothing back twice` |
+| 10 | `WebV1TrackingOnDatabaseTest › a guest follows a paid order with the recipient's or the buyer's phone - …`، `› the eleventh lookup in 10 minutes from one address is 429 with Retry-After …` |
+| 11 | `WebV1TrackingOnDatabaseTest › the daily list - masked only, a group one row, …`؛ `DailyShipmentMaskTest › a phone keeps its last four digits only`، `› a name keeps each word's first letter only` |
+| 12 | `WebV1StockAlertsOnDatabaseTest › the 31st active one 422 STOCK_ALERT_LIMIT_REACHED - the 11th made in an hour 429 …`؛ `WebV1ContactOnDatabaseTest › the sixth message of one mobile in a day, from other addresses, is 429 …`، `› the sixth message from one address in an hour is 429 …` |
+| 13 | `WebV1MyReviewsOnDatabaseTest › written - 201 PENDING, …`، `› the sixth review in 24 hours is 429 RATE_LIMITED with Retry-After`؛ `ReviewDomainServiceTest › named - none of the author's 404, …` |
+| 14 | `WebV1WishlistShareOnDatabaseTest › a token one character short or long, not one at all, or nobody's - the same 404 every time`، `› asked twice - one token - revoked, the old link 404 at once …`؛ `WishlistTest › a share token is wl_ and 32 base62 characters - …` |
+| 15 | `PanelCatalogLogScanOnDatabaseTest › an upload, a category, a product with its colors and stock, its edits and the change log …`، `› the scan finds a whole number, an IP and a file name, so a pass means something`؛ `WebV1AdminAuditOnDatabaseTest › the log is newest first, with the actor as they are now and a Persian sentence`؛ (بلاگ) `WebV1BlogOnDatabaseTest › the address itself is nowhere in the database - only its keyed hash` |
+| 16 | `AuditLogOnDatabaseTest › a row is never changed - not even an old one`، `› a row of 89 days is never removed - one of 91 days may be`، `› the job removes the rows of 91 days and keeps those of 89 - …` |
+| 17 | `WebV1AccountDeletionOnDatabaseTest › a customer with a SHIPPED order gets 422 ACCOUNT_HAS_ACTIVE_ORDERS …`، `› an order placed and not paid is active too - …`؛ `ActiveOrdersCheckTest` (همه) |
+| 18 | `MediaOnDatabaseTest › the clean-up removes an upload of 49 hours with its folder - …`، `› an upload attached after it was found stays - the delete itself checks` |
+| 19 | `WebV1TrackingOnDatabaseTest › a parcel handed over at a quarter to nine UTC is on the next day's list - …`؛ `WebV1AdminAuditOnDatabaseTest › from and to are Tehran days - 21 00 UTC on Thursday is Friday`؛ `GetReportOverviewUcTest › from and to are whole Tehran days - …` |
+| 20 | `ProductLockOrderOnDatabaseTest › a color change waits at its product's row - it never holds the color's row first`؛ `WebV1OrdersOnDatabaseTest › no deadlock - a color's price changed in the panel while it is being bought, at once, 20 times`، `› a payable the shopper didn't see is 409 PRICE_CHANGED …` |
+| 21 | `WebV1BalancePaymentsOnDatabaseTest › two attempts of one balance both paid at the bank, called back at the same moment, 10 times …`، `› «پرداخت» of a balance sent twice with one Idempotency-Key - …`؛ `PaymentDomainServiceTest › the balance changed since the attempt started …` |
 
 CSRF اینجا هم خطر نیست: همه‌ی نوشتن‌های پنل و فروشگاه با هدر `Authorization` میان که مرورگر خودش نمی‌فرسته. تنها کوکی (`kiva_rt`) فقط برای `/api/v1/auth` و `DELETE /me` فرستاده می‌شه و `SameSite=Strict` ـه.
 
@@ -5842,7 +5870,7 @@ Route: 200 application/pdf با هدرهای تصمیم ۱۶
 | ۱۵.۲ | نوشتن مقاله در پنل (ساخت، ویرایش، حذف، لیست و جزئیات پنل) | L | ✅ |
 | ۱۵.۳ | دسته‌ها، لیست و صفحه‌ی مقاله در فروشگاه | M | ✅ |
 | ۱۵.۴ | مقاله‌های مرتبط و «مفید بود؟» | S | ✅ |
-| ۱۵.۵ | ریویو و جمع‌بندی کل سند | M | ⬜ |
+| ۱۵.۵ | ریویو و جمع‌بندی کل سند | M | ✅ |
 
 ### ۲۰.۲ تصمیم‌های این فاز
 
@@ -6094,16 +6122,18 @@ Route: 204
 
 ---
 
-#### گام ۱۵.۵: ریویو و جمع‌بندی کل سند · M ⬜
+#### گام ۱۵.۵: ریویو و جمع‌بندی کل سند · M ✅
 
 **می‌سازی:** `BLOG_REVIEW.md` (ردیف ۴ ِ بخش ۳ برای بلاگ؛ خرابکاری: پاک‌سازی `html`، فیلتر دیده‌شدن، قید یک منتخب، hash ِ IP)؛ `docs/FRONTEND_BLOG.md`؛ **جمع‌بندی کل نقشه**: بخش ۲۹ (گزارش کار) کامل، همه‌ی ردیف‌های بخش ۳ اسم تستشون رو دارن، `RouteGuardsTest` نشون می‌ده **هیچ** مسیر `/admin` ِ کانترکت بدون route نمونده (یه تست تازه: «هر مسیر کانترکت یه route داره»)، و یه دور کامل با kiva-fe و پنل روی سرور؛ merge.
 
 وابسته به: ۱۵.۴
 
 **تموم شده یعنی:**
-- [ ] همه‌ی خرابکاری‌ها قرمز می‌کنن.
-- [ ] تست «هر مسیر کانترکت یه route داره» سبز (و با حذف عمدی یه route قرمز).
-- [ ] جدول وضعیت فازها (بخش ۰) همه ✅؛ merge به `main` و deploy.
+- [x] همه‌ی خرابکاری‌ها قرمز می‌کنن (۱۹ از ۱۹).
+- [x] تست «هر مسیر کانترکت یه route داره» سبز (و با حذف عمدی یه route قرمز).
+- [ ] جدول وضعیت فازها (بخش ۰) همه ✅؛ merge به `main` و deploy. **با تو:** همه‌ی ۱۵ فاز در ریپو آماده‌ان (🔧)، ولی هیچ‌کدوم هنوز در `main` نیست.
+
+**یادداشت پیاده‌سازی:** `BLOG_REVIEW.md` (دوازده خطر، ۱۹ خرابکاری ِ همه قرمز) و `docs/FRONTEND_BLOG.md`. تست تازه‌ی `RouteGuardsTest › every operation of the contract has a route` همه‌ی operationهای کانترکت (نه فقط `/admin`) رو با routeهای اپ می‌سنجه (اسم پارامترها مهم نیست: `{idOrSlug}` و `{postId}` یکی‌ان)؛ از روز اول سبز بود، و با تغییر اسم `/related` قرمز شد. بخش ۳.۱ ِ تازه: تست نگهبان هر ۲۱ ردیف ِ بخش ۳، هر اسم با جستجو در `src/test` پیدا شد. جدول وضعیت بخش ۰: فازهای ۱ تا ۵، ۱۳ و ۱۵ هم «ریپو آماده» با ریویوی خودشون. اجرای کامل: ۳۱۹۷ تست سبز، ۵ skip (ابزار واقعی). دور واقعی با kiva-fe و پنل روی سرور، `KIVA_BLOG_VOTER_PEPPER` روی سرور، merge و deploy با تو.
 
 ---
 
@@ -6534,3 +6564,4 @@ kiva {
 | ۲ آبان ۱۴۰۵ | ۱۵.۲ | Phase 15 step 15.2 | پنج route ِ پنل بلاگ، `BlogPosts` و `BlogPostWriting`، لاگ تغییرات (`V41` برای `BLOG_POST`)، خط بلاگ در `AccountEraser`. ۹ تست تازه سبز |
 | ۲ آبان ۱۴۰۵ | ۱۵.۳ | Phase 15 step 15.3 | دسته‌ها، لیست با منتخب و صفحه‌ی مقاله در فروشگاه با کش؛ ۵ تست تازه سبز |
 | ۳ آبان ۱۴۰۵ | ۱۵.۴ | Phase 15 step 15.4 | مرتبط‌ها و «مفید بود؟» با hash ِ کلیددار IP، سقف `blog-feedback`، پیکربندی اجباری `KIVA_BLOG_VOTER_PEPPER`، رأی‌ها در حذف حساب. ۷ تست تازه سبز |
+| ۳ آبان ۱۴۰۵ | ۱۵.۵ | Phase 15 step 15.5 | ریویوی بلاگ (۱۹ خرابکاری قرمز)، راهنمای فرانت، تست «هر مسیر کانترکت یه route داره»، تست نگهبان هر ردیف بخش ۳، وضعیت فازها؛ ۳۱۹۷ تست سبز |
