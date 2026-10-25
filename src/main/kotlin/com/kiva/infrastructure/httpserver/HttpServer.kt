@@ -4,6 +4,9 @@ import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminBlogUseCa
 import com.kiva.infrastructure.httpserver.controller.httprest.web.StockAlertUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1AdminBlog
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1Blog
+import com.kiva.infrastructure.httpserver.controller.httprest.web.BLOG_FEEDBACK_PER_IP
+import com.kiva.infrastructure.httpserver.controller.httprest.web.BLOG_FEEDBACK_RATE_LIMIT
+import com.kiva.infrastructure.httpserver.controller.httprest.web.BLOG_FEEDBACK_WINDOW
 import com.kiva.infrastructure.httpserver.controller.httprest.web.BlogUseCases
 import com.kiva.infrastructure.httpserver.controller.httprest.web.webV1StockAlerts
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AdminStockAlertUseCases
@@ -220,6 +223,10 @@ fun Application.configureHttp(allowedOrigins: List<String> = emptyList(), truste
             rateLimiter(limit = ContactPolicy.MAX_SUBSCRIBES_PER_IP, refillPeriod = ContactPolicy.SUBSCRIBE_WINDOW.toKotlinDuration())
             requestKey { call -> call.request.origin.remoteAddress }
         }
+        register(BLOG_FEEDBACK_RATE_LIMIT) {
+            rateLimiter(limit = BLOG_FEEDBACK_PER_IP, refillPeriod = BLOG_FEEDBACK_WINDOW)
+            requestKey { call -> call.request.origin.remoteAddress }
+        }
     }
     // The shop and the admin panel live on other origins (localhost:3100 and :3200 in development, kiva.ir and
     // admin.kiva.ir in production), so the browser asks before every call that isn't "simple" (JSON body,
@@ -395,7 +402,7 @@ fun Application.configureRouting() {
             webV1Tracking(TrackingUseCases(get(), get(), get()), mediaUrls)
             webV1Contact(ContactUseCases(get(), get(), get(), get()))
             webV1AdminNewsletter(AdminNewsletterUseCases(checkPanelAccessUc, get()))
-            webV1Blog(BlogUseCases(get(), get(), get()), config.shop.siteUrl, mediaUrls)
+            webV1Blog(BlogUseCases(get(), get(), get(), get(), get()), config.shop.siteUrl, mediaUrls)
             webV1AdminBlog(AdminBlogUseCases(checkPanelAccessUc, get(), get(), get(), get(), get()), config.shop.siteUrl, mediaUrls)
             webV1AdminSupport(AdminSupportUseCases(checkPanelAccessUc, get(), get()))
         }

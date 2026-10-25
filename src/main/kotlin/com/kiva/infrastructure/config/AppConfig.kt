@@ -11,10 +11,11 @@ import io.ktor.server.config.ApplicationConfig
 import java.nio.file.Paths
 import java.util.Base64
 
-/** @property auth no default: the app must not start without its secrets. */
+/** @property auth and [blog] no default: the app must not start without its secrets. */
 data class AppConfig(
     val datasource: DatasourceConfig,
     val auth: AuthConfig,
+    val blog: BlogConfig,
     val shop: ShopConfig = ShopConfig.DEFAULT,
     val seed: SeedConfig = SeedConfig(enabled = false),
     val http: HttpConfig = HttpConfig(allowedOrigins = emptyList()),
@@ -40,6 +41,7 @@ data class AppConfig(
                     maxSmsPerHour = config.property("kiva.auth.maxSmsPerHour").getString().toInt(),
                     bootstrapAdminPhoneRaw = config.propertyOrNull("kiva.auth.bootstrapAdminPhone")?.getString(),
                 ),
+                blog = BlogConfig.of(config.propertyOrNull("kiva.blog.voterPepper")?.getString()),
                 shop = ShopConfig(siteUrl = config.property("kiva.shop.siteUrl").getString()),
                 // Strict: a typo such as "yes" stops the boot instead of quietly meaning false.
                 seed = SeedConfig(enabled = config.property("kiva.seed.enabled").getString().toBooleanStrict()),
@@ -134,14 +136,44 @@ class AuthConfig(
                 },
             )
 
-        private fun secretOf(base64: String?, name: String): ByteArray {
-            require(!base64.isNullOrBlank()) { "$name is not set. $HOW_TO_MAKE_ONE" }
-            return try {
-                Base64.getDecoder().decode(base64.trim())
-            } catch (e: IllegalArgumentException) {
-                throw IllegalArgumentException("$name is not base64. $HOW_TO_MAKE_ONE", e)
-            }
+    }
+}
+
+private const val HOW_TO_MAKE_A_SECRET = "Make one with `openssl rand -base64 32` and set it as an environment variable."
+
+/** A required secret from its base64 config value; missing or not base64 stops the boot, saying how to make one. */
+private fun secretOf(base64: String?, name: String): ByteArray {
+    require(!base64.isNullOrBlank()) { "$name is not set. $HOW_TO_MAKE_A_SECRET" }
+    return try {
+        Base64.getDecoder().decode(base64.trim())
+    } catch (e: IllegalArgumentException) {
+        throw IllegalArgumentException("$name is not base64. $HOW_TO_MAKE_A_SECRET", e)
+    }
+}
+
+/**
+ * The blog's secret (roadmap phase 15, decision 14).
+ *
+ * @property voterPepper the key a guest's address is hashed with before a vote of «مفید بود؟» is kept
+ *   (`KIVA_BLOG_VOTER_PEPPER`), at least 32 bytes. Outside the database, so a copy of it can't be matched against addresses.
+ */
+class BlogConfig(voterPepper: ByteArray) {
+
+    private val pepper = voterPepper.copyOf()
+
+    val voterPepper: ByteArray get() = pepper.copyOf()
+
+    init {
+        require(pepper.size >= AuthConfig.MIN_SECRET_BYTES) {
+            "kiva.blog.voterPepper (KIVA_BLOG_VOTER_PEPPER) must be at least ${AuthConfig.MIN_SECRET_BYTES} bytes, was ${pepper.size}. $HOW_TO_MAKE_A_SECRET"
         }
+    }
+
+    // Never the secret itself, if this object is ever printed.
+    override fun toString() = "BlogConfig(voterPepper=<hidden>)"
+
+    companion object {
+        fun of(voterPepperBase64: String?): BlogConfig = BlogConfig(secretOf(voterPepperBase64, "kiva.blog.voterPepper (KIVA_BLOG_VOTER_PEPPER)"))
     }
 }
 

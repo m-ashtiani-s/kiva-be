@@ -7,6 +7,7 @@ import com.kiva.infrastructure.TestDatabase
 import com.kiva.infrastructure.httpserver.API_V1
 import com.kiva.infrastructure.httpserver.ContractSchemas
 import com.kiva.infrastructure.persistence.exposed.StoredCatalog
+import com.kiva.infrastructure.persistence.exposed.tbl.BlogFeedbackTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.ProductQmTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.ProductVariantQmTbl
 import com.kiva.infrastructure.seed.SeededCatalog
@@ -30,18 +31,25 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.select
+import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Duration
+import java.security.MessageDigest
 import java.time.Instant
+import javax.crypto.Mac
+import javax.crypto.spec.SecretKeySpec
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/** The shop's magazine (`/blog/categories`, `/blog/posts`, `/blog/posts/{idOrSlug}`; public; roadmap phase 15, step 15.3) on kiva_test. */
+/**
+ * The shop's magazine on kiva_test (roadmap phase 15): `/blog/categories`, `/blog/posts` and `/blog/posts/{idOrSlug}`
+ * (step 15.3), the related posts and «مفید بود؟» (step 15.4).
+ */
 class WebV1BlogOnDatabaseTest {
 
     private val clock = MutableClock(Instant.parse("2026-10-24T08:00:00Z"))
@@ -196,5 +204,89 @@ class WebV1BlogOnDatabaseTest {
             assertEquals(HttpStatusCode.NotModified, client.get("$API_V1$path") { header(HttpHeaders.IfNoneMatch, etag) }.status, path)
         }
         assertNull(shop("/blog/posts/a-draft").headers[HttpHeaders.ETag], "a 404 is never cached")
+    }
+
+    private suspend fun ApplicationTestBuilder.vote(postId: String, body: String, who: PanelTestStack.Caller? = null, ip: String? = null): HttpResponse =
+        client.post("$API_V1/blog/posts/$postId/feedback") {
+            who?.let { header(HttpHeaders.Authorization, it.bearer) }
+            ip?.let { header(HttpHeaders.XForwardedFor, it) }
+            contentType(ContentType.Application.Json)
+            setBody(body)
+        }
+
+    private fun votesOf(postId: String): List<Triple<String, Boolean, String?>> = transaction(db) {
+        BlogFeedbackTbl.selectAll().where { BlogFeedbackTbl.postId eq postId.toLong() }.orderBy(BlogFeedbackTbl.voterKey)
+            .map { Triple(it[BlogFeedbackTbl.voterKey], it[BlogFeedbackTbl.helpful], it[BlogFeedbackTbl.comment]) }
+    }
+
+    @Test
+    fun `related - the same category first, the latest first, never the post itself - limit 1 to 12 - a post the shop doesn't see is 404`() = panel.app {
+        val post = write("the-post")
+        write("other-care", category = "care")
+        write("old-style")
+        clock.advance(Duration.ofMinutes(1))
+        write("new-style")
+        write("newest-care", category = "care")
+        val draft = write("a-draft", status = "DRAFT")
+
+        val related = shop("/blog/posts/$post/related?limit=12")
+        assertEquals(HttpStatusCode.OK, related.status, related.bodyAsText())
+        val posts = Json.parseToJsonElement(related.bodyAsText()).jsonArray.map { it.jsonObject }
+        assertEquals(listOf("new-style", "old-style", "newest-care", "other-care"), posts.map { it.text("slug") })
+        assertEquals(ContractSchemas.propertiesOf("BlogPostSummary").toSet(), posts.first().keys)
+        assertEquals(3, Json.parseToJsonElement(shop("/blog/posts/$post/related").bodyAsText()).jsonArray.size)
+        for (limit in listOf("13", "0", "abc")) assertEquals(listOf("limit NUMBER_OUT_OF_RANGE"), shop("/blog/posts/$post/related?limit=$limit").errors(), limit)
+        assertEquals(HttpStatusCode.NotFound, shop("/blog/posts/$draft/related").status)
+        assertEquals(HttpStatusCode.NotFound, shop("/blog/posts/999999/related").status)
+    }
+
+    @Test
+    fun `a guest votes once per address - again replaces it - another address and a logged-in reader each count apart`() = panel.app(trustedProxyHops = 1) {
+        val post = write("voted")
+
+        assertEquals(HttpStatusCode.NoContent, vote(post, """{"helpful":true}""", ip = "203.0.113.7").status)
+        assertEquals(HttpStatusCode.NoContent, vote(post, """{"helpful":false,"comment":"مثال نداشت"}""", ip = "203.0.113.7").status)
+        assertEquals(HttpStatusCode.NoContent, vote(post, """{"helpful":true,"comment":"این نباید بمونه"}""", ip = "198.51.100.4").status)
+        assertEquals(HttpStatusCode.NoContent, vote(post, """{"helpful":true}""", who = editor, ip = "203.0.113.7").status)
+
+        val votes = votesOf(post)
+        assertEquals(3, votes.size)
+        assertEquals(Triple("u:${editor.userId}", true, null), votes.single { it.first.startsWith("u:") })
+        assertEquals(listOf(false to "مثال نداشت", true to null), votes.filter { it.first.startsWith("ip:") }.map { it.second to it.third }.sortedBy { it.first })
+        val page = shop("/blog/posts/$post").json().getValue("helpfulStats").jsonObject
+        assertEquals(listOf("2", "1"), listOf(page.text("helpfulCount"), page.text("notHelpfulCount")))
+        val panelPost = client.get("$API_V1/admin/blog/posts/$post") { header(HttpHeaders.Authorization, editor.bearer) }.json()
+        assertEquals(listOf("مثال نداشت"), panelPost.getValue("feedbackComments").jsonArray.map { it.jsonObject.text("comment") })
+    }
+
+    @Test
+    fun `the address itself is nowhere in the database - only its keyed hash`() = panel.app(trustedProxyHops = 1) {
+        val post = write("hashed")
+        val ip = "203.0.113.7"
+
+        vote(post, """{"helpful":false,"comment":"کوتاه بود"}""", ip = ip)
+
+        val key = votesOf(post).single().first
+        val mac = Mac.getInstance("HmacSHA256").apply { init(SecretKeySpec(PanelTestStack.VOTER_PEPPER, "HmacSHA256")) }
+        assertEquals("ip:" + mac.doFinal(ip.toByteArray()).joinToString("") { "%02x".format(it) }, key)
+        val plain = MessageDigest.getInstance("SHA-256").digest(ip.toByteArray()).joinToString("") { "%02x".format(it) }
+        assertTrue(plain !in key, "a plain SHA-256 of an address is reversed by trying them all")
+        val everything = transaction(db) { exec("SELECT string_agg(t::text, ' ') FROM blogfeedback_tbl t") { it.next(); it.getString(1) } }.orEmpty()
+        assertTrue(ip !in everything && "203.0.113" !in everything, everything)
+    }
+
+    @Test
+    fun `helpful is required - a long comment is 400 - a post the shop doesn't see is 404 - the 31st vote in an hour is 429`() = panel.app {
+        val post = write("limited")
+        val scheduled = write("scheduled", extra = ""","publishedAt":"${clock.now.plus(Duration.ofHours(1))}"""")
+
+        assertEquals(listOf("helpful FIELD_REQUIRED"), vote(post, """{"comment":"چیزی"}""").errors())
+        assertEquals(listOf("comment TEXT_TOO_LONG"), vote(post, """{"helpful":false,"comment":"${"ا".repeat(301)}"}""").errors())
+        assertEquals(HttpStatusCode.NotFound, vote(scheduled, """{"helpful":true}""").status)
+        assertEquals(HttpStatusCode.NotFound, vote("999999", """{"helpful":true}""").status)
+        assertEquals(emptyList(), votesOf(scheduled))
+
+        repeat(26) { assertEquals(HttpStatusCode.NoContent, vote(post, """{"helpful":true}""").status, "vote ${it + 5}") }
+        assertEquals(HttpStatusCode.TooManyRequests, vote(post, """{"helpful":true}""").status)
     }
 }

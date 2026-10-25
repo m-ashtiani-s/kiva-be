@@ -5841,7 +5841,7 @@ Route: 200 application/pdf با هدرهای تصمیم ۱۶
 | ۱۵.۱ | دسته‌ها، نویسنده‌ها و دامنه‌ی مقاله | M | ✅ |
 | ۱۵.۲ | نوشتن مقاله در پنل (ساخت، ویرایش، حذف، لیست و جزئیات پنل) | L | ✅ |
 | ۱۵.۳ | دسته‌ها، لیست و صفحه‌ی مقاله در فروشگاه | M | ✅ |
-| ۱۵.۴ | مقاله‌های مرتبط و «مفید بود؟» | S | ⬜ |
+| ۱۵.۴ | مقاله‌های مرتبط و «مفید بود؟» | S | ✅ |
 | ۱۵.۵ | ریویو و جمع‌بندی کل سند | M | ⬜ |
 
 ### ۲۰.۲ تصمیم‌های این فاز
@@ -6079,16 +6079,18 @@ Route: 204
 
 ---
 
-#### گام ۱۵.۴: مقاله‌های مرتبط و «مفید بود؟» · S ⬜
+#### گام ۱۵.۴: مقاله‌های مرتبط و «مفید بود؟» · S ✅
 
 **می‌سازی:** `ListRelatedBlogPostsUc`، `SendBlogFeedbackUc`؛ سقف `blog-feedback`؛ `kiva.blog.voterPepper`.
 
 وابسته به: ۱۵.۳
 
 **تموم شده یعنی:**
-- [ ] مرتبط‌ها: هم‌دسته‌ها اول، خودش نیست، `limit = 13` ← `400`.
-- [ ] رأی مهمان دو بار از یه IP ← یه ردیف (دومی جایگزین)؛ کاربر واردشده جدا شمرده می‌شه؛ `comment` با `helpful = true` ذخیره نمی‌شه.
-- [ ] خود IP هیچ‌جا در دیتابیس نیست (فقط hash).
+- [x] مرتبط‌ها: هم‌دسته‌ها اول، خودش نیست، `limit = 13` ← `400`.
+- [x] رأی مهمان دو بار از یه IP ← یه ردیف (دومی جایگزین)؛ کاربر واردشده جدا شمرده می‌شه؛ `comment` با `helpful = true` ذخیره نمی‌شه.
+- [x] خود IP هیچ‌جا در دیتابیس نیست (فقط hash).
+
+**یادداشت پیاده‌سازی:** `ListRelatedBlogPostsUc` (`limit` ِ نه‌عدد هم `400 NUMBER_OUT_OF_RANGE` روی `limit`، کش‌شده) و `SendBlogFeedbackUc` (ورود اختیاری با `authenticate(ACCESS, optional = true)`، توکن خراب `401`) در همون `webV1Blog.kt`. قانون رأی در دامنه: `BlogVote` (`helpful` اجباری؛ `comment` فقط با «نه»، ≤ ۳۰۰، بدون نویسه‌ی کنترلی؛ با «آره» بی‌صدا دور ریخته می‌شه). hash ِ IP پورت `VoterHashes` در application و `HmacVoterHashes` در infrastructure: **HMAC-SHA256** با pepper (نه SHA-256 ِ ساده‌ی `ip + pepper`؛ همون کار، ولی کلید درست جای خودش). پیکربندی تازه‌ی اجباری `kiva.blog.voterPepper` (`KIVA_BLOG_VOTER_PEPPER`، base64، حداقل ۳۲ بایت، `BlogConfig.toString` پنهان): `application.conf`، `AppConfig.blog`، `AppConfigTest`، ردیف README و `tools/ops/kiva.env.example`؛ **روی سرور و در Run configuration ِ IntelliJ باید پیش از اجرای این نسخه ساخته بشه** (`openssl rand -base64 32`)، وگرنه اپ بالا نمیاد. سقف `blog-feedback` (۳۰ در ساعت برای هر IP) در `configureHttp`. ردیف بلاگ در تست حذف حساب (`AccountErasureOnDatabaseTest`: رأی با route و بعد از حذف هیچ رأی `u:{id}` نمونده). تست: `WebV1BlogOnDatabaseTest` (۴ تست تازه، روی هم ۹)، `BlogVoteTest` (۲)، `AppConfigTest` (۱ تازه).
 
 ---
 
@@ -6531,3 +6533,4 @@ kiva {
 | ۲ آبان ۱۴۰۵ | ۱۵.۱ | Phase 15 step 15.1 | `V40` (با seed ِ پنج دسته و «تیم کیوا»)، دامنه‌ی `blog` (بلوک‌ها، فرم، مقاله، سیاست) و چهار repository. ۳۳ تست تازه سبز |
 | ۲ آبان ۱۴۰۵ | ۱۵.۲ | Phase 15 step 15.2 | پنج route ِ پنل بلاگ، `BlogPosts` و `BlogPostWriting`، لاگ تغییرات (`V41` برای `BLOG_POST`)، خط بلاگ در `AccountEraser`. ۹ تست تازه سبز |
 | ۲ آبان ۱۴۰۵ | ۱۵.۳ | Phase 15 step 15.3 | دسته‌ها، لیست با منتخب و صفحه‌ی مقاله در فروشگاه با کش؛ ۵ تست تازه سبز |
+| ۳ آبان ۱۴۰۵ | ۱۵.۴ | Phase 15 step 15.4 | مرتبط‌ها و «مفید بود؟» با hash ِ کلیددار IP، سقف `blog-feedback`، پیکربندی اجباری `KIVA_BLOG_VOTER_PEPPER`، رأی‌ها در حذف حساب. ۷ تست تازه سبز |

@@ -11,6 +11,9 @@ import com.kiva.application.usecase.blog.usecase.query.GetAdminBlogPostUc
 import com.kiva.application.usecase.blog.usecase.query.GetBlogPostUc
 import com.kiva.application.usecase.blog.usecase.query.ListBlogCategoriesUc
 import com.kiva.application.usecase.blog.usecase.query.ListBlogPostsUc
+import com.kiva.application.usecase.blog.usecase.query.ListRelatedBlogPostsUc
+import com.kiva.application.usecase.blog.usecase.command.SendBlogFeedbackUc
+import com.kiva.infrastructure.blog.HmacVoterHashes
 import com.kiva.application.usecase.stockalert.StockAlertCounts
 import com.kiva.infrastructure.httpserver.auth.asAccountCheck
 import com.kiva.infrastructure.persistence.exposed.BlogAuthorRepositoryImpl
@@ -526,6 +529,8 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         ListBlogCategoriesUc(transactions, blogPosts, clock),
         ListBlogPostsUc(transactions, blogPostRepository, BlogCategoryRepositoryImpl(), blogPosts, clock),
         GetBlogPostUc(transactions, blogPostRepository, blogPosts, clock),
+        ListRelatedBlogPostsUc(transactions, blogPostRepository, blogPosts, clock),
+        SendBlogFeedbackUc(transactions, blogPostRepository, BlogFeedbackRepositoryImpl(), HmacVoterHashes(VOTER_PEPPER), clock),
     )
     val adminSupport = AdminSupportUseCases(
         checkPanelAccess,
@@ -774,6 +779,9 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         private const val TEST_PHONES = "09900%"
         const val MEDIA_BASE_URL = "https://api.kivashop.test/media"
         const val SITE_URL = "https://kivashop.test"
+
+        /** The blog's key for guests' addresses (`kiva.blog.voterPepper`). */
+        val VOTER_PEPPER = ByteArray(32) { (it + 50).toByte() }
 
         /** `0990000000n`: the panel's test phones. */
         fun phone(n: Int) = "09900" + n.toString().padStart(6, '0')

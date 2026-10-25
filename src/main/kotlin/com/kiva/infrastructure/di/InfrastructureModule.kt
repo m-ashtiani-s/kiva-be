@@ -7,6 +7,8 @@ import com.kiva.application.port.HtmlText
 import com.kiva.application.port.MediaProcessor
 import com.kiva.application.port.MediaStorage
 import com.kiva.application.port.OtpCodes
+import com.kiva.application.port.VoterHashes
+import com.kiva.infrastructure.blog.HmacVoterHashes
 import com.kiva.application.port.PaymentGateways
 import com.kiva.application.port.SessionTokens
 import com.kiva.application.port.SmsSender
@@ -51,6 +53,7 @@ fun infrastructureModule(config: AppConfig, database: Database) = module {
     single<HtmlSanitizer> { JsoupHtmlSanitizer }
     single<HtmlText> { JsoupHtmlText }
     single<OtpCodes> { HmacOtpCodes(config.auth.otpPepper) }
+    single<VoterHashes> { HmacVoterHashes(config.blog.voterPepper) }
     // One instance: it signs tokens for the use cases and its verifier checks them for the routes.
     single { JwtAccessTokens(config.auth.jwtSecret, clock = get()) }
     single<AccessTokens> { get<JwtAccessTokens>() }

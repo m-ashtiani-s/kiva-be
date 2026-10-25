@@ -10,6 +10,8 @@ import com.kiva.application.usecase.blog.usecase.query.GetAdminBlogPostUc
 import com.kiva.application.usecase.blog.usecase.query.GetBlogPostUc
 import com.kiva.application.usecase.blog.usecase.query.ListBlogCategoriesUc
 import com.kiva.application.usecase.blog.usecase.query.ListBlogPostsUc
+import com.kiva.application.usecase.blog.usecase.query.ListRelatedBlogPostsUc
+import com.kiva.application.usecase.blog.usecase.command.SendBlogFeedbackUc
 import com.kiva.application.usecase.order.usecase.query.GetMyInvoiceUc
 import com.kiva.application.usecase.stockalert.StockAlertCounts
 import com.kiva.application.usecase.stockalert.usecase.command.DeleteOldStockAlertsUc
@@ -958,6 +960,8 @@ val useCaseModule = module(createdAtStart = true) {
     single { ListBlogCategoriesUc(transactionManager = get(), blogPosts = get(), clock = get()) }
     single { ListBlogPostsUc(transactionManager = get(), blogPostRepository = get(), blogCategoryRepository = get(), blogPosts = get(), clock = get()) }
     single { GetBlogPostUc(transactionManager = get(), blogPostRepository = get(), blogPosts = get(), clock = get()) }
+    single { ListRelatedBlogPostsUc(transactionManager = get(), blogPostRepository = get(), blogPosts = get(), clock = get()) }
+    single { SendBlogFeedbackUc(transactionManager = get(), blogPostRepository = get(), blogFeedbackRepository = get(), voterHashes = get(), clock = get()) }
 
     // --- contact and newsletter (phase 13) ---
     single { TicketCodeGenerator() }

@@ -45,6 +45,7 @@ openssl rand -base64 32
 | Variable | What |
 | --- | --- |
 | `KIVA_OTP_PEPPER` | Required. The key of the login codes' HMAC: base64 of at least 32 random bytes. |
+| `KIVA_BLOG_VOTER_PEPPER` | Required. The key a guest's address is hashed with before a blog vote («مفید بود؟») is kept: base64 of at least 32 random bytes, its own secret. |
 | `KIVA_JWT_SECRET` | Required. The key access tokens are signed with: base64 of at least 32 random bytes, not the pepper. |
 | `KIVA_SMS_PROVIDER` | `log` (the default) writes login codes to the log instead of sending them: development only. `faraz` sends them through Faraz SMS (below). |
 | `KIVA_TRUSTED_PROXY_HOPS` | `1` only behind the shop's own nginx; `0` (the default) everywhere else. |

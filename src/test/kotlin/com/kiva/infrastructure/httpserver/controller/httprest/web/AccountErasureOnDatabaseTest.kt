@@ -9,6 +9,7 @@ import com.kiva.domain.aggregate.user.model.valueobject.Role
 import com.kiva.infrastructure.MutableClock
 import com.kiva.infrastructure.TestDatabase
 import com.kiva.infrastructure.httpserver.API_V1
+import com.kiva.infrastructure.persistence.exposed.tbl.BlogFeedbackTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.AccountDeletionReasonTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.AddressTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.AuthSessionTbl
@@ -174,6 +175,14 @@ class AccountErasureOnDatabaseTest {
         )
         assertEquals(HttpStatusCode.Created, message.status, message.bodyAsText())
         assertEquals(HttpStatusCode.OK, client.post("$API_V1/newsletter/subscriptions") { contentType(ContentType.Application.Json); setBody("""{"email":"$EMAIL"}""") }.status)
+        val style = transaction(db) { exec("SELECT \"pId\" FROM blogcategory_tbl WHERE slug = 'style'") { it.next(); it.getLong(1) }!! }
+        val post = call(
+            "POST", "/admin/blog/posts", panel.callerWith(Role.CONTENT_EDITOR),
+            """{"title":"راهنمای انتخاب کیف","slug":"erasure-post","categoryId":$style,"blocks":[{"type":"PARAGRAPH","text":"یک"}],"status":"PUBLISHED"}""",
+        )
+        assertEquals(HttpStatusCode.Created, post.status, post.bodyAsText())
+        val vote = call("POST", "/blog/posts/${post.json().text("id")}/feedback", fresh, """{"helpful":false,"comment":"کوتاه بود"}""")
+        assertEquals(HttpStatusCode.NoContent, vote.status, vote.bodyAsText())
         return Sara(fresh, code, refundId, returnId, reviewId)
     }
 
@@ -184,7 +193,7 @@ class AccountErasureOnDatabaseTest {
     }
 
     @Test
-    fun `everything only hers is gone - addresses, cart, wishlist and its link, stock alerts, keys, contact messages, the newsletter`() = panel.app {
+    fun `everything only hers is gone - addresses, cart, wishlist and its link, stock alerts, keys, contact messages, the newsletter, blog votes`() = panel.app {
         val sara = saraWithEverything()
         val id = sara.caller.userId
         // Before: something in every one of them, or the test proves nothing.
@@ -197,6 +206,7 @@ class AccountErasureOnDatabaseTest {
             "idempotencykey_tbl" to { countOf(IdempotencyKeyTbl) { IdempotencyKeyTbl.userId eq id } },
             "contactmessage_tbl" to { countOf(ContactMessageTbl) { ContactMessageTbl.userId eq id } },
             "newslettersubscription_tbl" to { countOf(NewsletterSubscriptionTbl) { NewsletterSubscriptionTbl.email eq EMAIL } },
+            "blogfeedback_tbl" to { countOf(BlogFeedbackTbl) { BlogFeedbackTbl.voterKey eq "u:$id" } },
         )
         tables.forEach { (name, count) -> assertTrue(count() > 0, "$name has nothing of Sara before") }
 

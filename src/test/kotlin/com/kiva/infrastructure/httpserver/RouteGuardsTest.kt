@@ -26,6 +26,7 @@ import com.kiva.infrastructure.auth.JwtAccessTokens
 import com.kiva.infrastructure.common.persistence.ExposedTransactionManager
 import com.kiva.infrastructure.config.AppConfig
 import com.kiva.infrastructure.config.AuthConfig
+import com.kiva.infrastructure.config.BlogConfig
 import com.kiva.infrastructure.config.DatasourceConfig
 import com.kiva.infrastructure.di.appModules
 import com.kiva.infrastructure.httpserver.auth.RequiredRolesRouteSelector
@@ -83,6 +84,7 @@ class RouteGuardsTest {
     private val appConfig = AppConfig(
         DatasourceConfig("jdbc:postgresql://localhost:5432/kiva_test", "unused", "unused", 1),
         auth = AuthConfig(otpPepper = ByteArray(32) { 7 }, jwtSecret = ByteArray(32) { 8 }, maxSmsPerHour = 300),
+        blog = BlogConfig(voterPepper = ByteArray(32) { 9 }),
     )
 
     private data class Endpoint(val method: HttpMethod, val path: String, val requiredRoles: Set<Role>?) {

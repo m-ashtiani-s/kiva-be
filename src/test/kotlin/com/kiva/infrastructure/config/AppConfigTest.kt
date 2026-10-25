@@ -22,6 +22,7 @@ class AppConfigTest {
 
     private val pepper = ByteArray(32) { it.toByte() }
     private val jwtSecret = ByteArray(32) { (it + 100).toByte() }
+    private val voterPepper = ByteArray(32) { (it + 50).toByte() }
 
     private val valid = mapOf(
         "kiva.datasource.url" to "jdbc:postgresql://localhost:5432/kiva",
@@ -31,6 +32,7 @@ class AppConfigTest {
         "kiva.auth.otpPepper" to Base64.getEncoder().encodeToString(pepper),
         "kiva.auth.jwtSecret" to Base64.getEncoder().encodeToString(jwtSecret),
         "kiva.auth.maxSmsPerHour" to "300",
+        "kiva.blog.voterPepper" to Base64.getEncoder().encodeToString(voterPepper),
         "kiva.shop.siteUrl" to "https://kiva.ir",
         "kiva.seed.enabled" to "false",
         "kiva.http.allowedOrigins" to "http://localhost:5173",
@@ -94,6 +96,15 @@ class AppConfigTest {
     }
 
     @Test
+    fun `without the blog's voter pepper the app doesn't start - under 32 bytes is refused - it never shows when printed`() {
+        assertContentEquals(voterPepper, read().blog.voterPepper)
+        val missing = refusal("kiva.blog.voterPepper" to null)
+        assertTrue("KIVA_BLOG_VOTER_PEPPER" in missing && "openssl rand -base64 32" in missing, missing)
+        assertTrue("at least 32 bytes" in refusal("kiva.blog.voterPepper" to Base64.getEncoder().encodeToString(ByteArray(31))))
+        assertEquals("BlogConfig(voterPepper=<hidden>)", read().blog.toString())
+    }
+
+    @Test
     fun `trusted proxy hops are 0 or 1`() {
         assertEquals(1, read("kiva.http.trustedProxyHops" to "1").http.trustedProxyHops)
         assertTrue("trustedProxyHops" in refusal("kiva.http.trustedProxyHops" to "2"))
@@ -143,7 +154,7 @@ class AppConfigTest {
 
         val secrets = mapOf(
             "kiva.auth.otpPepper" to valid.getValue("kiva.auth.otpPepper"),
-            "kiva.auth.jwtSecret" to valid.getValue("kiva.auth.jwtSecret"),
+            "kiva.auth.jwtSecret" to valid.getValue("kiva.auth.jwtSecret"), "kiva.blog.voterPepper" to valid.getValue("kiva.blog.voterPepper"),
         )
         val withPepper = ConfigFactory.parseMap(secrets)
             .withFallback(file)
@@ -262,7 +273,7 @@ class AppConfigTest {
         val noEnvironment = ConfigResolveOptions.noSystem()
         val secrets = mapOf(
             "kiva.auth.otpPepper" to valid.getValue("kiva.auth.otpPepper"),
-            "kiva.auth.jwtSecret" to valid.getValue("kiva.auth.jwtSecret"),
+            "kiva.auth.jwtSecret" to valid.getValue("kiva.auth.jwtSecret"), "kiva.blog.voterPepper" to valid.getValue("kiva.blog.voterPepper"),
             "kiva.sms.provider" to "faraz",
         )
 
@@ -313,7 +324,7 @@ class AppConfigTest {
     @Test
     fun `application conf serves media from build in development`() {
         val file = ConfigFactory.parseResources("application.conf")
-        val secrets = mapOf("kiva.auth.otpPepper" to valid.getValue("kiva.auth.otpPepper"), "kiva.auth.jwtSecret" to valid.getValue("kiva.auth.jwtSecret"))
+        val secrets = mapOf("kiva.auth.otpPepper" to valid.getValue("kiva.auth.otpPepper"), "kiva.auth.jwtSecret" to valid.getValue("kiva.auth.jwtSecret"), "kiva.blog.voterPepper" to valid.getValue("kiva.blog.voterPepper"))
         val media = AppConfig.from(HoconApplicationConfig(ConfigFactory.parseMap(secrets).withFallback(file).resolve(ConfigResolveOptions.noSystem()))).media
 
         assertEquals("http://localhost:8080/media", media.publicBaseUrl)
@@ -363,7 +374,7 @@ class AppConfigTest {
     fun `application conf sends emails to the log, and reads smtp from the environment with its defaults`() {
         val file = ConfigFactory.parseResources("application.conf")
         val noEnvironment = ConfigResolveOptions.noSystem()
-        val secrets = mapOf("kiva.auth.otpPepper" to valid.getValue("kiva.auth.otpPepper"), "kiva.auth.jwtSecret" to valid.getValue("kiva.auth.jwtSecret"))
+        val secrets = mapOf("kiva.auth.otpPepper" to valid.getValue("kiva.auth.otpPepper"), "kiva.auth.jwtSecret" to valid.getValue("kiva.auth.jwtSecret"), "kiva.blog.voterPepper" to valid.getValue("kiva.blog.voterPepper"))
         assertEquals(EmailConfig.LOG, AppConfig.from(HoconApplicationConfig(ConfigFactory.parseMap(secrets).withFallback(file).resolve(noEnvironment))).email)
 
         val chosen = secrets + ("kiva.email.provider" to "smtp")

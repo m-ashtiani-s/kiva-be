@@ -16,6 +16,7 @@ import com.kiva.domain.aggregate.settings.model.valueobject.SiteStats
 import com.kiva.infrastructure.TestDatabase
 import com.kiva.infrastructure.config.AppConfig
 import com.kiva.infrastructure.config.AuthConfig
+import com.kiva.infrastructure.config.BlogConfig
 import com.kiva.infrastructure.config.DatasourceConfig
 import com.kiva.infrastructure.di.infrastructureModule
 import org.junit.jupiter.api.Test
@@ -96,6 +97,7 @@ class PaymentWiringTest {
         val config = AppConfig(
             DatasourceConfig("jdbc:postgresql://localhost:5432/kiva_test", "unused", "unused", 1),
             auth = AuthConfig(otpPepper = ByteArray(32) { 7 }, jwtSecret = ByteArray(32) { 8 }, maxSmsPerHour = 300),
+            blog = BlogConfig(voterPepper = ByteArray(32) { 9 }),
             payment = PaymentConfig(
                 PaymentProvider.ZARINPAL, "https://api.kiva.ir", "https://kiva.ir/checkout/result",
                 ZarinpalConfig("1344b5d4-0048-11e8-94db-005056a205be", sandbox = false),
