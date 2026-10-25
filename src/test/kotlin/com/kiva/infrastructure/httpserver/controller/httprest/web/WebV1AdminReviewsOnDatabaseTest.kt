@@ -153,6 +153,7 @@ class WebV1AdminReviewsOnDatabaseTest {
         val body = approved.json()
         assertEquals(ContractSchemas.propertiesOf("Review"), body.keys)
         assertEquals("APPROVED", body.text("status"))
+        assertEquals(nilaId.toString(), body.getValue("product").jsonObject.text("id"), "the panel's answer names the product")
         assertEquals("4.0" to "1", rating())
         assertEquals(listOf(id), publicIds())
         assertEquals(listOf("REVIEW_MODERATED" to listOf("status: PENDING -> APPROVED")), auditOf(id))
@@ -237,6 +238,10 @@ class WebV1AdminReviewsOnDatabaseTest {
         assertEquals("samira@example.com", items.last().text("contact"))
         assertEquals(customer(2).user.activePhone.value, items[1].text("contact"))
         assertEquals(customer(2).user.id.value.toString(), items[1].text("customerId"))
+        // The panel names each review's product (contract 1.22.0), whatever its status in the shop.
+        val products = items.map { it.getValue("product").jsonObject.let { p -> p.text("id") to p.text("slug") } }
+        assertEquals(listOf(nilaId.toString() to "nila-crossbody-bag", mahakId.toString() to "mahak-shoulder-bag", nilaId.toString() to "nila-crossbody-bag"), products)
+        assertEquals(ContractSchemas.propertiesOf("ProductRef"), items.first().getValue("product").jsonObject.keys)
 
         fun JsonObject.ids() = getValue("items").jsonArray.map { it.jsonObject.text("id") }
         assertEquals(listOf(other, withContact), queue("?status=PENDING").json().ids())

@@ -217,7 +217,30 @@ class WebV1AdminBlogOnDatabaseTest {
     }
 
     @Test
-    fun `an OPERATOR is 403 on all five routes - ADMIN may`() = panel.app {
+    fun `the authors are every byline - one without a post too - the default first, and a post can be signed by either`() = panel.app {
+        val sara = transaction(db) {
+            exec("INSERT INTO blogauthor_tbl (name, title) VALUES ('سارا', 'تیم استایل')")
+            exec("SELECT \"pId\" FROM blogauthor_tbl WHERE name = 'سارا'") { it.next(); it.getLong(1) }!!
+        }
+        try {
+            val answer = read("/admin/blog/authors")
+
+            assertEquals(HttpStatusCode.OK, answer.status, answer.bodyAsText())
+            val authors = Json.parseToJsonElement(answer.bodyAsText()).jsonArray.map { it.jsonObject }
+            assertEquals(listOf("تیم کیوا" to "true", "سارا" to "false"), authors.map { it.text("name") to it.text("isDefault") })
+            assertEquals(listOf(sara.toString(), "س"), listOf(authors[1].text("id"), authors[1].text("initial")))
+            assertEquals(ContractSchemas.propertiesOf("BlogAuthor").toSet() + "isDefault", authors[1].keys)
+            val signed = create(body(extra = ""","authorId":$sara"""))
+            assertEquals(HttpStatusCode.Created, signed.status, signed.bodyAsText())
+            assertEquals("سارا", signed.json().getValue("author").jsonObject.text("name"))
+        } finally {
+            panel.deleteWhatWasStored()
+            transaction(db) { exec("DELETE FROM blogauthor_tbl WHERE \"pId\" = $sara") }
+        }
+    }
+
+    @Test
+    fun `an OPERATOR is 403 on all six routes - ADMIN may`() = panel.app {
         val operator = panel.callerWith(Role.OPERATOR)
         val answers = listOf(
             read("/admin/blog/posts", operator).status,
@@ -225,9 +248,10 @@ class WebV1AdminBlogOnDatabaseTest {
             create(body(), operator).status,
             update(1, body(), operator).status,
             client.delete("$API_V1/admin/blog/posts/1") { header(HttpHeaders.Authorization, operator.bearer) }.status,
+            read("/admin/blog/authors", operator).status,
         )
 
-        assertEquals(List(5) { HttpStatusCode.Forbidden }, answers)
+        assertEquals(List(6) { HttpStatusCode.Forbidden }, answers)
         assertEquals(HttpStatusCode.Created, create(body(), panel.callerWith(Role.ADMIN)).status)
     }
 }

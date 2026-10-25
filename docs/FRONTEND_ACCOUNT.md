@@ -87,7 +87,7 @@ URL.revokeObjectURL(url)
 
 ## ۳. پنل
 
-- **مشتری‌ها:** حساب حذف‌شده در `GET /admin/customers` نمیاد (نه با جستجوی موبایل قبلیش)، و `GET /admin/customers/{id}` و `PUT /admin/customers/{id}/roles` برای اون `404` می‌دن.
+- **مشتری‌ها:** حساب حذف‌شده در `GET /admin/customers` نمیاد (نه با جستجوی موبایل قبلیش)، و `GET /admin/customers/{id}` و `PUT /admin/customers/{id}/roles` برای اون `404` می‌دن. `GET /admin/customers/{id}` برای حساب حذف‌شده کد `CUSTOMER_DELETED` می‌ده و برای شناسه‌ای که اصلاً نیست `NOT_FOUND` (کانترکت 1.22.0): اولی رو «این حساب حذف شده» نشون بده، نه «پیدا نشد». شناسه‌ی این حساب هنوز در سفارش‌ها، مرجوعی‌ها و نظرهاش هست، پس لینک بهش ممکنه.
 - **سفارش بی‌نام** (حساب حذف‌شده): در `AdminOrder`، `customer.fullName` و `customer.phone` `null`ـن؛ «حساب حذف‌شده» نشون بده. `address` فقط `provinceName` و `cityName` داره (بقیه `null`) و `fullText` فقط «استان، شهر» ـه. در لیست سفارش‌ها `customerName` و `customerPhone` هم `null` می‌شن. `preShipmentMediaDetail.phone` و `username` و `note` هم `null`ـن (کانال می‌مونه). مبلغ‌ها، ردیف‌ها، کد رهگیری و تاریخ‌ها سر جاشونن.
 - **مرجوعی‌ها:** `customer.phone` ِ مرجوعی ِ حساب حذف‌شده `null` ـه.
 - **کارمند:** کارمندی که می‌خواد حسابش رو حذف کنه، اول باید ادمین همه‌ی نقش‌های پنلش رو برداره.

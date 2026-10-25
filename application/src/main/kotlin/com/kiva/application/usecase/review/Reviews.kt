@@ -14,7 +14,7 @@ import com.kiva.domain.aggregate.review.repository.ReviewVoteRepository
 /**
  * Reviews as one viewer sees them (the contract's Review; roadmap section 13.2, decision 19), built the same way for the
  * product's list, «نظرات من», a review just written and the panel (Rule 15). A whole page in a few reads, never one per
- * review: the media, the viewer's votes, the products (only for «نظرات من»), the palette. Runs inside the caller's
+ * review: the media, the viewer's votes, the products (for «نظرات من» and the panel), the palette. Runs inside the caller's
  * transaction.
  */
 class Reviews(
@@ -26,7 +26,7 @@ class Reviews(
 
     /**
      * Who looks: [viewer] (null for a guest), the panel ([panel]: every reason and reply), and whether each review names
-     * its product ([withProduct], «نظرات من»).
+     * its product ([withProduct], «نظرات من» and the panel).
      */
     data class Viewer(val viewer: UserId?, val panel: Boolean = false, val withProduct: Boolean = false)
 

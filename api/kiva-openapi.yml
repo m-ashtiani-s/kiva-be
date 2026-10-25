@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: KIVA Store API — کیوا
-  version: 1.21.0
+  version: 1.22.0
   contact:
     name: KIVA Engineering
     email: support@kiva.ir
@@ -1116,7 +1116,6 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
-        '404': { $ref: '#/components/responses/NotFound' }
   # ================================================================
   #  SEARCH
   # ================================================================
@@ -5029,6 +5028,27 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /admin/blog/authors:
+    get:
+      tags: [Admin · Content]
+      x-roles: [ADMIN, CONTENT_EDITOR]
+      operationId: adminListBlogAuthors
+      summary: "نویسنده‌های مجله (برای انتخاب `authorId` در فرم مقاله)"
+      description: |
+        همه‌ی نویسنده‌ها، چه مقاله‌ی منتشرشده داشته باشند چه نه: اول نویسنده‌ی پیش‌فرض (`isDefault`، همانی که مقاله‌ی بی‌`authorId` می‌گیرد)، بعد به ترتیب
+        ساخته شدن. نویسنده‌ها با SQL ساخته و عوض می‌شوند و endpoint ِ نوشتن ندارند. دسته‌های مجله را پنل از `GET /blog/categories` می‌خواند
+        (همه‌ی دسته‌ها را می‌دهد، با `postCount` ِ صفر هم).
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AdminBlogAuthor' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
   /admin/faq/groups:
     get:
       tags: [Admin · Content]
@@ -5403,7 +5423,9 @@ paths:
       x-roles: [ADMIN, SUPPORT]
       operationId: adminGetCustomer
       summary: "جزئیات یک مشتری: پروفایل، آدرس‌ها و آخرین سفارش‌ها"
-      description: 'کاربر ناموجود، حساب حذف‌شده یا شناسه‌ی بدشکل ← `404 NOT_FOUND`. خواندن در لاگ تغییرات ثبت نمی‌شود.'
+      description: |
+        کاربر ناموجود یا شناسه‌ی بدشکل ← `404 NOT_FOUND`؛ حساب حذف‌شده ← `404 CUSTOMER_DELETED` (تا پنل «این حساب حذف شده» را از «مسیر اشتباه» جدا کند؛
+        شناسه‌ی چنین حسابی هنوز در سفارش‌ها، مرجوعی‌ها و نظرهایش هست). خواندن در لاگ تغییرات ثبت نمی‌شود.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: customerId
@@ -6032,6 +6054,7 @@ components:
         - STAFF_ACCOUNT_CANNOT_BE_DELETED
         - INVOICE_NOT_AVAILABLE
         - ROLE_CHANGE_NOT_ALLOWED
+        - CUSTOMER_DELETED
         # --- پنل ادمین: کلید تکراری (رنگ) ---
         - DUPLICATE_CODE
         # --- پنل ادمین: محصول و رنگ‌هایش ---
@@ -6698,7 +6721,7 @@ components:
         product:
           allOf: [{ $ref: '#/components/schemas/ProductRef' }]
           nullable: true
-          description: فقط در «نظرات من»؛ بقیه‌جا `null`
+          description: 'در «نظرات من» و در پنل (صف نظرات و پاسخ تأیید/رد و «پاسخ کیوا»)، با هر وضعیتی که محصول الان دارد؛ بقیه‌جا `null`'
         authorName: { type: string, description: 'اسمی که نویسنده داد؛ نداد ← «کاربر کیوا». اسم حساب خودکار گذاشته نمی‌شود', example: سمیرا }
         authorInitial: { type: string, example: س }
         rating: { type: integer, minimum: 1, maximum: 5, example: 5 }
@@ -8610,6 +8633,14 @@ components:
           items: { $ref: '#/components/schemas/BlogPostSummary' }
         meta: { $ref: '#/components/schemas/PageMeta' }
         emptyMessage: { type: string, nullable: true, example: مقاله‌ای با این مشخصات پیدا نشد. }
+    AdminBlogAuthor:
+      description: 'نویسنده در پنل: همه‌ی `BlogAuthor` به‌علاوه‌ی `isDefault`.'
+      allOf:
+        - $ref: '#/components/schemas/BlogAuthor'
+        - type: object
+          required: [isDefault]
+          properties:
+            isDefault: { type: boolean, description: 'نویسنده‌ی مقاله‌ای که `authorId` نفرستاده؛ حداکثر یکی', example: true }
     AdminBlogPost:
       description: |
         مقاله در پنل: همه‌ی `BlogPostDetail` به‌علاوه‌ی وضعیت و چیزهای ویرایش. در لیست پنل `blocks` و `toc` خالی‌اند.
@@ -9312,7 +9343,7 @@ components:
           type: array
           items:
             type: object
-            description: مثل BlogContentBlock، با `productId` و `imageMediaId` به‌جای آبجکت کامل
+            description: مثل BlogContentBlock، با `productId` و `imageMediaId` به‌جای آبجکت کامل؛ فیلدهای نوع‌های دیگر (و `anchor`) نادیده
             properties:
               type: { type: string, enum: [HEADING, PARAGRAPH, QUOTE, TIP, PRODUCT, IMAGE, LIST] }
               text: { type: string, nullable: true }
@@ -9324,7 +9355,6 @@ components:
                 items: { type: string }
               productId: { type: integer, nullable: true }
               imageMediaId: { type: string, nullable: true }
-            description: 'فیلدهای نوع‌های دیگر (و `anchor`) نادیده'
         tags:
           type: array
           items: { type: string }

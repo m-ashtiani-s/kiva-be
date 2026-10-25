@@ -12,6 +12,9 @@ data class BlogCategoryDto(val id: Long, val slug: String, val name: String, val
 /** A byline (the contract's BlogAuthor); its initial is the HTTP layer's. */
 data class BlogAuthorDto(val id: Long, val name: String, val title: String?, val bio: String?, val avatar: UploadedMediaDto?)
 
+/** A byline in the panel's picker (the contract's AdminBlogAuthor); [isDefault] the author of a post that names none. */
+data class AdminBlogAuthorDto(val author: BlogAuthorDto, val isDefault: Boolean)
+
 /**
  * A post as cards and lists show it (the contract's BlogPostSummary).
  *
