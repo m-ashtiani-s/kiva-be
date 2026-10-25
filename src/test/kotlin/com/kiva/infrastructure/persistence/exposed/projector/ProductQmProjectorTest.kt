@@ -15,6 +15,7 @@ import com.kiva.infrastructure.TestDatabase
 import com.kiva.infrastructure.persistence.event.ProductEventSamples
 import com.kiva.infrastructure.persistence.event.serializer.payload.product.ProductSpecsPayload
 import com.kiva.infrastructure.persistence.exposed.ProductRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.SampleMedia
 import com.kiva.infrastructure.persistence.exposed.StoredCatalog
 import com.kiva.infrastructure.persistence.exposed.StoredCatalog.Companion.orFail
 import com.kiva.infrastructure.persistence.exposed.StoredCatalog.Companion.priceTag
@@ -94,7 +95,7 @@ class ProductQmProjectorTest {
                 val priceTag = PricePolicy.priceTagOf(product, it)
                 listOf(
                     it.id.value, it.colorKey.value, it.sku.value, priceTag.price.toman, priceTag.compareAtPrice?.toman,
-                    it.ownPriceTag != null, it.isDefault, it.isActive, it.sortOrder, it.media,
+                    it.ownPriceTag != null, it.isDefault, it.isActive, it.sortOrder, it.media.map(SampleMedia::dtoOf),
                 )
             },
             colorRows(product.id).map {
@@ -102,7 +103,7 @@ class ProductQmProjectorTest {
                     it[ProductVariantQmTbl.variantId], it[ProductVariantQmTbl.colorKey], it[ProductVariantQmTbl.sku],
                     it[ProductVariantQmTbl.price], it[ProductVariantQmTbl.compareAtPrice], it[ProductVariantQmTbl.hasOwnPrice],
                     it[ProductVariantQmTbl.isDefault], it[ProductVariantQmTbl.isActive], it[ProductVariantQmTbl.sortOrder],
-                    it[ProductVariantQmTbl.media].map { media -> media.toDomain() },
+                    it[ProductVariantQmTbl.media].map { media -> media.toDto() },
                 )
             },
         )
@@ -184,21 +185,21 @@ class ProductQmProjectorTest {
                 row[ProductQmTbl.specs],
             ),
         )
-        assertEquals(listOf(0, 0), listOf(row[ProductQmTbl.soldCount], row[ProductQmTbl.ratingAvg].toInt()))
+        assertEquals(0, row[ProductQmTbl.soldCount])
         assertMatchesDomain(product)
     }
 
     @Test
-    fun `the search text holds name, category, active colors and material, written the Persian way`() {
+    fun `the search text holds name, category, active colors, material and the product's code, written the Persian way`() {
         // Typed on an Arabic keyboard: ي and ك instead of ی and ک.
         val arabicName = ProductEventSamples.fullDetails.copy(name = ProductName.constructFromPersisted("كيف دوشي ماهك"))
         val product = catalog.newProduct(listOf(NewColor("lilac"), NewColor("black")), details = arabicName)
 
-        assertEquals("کیف دوشی ماهک کیف دوشی یاسی مشکی چرم مصنوعی مات درجه یک", productRow(product.id)[ProductQmTbl.searchText])
+        assertEquals("کیف دوشی ماهک کیف دوشی یاسی مشکی چرم مصنوعی مات درجه یک ${product.sku.value}", productRow(product.id)[ProductQmTbl.searchText])
 
         catalog.change(product.id) { it.deactivateVariant(product.color("black"), staff, now) }
 
-        assertEquals("کیف دوشی ماهک کیف دوشی یاسی چرم مصنوعی مات درجه یک", productRow(product.id)[ProductQmTbl.searchText])
+        assertEquals("کیف دوشی ماهک کیف دوشی یاسی چرم مصنوعی مات درجه یک ${product.sku.value}", productRow(product.id)[ProductQmTbl.searchText])
     }
 
     @Test
@@ -210,7 +211,7 @@ class ProductQmProjectorTest {
 
         val row = productRow(product.id)
         assertEquals(listOf("wallet", "genuine-cow-leather", BagType.WALLET), listOf(row[ProductQmTbl.categorySlug], row[ProductQmTbl.materialSlug], row[ProductQmTbl.bagType]))
-        assertEquals("کیف پول ساده کیف پول مشکی چرم طبیعی گاوی", row[ProductQmTbl.searchText])
+        assertEquals("کیف پول ساده کیف پول مشکی چرم طبیعی گاوی ${changed.sku.value}", row[ProductQmTbl.searchText])
         assertEquals(
             listOf(null, null, emptyList<String>(), null, ProductSpecsPayload(ProductEventSamples.bareDetails.specs), emptyList<String>(), null, true, true, 5),
             listOf(

@@ -7,8 +7,11 @@ import com.kiva.domain.aggregate.product.model.valueobject.BagType
 import com.kiva.domain.aggregate.product.model.valueobject.ClosureType
 import com.kiva.domain.aggregate.product.model.valueobject.MediaView
 import com.kiva.domain.aggregate.product.model.valueobject.Occasion
+import com.kiva.domain.aggregate.product.model.valueobject.PocketInfo
 import com.kiva.domain.aggregate.product.model.valueobject.StockInfo
 import com.kiva.domain.aggregate.product.model.valueobject.StockStatus
+import com.kiva.domain.aggregate.product.model.valueobject.StrapInfo
+import com.kiva.domain.aggregate.product.model.valueobject.StrapType
 import com.kiva.infrastructure.common.http.toPersianNumber
 
 /**
@@ -90,8 +93,8 @@ object ProductTexts {
         }
         specs.weightGrams?.let { add(SpecRowHttpResponse("WEIGHT", "وزن", "${it.toLong().toPersianNumber()} گرم")) }
         specs.closure?.let { add(SpecRowHttpResponse("CLOSURE", "نوع بسته شدن", closure(it))) }
-        specs.strap?.let { add(SpecRowHttpResponse("STRAP", "بند و دسته", it)) }
-        specs.pockets?.let { add(SpecRowHttpResponse("POCKETS", "جیب‌ها", it)) }
+        if (specs.straps.isNotEmpty()) add(SpecRowHttpResponse("STRAP", "بند و دسته", specs.straps.joinToString("، ") { strap(it) }))
+        specs.pockets?.let { add(SpecRowHttpResponse("POCKETS", "جیب‌ها", pockets(it))) }
         add(
             SpecRowHttpResponse(
                 "COLORS", "رنگ‌های موجود", detail.variants.joinToString("، ") { it.color.name },
@@ -109,7 +112,64 @@ object ProductTexts {
             StockStatus.OUT_OF_STOCK -> add(SpecRowHttpResponse("STOCK", "موجودی انبار", "تمام شد", tone = "DARK"))
             StockStatus.IN_STOCK -> Unit
         }
+        specs.laptopMaxInch?.let { add(SpecRowHttpResponse("LAPTOP", "جای لپ‌تاپ", "تا ${number(it)} اینچ")) }
+        if (specs.waterproof) add(SpecRowHttpResponse("WATERPROOF", "ضدآب", "دارد"))
+        specs.lining?.let { add(SpecRowHttpResponse("LINING", "آستر", listOfNotNull(it.material, it.color).joinToString("، "))) }
+        specs.hardware?.let { add(SpecRowHttpResponse("HARDWARE", "یراق‌آلات", listOfNotNull(it.material, it.finish).joinToString("، "))) }
+        specs.madeIn?.let { add(SpecRowHttpResponse("MADE_IN", "ساخت", it)) }
+        specs.warranty?.let { add(SpecRowHttpResponse("WARRANTY", "ضمانت", it.description ?: "${it.months.toLong().toPersianNumber()} ماه")) }
     }
+
+    fun strapType(type: StrapType): String = when (type) {
+        StrapType.SHOULDER -> "بند دوشی"
+        StrapType.CROSSBODY -> "بند کراس‌بادی"
+        StrapType.TOP_HANDLE -> "دسته‌ی دستی"
+        StrapType.CHAIN -> "بند زنجیری"
+        StrapType.BACKPACK_STRAPS -> "بند کوله"
+        StrapType.WRISTLET -> "بند مچی"
+        StrapType.NONE -> "بدون بند"
+    }
+
+    /** The panel's label, or the kind and the length: «بند دوشی ۵۵ سانتی‌متر», «بند کراس‌بادی ۸۰ تا ۱۲۰ سانتی‌متر». */
+    fun strap(strap: StrapInfo): String {
+        strap.label?.let { return it }
+        val kind = strap.type?.let(::strapType) ?: "بند"
+        val min = strap.minLengthCm
+        val max = strap.maxLengthCm
+        val fixed = strap.lengthCm
+        val length = when {
+            min != null && max != null -> "${number(min)} تا ${number(max)} سانتی‌متر"
+            fixed != null -> "${number(fixed)} سانتی‌متر"
+            else -> null
+        }
+        return listOfNotNull(kind, length).joinToString(" ")
+    }
+
+    /** The panel's summary, or one made from the counts: «۱ جیب زیپ‌دار داخلی، ۲ جیب موبایل». */
+    fun pockets(pockets: PocketInfo): String {
+        pockets.summary?.let { return it }
+        val counted = listOf(
+            pockets.internal to "جیب داخلی",
+            pockets.internalZip to "جیب زیپ‌دار داخلی",
+            pockets.external to "جیب بیرونی",
+            pockets.phone to "جیب موبایل",
+            pockets.cardSlots to "جای کارت",
+            pockets.billSlots to "جای اسکناس",
+        ).filter { it.first > 0 }.map { (count, name) -> "${count.toLong().toPersianNumber()} $name" }
+        val flags = listOfNotNull(
+            "جیب پول خرد".takeIf { pockets.coinPocket },
+            "کیف کوچک جداشدنی".takeIf { pockets.detachablePouch },
+            "جای لپ‌تاپ".takeIf { pockets.laptopSleeve },
+        )
+        return (counted + flags).joinToString("، ").ifEmpty { "بدون جیب" }
+    }
+
+    /**
+     * What «سؤال داری؟» puts in a messenger (roadmap section 15.6): «سلام، درباره «کیف دوشی ماهک» رنگ یاسی (کد KV-1001)
+     * سؤال دارم. می‌شه عکس/ویدیوی بیشتری بفرستید؟». [code] is the product's own (KV-1001), as its page shows it.
+     */
+    fun inquiryText(name: String, colorName: String, code: String): String =
+        "سلام، درباره «$name» رنگ $colorName (کد $code) سؤال دارم. می‌شه عکس/ویدیوی بیشتری بفرستید؟"
 
     // StockPolicy gives the number exactly when the status is LOW_STOCK.
     private fun shown(stock: StockInfo): String =

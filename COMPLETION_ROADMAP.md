@@ -90,21 +90,21 @@
 
 | فاز | گام‌ها | وضعیت |
 |---|---|---|
-| ۱ | ۱.۰ تا ۱.۱۰ | ⬜ |
-| ۲ | ۲.۰ تا ۲.۱۱ | ⬜ |
-| ۳ | ۳.۰ تا ۳.۵ | ⬜ |
-| ۴ | ۴.۰ تا ۴.۵ | ⬜ |
-| ۵ | ۵.۰ تا ۵.۵ | ⬜ |
-| ۶ | ۶.۱ تا ۶.۹ | ⬜ |
-| ۷ | ۷.۰ تا ۷.۶ | ⬜ |
-| ۸ | ۸.۰ تا ۸.۶ | ⬜ |
-| ۹ | ۹.۰ تا ۹.۵ | ⬜ |
-| ۱۰ | ۱۰.۰ تا ۱۰.۴ | ⬜ |
-| ۱۱ | ۱۱.۰ تا ۱۱.۷ | ⬜ |
-| ۱۲ | ۱۲.۰ تا ۱۲.۳ | ⬜ |
-| ۱۳ | ۱۳.۰ تا ۱۳.۵ | ⬜ |
-| ۱۴ | ۱۴.۰ تا ۱۴.۴ | ⬜ |
-| ۱۵ | ۱۵.۰ تا ۱۵.۵ | ⬜ |
+| ۱ | ۱.۰ تا ۱.۱۰ | 🔧 ریپو آماده؛ merge با تو (`PANEL_CATALOG_REVIEW.md`) |
+| ۲ | ۲.۰ تا ۲.۱۱ | 🔧 ریپو آماده؛ merge با تو (`PANEL_ORDERS_REVIEW.md`) |
+| ۳ | ۳.۰ تا ۳.۵ | 🔧 ریپو آماده؛ merge با تو (`CHANGE_REQUESTS_REVIEW.md`) |
+| ۴ | ۴.۰ تا ۴.۵ | 🔧 ریپو آماده؛ merge با تو (`PANEL_SETTINGS_REVIEW.md`) |
+| ۵ | ۵.۰ تا ۵.۵ | 🔧 ریپو آماده؛ merge با تو (`CONTENT_REVIEW.md`) |
+| ۶ | ۶.۱ تا ۶.۹ | 🔧 ریپو آماده؛ اجرای روی سرور با تو (`LAUNCH.md`) |
+| ۷ | ۷.۰ تا ۷.۶ | 🔧 ریپو آماده؛ الگوهای فراز، دور واقعی و merge با تو (`RETURNS_REVIEW.md`) |
+| ۸ | ۸.۰ تا ۸.۶ | 🔧 ریپو آماده؛ دور واقعی و merge با تو (`REVIEWS_REVIEW.md`) |
+| ۹ | ۹.۰ تا ۹.۵ | 🔧 ریپو آماده؛ دور واقعی و merge با تو (`WISHLIST_REVIEW.md`) |
+| ۱۰ | ۱۰.۰ تا ۱۰.۴ | 🔧 ریپو آماده؛ الگوی فراز، دور واقعی و merge با تو (`STOCK_ALERTS_REVIEW.md`) |
+| ۱۱ | ۱۱.۰ تا ۱۱.۷ | 🔧 ریپو آماده؛ دور واقعی و merge با تو (`MARKETING_REVIEW.md`) |
+| ۱۲ | ۱۲.۰ تا ۱۲.۳ | 🔧 ریپو آماده؛ nginx، دور واقعی و merge با تو (`SEARCH_REVIEW.md`) |
+| ۱۳ | ۱۳.۰ تا ۱۳.۵ | 🔧 ریپو آماده؛ دور واقعی و merge با تو (`CONTACT_REVIEW.md`) |
+| ۱۴ | ۱۴.۰ تا ۱۴.۴ | 🔧 ریپو آماده؛ دور واقعی، رسید با گوشی و merge با تو (`ACCOUNT_CLOSURE_REVIEW.md`) |
+| ۱۵ | ۱۵.۰ تا ۱۵.۵ | 🔧 ریپو آماده؛ `KIVA_BLOG_VOTER_PEPPER` روی سرور، دور واقعی و merge با تو (`BLOG_REVIEW.md`) |
 
 جدول گام‌های هر فاز اول بخش همون فازه.
 
@@ -269,6 +269,34 @@
 | 19 | خطای منطقه‌ی زمانی | «امروز» ِ رهگیری روزانه، بازه‌ی گزارش یا فیلتر تاریخ لاگ به وقت UTC حساب بشه | همه‌ی «روز»ها با `ShopCalendar.ZONE` (تهران)، و تست مرز ساعت ۲۰:۳۰ ِ UTC | ۱.۱، ۲.۹، ۴.۴ |
 | 20 | فرم پنل کار مشتری رو خراب کنه | تغییر قیمت یا غیرفعال کردن رنگ در لحظه‌ی خرید | ترتیب قفل بخش ۱۱ ِ خرید (ردیف محصول، بعد رنگ‌ها) برای هر نویسنده‌ی تازه‌ی read model. ثبت سفارش read model رو داخل تراکنش دوباره می‌خونه (از قبل) | ۱.۵ و ۱.۷ |
 | 21 | پرداخت مانده دو بار | مشتری مانده رو دو بار می‌پردازه | همون نگهبان‌های پرداخت (`IdempotencyGuard`، قفل همه‌ی تلاش‌ها، «یک موفق برای هر بدهی») | ۳.۲ |
+
+### ۳.۱ تست نگهبان هر ردیف
+
+جمع‌بندی گام ۱۵.۵: جلوی هر ردیف تست‌هایی که اگه دفاعش برداشته بشه قرمز می‌شن (`کلاس › اسم تست`؛ اسم‌های بلند با `…` کوتاه شدن). همه‌شون در خرابکاری‌های عمدی ِ ریویوی فاز خودشون امتحان شدن.
+
+| # | تست‌ها |
+|---|---|
+| 1 | `RouteGuardsTest › every admin endpoint takes exactly the roles of its x-roles in the contract`، `› every admin endpoint refuses a panel session without one of its roles`؛ `WebV1AdminProductWritesOnDatabaseTest › an OPERATOR is 403 on both writes, and nothing is stored`؛ `WebV1AdminSettingsOnDatabaseTest › SUPPORT and OPERATOR are 403, for reading and for saving` |
+| 2 | `WebV1AdminCustomerDetailOnDatabaseTest › two admins taking ADMIN from each other at once - …`؛ `SetUserRolesLastAdminTest › taking ADMIN from the only one is 422 ROLE_CHANGE_NOT_ALLOWED …`، `› the one changing roles is read again under the lock - …` |
+| 3 | `WebV1AdminMediaOnDatabaseTest › an HEVC video is 415 with the hint H264 - a GIF, an SVG or a program named jpg too`، `› the client's file name is nowhere - not on the disk, not in the row`؛ `MediaInfrastructureTest › a file over the cap is cut off the moment it passes it - never read whole`، `› a path that would leave the media root is refused, not followed`؛ `WebV1MyUploadsOnDatabaseTest › a photo of 9 MB is 413 …` |
+| 4 | `JsoupHtmlSanitizerTest › what could run in the page goes`؛ `WebV1AdminProductWritesOnDatabaseTest › a description is kept without script, on-handlers or javascript links - …`؛ `WebV1AdminPagesOnDatabaseTest › script, on-handlers and javascript links go - …`؛ `WebV1AdminBlogOnDatabaseTest › a paragraph's script and onerror are cleaned out - a relative link stays` |
+| 5 | `UpdateProductUcTest › a stale version is 412 CHANGED_BY_SOMEONE_ELSE with the current ETag, …`؛ `WebV1AdminProductWritesOnDatabaseTest › PUT with the current If-Match is 200 and one step up - a stale one is 412 …`؛ `UpdateProductUcOnDatabaseTest › two saves of one version at the same moment, 10 times - …` |
+| 6 | `WebV1AdminRefundsOnDatabaseTest › two refunds that fit alone but not together, opened at once 20 times - …`، `› a refund opens PENDING, expected in 72 hours - more than is refundable is 400 …`؛ `RefundDomainServiceTest › paid 2,000,000 with a PENDING refund of 500,000 and a FAILED one of 300,000 …` |
+| 7 | `WebV1ShipmentOnDatabaseTest › an operator cancels while another ships, 20 times - …`؛ `OrderAfterPaymentTest › only a PHOTO_SENT order ships - …`؛ `OrderChangeRequestTest › it doesn't ship while something is owed - 422 BALANCE_DUE with the amount` |
+| 8 | `WebV1ChangeResolutionOnDatabaseTest › the last bag of a color - a change to it and a purchase of it at once, 20 times …`، `› A swaps Nila for Mahak while B swaps Mahak for Nila, at once, 20 times …`؛ `InventoryDomainServiceTest › a new color with too few left is QUANTITY_EXCEEDS_STOCK …` |
+| 9 | `WebV1OrderCancellationOnDatabaseTest › the customer and an operator cancel at once, 20 times - …`؛ `InventoryDomainServiceTest › releasing gives every line back, in lock order, and a second release gives nothing back twice` |
+| 10 | `WebV1TrackingOnDatabaseTest › a guest follows a paid order with the recipient's or the buyer's phone - …`، `› the eleventh lookup in 10 minutes from one address is 429 with Retry-After …` |
+| 11 | `WebV1TrackingOnDatabaseTest › the daily list - masked only, a group one row, …`؛ `DailyShipmentMaskTest › a phone keeps its last four digits only`، `› a name keeps each word's first letter only` |
+| 12 | `WebV1StockAlertsOnDatabaseTest › the 31st active one 422 STOCK_ALERT_LIMIT_REACHED - the 11th made in an hour 429 …`؛ `WebV1ContactOnDatabaseTest › the sixth message of one mobile in a day, from other addresses, is 429 …`، `› the sixth message from one address in an hour is 429 …` |
+| 13 | `WebV1MyReviewsOnDatabaseTest › written - 201 PENDING, …`، `› the sixth review in 24 hours is 429 RATE_LIMITED with Retry-After`؛ `ReviewDomainServiceTest › named - none of the author's 404, …` |
+| 14 | `WebV1WishlistShareOnDatabaseTest › a token one character short or long, not one at all, or nobody's - the same 404 every time`، `› asked twice - one token - revoked, the old link 404 at once …`؛ `WishlistTest › a share token is wl_ and 32 base62 characters - …` |
+| 15 | `PanelCatalogLogScanOnDatabaseTest › an upload, a category, a product with its colors and stock, its edits and the change log …`، `› the scan finds a whole number, an IP and a file name, so a pass means something`؛ `WebV1AdminAuditOnDatabaseTest › the log is newest first, with the actor as they are now and a Persian sentence`؛ (بلاگ) `WebV1BlogOnDatabaseTest › the address itself is nowhere in the database - only its keyed hash` |
+| 16 | `AuditLogOnDatabaseTest › a row is never changed - not even an old one`، `› a row of 89 days is never removed - one of 91 days may be`، `› the job removes the rows of 91 days and keeps those of 89 - …` |
+| 17 | `WebV1AccountDeletionOnDatabaseTest › a customer with a SHIPPED order gets 422 ACCOUNT_HAS_ACTIVE_ORDERS …`، `› an order placed and not paid is active too - …`؛ `ActiveOrdersCheckTest` (همه) |
+| 18 | `MediaOnDatabaseTest › the clean-up removes an upload of 49 hours with its folder - …`، `› an upload attached after it was found stays - the delete itself checks` |
+| 19 | `WebV1TrackingOnDatabaseTest › a parcel handed over at a quarter to nine UTC is on the next day's list - …`؛ `WebV1AdminAuditOnDatabaseTest › from and to are Tehran days - 21 00 UTC on Thursday is Friday`؛ `GetReportOverviewUcTest › from and to are whole Tehran days - …` |
+| 20 | `ProductLockOrderOnDatabaseTest › a color change waits at its product's row - it never holds the color's row first`؛ `WebV1OrdersOnDatabaseTest › no deadlock - a color's price changed in the panel while it is being bought, at once, 20 times`، `› a payable the shopper didn't see is 409 PRICE_CHANGED …` |
+| 21 | `WebV1BalancePaymentsOnDatabaseTest › two attempts of one balance both paid at the bank, called back at the same moment, 10 times …`، `› «پرداخت» of a balance sent twice with one Idempotency-Key - …`؛ `PaymentDomainServiceTest › the balance changed since the attempt started …` |
 
 CSRF اینجا هم خطر نیست: همه‌ی نوشتن‌های پنل و فروشگاه با هدر `Authorization` میان که مرورگر خودش نمی‌فرسته. تنها کوکی (`kiva_rt`) فقط برای `/api/v1/auth` و `DELETE /me` فرستاده می‌شه و `SameSite=Strict` ـه.
 
@@ -500,8 +528,10 @@ class AddAddressUc(
 | 7 | ردیف محصول‌ها و رنگ‌ها در read model، صعودی `(productId, variantId)` | رزرو، آزادسازی، ارسال، `soldCount`، برگشت به موجودی از مرجوعی، هر تغییر پنل روی محصول و رنگ، تغییر اسم دسته/رنگ/متریال (`refreshSearchText`) |
 | 8 | stream ِ سفارش (قید یکتای event store) | همه‌ی رویدادهای سفارش |
 | 12 | ردیف‌های لاگ تغییرات (فقط insert، بدون قفل) | همه‌ی نوشتن‌های پنل، آخر تراکنش |
+| **14** | **advisory ِ کمپین‌ها `campaigns` (تازه، فاز ۱۱)** | ساخت، ویرایش و حذف کمپین؛ هیچ قفل دیگه‌ای با این نمی‌گیره |
+| **15** | **advisory ِ موبایل ِ فرم تماس `contact:{phone}`؛ ردیف پیام تماس (`contactmessage_tbl`)؛ ردیف عضو خبرنامه (`newslettersubscription_tbl`) (تازه، فاز ۱۳)** | ثبت پیام تماس (سقف موبایل)، تغییر پیام از پنل، عضویت و لغو خبرنامه؛ هر کدوم تنها، جز ردیف لاگ تغییرات (۱۲) بعدش |
 
-**ترتیب واقعی، از بالا به پایین:** ۰، ۱، ۲، ۱۳، ۳، ۴، ۵، ۶، ۹، ۱۰، ۱۱، ۷، ۸، ۱۲. شماره‌ها اسم قفل‌ان، نه ترتیبشون (۱ تا ۸ از خرید اومدن و عوض نمی‌شن).
+**ترتیب واقعی، از بالا به پایین:** ۰، ۱، ۲، ۱۳، ۳، ۴، ۵، ۶، ۹، ۱۰، ۱۱، ۷، ۸، ۱۲. شماره‌ها اسم قفل‌ان، نه ترتیبشون (۱ تا ۸ از خرید اومدن و عوض نمی‌شن). قفل ۱۴ (کمپین‌ها) و قفل‌های ۱۵ (تماس و خبرنامه) با هیچ‌کدوم از این‌ها در یه تراکنش نمیان (جز ۱۲).
 
 **قفل ۹ چرا بین ۶ و ۷:** هر کاری که سفارش پرداخت‌شده رو عوض می‌کنه (لغو، ارسال، استرداد) اول ممکنه پرداخت‌ها رو بخونه (۶)، بعد سفارش رو یکی‌یکی می‌کنه (۹)، بعد موجودی رو آزاد یا کسر می‌کنه (۷)، بعد رویداد سفارش رو می‌نویسه (۸). قفل ۹ جلوی دو کار همزمانِ پنل روی یه سفارش (دو اپراتور، یا اپراتور و مشتری) رو قبل از هر محاسبه‌ای می‌گیره، تا مثلاً جمع استردادها با یه عدد کهنه حساب نشه. چون همه‌ی رویدادهای سفارش در نهایت قید یکتای stream (۸) رو هم دارن، قفل ۹ ثبات رو قوی‌تر می‌کنه، نه اینکه جای ۸ رو بگیره.
 
@@ -761,16 +791,16 @@ Route: 201 با MediaAsset
 
 | گام | عنوان | اندازه | وضعیت |
 |---|---|---|---|
-| ۱.۰ | کانترکت 1.8.0 و آماده‌سازی | M | ⬜ |
-| ۱.۱ | لاگ تغییرات | M | ⬜ |
-| ۱.۲ | آپلود مدیا | L | ⬜ |
-| ۱.۳ | دسته، رنگ و متریال | M | ⬜ |
-| ۱.۴ | read model ِ پنل و دو Query ِ محصول | M | ⬜ |
-| ۱.۵ | ساخت و ویرایش محصول، `If-Match` | L | ⬜ |
-| ۱.۶ | وضعیت، آرشیو و انتشار زمان‌بندی‌شده | M | ⬜ |
-| ۱.۷ | رنگ‌ها (ورینت‌ها) | M | ⬜ |
-| ۱.۸ | تغییر موجودی و تاریخچه‌اش | M | ⬜ |
-| ۱.۹ | عکس‌ها در فروشگاه، سبد و سفارش | M | ⬜ |
+| ۱.۰ | کانترکت 1.8.0 و آماده‌سازی | M | ✅ |
+| ۱.۱ | لاگ تغییرات | M | ✅ |
+| ۱.۲ | آپلود مدیا | L | ✅ |
+| ۱.۳ | دسته، رنگ و متریال | M | ✅ |
+| ۱.۴ | read model ِ پنل و دو Query ِ محصول | M | ✅ |
+| ۱.۵ | ساخت و ویرایش محصول، `If-Match` | L | ✅ |
+| ۱.۶ | وضعیت، آرشیو و انتشار زمان‌بندی‌شده | M | ✅ |
+| ۱.۷ | رنگ‌ها (ورینت‌ها) | M | ✅ |
+| ۱.۸ | تغییر موجودی و تاریخچه‌اش | M | ✅ |
+| ۱.۹ | عکس‌ها در فروشگاه، سبد و سفارش | M | ✅ |
 | ۱.۱۰ | ریویو، حمله‌ی آزمایشی و دور با پنل | M | ⬜ |
 
 ### ۶.۲ تصمیم‌های این فاز
@@ -1149,8 +1179,11 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 | 16 | متریال‌ها | الگوی `slug` و ≤ ۱۰۰؛ `409 DUPLICATE_SLUG` روی `POST`؛ `description` ≤ ۱۰۰۰؛ `careInstructions` حداکثر ۱۰ × ≤ ۲۰۰؛ توضیح `PUT`: «اسم تازه در متن جستجو می‌نشیند» (بدون «توضیح») | تصمیم ۱۷ |
 | 17 | `ErrorCode` | `DUPLICATE_CODE` (تازه؛ متن: «این کد قبلاً استفاده شده») | ردیف ۱۵ |
 | 18 | مثال‌های SKU | `KV-1001-LIL` ← `KV-1001-LILAC` | قانون واقعی `Sku.forVariant` |
+| 19 | `ProductUpsertRequest.specs` | شِمای تازه‌ی `ProductSpecsInput`: همون `ProductSpecs` با سقف هر فیلد (ردیف `ProductSpecs` ِ ۶.۳)، و `seo` ِ ورودی محصول و دسته فقط با `title`، `description`، `noIndex` | `ProductSpecs` ِ پاسخ هیچ سقفی نداشت و `label`ها رو سرور می‌سازه (گام ۱.۰) |
+| 20 | پارامتر `SearchQuery` | «جستجو روی نام، دسته، رنگ‌های فعال، متریال و کد محصول (SKU)» | تصمیم ۱۷: کد محصول در متن جستجو (گام ۱.۴) |
+| 21 | `OrderItem.image` | `MediaAsset` ← آدرس رشته‌ای (`uri`، nullable): نسخه‌ی ۴۸۰ ِ عکس رنگ در لحظه‌ی خرید | سفارش فقط مسیر یه اندازه رو snapshot می‌کنه (نه کل فایل)، و پیاده‌سازی از اول رشته می‌فرستاد (گام ۱.۹) |
 
-**کدهای فیلدی تازه** (در enum ِ کانترکت نیستن، ولی متن فارسی تو `ErrorMessages.kt` می‌گیرن): `SLUG_IMMUTABLE`، `SKU_IMMUTABLE`، `COLOR_KEY_IMMUTABLE`، `IF_MATCH_INVALID`، `PUBLISH_AT_NOT_ALLOWED`، `PUBLISH_AT_TOO_FAR`، `MEDIA_ID_INVALID`، `MEDIA_NOT_FOUND`، `MEDIA_PURPOSE_MISMATCH`، `MEDIA_TYPE_NOT_ALLOWED`، `MEDIA_VIEW_INVALID`، `MEDIA_PRIMARY_DUPLICATE`، `MEDIA_DUPLICATE`، `MEDIA_TOO_MANY`، `MEDIA_ALT_TOO_LONG` (هست)، `IMAGE_TOO_SMALL`، `IMAGE_TOO_LARGE`، `VIDEO_TOO_LONG`، `FILE_COUNT_INVALID`، `MEDIA_PURPOSE_INVALID`، `BARCODE_INVALID`، `TAG_INVALID`، `TAGS_TOO_MANY`، `SEO_TITLE_TOO_LONG`، `SEO_DESCRIPTION_TOO_LONG`، `MATERIAL_FAMILY_INVALID`، `CATEGORY_DESCRIPTION_TOO_LONG`، `MATERIAL_NOTE_TOO_LONG`، `CARE_INSTRUCTIONS_INVALID`، `DATE_RANGE_INVALID`، و کدهای هر فیلد تازه‌ی `specs`. `MEDIA_INVALID` و `SPECS_INVALID` هم که الان متن ندارن، متن می‌گیرن.
+**کدهای فیلدی تازه** (در enum ِ کانترکت نیستن، ولی متن فارسی تو `ErrorMessages.kt` می‌گیرن؛ گام ۱.۰ این‌ها رو هم اضافه کرد: `FIELD_REQUIRED` برای فیلد اجباری ِ نیومده، `STOCK_QUANTITY_INVALID`، `DATE_INVALID`، `AUDIT_ENTITY_TYPE_INVALID`، `ENTITY_ID_TOO_LONG`، و کدهای `specs`: `STRAPS_TOO_MANY`، `STRAP_TYPE_INVALID`، `STRAP_LENGTH_INVALID`، `STRAP_LENGTH_RANGE_INVALID`، `STRAP_MATERIAL_TOO_LONG`، `POCKET_COUNT_INVALID`، `LAPTOP_MAX_INCH_INVALID`، `CAPACITY_LITERS_INVALID`، `FIT_ITEM_INVALID`، `LINING_MATERIAL_TOO_LONG`، `LINING_COLOR_TOO_LONG`، `HARDWARE_MATERIAL_TOO_LONG`، `HARDWARE_FINISH_TOO_LONG`، `STITCHING_TOO_LONG`، `MADE_IN_TOO_LONG`، `WARRANTY_MONTHS_INVALID`، `WARRANTY_DESCRIPTION_TOO_LONG`): `SLUG_IMMUTABLE`، `SKU_IMMUTABLE`، `COLOR_KEY_IMMUTABLE`، `IF_MATCH_INVALID`، `PUBLISH_AT_NOT_ALLOWED`، `PUBLISH_AT_TOO_FAR`، `MEDIA_ID_INVALID`، `MEDIA_NOT_FOUND`، `MEDIA_PURPOSE_MISMATCH`، `MEDIA_TYPE_NOT_ALLOWED`، `MEDIA_VIEW_INVALID`، `MEDIA_PRIMARY_DUPLICATE`، `MEDIA_DUPLICATE`، `MEDIA_TOO_MANY`، `MEDIA_ALT_TOO_LONG` (هست)، `IMAGE_TOO_SMALL`، `IMAGE_TOO_LARGE`، `VIDEO_TOO_LONG`، `FILE_COUNT_INVALID`، `MEDIA_PURPOSE_INVALID`، `BARCODE_INVALID`، `TAG_INVALID`، `TAGS_TOO_MANY`، `SEO_TITLE_TOO_LONG`، `SEO_DESCRIPTION_TOO_LONG`، `MATERIAL_FAMILY_INVALID`، `CATEGORY_DESCRIPTION_TOO_LONG`، `MATERIAL_NOTE_TOO_LONG`، `CARE_INSTRUCTIONS_INVALID`، `DATE_RANGE_INVALID`، و کدهای هر فیلد تازه‌ی `specs`. `MEDIA_INVALID` و `SPECS_INVALID` هم که الان متن ندارن، متن می‌گیرن.
 
 **پیام برای فرانت:** همه‌ی ردیف‌ها رفتار پنل رو تعریف می‌کنن؛ ردیف‌های ۹ و جدول ۶.۷ رفتار فروشگاه رو هم عوض می‌کنن. `docs/FRONTEND_PANEL_CATALOG.md` (گام ۱.۱۰).
 
@@ -1170,7 +1203,7 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 
 ---
 
-#### گام ۱.۰: کانترکت 1.8.0 و آماده‌سازی · M ⬜
+#### گام ۱.۰: کانترکت 1.8.0 و آماده‌سازی · M ✅
 
 **می‌سازی:**
 - برنچ `panel-catalog`.
@@ -1187,15 +1220,15 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 - چرا همه‌ی متن‌ها اول کار؟ تا `ErrorMessagesTest` از اول سبز باشه و هیچ گامی با متن نصفه تموم نشه.
 
 **تموم شده یعنی:**
-- [ ] کانترکت 1.8.0 با هر ۱۸ ردیف؛ YAML معتبره؛ `ErrorMessagesTest` سبزه (`DUPLICATE_CODE` متن داره).
-- [ ] `FailureKind.PRECONDITION_FAILED` ← 412، `PAYLOAD_TOO_LARGE` ← 413، `UNSUPPORTED_MEDIA_TYPE` ← 415، با تست `Problem`.
-- [ ] `version` ِ Aggregate ِ تازه بعد از `create` با دو رنگ ۳ ـه، و بعد از بارگذاری از ۵ رویداد ۵.
-- [ ] `RouteGuardsTest` تست ۴۰۳ رو داره و روی `/admin/customers` سبزه (یه کاربر `SUPPORT` به `PUT …/roles` ← 403).
-- [ ] `PanelTestStack` با یه تست نمونه کار می‌کنه.
+- [x] کانترکت 1.8.0 با هر ۱۸ ردیف؛ YAML معتبره؛ `ErrorMessagesTest` سبزه (`DUPLICATE_CODE` متن داره).
+- [x] `FailureKind.PRECONDITION_FAILED` ← 412، `PAYLOAD_TOO_LARGE` ← 413، `UNSUPPORTED_MEDIA_TYPE` ← 415، با تست `Problem`.
+- [x] `version` ِ Aggregate ِ تازه بعد از `create` با دو رنگ ۳ ـه، و بعد از بارگذاری از ۵ رویداد ۵.
+- [x] `RouteGuardsTest` تست ۴۰۳ رو داره و روی `/admin/customers` سبزه (یه کاربر `SUPPORT` به `PUT …/roles` ← 403).
+- [x] `PanelTestStack` با یه تست نمونه کار می‌کنه.
 
 ---
 
-#### گام ۱.۱: لاگ تغییرات · M ⬜
+#### گام ۱.۱: لاگ تغییرات · M ✅
 
 **می‌سازی:** `V21__audit_log.sql`؛ `AuditTrail`، `AuditEntry`، `AuditChange`، `PanelActor` (application)؛ `AuditAction` و `AuditEntityType` (enum، با ردیف‌های فاز ۱ ِ جدول ۵.۱)؛ `AuditDiff`؛ `AuditTrailImpl`؛ `AuditLogQmRepository` و پیاده‌سازیش (با join ِ `user_tbl`)؛ `ListAuditLogUc`؛ `AuditTexts` (جمله‌ی هر `AuditAction`)؛ `webV1AdminAudit.kt`؛ `ApplicationCall.panelActor()`؛ `DeleteOldAuditEntriesUc` و `PanelJobs` با job ِ `delete-old-audit-entries`؛ و **لاگ تغییرات برای endpoint ِ موجود `PUT /admin/customers/{customerId}/roles`** (`SetUserRolesUc.Cmd` یه `actor: PanelActor` می‌گیره).
 
@@ -1207,18 +1240,25 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 - چرا موبایل کاربر تو ردیف نیست؟ داده‌ی شخصی کمتر، و حذف حساب (فاز ۱۴) لازم نیست لاگ رو دست بزنه.
 
 **تموم شده یعنی:**
-- [ ] `AuditDiff` فقط فیلدهای عوض‌شده رو می‌ده؛ متن بلند `from = to = null`؛ پول بدون جداکننده؛ لیست JSON ِ مرتب.
-- [ ] تغییر نقش یه ردیف `USER_ROLES_CHANGED` با `roles` ِ قبل و بعد، `ip` و `traceId` می‌ذاره؛ تغییر نقش ِ ردشده (`ROLE_CHANGE_NOT_ALLOWED`) هیچ ردیفی نمی‌ذاره.
-- [ ] `GET /admin/audit-log`: تازه‌ترین اول؛ فیلتر `entityType` + `entityId`، `actorId`، و `from`/`to` به وقت تهران (ردیف ساعت ۲۱:۰۰ ِ UTC ِ پنجشنبه تو روز جمعه ـه)؛ `from > to` ← ۴۰۰؛ `summary` فارسی و `actor` با اسم و موبایل.
-- [ ] `SUPPORT` ← 403؛ بدون توکن ← 401.
-- [ ] دیتابیس رد می‌کنه: `UPDATE` ِ هر ردیف؛ `DELETE` ِ ردیف ۸۹ روزه. `DELETE` ِ ردیف ۹۱ روزه مجازه.
-- [ ] `DeleteOldAuditEntriesUc` با `MutableClock`: ردیف‌های ۹۱ روزه می‌رن، ۸۹ روزه می‌مونن؛ ۱۲٬۰۰۰ ردیف در سه دسته؛ اجرای دوباره بی‌اثر.
-- [ ] `AuditTextsTest`: هر مقدار `AuditAction` یه جمله داره.
-- [ ] خرابکاری: trigger بدون شرط ۹۰ روز ← تست «ردیف ۸۹ روزه پاک نمی‌شه» قرمز.
+- [x] `AuditDiff` فقط فیلدهای عوض‌شده رو می‌ده؛ متن بلند `from = to = null`؛ پول بدون جداکننده؛ لیست JSON ِ مرتب.
+- [x] تغییر نقش یه ردیف `USER_ROLES_CHANGED` با `roles` ِ قبل و بعد، `ip` و `traceId` می‌ذاره؛ تغییر نقش ِ ردشده (`ROLE_CHANGE_NOT_ALLOWED`) هیچ ردیفی نمی‌ذاره.
+- [x] `GET /admin/audit-log`: تازه‌ترین اول؛ فیلتر `entityType` + `entityId`، `actorId`، و `from`/`to` به وقت تهران (ردیف ساعت ۲۱:۰۰ ِ UTC ِ پنجشنبه تو روز جمعه ـه)؛ `from > to` ← ۴۰۰؛ `summary` فارسی و `actor` با اسم و موبایل.
+- [x] `SUPPORT` ← 403؛ بدون توکن ← 401.
+- [x] دیتابیس رد می‌کنه: `UPDATE` ِ هر ردیف؛ `DELETE` ِ ردیف ۸۹ روزه. `DELETE` ِ ردیف ۹۱ روزه مجازه.
+- [x] `DeleteOldAuditEntriesUc` با `MutableClock`: ردیف‌های ۹۱ روزه می‌رن، ۸۹ روزه می‌مونن؛ ۱۲٬۰۰۰ ردیف در سه دسته؛ اجرای دوباره بی‌اثر.
+- [x] `AuditTextsTest`: هر مقدار `AuditAction` یه جمله داره.
+- [x] خرابکاری: trigger بدون شرط ۹۰ روز ← تست «ردیف ۸۹ روزه پاک نمی‌شه» قرمز.
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- `AuditTrailImpl` و `AuditLogQmRepositoryImpl` کنار بقیه در `persistence/exposed/` ان (نه `infrastructure/audit/` ِ بخش ۲۲)، مثل `SecurityEventLogImpl`. `AuditDiff` در application ـه چون UseCaseها می‌سازنش.
+- پاک کردن قدیمی‌ها متد خود پورت `AuditTrail` ـه (`deleteRecordedBefore(before, limit)`)، مثل `IdempotencyStore`. هر دسته‌ی ۵۰۰۰تایی تراکنش خودش رو داره.
+- مرز پاک کردن یه ساعت زودتر از ۹۰ روزه (`SAFETY_MARGIN`): trigger با ساعت دیتابیس چک می‌کنه، و چند ثانیه اختلاف دو ساعت نباید یه دسته رو بشکنه.
+- `actor.phone` فقط وقتی `null` می‌شه که حساب دیگه نباشه (left join)، که تو فروشگاه پیش نمیاد (حساب بی‌نام می‌شه، پاک نه).
+- `entityLabel` ِ تغییر نقش اسم کاربره، یا `null`؛ `roles` به ترتیب الفبا تا یه مجموعه همیشه یه متن باشه.
 
 ---
 
-#### گام ۱.۲: آپلود مدیا · L ⬜
+#### گام ۱.۲: آپلود مدیا · L ✅
 
 **می‌سازی:** `V22__media.sql`؛ aggregate ِ `media` (بخش ۵.۲، و انتقال `MediaType`)؛ پورت‌های `MediaProcessor` و `MediaStorage`؛ `VipsFfmpegMediaProcessor` (اجرای `vips`، `vipsheader`، `ffprobe`، `ffmpeg` با `ProcessBuilder`، timeout ِ ۹۰ ثانیه، خطای استاندارد فقط در لاگ)، `DiskMediaStorage`، `RandomMediaIds`، `MediaRepositoryImpl`؛ `Blurhash` (پیاده‌سازی کوچیک با تست طلایی)؛ `UploadMediaUc` و `UploadedMediaDto`؛ `webV1AdminMedia.kt` با خوندن multipart جریانی و سقف حجم؛ پیکربندی `kiva.media` (بخش ۲۳)؛ route ِ `staticFiles` ِ توسعه؛ `FindUnattachedMediaUc` + `DeleteUnattachedMediaUc` و job ِ `delete-unattached-media`؛ `FakeMediaProcessor` برای تست‌ها؛ سه فایل نمونه‌ی کوچیک تست (jpeg، png، mp4 ِ H.264) و یه SVG و یه HEVC برای تست ِ رد.
 
@@ -1230,21 +1270,31 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 - چرا HEVC رد می‌شه به‌جای تبدیل؟ تبدیل روی ۲ هسته چند دقیقه طول می‌کشه و درخواست HTTP (و timeout ِ nginx) رو نگه می‌داره. تنظیم دوربین یه بار انجام می‌شه.
 
 **تموم شده یعنی:**
-- [ ] jpeg ِ ۴۰۰۰×۳۰۰۰ با GPS ← `201`، پنج نسخه‌ی webp، `blurhash`، `width = 1600`؛ هیچ نسخه‌ای EXIF یا GPS نداره (با `vipsheader -a` چک می‌شه).
-- [ ] عکس ۴۰۰×۳۰۰ فقط نسخه‌های ۱۶۰ و ۴۰۰ (اندازه‌ی خودش) رو می‌سازه؛ عکس ۲۰۰×۲۰۰ ← `400 IMAGE_TOO_SMALL`؛ ۵۰ مگاپیکسل ← `400 IMAGE_TOO_LARGE`.
-- [ ] mp4 ِ H.264 ← `201` با `posterUrl` و `durationSec`؛ HEVC ← `415` با `meta.hint = "H264"`؛ SVG، GIF و فایل اجرایی با پسوند `.jpg` ← `415`.
-- [ ] ۱۶ مگابایت ← `413` قبل از اینکه کل فایل خونده بشه (تست با جریانی که بیشتر از سقف می‌فرسته و چک می‌کنه سرور زودتر قطع کرده).
-- [ ] `purpose` ِ `RETURN_EVIDENCE` از پنل ← `400 MEDIA_PURPOSE_INVALID`؛ ویدیو با `purpose = CATEGORY` ← `415`.
-- [ ] اسم فایل کلاینت (`../../etc/passwd.jpg`) هیچ‌جا نیست: نه روی دیسک، نه در دیتابیس، نه در لاگ.
-- [ ] خطای دیتابیس بعد از ذخیره‌ی فایل‌ها ← پوشه پاک می‌شه (با `MediaRepository` ِ خراب‌شده در تست).
-- [ ] هیچ ردیف لاگ تغییراتی برای آپلود.
-- [ ] job: مدیای وصل‌نشده‌ی ۴۹ ساعته پاک می‌شه (ردیف و پوشه)، ۴۷ ساعته و وصل‌شده می‌مونن.
-- [ ] `OPERATOR` و `CONTENT_EDITOR` می‌تونن آپلود کنن؛ `SUPPORT` ← 403.
-- [ ] تست‌های ابزار واقعی بدون `vips` روی PATH با پیام روشن رد می‌شن، نه شکست.
+- [x] jpeg ِ ۴۰۰۰×۳۰۰۰ با GPS ← `201`، پنج نسخه‌ی webp، `blurhash`، `width = 1600`؛ هیچ نسخه‌ای EXIF یا GPS نداره (با `vipsheader -a` چک می‌شه).
+- [x] عکس ۴۰۰×۳۲۰ فقط نسخه‌های ۱۶۰ و ۴۰۰ (اندازه‌ی خودش) رو می‌سازه؛ عکس ۲۰۰×۲۰۰ ← `400 IMAGE_TOO_SMALL`؛ ۵۰ مگاپیکسل ← `400 IMAGE_TOO_LARGE`.
+- [x] mp4 ِ H.264 ← `201` با `posterUrl` و `durationSec`؛ HEVC ← `415` با `meta.hint = "H264"`؛ SVG، GIF و فایل اجرایی با پسوند `.jpg` ← `415`.
+- [x] ۱۶ مگابایت ← `413` قبل از اینکه کل فایل خونده بشه (تست با جریانی که بیشتر از سقف می‌فرسته و چک می‌کنه سرور زودتر قطع کرده).
+- [x] `purpose` ِ `RETURN_EVIDENCE` از پنل ← `400 MEDIA_PURPOSE_INVALID`؛ ویدیو با `purpose = CATEGORY` ← `415`.
+- [x] اسم فایل کلاینت (`../../etc/passwd.jpg`) هیچ‌جا نیست: نه روی دیسک، نه در دیتابیس، نه در لاگ.
+- [x] خطای دیتابیس بعد از ذخیره‌ی فایل‌ها ← پوشه پاک می‌شه (با `MediaRepository` ِ خراب‌شده در تست).
+- [x] هیچ ردیف لاگ تغییراتی برای آپلود.
+- [x] job: مدیای وصل‌نشده‌ی ۴۹ ساعته پاک می‌شه (ردیف و پوشه)، ۴۷ ساعته و وصل‌شده می‌مونن.
+- [x] `OPERATOR` و `CONTENT_EDITOR` می‌تونن آپلود کنن؛ `SUPPORT` ← 403.
+- [x] تست‌های ابزار واقعی بدون `vips` روی PATH با پیام روشن رد می‌شن، نه شکست.
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- مثال «عکس ۴۰۰×۳۰۰» با قانون «کوتاه‌ترین ضلع حداقل ۳۲۰» ِ همین سند و کانترکت نمی‌خوند (۳۰۰ < ۳۲۰ یعنی `IMAGE_TOO_SMALL`)؛ قانون کانترکت موند و مثال شد ۴۰۰×۳۲۰.
+- روی این کامپیوتر `vips` و `ffmpeg` نصب نیستن، پس چهار تست `VipsFfmpegMediaProcessorTest` با پیام روشن skip شدن (نه شکست). بقیه‌ی آپلود با `FakeMediaProcessor` تست شده (نوع عکس از محتوا با خواننده‌های خود JDK، GIF و SVG و فایل اجرایی ← `Unsupported`). روی سرور (گام ۶) و هر جا ابزارها باشن، این چهار تست باید سبز بشن.
+- فایل‌های نمونه‌ی تست در repo نیستن: عکس‌ها با JDK و ویدیوها با خود ffmpeg (`testsrc` با libx264 و libx265) همون لحظه ساخته می‌شن؛ عکس GPS‌دار با یه بلوک EXIF ِ دست‌ساز.
+- سقف موقع خوندن: اگه `purpose` قبل از فایل اومده باشه سقف همون purpose (۱۵ مگ برای دسته)، وگرنه بزرگ‌ترین سقف (۲۰۰ مگ)؛ بعد از تشخیص نوع، سقف دقیق همون نوع (۴۱۳). قطع زودهنگام با `copyToFileWithin` تست شده (از ۱۰۰ مگ، کمتر از ۴ مگ خونده می‌شه).
+- هر part ِ فایلی، با هر اسمی، یه فایل حساب می‌شه (دو تا ← `FILE_COUNT_INVALID`). فایل موقت مال route ـه و همیشه پاک می‌شه.
+- کاور ویدیو برای ویدیوی باریک‌تر از ۸۰۰ بزرگ نمی‌شه (مثل عکس‌ها: ۴۸۰ و عرض خود ویدیو). صدای ویدیو (اگه باشه) AAC می‌شه تا mov ِ گوشی هم mp4 ِ درست بده؛ تصویر دوباره انکود نمی‌شه.
+- `MediaRepository.deleteIfUnattached` خودش در `DELETE` شرط «وصل‌نشده و قدیمی‌تر از ۴۸ ساعت» رو چک می‌کنه، پس مدیایی که بین پیدا شدن و پاک شدن وصل بشه می‌مونه (تست داره). job حداکثر ۵۰ دسته‌ی ۱۰۰تایی در هر اجرا.
+- `MediaAssetHttpResponse` ِ ناقص قبلی (فقط برای `image` ِ کارت) با نسخه‌ی کامل کانترکت جایگزین شد؛ تا گام ۱.۹ همه‌جا `null` می‌مونه.
 
 ---
 
-#### گام ۱.۳: دسته، رنگ و متریال · M ⬜
+#### گام ۱.۳: دسته، رنگ و متریال · M ✅
 
 **می‌سازی:** `V23__catalog_admin.sql`؛ متدهای `create`/`change` و VOهای تازه‌ی ۶.۳؛ نوشتن در سه Repository و `UniqueTakenException`؛ شمارش «در استفاده» در `ProductQmRepository` (`countAllByCategory`، `countAllByMaterial`، `countAllByColor`، به‌علاوه‌ی `countCategoriesWithIcon(colorKey)` در `CategoryRepository`)؛ ۱۱ UseCase ِ جدول ۶.۵؛ `webV1AdminCatalog.kt`؛ `imageUrl` و `seo` در پاسخ دسته (پنل و فروشگاه).
 
@@ -1255,20 +1305,31 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 - چرا `refreshSearchText` در همون تراکنش؟ وگرنه بین commit ِ اسم تازه و به‌روزرسانی جستجو، محصول با اسم تازه پیدا نمی‌شه، و اگه دومی شکست بخوره هیچ‌وقت پیدا نمی‌شه.
 
 **تموم شده یعنی:**
-- [ ] ساخت دسته با همه‌ی فیلدها ← `201`؛ بدون `iconBagType` ← ۴۰۰؛ `iconColorKey` ِ ناموجود ← `400 COLOR_NOT_FOUND`؛ slug ِ تکراری ← `409 DUPLICATE_SLUG`؛ دو ساخت همزمان با یه slug، ۱۰ بار ← یکی ۲۰۱ و یکی ۴۰۹، هیچ‌وقت ۵۰۰.
-- [ ] تغییر اسم دسته ← جستجوی `/products?q=<اسم تازه>` محصولاتش رو پیدا می‌کنه، اسم قدیمی نه.
-- [ ] تغییر slug ِ دسته ← `/products?category=<slug تازه>` کار می‌کنه.
-- [ ] حذف دسته‌ای که فقط یه محصول **آرشیو** داره ← `409 IN_USE` با `productCount = 1`؛ دسته‌ی خالی ← `204` و لاگ `CATEGORY_DELETED`.
-- [ ] رنگ: کلید تکراری ← `409 DUPLICATE_CODE`؛ `PUT` با کلید دیگه ← `400 COLOR_KEY_IMMUTABLE`؛ حذف رنگی که فقط روی یه ورینت **غیرفعال** هست ← `409 IN_USE` (`productCount = 1`)؛ حذف رنگ آیکن یه دسته ← `409 IN_USE` (`categoryCount = 1`).
-- [ ] متریال: `family` ِ غلط ← `400 MATERIAL_FAMILY_INVALID`؛ ۱۱ دستور نگه‌داری ← ۴۰۰؛ تغییر اسم ← جستجو.
-- [ ] `GET /admin/categories` و `/admin/materials`: `productCount` پیش‌نویس و آرشیو رو هم می‌شمره؛ `GET /categories` و `/materials` همون «فقط منتشرشده».
-- [ ] هر نوشتن یه ردیف لاگ با `changes` ِ درست؛ `PUT` ِ بی‌تغییر هیچی.
-- [ ] `OPERATOR` ← 403.
-- [ ] خرابکاری: حذف `refreshSearchText` از `UpdateCategoryUc` ← تست جستجو قرمز.
+- [x] ساخت دسته با همه‌ی فیلدها ← `201`؛ بدون `iconBagType` ← ۴۰۰؛ `iconColorKey` ِ ناموجود ← `400 COLOR_NOT_FOUND`؛ slug ِ تکراری ← `409 DUPLICATE_SLUG`؛ دو ساخت همزمان با یه slug، ۱۰ بار ← یکی ۲۰۱ و یکی ۴۰۹، هیچ‌وقت ۵۰۰.
+- [x] تغییر اسم دسته ← جستجوی `/products?q=<اسم تازه>` محصولاتش رو پیدا می‌کنه، اسم قدیمی نه.
+- [x] تغییر slug ِ دسته ← `/products?category=<slug تازه>` کار می‌کنه.
+- [x] حذف دسته‌ای که فقط یه محصول **آرشیو** داره ← `409 IN_USE` با `productCount = 1`؛ دسته‌ی خالی ← `204` و لاگ `CATEGORY_DELETED`.
+- [x] رنگ: کلید تکراری ← `409 DUPLICATE_CODE`؛ `PUT` با کلید دیگه ← `400 COLOR_KEY_IMMUTABLE`؛ حذف رنگی که فقط روی یه ورینت **غیرفعال** هست ← `409 IN_USE` (`productCount = 1`)؛ حذف رنگ آیکن یه دسته ← `409 IN_USE` (`categoryCount = 1`).
+- [x] متریال: `family` ِ غلط ← `400 MATERIAL_FAMILY_INVALID`؛ ۱۱ دستور نگه‌داری ← ۴۰۰؛ تغییر اسم ← جستجو.
+- [x] `GET /admin/categories` و `/admin/materials`: `productCount` پیش‌نویس و آرشیو رو هم می‌شمره؛ `GET /categories` و `/materials` همون «فقط منتشرشده».
+- [x] هر نوشتن یه ردیف لاگ با `changes` ِ درست؛ `PUT` ِ بی‌تغییر هیچی.
+- [x] `OPERATOR` ← 403.
+- [x] خرابکاری: حذف `refreshSearchText` از `UpdateCategoryUc` ← تست جستجو قرمز.
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- سئو یه VO ِ مشترک داره: `SeoMeta` در `common` (`title` ≤ ۷۰، `description` ≤ ۱۷۰، `noIndex`؛ خالی = null)، به‌جای `CategorySeo` و `ProductSeo` ِ جدا. محصول (۱.۵)، صفحه و بلاگ هم همین رو می‌گیرن.
+- دسته و متریال شناسه‌شون رو قبل از insert از sequence ِ identity ِ جدول می‌گیرن (`CategoryIdGenerator`، `MaterialIdGenerator`، مثل `user_tbl`)، تا `create` ِ Aggregate شناسه داشته باشه.
+- `UniqueTakenException` و `StillReferencedException` در `common.repository` ان. FK ِ read model (دیوار دوم «در استفاده») ← همون `409 IN_USE`، با `productCount` حداقل ۱ (بعد از خطای دیتابیس تراکنش دیگه کوئری نمی‌گیره).
+- قانون‌های وصل شدن مدیا (۵.۲) یه سرویس مشترکه: `MediaAttachments` (`check` همه‌ی فیلدها با هم، `attach`). عکس ۸۰۰ ِ دسته = بزرگ‌ترین نسخه‌ای که از ۸۰۰ پهن‌تر نیست (`MediaAsset.pathFor`).
+- بدنه‌ی پاسخ نوشتن‌ها با سه Query ِ کوچیک خونده می‌شه: `GetAdminCategoryUc`، `GetAdminMaterialUc`، `GetAdminColorUc` (رنگ بدون `productCount`، چون کانترکت فقط در `/colors` می‌فرستدش).
+- ردیف لاگ ِ `*_CREATED` و `*_DELETED` بدون `changes`ـه؛ `*_UPDATED` فیلدهای عوض‌شده. توضیح متریال `longText` (فقط «عوض شد»).
+- پاسخ فروشگاه هم کامل شد: `Category.imageUrl`، `icon.imageUrl` (همیشه null) و `seo` (برگشت به اسم و توضیح دسته، `canonicalUrl` = `{siteUrl}/categories/{slug}`).
+- fakeهای تست application یه پایه‌ی مشترک دارن (`UnusedRepositories.kt`) تا متد تازه‌ی پورت فقط یه فایل رو عوض کنه.
+- خرابکاری: حذف `refreshSearchText` از `UpdateCategoryUc` ← `renaming a category puts its new name in its products' search text - the old name finds nothing` قرمز شد.
 
 ---
 
-#### گام ۱.۴: read model ِ پنل و دو Query ِ محصول · M ⬜
+#### گام ۱.۴: read model ِ پنل و دو Query ِ محصول · M ✅
 
 **می‌سازی:** `V24__product_admin_read_model.sql` (با backfillها)؛ Projector: `version` = `sequence` ِ هر رویداد محصول، `createdByUserId` از `ProductCreated`، `publishAt`، `tags`، `seo`، `barcode`؛ `ProductQmSummary.refresh` ← `availableTotal`؛ `OrderQmProjector` با `OrderPaid` ← `soldCount` ِ هر رنگ هم (مثل محصول، زیر همون قفل ۷)؛ پورت‌های تازه‌ی `ProductQmRepository` (`findForAdmin(filter, pageable)`، `findAdminDetail(productId)`)؛ `AdminProductSorts`؛ `FindAdminProductsUc`، `GetAdminProductUc`، DTOها؛ `webV1AdminProducts.kt` (دو GET)؛ `AdminProductHttpResponse`، `AdminVariantHttpResponse`، `AdminProductListItemHttpResponse`.
 
@@ -1279,17 +1340,27 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 - چرا `AdminProduct` از همون سازنده‌ی پاسخ فروشگاه استفاده می‌کنه؟ تا پنل دقیقاً همون چیزی رو ببینه که مشتری می‌بینه («پیش‌نمایش»)، و دو کد برای یه شِما نباشه.
 
 **تموم شده یعنی:**
-- [ ] backfillها روی دیتابیس با داده‌ی seed: `version` ِ هر محصول = تعداد رویدادهاش، `createdByUserId = 0`، `availableTotal` = جمع موجودی رنگ‌های فعال، `soldCount` ِ رنگ‌ها از سفارش‌های پرداخت‌شده.
-- [ ] لیست همه‌ی وضعیت‌ها رو داره؛ هر فیلتر و هر sort ِ جدول با یه تست؛ `q = KV-1001` محصول و `q = KV-1001-LILAC` همون محصول رو پیدا می‌کنه.
-- [ ] `stockStatus = LOW_STOCK` محصولی رو می‌ده که یه رنگش ۳ تا و بقیه ۱۲ تا دارن.
-- [ ] جزئیات محصول پیش‌نویس بدون رنگ ← `200` با `defaultColorKey = null` و `adminVariants = []`؛ محصول آرشیو هم `200`؛ ناموجود و `abc` ← `404 PRODUCT_NOT_FOUND`.
-- [ ] `adminVariants` رنگ غیرفعال رو داره با `isActive = false`؛ `variants` نه.
-- [ ] هدر `ETag` = فیلد `etag` = `W/"{تعداد رویدادها}"`.
-- [ ] صفحه‌ی ۲۰ تایی دقیقاً دو کوئری می‌زنه (با شمارنده‌ی کوئری در تست).
+- [x] backfillها روی دیتابیس با داده‌ی seed: `version` ِ هر محصول = تعداد رویدادهاش، `createdByUserId = 0`، `availableTotal` = جمع موجودی رنگ‌های فعال، `soldCount` ِ رنگ‌ها از سفارش‌های پرداخت‌شده.
+- [x] لیست همه‌ی وضعیت‌ها رو داره؛ هر فیلتر و هر sort ِ جدول با یه تست؛ `q = KV-1001` محصول و `q = KV-1001-LILAC` همون محصول رو پیدا می‌کنه.
+- [x] `stockStatus = LOW_STOCK` محصولی رو می‌ده که یه رنگش ۳ تا و بقیه ۱۲ تا دارن.
+- [x] جزئیات محصول پیش‌نویس بدون رنگ ← `200` با `defaultColorKey = null` و `adminVariants = []`؛ محصول آرشیو هم `200`؛ ناموجود و `abc` ← `404 PRODUCT_NOT_FOUND`.
+- [x] `adminVariants` رنگ غیرفعال رو داره با `isActive = false`؛ `variants` نه.
+- [x] هدر `ETag` = فیلد `etag` = `W/"{تعداد رویدادها}"`.
+- [x] صفحه‌ی ۲۰ تایی دقیقاً دو کوئری می‌زنه (با شمارنده‌ی کوئری در تست).
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- backfillها با یه تست اثبات می‌شن که SQL ِ خود `V24` روی ردیف‌هایی که به حالت قبل از V24 برگردونده شدن همون عددهای Projector رو می‌ده (`V24's backfills give exactly what the projectors wrote`). دیتابیس تست محصول seed نداره، پس محصول‌ها با Repository ِ واقعی ساخته می‌شن.
+- صفحه‌ی لیست سه statement می‌زنه، مستقل از اندازه‌ی صفحه: ردیف‌ها (با `variantsCount` و `lowStockVariants` در خود SQL، با subquery)، شمارش کل (`paginate`) و مدیای اول رنگ‌های پیش‌فرض. تست با `statementCount` ِ تراکنش برای صفحه‌ی ۱ و ۲۰ تایی ۳ می‌بینه. اسم دسته‌ها یه کوئری جدا در UseCase ـه (همه‌ی دسته‌ها، نه یکی برای هر محصول).
+- متن جستجو حالا با کد محصول تموم می‌شه (تصمیم ۱۷)؛ `V24` کد رو به ردیف‌های قبلی هم اضافه کرد و توضیح `SearchQuery` ِ کانترکت عوض شد (ردیف ۲۰ ِ ۶.۸).
+- `tags`، `seo`، `barcode` و `publishAt` ستون‌هاشون الان ساخته شدن ولی تا رویدادهاشون (۱.۵ و ۱.۶) مقدار پیش‌فرض دارن.
+- `createdBy` یه `ActorNameDto` ـه (سیستم، شخص با اسم یا موبایل ماسک‌شده، یا حسابی که دیگه نیست ← «حساب حذف‌شده») و متنش در `PanelTexts` ِ لایه‌ی HTTP؛ همین برای `createdBy` ِ تاریخچه‌ی موجودی (۱.۸) هم استفاده می‌شه.
+- `defaultColorKey`، `displayColorKey` و `selectedColorKey` در DTO و پاسخ `String?` شدن (فروشگاه هیچ‌وقت null نمی‌ده). سازنده‌ی رنگ صفحه‌ی محصول (`ProductCards.variantOf`) بین فروشگاه و پنل مشترکه.
+- `AdminProductHttpResponse` از خروجی خود `ProductDetailHttpResponse.from` ساخته می‌شه و فیلدهای پنل بهش اضافه می‌شن؛ `respondResultWithETag` هدر `ETag` رو با `VersionETag.of(version)` می‌ذاره.
+- کد فیلدی تازه: `STOCK_STATUS_INVALID` (پارامتر `stockStatus`) با متن فارسی.
 
 ---
 
-#### گام ۱.۵: ساخت و ویرایش محصول، `If-Match` · L ⬜
+#### گام ۱.۵: ساخت و ویرایش محصول، `If-Match` · L ✅
 
 **می‌سازی:** تغییرات دامنه‌ی ۶.۳ برای محصول (`ProductMedia` ِ تازه، `ProductTags`، `ProductSeo`، `ProductSpecs` ِ کامل، `Barcode`، `MaxPerOrder` ِ سقف‌دار) با payloadها و JSON ِ طلایی؛ Projector: مدیای رنگ‌ها به شکل کامل از `media_tbl`؛ یه سرویس مشترک `ProductInput` (application، Rule 15) که شکل ورودی محصول رو برای ساخت و ویرایش یه جا می‌خونه؛ گسترش `CreateProductUc.Cmd` (tags، seo، barcode و media و isActive و stockQuantity ِ هر رنگ، `actor`)؛ `UpdateProductUc`؛ خوندن `If-Match` در route؛ به‌روزرسانی `DevCatalogSeeder` و سه تستی که `CreateProductUc` رو می‌سازن.
 
@@ -1301,22 +1372,36 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 - چرا موجودی اولیه در همون تراکنش؟ تا محصول بدون موجودی ِ نصفه‌کاره نمونه (مشکل فعلی seeder).
 
 **تموم شده یعنی:**
-- [ ] قبل از هر چیز، یه کوئری روی `eventstore_tbl` ثابت می‌کنه هیچ رویداد ذخیره‌شده‌ای مدیا نداره (و نتیجه‌ش تو یادداشت گام میاد).
-- [ ] ساخت کامل با سه رنگ، مدیا، موجودی اولیه و `status = ACTIVE` ← `201`، محصول تو فروشگاه با عکس، `availableTotal` درست، یه ردیف لاگ `PRODUCT_CREATED`، و هر سه رنگ با `StockAdjusted` ِ `RESTOCK` تو تاریخچه‌ی موجودی.
-- [ ] ۱۰ خطای شکل با هم ← یه ۴۰۰ با ۱۰ ردیف `errors[]` و مسیرهای درست (`variants.1.media.0.mediaId`، `specs.straps.0.lengthCm`).
-- [ ] مدیای `PRE_SHIPMENT` در گالری محصول ← `400 MEDIA_PURPOSE_MISMATCH`؛ دو `isPrimary` ← `400 MEDIA_PRIMARY_DUPLICATE`؛ ۲۱ مدیا ← `400 MEDIA_TOO_MANY`.
-- [ ] `description` با `<script>` و `onerror` ذخیره می‌شه بدون اون‌ها؛ لینک `javascript:` حذف می‌شه.
-- [ ] `PUT` با `If-Match` ِ درست ← `200` و `ETag` یه پله بالاتر؛ با `If-Match` ِ کهنه ← `412` و هیچ رویدادی؛ بدون `If-Match` ← `200`.
-- [ ] دو `PUT` همزمان با یه `If-Match`، ۱۰ بار ← یکی `200` و یکی `409 CHANGED_BY_SOMEONE_ELSE`، و فقط تغییر برنده ذخیره شده.
-- [ ] `PUT` با `slug` ِ دیگه ← `400 SLUG_IMMUTABLE`؛ با `status = ARCHIVED` ← محصول آرشیو **نمی‌شه**.
-- [ ] تغییر فقط قیمت ← لاگ `PRODUCT_PRICE_CHANGED` با `price` ِ قبل و بعد؛ قیمت و اسم ← `PRODUCT_UPDATED` با هر دو.
-- [ ] `PUT` روی محصول آرشیو ← `422 PRODUCT_ARCHIVED`.
-- [ ] رویدادهای ذخیره‌شده‌ی قبلی (`ProductDetailsChanged` بدون `tags`/`seo`، `VariantAdded` بدون `barcode`) هنوز خونده می‌شن (تست با JSON ِ قدیمی).
-- [ ] خرابکاری: حذف چک `If-Match` ← تست ۴۱۲ قرمز؛ حذف sanitize ← تست `<script>` قرمز.
+- [x] قبل از هر چیز، یه کوئری روی `eventstore_tbl` ثابت می‌کنه هیچ رویداد ذخیره‌شده‌ای مدیا نداره (و نتیجه‌ش تو یادداشت گام میاد).
+- [x] ساخت کامل با سه رنگ، مدیا، موجودی اولیه و `status = ACTIVE` ← `201`، محصول تو فروشگاه با عکس، `availableTotal` درست، یه ردیف لاگ `PRODUCT_CREATED`، و هر سه رنگ با `StockAdjusted` ِ `RESTOCK` تو تاریخچه‌ی موجودی.
+- [x] ۱۰ خطای شکل با هم ← یه ۴۰۰ با ۱۰ ردیف `errors[]` و مسیرهای درست (`variants.1.media.0.mediaId`، `specs.straps.0.lengthCm`).
+- [x] مدیای `PRE_SHIPMENT` در گالری محصول ← `400 MEDIA_PURPOSE_MISMATCH`؛ دو `isPrimary` ← `400 MEDIA_PRIMARY_DUPLICATE`؛ ۲۱ مدیا ← `400 MEDIA_TOO_MANY`.
+- [x] `description` با `<script>` و `onerror` ذخیره می‌شه بدون اون‌ها؛ لینک `javascript:` حذف می‌شه.
+- [x] `PUT` با `If-Match` ِ درست ← `200` و `ETag` یه پله بالاتر؛ با `If-Match` ِ کهنه ← `412` و هیچ رویدادی؛ بدون `If-Match` ← `200`.
+- [x] دو `PUT` همزمان با یه `If-Match`، ۱۰ بار ← یکی `200` و یکی `409 CHANGED_BY_SOMEONE_ELSE`، و فقط تغییر برنده ذخیره شده.
+- [x] `PUT` با `slug` ِ دیگه ← `400 SLUG_IMMUTABLE`؛ با `status = ARCHIVED` ← محصول آرشیو **نمی‌شه**.
+- [x] تغییر فقط قیمت ← لاگ `PRODUCT_PRICE_CHANGED` با `price` ِ قبل و بعد؛ قیمت و اسم ← `PRODUCT_UPDATED` با هر دو.
+- [x] `PUT` روی محصول آرشیو ← `422 PRODUCT_ARCHIVED`.
+- [x] رویدادهای ذخیره‌شده‌ی قبلی (`ProductDetailsChanged` بدون `tags`/`seo`، `VariantAdded` بدون `barcode`) هنوز خونده می‌شن (تست با JSON ِ قدیمی).
+- [x] خرابکاری: حذف چک `If-Match` ← تست ۴۱۲ قرمز؛ حذف sanitize ← تست `<script>` قرمز.
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- کوئری روی دیتابیس توسعه، قبل از هر چیز: ۹۷ رویداد محصول، ۶۵ تاشون فیلد `media` دارن و **هیچ‌کدوم** خالی نیست جز `[]` (۰ از ۶۵). پس رویداد ذخیره‌شده‌ای با `url` نیست و `ProductMediaPayload` ِ بدون `mediaId` با `error(...)` می‌ایسته (تست با JSON).
+- سئوی محصول همون `SeoMeta` ِ مشترک ۱.۳ ـه (نه `ProductSeo`). در payload `seo` با پیش‌فرض `null` و `tags` با پیش‌فرض `[]`؛ `barcode` ِ `VariantAdded`/`VariantChanged` با پیش‌فرض `null`. نسخه‌ی payload همون ۱ موند.
+- `strap` و `pockets` ِ متنی ِ قبلی در `ProductSpecsPayload` موندن (فیلد حذف نمی‌شه) و از این به بعد `null` نوشته می‌شن؛ شکل تازه `straps` و `pocketInfo` ـه. payload ِ قدیمی یه بند با همون `label` (`StrapInfo.legacy`) و جیب‌هایی با همون `summary` (`PocketInfo.legacy`) خونده می‌شه، و دوباره نوشتنش شکل تازه رو می‌ده. `ProductSpecs` حالا `warranty` هم داره (کانترکت داشت).
+- read model ِ مدیا: `GalleryItemPayload` در `productvariantqm_tbl.media` (شناسه، نوع، `view`، `alt`، اندازه‌ها، `blurhash`، همه‌ی مسیرهای نسبی). Projector موقع `VariantAdded`/`VariantMediaReplaced` ردیف‌های `media_tbl` رو می‌خونه؛ فایلِ نبود = باگ (`error`). لایه‌ی application `GalleryItemDto` (`UploadedMediaDto` + `view`) می‌بینه و پاسخ `ProductMedia` ِ کانترکت همه‌ی فیلدهای `MediaAsset` رو با `MediaUrls` می‌سازه (`webV1Products` و `webV1AdminProducts` حالا `mediaUrls` می‌گیرن). `alt` ِ آیتم گالری، یا اگه پنل نداد `alt` ِ خود فایل.
+- `ProductInput` فرم رو با یه جمع‌کننده‌ی ساده (`Problems`) به‌جای zipهای تودرتو می‌خونه؛ مسیرها کامل‌ان (`specs.closure.type`، `specs.straps.0.lengthCm`، `variants.1.media.0.mediaId`). سقف‌های کل specs (وزن، تعداد بند، …) با `ProductSpecs.problemsOfWhole` همراه خطاهای اجزا میان. ترتیب نهایی گالری مال `ProductGalleryPolicy` ِ دامنه‌ست و جای هر فایل در فرم (`mediaPlaces`) نگه داشته می‌شه تا `MEDIA_NOT_FOUND` روی همون اندیس بیاد.
+- ترتیب `CreateProductUc` در تراکنش: slug ← فایل‌ها (`PRODUCT`، عکس یا ویدیو) ← دامنه ← کدها ← رنگ‌های `isActive: false` غیرفعال ← `status` ← ذخیره ← موجودی اولیه (یه `RESTOCK` برای هر رنگ با موجودی، به ترتیب id ِ رنگ) ← `markAttached` ← لاگ. `actor` ِ null یعنی seeder: با `UserId.SYSTEM` و بدون لاگ. seeder حالا موجودی رو در همون درخواست می‌ده و `AdjustInventoryUc` رو صدا نمی‌زنه (محصول نصفه‌کاره نمی‌مونه).
+- `UpdateProductUc`: شکل `If-Match` قبل از هر چیز؛ فرم قبل از تراکنش، ولی **اگه فرم غلط بود و `If-Match` اومده بود**، اول یه خوندن کوتاه نسخه رو چک می‌کنه تا فرم کهنه ۴۱۲ بگیره نه خطاهای فرم (قانون «`If-Match` قبل از همه»). ذخیره‌ی همزمان: `ConcurrentChangeException` تا `StatusPages` بالا می‌ره ← `409 CHANGED_BY_SOMEONE_ELSE`. لاگ: فقط قیمت ← `PRODUCT_PRICE_CHANGED`، بقیه ← `PRODUCT_UPDATED` با همه‌ی فیلدها؛ `description` و `specs` فقط «عوض شد».
+- تست همزمانی در سطح UseCase روی دیتابیس با یه `CyclicBarrier` بعد از خوندن (`UpdateProductUcOnDatabaseTest`)، تا هر ۱۰ دور واقعاً هر دو یه نسخه رو ببینن و جواب همیشه «یکی ذخیره، یکی ۴۰۹» باشه، نه گاهی ۴۱۲.
+- `MaxPerOrder` حالا ۱ تا ۲۰ ـه؛ سقف ۲۰ ِ ردیف سبد با همین یکی شد (دو تست سبد که `maxPerOrder = 30` داشتن، ۲۰ شدن). متن `MAX_PER_ORDER_INVALID` با `{max}`.
+- لینک نسبی (`/faq#reserve`) هنوز `href` ِ خودش رو از دست می‌ده: این تصمیم ۶ ِ گام ۵.۱ ـه. تست sanitize ِ این گام `<script>`، `onclick` و `javascript:` رو چک می‌کنه و لینک `https` ِ کامل باید بمونه.
+- تست‌های دیتابیس که رویداد با گالری می‌سازن، فایل‌های نمونه رو یه بار در `media_tbl` می‌ذارن (`SampleMedia`) چون Projector اندازه‌ها رو از اونجا می‌خونه.
+- خرابکاری: حذف چک `If-Match` در تراکنش ← `a stale version is 412 …` (application) و `PUT with the current If-Match is 200 … a stale one is 412 …` (HTTP) قرمز؛ `HtmlSanitizer { it }` به‌جای sanitizer در `ProductInput` ← `the description is kept as the sanitizer made it …` و `a description is kept without script …` قرمز.
 
 ---
 
-#### گام ۱.۶: وضعیت، آرشیو و انتشار زمان‌بندی‌شده · M ⬜
+#### گام ۱.۶: وضعیت، آرشیو و انتشار زمان‌بندی‌شده · M ✅
 
 **می‌سازی:** `schedulePublish`، `unschedulePublish`، دو رویداد تازه و payloadهاشون؛ Projector (`publishAt`)؛ `ChangeProductStatusUc` (جدول ۶.۶)، `ArchiveProductUc`؛ `FindDueScheduledProductsUc` + `PublishScheduledProductUc` و job ِ `publish-scheduled-products` در `PanelJobs`؛ routeهای `PATCH …/status` و `DELETE /admin/products/{productId}`.
 
@@ -1327,17 +1412,27 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 - چرا job دوباره رنگ فعال رو چک می‌کنه؟ بین برنامه‌ریزی و موعد ممکنه آخرین رنگ غیرفعال شده باشه؛ قانون انتشار باید لحظه‌ی انتشار برقرار باشه.
 
 **تموم شده یعنی:**
-- [ ] هر ردیف جدول ۶.۶ یه تست.
-- [ ] برنامه برای ۱۰ دقیقه‌ی بعد ← `DRAFT` با `publishAt`؛ `MutableClock` ۱۱ دقیقه جلو و اجرای job ← `ACTIVE` و `publishedOn` = زمان اجرا.
-- [ ] محصولی که بعد از برنامه رنگ فعالش رو از دست داده ← job منتشرش نمی‌کنه، برنامه پاک می‌شه و یه WARN.
-- [ ] دو اجرای همزمان job ← یه `ProductPublished`.
-- [ ] `DELETE` ← `204` و آرشیو؛ دوباره ← `204` بدون رویداد و بدون لاگ.
-- [ ] محصول آرشیو‌شده در سبد ← ردیف `purchasable = false`.
-- [ ] دیتابیس رد می‌کنه: `publishAt` روی محصول `ACTIVE`.
+- [x] هر ردیف جدول ۶.۶ یه تست.
+- [x] برنامه برای ۱۰ دقیقه‌ی بعد ← `DRAFT` با `publishAt`؛ `MutableClock` ۱۱ دقیقه جلو و اجرای job ← `ACTIVE` و `publishedOn` = زمان اجرا.
+- [x] محصولی که بعد از برنامه رنگ فعالش رو از دست داده ← job منتشرش نمی‌کنه، برنامه پاک می‌شه و یه WARN.
+- [x] دو اجرای همزمان job ← یه `ProductPublished`.
+- [x] `DELETE` ← `204` و آرشیو؛ دوباره ← `204` بدون رویداد و بدون لاگ.
+- [x] محصول آرشیو‌شده در سبد ← ردیف `purchasable = false`.
+- [x] دیتابیس رد می‌کنه: `publishAt` روی محصول `ACTIVE`.
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- «گذشته = انتشار فوری» تصمیم UseCase ـه؛ `schedulePublish` با `at ≤ now` یه `require` ِ دامنه‌ست (باگ، نه خطای کاربر). خطاهای `schedulePublish` یه خانواده‌ی جدا دارن (`SchedulePublishFailure`)؛ `unschedulePublish` بدون برنامه ← `PRODUCT_ALREADY_DRAFT` (همون ردیف جدول).
+- `publish`، `unpublish` و `archive` در `apply` و در Projector برنامه رو پاک می‌کنن؛ قید `productqm_publish_at_only_draft` ِ `V24` دیوار دومه (تست: `UPDATE` ِ مستقیم روی محصول `ACTIVE` رد می‌شه).
+- `publishAt` (و `newUntil` ِ فرم محصول) با `MomentField` خونده می‌شه: ISO-8601 با offset، وگرنه `400 DATE_TIME_INVALID` روی همون فیلد (کد و متن تازه). این یه باگ ِ ۱.۵ رو هم درست کرد: `newUntil` ِ بدشکل بی‌صدا null می‌شد.
+- دو اجرای همزمان job: هر دو پیش‌نویس رو می‌خونن؛ event store اولی رو نگه می‌داره و `ConcurrentChangeException` ِ دومی در `PublishScheduledProductUc` یعنی «اجرای دیگه انجامش داد» (`Outcome.NOTHING`). تست با `CyclicBarrier` بعد از خوندن.
+- لاگ تغییرات: `PRODUCT_PUBLISHED`، `PRODUCT_UNPUBLISHED`، `PRODUCT_ARCHIVED`، `PRODUCT_PUBLISH_SCHEDULED`، `PRODUCT_PUBLISH_UNSCHEDULED` با `status` و `publishAt` ِ قبل و بعد. job لاگ نمی‌نویسه.
+- `DELETE` ِ دوباره ← `204` بدون رویداد و لاگ؛ «در سبد خریدنی نیست» با `OfferQmRepository` (منبع سبد) تست شد.
+- فایل‌های نمونه‌ی تست (`SampleMedia`) حالا «وصل‌شده» ذخیره می‌شن تا job ِ پاک‌سازی مدیا در تست خودش اون‌ها رو برنداره. `MutableClock` یه کپی هم در تست‌های application گرفت.
+- خرابکاری: حذف `catch (ConcurrentChangeException)` از `PublishScheduledProductUc` ← `two runs of the job on one product at the same moment publish it once` قرمز.
 
 ---
 
-#### گام ۱.۷: رنگ‌ها (ورینت‌ها) · M ⬜
+#### گام ۱.۷: رنگ‌ها (ورینت‌ها) · M ✅
 
 **می‌سازی:** `AddVariantUc`، `UpdateVariantUc`، `DeactivateVariantUc`؛ `changeVariant` با `barcode`؛ سه route؛ `AdminVariantHttpResponse` از `GetAdminProductUc`.
 
@@ -1348,19 +1443,28 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 - چرا `isDefault: false` پیش‌فرض بودن رو برنمی‌داره؟ همیشه باید دقیقاً یه رنگ پیش‌فرض باشه؛ «برداشتن» بدون «گذاشتن» این قانون رو می‌شکنه.
 
 **تموم شده یعنی:**
-- [ ] افزودن رنگ با موجودی ۸ و دو مدیا ← `201`، تو فروشگاه با عکس و موجودی ۸.
-- [ ] رنگ تکراری (حتی غیرفعال) ← `409 COLOR_ALREADY_ON_PRODUCT`؛ SKU ِ رنگ محصول دیگه ← `409 DUPLICATE_SKU`.
-- [ ] رنگ با `isActive: false` ← اضافه و غیرفعال؛ تو فروشگاه نیست.
-- [ ] `PUT` رنگ غیرفعال با `isActive: true` و `isDefault: true` ← فعال و پیش‌فرض، رنگ قبلی پیش‌فرض نیست.
-- [ ] `PUT` با `colorKey` ِ دیگه ← `400 COLOR_KEY_IMMUTABLE`؛ با `stockQuantity: 99` ← موجودی عوض نمی‌شه.
-- [ ] غیرفعال کردن آخرین رنگ محصول منتشرشده ← `422 LAST_ACTIVE_VARIANT`؛ محصول پیش‌نویس ← مجاز.
-- [ ] رنگ محصول دیگه در مسیر ← `404 VARIANT_NOT_FOUND`.
-- [ ] تغییر قیمت رنگ همزمان با خرید همون رنگ، ۲۰ بار ← هیچ بن‌بستی (قفل ۷: ردیف محصول، بعد رنگ).
-- [ ] هر نوشتن لاگ `VARIANT_*` با `changes`؛ `DELETE` ِ رنگِ از قبل غیرفعال هیچی.
+- [x] افزودن رنگ با موجودی ۸ و دو مدیا ← `201`، تو فروشگاه با عکس و موجودی ۸.
+- [x] رنگ تکراری (حتی غیرفعال) ← `409 COLOR_ALREADY_ON_PRODUCT`؛ SKU ِ رنگ محصول دیگه ← `409 DUPLICATE_SKU`.
+- [x] رنگ با `isActive: false` ← اضافه و غیرفعال؛ تو فروشگاه نیست.
+- [x] `PUT` رنگ غیرفعال با `isActive: true` و `isDefault: true` ← فعال و پیش‌فرض، رنگ قبلی پیش‌فرض نیست.
+- [x] `PUT` با `colorKey` ِ دیگه ← `400 COLOR_KEY_IMMUTABLE`؛ با `stockQuantity: 99` ← موجودی عوض نمی‌شه.
+- [x] غیرفعال کردن آخرین رنگ محصول منتشرشده ← `422 LAST_ACTIVE_VARIANT`؛ محصول پیش‌نویس ← مجاز.
+- [x] رنگ محصول دیگه در مسیر ← `404 VARIANT_NOT_FOUND`.
+- [x] تغییر قیمت رنگ همزمان با خرید همون رنگ، ۲۰ بار ← هیچ بن‌بستی (قفل ۷: ردیف محصول، بعد رنگ).
+- [x] هر نوشتن لاگ `VARIANT_*` با `changes`؛ `DELETE` ِ رنگِ از قبل غیرفعال هیچی.
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- `changeVariant` ِ `barcode` از ۱.۵ ساخته شده بود؛ اینجا فقط به کار رفت. شکل فرم رنگ همون `ProductInput.checkVariant` ِ ۱.۵ ـه (مسیرها بدون `variants.i`: `colorKey`، `media.0.mediaId`).
+- `AddVariantUc` ترتیب کانترکت رو خودش چک می‌کنه (پالت ← رنگ روی محصول ← کد ← مدیا) و بعد `ProductDomainService.addVariant` رو صدا می‌زنه، چون نوع هر مدیا (عکس یا ویدیو) باید قبل از ساختن `ProductMedia` از ردیف فایل خونده بشه. کد ِ گرفته‌شده بین چک و ذخیره (`ProductCodeTakenException`) همون `409 DUPLICATE_SKU` ـه.
+- `PUT` ِ رنگ فرم کامله: `isActive` ِ نیومده یعنی `true` (پیش‌فرض کانترکت)، `barcode` ِ نیومده یعنی بدون بارکد. `stockQuantity` قبل از چک فرم دور ریخته می‌شه (نادیده، نه خطا).
+- برچسب ردیف لاگ ِ رنگ: «اسم محصول · کلید رنگ»؛ `VARIANT_UPDATED` با فیلدهای عوض‌شده (`priceOverride`، `compareAtPriceOverride`، `sortOrder`، `isDefault`، `isActive`، `barcode`، `media` به شکل لیست شناسه‌ها).
+- پاسخ هر سه نوشتن رنگ (به‌جز `DELETE`) `AdminVariant` ِ همون رنگه که از `GetAdminProductUc` برداشته می‌شه، با `ETag` ِ نسخه‌ی محصول.
+- تست «تغییر قیمت رنگ همزمان با خرید همون رنگ، ۲۰ بار» در `WebV1OrdersOnDatabaseTest` (با کاتالوگ seed و `PlaceOrderUc` ِ واقعی): هیچ بن‌بستی؛ سفارش یا ثبت می‌شه یا با یه قانون بیزنس رد می‌شه. خرابکاری ِ «حذف قفل ردیف محصول برای `VariantChanged` در Projector» در ۲۰ دور بن‌بست نساخت (زمان‌بندیه)؛ پس این تست نگهبانه، نه اثبات ِ اون یه خط.
+- خرابکاری: جابه‌جایی ترتیب «فعال کردن» و «پیش‌فرض کردن» در `UpdateVariantUc` ← `PUT an inactive color with isActive and isDefault …` قرمز.
 
 ---
 
-#### گام ۱.۸: تغییر موجودی و تاریخچه‌اش · M ⬜
+#### گام ۱.۸: تغییر موجودی و تاریخچه‌اش · M ✅
 
 **می‌سازی:** `V25__inventory_adjustments.sql` (با backfill)؛ `InventoryQmProjector` با `StockAdjusted` یه ردیف `inventoryadjustmentqm_tbl` می‌نویسه؛ `InventoryAdjustmentQmRepository`؛ گسترش `AdjustInventoryUc` (`actor`، لاگ تغییرات، `id` از read model)؛ `ListInventoryAdjustmentsUc`؛ `webV1AdminInventory.kt`؛ `InventoryAdjustmentHttpResponse`.
 
@@ -1371,28 +1475,48 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 - چرا رزرو و ارسال تو تاریخچه نیستن؟ اونا تغییر دستی نیستن و هر سفارش ده‌ها ردیف می‌ساخت؛ تاریخچه‌ی رزرو مال سفارشه.
 
 **تموم شده یعنی:**
-- [ ] backfill روی داده‌ی seed: هر رنگ یه ردیف `RESTOCK` با `stockAfter` = موجودی اولیه.
-- [ ] `RESTOCK` با ۵ ← `201` با `id`، `stockAfter`، `createdBy` = اسم کاربر؛ تو لیست اول.
-- [ ] `DAMAGED` با +۲ ← `400 ADJUSTMENT_DIRECTION_INVALID`؛ ۰ ← `400 STOCK_DELTA_INVALID`؛ کم کردن بیشتر از آزاد (۳ تا رزرو شده) ← `422 QUANTITY_EXCEEDS_STOCK` با `availableQuantity`.
-- [ ] لیست با `variantId` فقط همون رنگ؛ تازه‌ترین اول؛ رزرو یه سفارش تو لیست نیست.
-- [ ] ۲۰ تغییر همزمان روی یه رنگ ← موجودی نهایی = جمعشون، ۲۰ ردیف تاریخچه با `stockAfter` ِ پشت‌سرهم.
-- [ ] لاگ تغییرات `INVENTORY_ADJUSTED` با `stockOnHand` ِ قبل و بعد.
+- [x] backfill روی داده‌ی seed: هر رنگ یه ردیف `RESTOCK` با `stockAfter` = موجودی اولیه.
+- [x] `RESTOCK` با ۵ ← `201` با `id`، `stockAfter`، `createdBy` = اسم کاربر؛ تو لیست اول.
+- [x] `DAMAGED` با +۲ ← `400 ADJUSTMENT_DIRECTION_INVALID`؛ ۰ ← `400 STOCK_DELTA_INVALID`؛ کم کردن بیشتر از آزاد (۳ تا رزرو شده) ← `422 QUANTITY_EXCEEDS_STOCK` با `availableQuantity`.
+- [x] لیست با `variantId` فقط همون رنگ؛ تازه‌ترین اول؛ رزرو یه سفارش تو لیست نیست.
+- [x] ۲۰ تغییر همزمان روی یه رنگ ← موجودی نهایی = جمعشون، ۲۰ ردیف تاریخچه با `stockAfter` ِ پشت‌سرهم.
+- [x] لاگ تغییرات `INVENTORY_ADJUSTED` با `stockOnHand` ِ قبل و بعد.
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- `V25` همون شِمای ۶.۵؛ backfill جمع غلتان `onHand` (`StockAdjusted` ‏`+delta`، `StockShipped` ‏`−quantity`) و ترتیب ردیف‌ها «زمان، رنگ، sequence». تست با SQL ِ خود فایل (`ON CONFLICT ("eventId") DO NOTHING` برای ردیف‌های بقیه‌ی تست‌ها) همون ردیف‌های Projector رو می‌ده؛ کامنت‌های SQL `;` ندارن تا تست بتونه فایل رو به دستورها بشکنه.
+- Projector ردیف تاریخچه رو در همون تراکنش رویداد، بعد از به‌روز کردن `onHand` ِ رنگ می‌نویسه و `stockAfter` رو از همون ردیف می‌خونه.
+- `AdjustInventoryUc` حالا `actor: PanelActor` می‌گیره (seeder دیگه صداش نمی‌زنه، از ۱.۵)، فیلدهای Cmd nullable با `FIELD_REQUIRED`، پاسخ = ردیف read model ِ همین رویداد (با `eventId`) و `createdBy` به اسم. لاگ `INVENTORY_ADJUSTED` با `stockOnHand` ِ قبل و بعد و `reason`.
+- ۲۰ تغییر همزمان با ۳ بار تلاش ِ قبلی ۴۰۹ می‌گرفتن. پورت `InventoryRepository` یه `holdForChange(variantId)` گرفت (پیش‌فرض بی‌اثر برای حافظه‌ای‌ها؛ در Exposed همون قفل ۷ ِ ردیف محصول، این بار **قبل** از خوندن) و `AdjustInventoryUc` قبل از خوندن موجودی صداش می‌زنه؛ تغییرهای همزمان صف می‌کشن. تلاش دوباره برای سفارش‌ها (که قبلش قفل نمی‌گیرن) سر جاشه.
+- `InventoryAdjustmentDto` شکل کانترکت رو گرفت (`id`، `stockAfter`، `createdBy`)؛ `onHandAfter`/`availableAfter` رفتن.
+- `ListInventoryAdjustmentsUc` همیشه تازه‌ترین اول (`occurredOn`، بعد `pId`)؛ کانترکت `sort` نداره. اسم‌ها برای هر شخص یه بار.
+- خرابکاری: حذف `holdForChange` از `AdjustInventoryUc` ← `20 changes at once on one color …` قرمز.
 
 ---
 
-#### گام ۱.۹: عکس‌ها در فروشگاه، سبد و سفارش · M ⬜
+#### گام ۱.۹: عکس‌ها در فروشگاه، سبد و سفارش · M ✅
 
 **می‌سازی:** جدول ۶.۷: `ProductCardQm` و `ProductDetailQm` با مدیا، کوئری مدیای یه صفحه، `ProductSummaryHttpResponse.image`/`hoverImage`، `ProductColorOptionHttpResponse.imageUrl`/`thumbnailUrl`، `ProductMediaHttpResponse` ِ کامل، `OfferQm.imageUrl` و `CartItemHttpResponse.image`، `PlaceOrderUc` ← `OrderItemSnapshot.imageUrl`، و `MediaAssetHttpResponse.from` (آدرس کامل از `publicBaseUrl` و مسیر نسبی).
 
 وابسته به: ۱.۵ و ۱.۷
 
 **تموم شده یعنی:**
-- [ ] کارت محصول با عکس رنگ پیش‌فرض؛ با فیلتر `color=lilac`، عکس رنگ یاسی؛ `hoverImage` دومین عکس.
-- [ ] محصول بدون مدیا ← `image = null` مثل قبل (فرانت ایلاستریشن نشون می‌ده).
-- [ ] رنگ بدون مدیا ← `imageUrl = null` برای همون رنگ.
-- [ ] سبد با عکس هر ردیف؛ سفارش تازه با `imageUrl` در ردیف‌ها؛ سفارش قبلی `null` می‌مونه.
-- [ ] ویدیو تو گالری `type = VIDEO` با `posterUrl` و `durationSec`؛ `image` ِ کارت هیچ‌وقت ویدیو نیست.
-- [ ] لیست ۲۴ تایی فروشگاه یه کوئری بیشتر از قبل می‌زنه، نه ۲۴ تا.
+- [x] کارت محصول با عکس رنگ پیش‌فرض؛ با فیلتر `color=lilac`، عکس رنگ یاسی؛ `hoverImage` دومین عکس.
+- [x] محصول بدون مدیا ← `image = null` مثل قبل (فرانت ایلاستریشن نشون می‌ده).
+- [x] رنگ بدون مدیا ← `imageUrl = null` برای همون رنگ.
+- [x] سبد با عکس هر ردیف؛ سفارش تازه با `imageUrl` در ردیف‌ها؛ سفارش قبلی `null` می‌مونه.
+- [x] ویدیو تو گالری `type = VIDEO` با `posterUrl` و `durationSec`؛ `image` ِ کارت هیچ‌وقت ویدیو نیست.
+- [x] لیست ۲۴ تایی فروشگاه یه کوئری بیشتر از قبل می‌زنه، نه ۲۴ تا.
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- `ProductMediaHttpResponse` ِ کامل از ۱.۵ ساخته شده بود (چون `ProductMedia` دیگه `url` نداشت). اینجا کارت، سواچ‌ها، سبد و سفارش.
+- عکس کارت و hover مال **رنگ نمایش** ـه (فیلتر رنگ، وگرنه پیش‌فرض)، پس هر `ColorOption` ِ DTO دو عکس اولش (`image`، `hoverImage`) رو داره و لایه‌ی HTTP رنگ نمایش رو انتخاب می‌کنه (همون‌جا که `displayColorKey` حساب می‌شد). ویدیو هیچ‌وقت عکس کارت نیست.
+- کوئری اضافه لازم نشد: گالری هر رنگ (با اندازه‌ها) در همون ستون `media` ِ ردیف رنگه که لیست از قبل می‌خوند. تست: یه صفحه‌ی ۲۴ تایی همون‌قدر statement می‌زنه که یه صفحه‌ی ۱ تایی.
+- `UploadedMediaDto.pathFor(width)` (مثل `MediaAsset.pathFor`): `imageUrl`/`thumbnailUrl` ِ سواچ نسخه‌ی ۴۸۰ و ۱۶۰.
+- `OfferQm.image` (اولین عکس رنگ) ← `CartItem.image` و `PlaceOrderUc`. `OrderItemSnapshot.imageUrl` مسیر نسبیه (`2026/10/med_…/480.webp`) و HTTP آدرس کامل می‌سازه (تصمیم ۶.۲: فقط مسیر نسبی ذخیره می‌شه)؛ سفارش‌های قبلی `null`.
+- کانترکت: `OrderItem.image` از `MediaAsset` به آدرس رشته‌ای (ردیف ۲۱ ِ ۶.۸): سفارش فقط مسیر یه اندازه رو نگه می‌داره، و پیاده‌سازی از قبل رشته می‌فرستاد.
+- routeهای سبد، ورود، checkout و سفارش‌های من حالا `mediaUrls` می‌گیرن؛ تست‌ها `testMediaUrls` ِ مشترک.
+- `ProductRef.imageUrl` هنوز جایی ساخته نمی‌شه (هیچ پاسخی `ProductRef` نمی‌فرسته تا فاز ۸/۱۰).
+- خرابکاری: `imageUrl = null` در `PlaceOrderUc` ← `a cart line shows its color's photo, a new order keeps the 480 one …` قرمز.
 
 ---
 
@@ -1408,11 +1532,17 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 وابسته به: ۱.۰ تا ۱.۹
 
 **تموم شده یعنی:**
-- [ ] هر ردیف بخش ۳ ِ این فاز حداقل یه تست داره و هر خرابکاری حداقل یه تست رو قرمز می‌کنه.
-- [ ] اسکن لاگ سبز، با تست همراهِ نشت عمدی.
+- [x] هر ردیف بخش ۳ ِ این فاز حداقل یه تست داره و هر خرابکاری حداقل یه تست رو قرمز می‌کنه.
+- [x] اسکن لاگ سبز، با تست همراهِ نشت عمدی.
 - [ ] دور با پنل انجام شده، یا اگه این محیط پنل رو نداره، با Chromium و اسکریپت، و دور با پنل برای تو مونده (مثل گام ۲۱ ِ خرید).
 - [ ] merge به `main`.
 
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- `PANEL_CATALOG_REVIEW.md`، `PanelCatalogLogScanOnDatabaseTest` (با IP ِ واقعی از `X-Forwarded-For` که به لاگ تغییرات رسیده و به لاگ برنامه نه؛ `PanelTestStack.app(trustedProxyHops)`)، `docs/FRONTEND_PANEL_CATALOG.md` و بخش «The panel's catalog» ِ README. پیکربندی مدیا و نصب `vips`/`ffmpeg` از گام ۱.۲ تو README بود.
+- دو خرابکاری اول سبز موندن و تستشون اضافه شد: حذف چک «در استفاده» ِ دسته (FK دیوار دوم فقط «حداقل ۱» می‌گه) ← `a category with a draft and an archived product is 409 IN_USE with productCount 2 …`؛ حذف قفل ۷ برای `VariantChanged` (بن‌بست به زمان‌بندی بستگی داره) ← `ProductLockOrderOnDatabaseTest` با `FOR UPDATE NOWAIT` روی ردیف رنگ وقتی ردیف محصول دست کس دیگه‌ست.
+- خرابکاری‌های تازه: چک نقش در `webV1AdminProducts` ← `RouteGuardsTest` قرمز؛ `MediaProbe.Unsupported` به‌عنوان عکس ← `MediaLimitsPolicyTest` و تست ۴۱۵ ِ HTTP قرمز؛ سقف حجم عکس ← تست‌های ۴۱۳ قرمز. جدول کامل در `PANEL_CATALOG_REVIEW.md`.
+- **دور با پنل انجام نشد:** این ماشین نه kiva-backoffice-fe رو داره نه `vips`/`ffmpeg` (پس آپلود واقعی ۵۰۰ می‌شه). همه‌ی جریان‌های دور با HTTP ِ واقعی و `FakeMediaProcessor` تست شدن؛ دور واقعی و تست‌های ابزار واقعی برای تو مونده (بخش آخر سند ریویو).
+- **merge به `main`** منتظر تأیید توئه.
 ---
 
 <a id="p2"></a>
@@ -1428,18 +1558,18 @@ Route: 201 با AdminVariant ِ همین رنگ (از GetAdminProductUc)، و ه
 
 | گام | عنوان | اندازه | وضعیت |
 |---|---|---|---|
-| ۲.۰ | کانترکت 1.9.0 | M | ⬜ |
-| ۲.۱ | دامنه‌ی سفارش بعد از پرداخت، و Aggregate ِ استرداد | L | ⬜ |
-| ۲.۲ | read model ِ سفارش برای پنل و تایم‌لاین تازه | L | ⬜ |
-| ۲.۳ | صف و جزئیات سفارش در پنل | M | ⬜ |
-| ۲.۴ | یادداشت داخلی | S | ⬜ |
-| ۲.۵ | عکس قبل از ارسال، تأیید مشتری و تأیید خودکار | L | ⬜ |
-| ۲.۶ | استرداد دستی | M | ⬜ |
-| ۲.۷ | تغییر وضعیت از پنل و لغو (پنل و مشتری) | L | ⬜ |
-| ۲.۸ | ارسال (تکی و گروهی) و «تحویل شد» | L | ⬜ |
-| ۲.۹ | رهگیری: مهمان، روزانه و «رهگیری‌های من» | M | ⬜ |
-| ۲.۱۰ | «سفارش‌های من» کامل و آمار مشتری | M | ⬜ |
-| ۲.۱۱ | ریویو، حمله‌ی آزمایشی و دور با پنل | M | ⬜ |
+| ۲.۰ | کانترکت 1.9.0 | M | ✅ |
+| ۲.۱ | دامنه‌ی سفارش بعد از پرداخت، و Aggregate ِ استرداد | L | ✅ |
+| ۲.۲ | read model ِ سفارش برای پنل و تایم‌لاین تازه | L | ✅ |
+| ۲.۳ | صف و جزئیات سفارش در پنل | M | ✅ |
+| ۲.۴ | یادداشت داخلی | S | ✅ |
+| ۲.۵ | عکس قبل از ارسال، تأیید مشتری و تأیید خودکار | L | ✅ |
+| ۲.۶ | استرداد دستی | M | ✅ |
+| ۲.۷ | تغییر وضعیت از پنل و لغو (پنل و مشتری) | L | ✅ |
+| ۲.۸ | ارسال (تکی و گروهی) و «تحویل شد» | L | ✅ |
+| ۲.۹ | رهگیری: مهمان، روزانه و «رهگیری‌های من» | M | ✅ |
+| ۲.۱۰ | «سفارش‌های من» کامل و آمار مشتری | M | ✅ |
+| ۲.۱۱ | ریویو، حمله‌ی آزمایشی و دور با پنل | M | ✅ |
 
 ### ۷.۲ تصمیم‌های این فاز
 
@@ -1891,24 +2021,28 @@ Route: 200 با AdminOrder ِ همون سفارش
 | 14 | `POST /tracking/lookup`، `GET /tracking/daily*` | «فقط سفارش پرداخت‌شده»؛ «یک ردیف برای هر کد رهگیری»؛ «فقط ۳۰ روز اخیر» | — |
 | 15 | `ErrorCode` | تازه: `AWAITING_CUSTOMER_FEEDBACK`، `GROUP_NOT_READY`، `PHOTOS_INCOMPLETE`، `REFUND_NOT_FOUND`، `PAYMENT_IN_PROGRESS` | کلاینت روی هر کدوم رفتار جدا داره |
 | 16 | بخش ۵ (پیامک‌ها) | «لغو شد» و «پول برگشت» اضافه؛ «ارسال عکس: پیام‌رسان با اپراتور، پیامک با سرور» | — |
+| 17 | `GET /me/orders/{orderCode}/media`، `POST …/media-feedback` (تازه، گام ۲.۰) | «`items` فقط دسته‌ی فرستاده‌شده»؛ `APPROVE` فقط وقتی عکس `SENT` ـه، وگرنه `422 INVALID_STATUS_TRANSITION`، تأیید دوباره `200`؛ `REQUEST_CHANGE` تا فاز ۳ ← `422 CHANGE_REQUEST_NOT_ALLOWED` | کانترکت برای این دو هیچ قانونی نداشت |
+| 18 | `AdminOrder.customer` (تازه، گام ۲.۰) | `fullName` nullable (مشتری بی‌اسم)؛ `ordersCount` = سفارش‌های پرداخت‌شده، لغوشده هم | کانترکت non-null بود ولی حساب بی‌اسم داریم |
 
 **کدهای فیلدی تازه** (فقط متن فارسی): `NOTE_REQUIRED`، `NOTE_TOO_LONG`، `ORDER_ITEM_NOT_FOUND`، `MANUAL_ONLY`، `CARRIER_MISMATCH`، `SHIPPED_AT_INVALID`، `TRACKING_CODE_INVALID`، `REFUND_EXCEEDS_PAID`، `REFERENCE_ID_REQUIRED`، `REFUND_REASON_REQUIRED`، `RETURN_NOT_FOUND`.
 
 ### ۷.۱۱ گام‌ها
 
-#### گام ۲.۰: کانترکت 1.9.0 · M ⬜
+#### گام ۲.۰: کانترکت 1.9.0 · M ✅
 
 **می‌سازی:** برنچ `panel-orders`؛ ردیف‌های ۷.۱۰ و `info.version: 1.9.0`؛ متن کدهای تازه در `ErrorMessages.kt`.
 
 وابسته به: فاز ۱ (merge‌شده)
 
 **تموم شده یعنی:**
-- [ ] همه‌ی ردیف‌ها، YAML معتبر، `ErrorMessagesTest` سبز.
-- [ ] `STORE_CREDIT` در هیچ‌جای کانترکت نیست (grep).
+- [x] همه‌ی ردیف‌ها، YAML معتبر، `ErrorMessagesTest` سبز.
+- [x] `STORE_CREDIT` در هیچ‌جای کانترکت نیست (grep).
+
+**یادداشت پیاده‌سازی:** برنچ `panel-orders` از نوک فاز ۱ ساخته شد (فاز ۱ هنوز منتظر merge به `main` ـه). دو ردیف تازه در جدول ۷.۱۰ (۱۷ و ۱۸). کدهای فیلدی بیشتر از فهرست ۷.۱۰ متن گرفتن (`CARRIER_INVALID`، `TRACKING_CODE_REQUIRED`، `REFUND_AMOUNT_INVALID`، `REFUND_METHOD_INVALID`، `REFUND_STATUS_INVALID`، `REFUND_REASON_TOO_LONG`، `REFUND_NOTE_TOO_LONG`، `REFERENCE_ID_INVALID`، `ORDER_STATUS_INVALID`، `CANCEL_REASON_INVALID`، `CANCEL_NOTE_TOO_LONG`، `STATUS_NOTE_TOO_LONG`، `PHOTO_MESSAGE_TOO_LONG`، `PHOTOS_REQUIRED`، `PHOTOS_TOO_MANY`، `SORT_ORDER_INVALID`، `FEEDBACK_DECISION_INVALID`، `REFUND_STATUS_FILTER_INVALID`، `DAYS_INVALID`، `TRACKING_QUERY_TOO_LONG`)، تا گام‌های بعد فقط استفاده کنن.
 
 ---
 
-#### گام ۲.۱: دامنه‌ی سفارش بعد از پرداخت، و Aggregate ِ استرداد · L ⬜
+#### گام ۲.۱: دامنه‌ی سفارش بعد از پرداخت، و Aggregate ِ استرداد · L ✅
 
 **می‌سازی:** رویدادها، وضعیت و متدهای ۷.۴ با payload و JSON ِ طلایی؛ `OrderTransitionPolicy`؛ `PreShipmentPolicy` (`FEEDBACK_HOURS = 24`، `MAX_PHOTOS = 20`)؛ `OrderActionsPolicy` با `OrderActionFacts`؛ `OrderStatus.countsAsPurchase`؛ `InventoryDomainService.shipForOrder`؛ `DiscountRedemption.giveBack`؛ Aggregate و Domain Service ِ `refund`؛ `CancelReason` و `CancelledBy`.
 
@@ -1919,66 +2053,95 @@ Route: 200 با AdminOrder ِ همون سفارش
 - چرا `returnableUntil` تو رویداد `OrderDelivered` و نه حساب‌شده موقع خوندن؟ چون از تنظیمات اون لحظه میاد؛ replay نباید با تنظیمات امروز دوباره حساب کنه (همون اصل `heldForReservation` ِ `OrderPaid`).
 
 **تموم شده یعنی:**
-- [ ] هر سطر جدول متدهای ۷.۴ یه تست موفق و یه تست شکست.
-- [ ] replay: ثبت، پرداخت، عکس، تأیید، ارسال، تحویل ← دقیقاً همون وضعیت؛ و ثبت، پرداخت، لغو، استرداد ← `refunded` درست.
-- [ ] مشتری: لغو `PROCESSING` ِ بدون عکس ← موفق؛ بعد از یه بار عکس (حتی اگه دوباره `PROCESSING` شده) ← `ORDER_NOT_CANCELLABLE`.
-- [ ] ارسال قبل از تأیید و قبل از مهلت ← `AWAITING_CUSTOMER_FEEDBACK`؛ بعد از مهلت بدون تأیید ← موفق.
-- [ ] `Refund`: هر انتقال مجاز موفق، هر انتقال دیگه `INVALID_STATUS_TRANSITION`؛ `COMPLETED` بدون شماره‌ی پیگیری رد.
-- [ ] `RefundDomainService`: پرداخت ۲٬۰۰۰٬۰۰۰، استرداد قبلی ۵۰۰٬۰۰۰ (`PENDING`) و ۳۰۰٬۰۰۰ (`FAILED`) ← قابل استرداد ۱٬۵۰۰٬۰۰۰.
-- [ ] `shipForOrder` ردیف‌ها رو به ترتیب قفل برمی‌گردونه و بار دوم هیچی.
-- [ ] `giveBack` فقط از `CONFIRMED`.
-- [ ] `NoFloatingPointMoneyTest` پکیج `refund` رو هم می‌گرده.
+- [x] هر سطر جدول متدهای ۷.۴ یه تست موفق و یه تست شکست.
+- [x] replay: ثبت، پرداخت، عکس، تأیید، ارسال، تحویل ← دقیقاً همون وضعیت؛ و ثبت، پرداخت، لغو، استرداد ← `refunded` درست.
+- [x] مشتری: لغو `PROCESSING` ِ بدون عکس ← موفق؛ بعد از یه بار عکس (حتی اگه دوباره `PROCESSING` شده) ← `ORDER_NOT_CANCELLABLE`.
+- [x] ارسال قبل از تأیید و قبل از مهلت ← `AWAITING_CUSTOMER_FEEDBACK`؛ بعد از مهلت بدون تأیید ← موفق.
+- [x] `Refund`: هر انتقال مجاز موفق، هر انتقال دیگه `INVALID_STATUS_TRANSITION`؛ `COMPLETED` بدون شماره‌ی پیگیری رد.
+- [x] `RefundDomainService`: پرداخت ۲٬۰۰۰٬۰۰۰، استرداد قبلی ۵۰۰٬۰۰۰ (`PENDING`) و ۳۰۰٬۰۰۰ (`FAILED`) ← قابل استرداد ۱٬۵۰۰٬۰۰۰.
+- [x] `shipForOrder` ردیف‌ها رو به ترتیب قفل برمی‌گردونه و بار دوم هیچی.
+- [x] `giveBack` فقط از `CONFIRMED`.
+- [x] `NoFloatingPointMoneyTest` پکیج `refund` رو هم می‌گرده.
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- `OrderDelivered` به‌جز `returnableUntil` یه `note` (`StatusNote`) هم داره: کانترکت می‌گه `note` ِ `POST …/status` تو تایم‌لاین مشتری دیده می‌شه، پس باید تو رویداد باشه. لحظه‌ی تحویل همون `occurredOn` ِ رویداده (فیلد جدای `deliveredOn` تکراری بود).
+- `OrderPhotosApproved` با `automatic = true` فقط از `feedbackDeadline` به بعد (`PHOTOS_NOT_DUE`، `CONFLICT`؛ به کلاینت نمی‌رسه، job فقط رد می‌شه).
+- `ship` اول وضعیت، بعد حامل و `shippedOn` (۴۰۰ها)، بعد تأیید یا مهلت (۴۲۲) رو چک می‌کنه، تا خطای ورودی ِ سفارش آماده هم همون ۴۰۰ باشه.
+- `StatusNote` (≤ ۵۰۰) یه VO برای هر یادداشت تغییر وضعیته (لغو مشتری، لغو و تحویل پنل): `STATUS_NOTE_TOO_LONG` / `STATUS_NOTE_INVALID` روی `note`. `CANCEL_NOTE_TOO_LONG` ِ گام ۲.۰ حذف شد.
+- `DiscountRedemption.storedStatus` همون «وضعیتی که خونده شد» ِ قفل خوش‌بینانه‌ی `save` ـه.
+- تا گام ۲.۲ Projector رویدادهای تازه رو نمی‌شناسه (هیچ‌کس هم نمی‌سازدشون)، و تا گام ۲.۱۰ دکمه‌های `canCancel` و `canApproveMedia` ِ کارت سفارش خاموش می‌مونن.
 
 ---
 
-#### گام ۲.۲: read model ِ سفارش برای پنل و تایم‌لاین تازه · L ⬜
+#### گام ۲.۲: read model ِ سفارش برای پنل و تایم‌لاین تازه · L ✅
 
 **می‌سازی:** `V26__order_admin_read_model.sql` (با backfill ِ `searchText` و `kind` ِ تایم‌لاین)؛ `OrderTimelineEntry` با `kind` و `note`؛ Projector برای همه‌ی رویدادهای تازه (ستون‌ها، تایم‌لاین، `soldCount` ِ محصول و رنگ منفی با `OrderCancelled` زیر قفل ۷ و قبل از stream ِ سفارش، مثل `OrderPaid`)؛ `OrderQm` با فیلدهای تازه؛ `OrderQmRepository`: `findByCode(code)` (بدون مالک)، `findForAdmin(filter, pageable)`، `statusCounts(filter)`، `findOfGroup(groupId)`، `findSilentPhotos(now, limit)`، `dailyShipments(day, q, pageable)`، `shippedOfCustomer(userId)`؛ `lockOrder(orderId)` (قفل ۹)؛ `purchasesOf` با `refunded`؛ `paidCodesIn` با `countsAsPurchase`.
 
 وابسته به: ۲.۱
 
 **تموم شده یعنی:**
-- [ ] backfill: تایم‌لاین سفارش رزروی ِ آزادشده ← `PLACED`، `PAID`، `RELEASED_FROM_RESERVATION`؛ `searchText` ِ همه‌ی ردیف‌ها پر.
-- [ ] هر رویداد تازه فقط همون ردیف رو عوض می‌کنه و یه ردیف تایم‌لاین با `kind` ِ درست می‌ذاره.
-- [ ] لغو ← `soldCount` ِ محصول و رنگ همون اندازه‌ای کم می‌شه که با پرداخت زیاد شده بود، و هیچ‌وقت منفی نمی‌شه.
-- [ ] پرداخت و لغو یه سفارش در یه لحظه، ۲۰ بار ← یکی‌شون، هیچ بن‌بست.
-- [ ] دیتابیس رد می‌کنه: `SHIPPED` بدون کد، `CANCELLED` بدون `cancelledOn`.
+- [x] backfill: تایم‌لاین سفارش رزروی ِ آزادشده ← `PLACED`، `PAID`، `RELEASED_FROM_RESERVATION`؛ `searchText` ِ همه‌ی ردیف‌ها پر.
+- [x] هر رویداد تازه فقط همون ردیف رو عوض می‌کنه و یه ردیف تایم‌لاین با `kind` ِ درست می‌ذاره.
+- [x] لغو ← `soldCount` ِ محصول و رنگ همون اندازه‌ای کم می‌شه که با پرداخت زیاد شده بود، و هیچ‌وقت منفی نمی‌شه.
+- [x] پرداخت و لغو یه سفارش در یه لحظه، ۲۰ بار ← یکی‌شون، هیچ بن‌بست.
+- [x] دیتابیس رد می‌کنه: `SHIPPED` بدون کد، `CANCELLED` بدون `cancelledOn`.
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- `OrderPhotosAttached` (پیش‌نویس) ردیف تایم‌لاین نمی‌ذاره: تایم‌لاین مال مشتریه و پیش‌نویس رو نمی‌بینه. بقیه‌ی رویدادهای تازه هر کدوم یه ردیف با `kind` ِ خودشون (`OrderTimelineKind` در application: `PLACED`، `PAYMENT_FAILED`، `PAID`، `EXPIRED`، `RELEASED_FROM_RESERVATION`، `PHOTOS_SENT`، `PHOTOS_APPROVED`، `PHOTOS_AUTO_APPROVED`، `SHIPPED`، `SHIPMENT_CORRECTED`، `DELIVERED`، `CANCELLED`، `REFUNDED`). ردیف `note` (لغو و تحویل) و `amount` (استرداد) هم داره.
+- `searchText` = `normalizePersian` ِ «کد، اسم و موبایل گیرنده، شهر» (`OrderQmProjector.searchTextOf`). SQL ِ backfill عین همون قانون‌هاست (نیم‌فاصله‌ی تکی می‌مونه، چسبیده به فاصله فاصله می‌شه) و `OrderAdminReadModelMigrationTest` هر دو رو با یه آدرس پر از حرف عربی، رقم فارسی و نیم‌فاصله با هم مقایسه می‌کنه، و خود دو `UPDATE` ِ فایل migration رو روی یه ردیف با شکل قدیم اجرا می‌کنه.
+- دو `CHECK` ِ بیشتر: `orderqm_photo_sent_check` (عکس غیر `WAITING` ← `photoEverSent` و زمان‌ها) و `orderqm_refunded_check` (`refunded ≤ payable`)، و ایندکس `orderqm_group_idx` برای سفارش‌های یه گروه.
+- لغو `soldCount` رو زیر همون قفل ۷ کم می‌کنه (`lockFor` حالا برای `OrderCancelled` هم قفل می‌گیره). «پرداخت و لغو در یه لحظه» به‌صورت پرداخت یه سفارش و لغو سفارش دیگه از همون دو رنگ با ترتیب برعکس، ۲۰ بار، تست شد (یه سفارش رو نمی‌شه همزمان پرداخت و لغو کرد).
+- از متدهای تازه‌ی `OrderQmRepository` این گام `findByCode`، `lockOrder`، `hasPurchase` و تغییر `purchasesOf` (`totalSpent` = پرداخت − برگشت) و `paidCodesIn` (`countsAsPurchase`) رو داره؛ `Discounts` «خرید اول» رو از `hasPurchase` می‌پرسه. `findForAdmin`/`statusCounts`/`findOfGroup` با گام ۲.۳، `findSilentPhotos` با ۲.۵ و رهگیری‌ها با ۲.۹ میان، هر کدوم با تست همون گام. برچسب تایم‌لاین هنوز از وضعیته و با گام ۲.۵ از `kind` می‌شه.
 
 ---
 
-#### گام ۲.۳: صف و جزئیات سفارش در پنل · M ⬜
+#### گام ۲.۳: صف و جزئیات سفارش در پنل · M ✅
 
 **می‌سازی:** `FindAdminOrdersUc`، `GetAdminOrderUc`، `AdminOrderSorts`، `OrderByCode`؛ `webV1AdminOrders.kt` (دو GET)؛ `AdminOrderListItemHttpResponse`، `AdminOrderHttpResponse`؛ `PanelTestStack` با سفارش‌های پرداخت‌شده (از `PurchaseTestStack` یا `StoredOrders`).
 
 وابسته به: ۲.۲
 
 **تموم شده یعنی:**
-- [ ] هر فیلتر یه تست؛ `q` با کد، با فقط رقم، با موبایل حساب، با موبایل گیرنده، با اسم.
-- [ ] پیش‌فرض سفارش پرداخت‌نشده نداره؛ `status=PENDING_PAYMENT` داره.
-- [ ] `statusCounts` با `status=PROCESSING` همون عددهای بدون اون فیلتره و هر ۱۳ کلید رو داره.
-- [ ] `from`/`to` به وقت تهران (سفارش ساعت ۲۲:۰۰ ِ UTC ِ پنجشنبه تو جمعه‌ست).
-- [ ] جزئیات: همه‌ی تلاش‌های پرداخت، گروه رزرو با کدهای اعضا، `allowedTransitions` ِ درست برای هر وضعیت.
-- [ ] `OPERATOR` می‌بینه، `CATALOG_MANAGER` ← 403.
-- [ ] صفحه‌ی ۲۰ تایی سه کوئری.
+- [x] هر فیلتر یه تست؛ `q` با کد، با فقط رقم، با موبایل حساب، با موبایل گیرنده، با اسم.
+- [x] پیش‌فرض سفارش پرداخت‌نشده نداره؛ `status=PENDING_PAYMENT` داره.
+- [x] `statusCounts` با `status=PROCESSING` همون عددهای بدون اون فیلتره و هر ۱۳ کلید رو داره.
+- [x] `from`/`to` به وقت تهران (سفارش ساعت ۲۲:۰۰ ِ UTC ِ پنجشنبه تو جمعه‌ست).
+- [x] جزئیات: همه‌ی تلاش‌های پرداخت، گروه رزرو با کدهای اعضا، `allowedTransitions` ِ درست برای هر وضعیت.
+- [x] `OPERATOR` می‌بینه، `CATALOG_MANAGER` ← 403.
+- [x] صفحه‌ی ۲۰ تایی سه کوئری.
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- فیلتر `refundStatus` با جدول استرداد در گام ۲.۶ میاد (جدولش تا اون موقع نیست). `draftItems`، `notes` و `refunds` ِ `AdminOrder` تا گام‌های ۲.۵، ۲.۴ و ۲.۶ لیست خالی‌ان.
+- `q` با واژه‌ها: هر واژه باید تو `searchText` (کد، اسم و موبایل گیرنده، شهر) یا اسم و فامیل حساب باشه (`inSubQuery` روی `user_tbl`). موبایل: حساب دقیق، یا گیرنده به‌صورت یه کلمه‌ی کامل از `searchText`.
+- `statusCounts` هیچ شرط وضعیتی نداره (حتی پیش‌فرض صف)، پس تب «در انتظار پرداخت» هم عدد واقعی داره.
+- `OrderDetails` (سرویس مشترک) صفحه‌ی سفارش رو برای مشتری و پنل یکسان می‌سازه؛ `GetMyOrderUc` از اون و `OrderByCode` استفاده می‌کنه. `AdminCustomerRepository.findAll(ids)` حساب‌های کل صفحه رو یه‌جا می‌خونه.
+- «سه کوئری»: با شمارش دستورهای SQL از لاگ `SqlWithoutValuesLogger` تست شد: صفحه‌ی ۲ تایی و ۲۰ تایی هر دو ۴ `SELECT` (شمارش صفحه، ردیف‌ها با join ِ گروه رزرو، شمارنده‌ها، حساب‌ها).
+- `PanelTestStack` حالا یه `PurchaseTestStack` و `PaidOrders` (سفارش واقعی با سبد، تسویه و callback ِ درگاه آزمایشی) داره و routeهای «سفارش‌های من» رو هم سوار می‌کنه.
 
 ---
 
-#### گام ۲.۴: یادداشت داخلی · S ⬜
+#### گام ۲.۴: یادداشت داخلی · S ✅
 
 **می‌سازی:** `V27__order_notes.sql`؛ `OrderNote` (domain، ساده)، `OrderNoteRepository`؛ `AddOrderNoteUc`؛ route؛ یادداشت‌ها در `GetAdminOrderUc`.
 
 وابسته به: ۲.۳
 
 **تموم شده یعنی:**
-- [ ] یادداشت ← `201` با `author` = اسم اپراتور؛ تو جزئیات به ترتیب زمان.
-- [ ] متن خالی یا ۱۰۰۱ نویسه ← ۴۰۰.
-- [ ] دیتابیس `UPDATE` و `DELETE` رو رد می‌کنه.
-- [ ] یادداشت تو پاسخ مشتری نیست.
-- [ ] لاگ تغییرات بدون متن یادداشت.
+- [x] یادداشت ← `201` با `author` = اسم اپراتور؛ تو جزئیات به ترتیب زمان.
+- [x] متن خالی یا ۱۰۰۱ نویسه ← ۴۰۰.
+- [x] دیتابیس `UPDATE` و `DELETE` رو رد می‌کنه.
+- [x] یادداشت تو پاسخ مشتری نیست.
+- [x] لاگ تغییرات بدون متن یادداشت.
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- `OrderNote` و `OrderNoteText` در aggregate ِ کوچیک `ordernote` (جدول ساده، فقط اضافه). متن trim می‌شه، حرف‌ها نرمال، و خط‌های تازه همون‌طور می‌مونن.
+- `AddOrderNoteUc` خود `AdminNoteDto` رو برمی‌گردونه (مثل `InventoryAdjustmentDto`، استثنای ۴.۵.۶): یادداشت صفحه‌ی جدایی برای خوندن دوباره نداره.
+- `AuditAction.ORDER_NOTE_ADDED` با جمله‌ی «یادداشت داخلی روی سفارش «…» نوشته شد»؛ `changes = null`.
+- اسکریپت مرتب‌سازی importها در این گام فاصله‌های دوتایی ِ چند فایل از گام‌های قبلی رو هم یکی کرد (بدون تغییر رفتار).
 
 ---
 
-#### گام ۲.۵: عکس قبل از ارسال، تأیید مشتری و تأیید خودکار · L ⬜
+#### گام ۲.۵: عکس قبل از ارسال، تأیید مشتری و تأیید خودکار · L ✅
 
 **می‌سازی:** `SetPreShipmentMediaUc`، `SendPreShipmentMediaUc`، `GetMyOrderMediaUc`، `SubmitMediaFeedbackUc` (فقط `APPROVE`)؛ job ِ `approve-silent-photos` در `PanelJobs`؛ `SmsSender.sendPhotosSent` (و مسیر ۹ مرحله‌ای پیامک)؛ routeها؛ `PreShipmentMediaHttpResponse` ِ واقعی؛ `OrderTexts` (پیام‌های انتظار و برچسب‌های تایم‌لاین عکس).
 
@@ -1989,18 +2152,26 @@ Route: 200 با AdminOrder ِ همون سفارش
 - چرا پیامک بعد از commit؟ قانون پروژه؛ و اگه پیامک نرسه، عکس‌ها هنوز فرستاده‌شده‌ان (اپراتور دستی فرستاده).
 
 **تموم شده یعنی:**
-- [ ] پیش‌نویس دو بار جایگزین می‌شه؛ مشتری چیزی نمی‌بینه؛ `send` ← `PHOTO_SENT`، مشتری دسته رو می‌بینه، پیامک ضبط می‌شه.
-- [ ] سفارش دوردیفه با عکس فقط برای ردیف ۱ ← `422 PHOTOS_INCOMPLETE` با `missingItemIds = [2]`.
-- [ ] مدیای `PRODUCT` در عکس سفارش ← `400 MEDIA_PURPOSE_MISMATCH`.
-- [ ] `manual = false` ← `400 MANUAL_ONLY`.
-- [ ] تأیید مشتری ← `APPROVED`، `canApproveMedia = false`؛ تأیید دوباره ← `200`؛ مشتری دیگه ← `404`.
-- [ ] job: ۲۴ ساعت و یه دقیقه بعد ← `APPROVED` (خودکار) و ردیف تایم‌لاین «خودکار تأیید شد»؛ ۲۳ ساعت ← هیچی.
-- [ ] `REQUEST_CHANGE` ← `422 CHANGE_REQUEST_NOT_ALLOWED` (تا فاز ۳).
-- [ ] `PUT …/pre-shipment-media` روی `RESERVED` ← `422`.
+- [x] پیش‌نویس دو بار جایگزین می‌شه؛ مشتری چیزی نمی‌بینه؛ `send` ← `PHOTO_SENT`، مشتری دسته رو می‌بینه، پیامک ضبط می‌شه.
+- [x] سفارش دوردیفه با عکس فقط برای ردیف ۱ ← `422 PHOTOS_INCOMPLETE` با `missingItemIds = [2]`.
+- [x] مدیای `PRODUCT` در عکس سفارش ← `400 MEDIA_PURPOSE_MISMATCH`.
+- [x] `manual = false` ← `400 MANUAL_ONLY`.
+- [x] تأیید مشتری ← `APPROVED`، `canApproveMedia = false`؛ تأیید دوباره ← `200`؛ مشتری دیگه ← `404`.
+- [x] job: ۲۴ ساعت و یه دقیقه بعد ← `APPROVED` (خودکار) و ردیف تایم‌لاین «خودکار تأیید شد»؛ ۲۳ ساعت ← هیچی.
+- [x] `REQUEST_CHANGE` ← `422 CHANGE_REQUEST_NOT_ALLOWED` (تا فاز ۳).
+- [x] `PUT …/pre-shipment-media` روی `RESERVED` ← `422`.
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- `SetPreShipmentMediaUc`، `SendPreShipmentMediaUc` و `SubmitMediaFeedbackUc` چیزی جز `Unit` برنمی‌گردونن و route بدنه رو با Query می‌سازه: `PUT` با `GetAdminOrderUc` و `PreShipmentMediaHttpResponse.fromDraft` (پیش‌نویس در `items`)، `send` با `AdminOrder`، و `media-feedback` با `GetMyOrderUc`. بدنه‌ی خالی ِ `send` مجازه.
+- `OrderNotices` (سرویس مشترک) همه‌ی پیامک‌های سفارشِ این فاز رو بعد از commit می‌فرسته و شکست رو فقط WARN می‌کنه؛ موبایل حساب داخل تراکنش خونده می‌شه.
+- `PreShipmentMediaDto` (فرستاده‌شده + پیش‌نویس) بخشی از `OrderDetailDto` ـه؛ پاسخ مشتری فقط فرستاده‌شده رو نشون می‌ده. `PreShipmentMedia.username` از پیام‌رسان سفارش. کارت سفارش `count`، `hasVideo` و `sentAt` ِ واقعی داره (فایل‌های کل صفحه‌ی «سفارش‌های من» یه‌جا خونده می‌شن). دکمه‌ی `canApproveMedia` روشن شد؛ `canCancel` با گام ۲.۷.
+- برچسب تایم‌لاین از این گام از `kind` ساخته می‌شه (`OrderTexts.timelineLabel`)؛ `note` ِ ردیف یا دلیل شکست پرداخته یا یادداشت لغو/تحویل.
+- لاگ `ORDER_MEDIA_SET`: `changes` = `media` با تعداد عکس هر ردیف (`{"1":1,"order":1}`)، از پیش‌نویس قبلی (یا `null`) به تازه.
+- job ِ `approve-silent-photos` با `FindSilentPhotoOrdersUc` و `ApproveSilentPhotosUc` در `PanelJobs`، هر ۱۰ دقیقه.
 
 ---
 
-#### گام ۲.۶: استرداد دستی · M ⬜
+#### گام ۲.۶: استرداد دستی · M ✅
 
 **می‌سازی:** `V28__refunds.sql`؛ `RefundRepositoryImpl`، `RefundIdGeneratorImpl`؛ `CreateRefundUc`، `UpdateRefundUc`؛ `webV1AdminRefunds.kt` و route ِ ایجاد در `webV1AdminOrders.kt`؛ `SmsSender.sendRefundCompleted`؛ `RefundHttpResponse`، `RefundTexts`.
 
@@ -2010,16 +2181,23 @@ Route: 200 با AdminOrder ِ همون سفارش
 - چرا قفل ردیف سفارش (۹) و نه فقط قفل استردادها؟ دو استرداد همزمان برای سفارشی که هنوز هیچ استردادی نداره، هیچ ردیفی برای قفل کردن ندارن؛ ردیف سفارش همیشه هست.
 
 **تموم شده یعنی:**
-- [ ] ثبت ← `201 PENDING` با `expectedBy`؛ بیشتر از قابل استرداد ← `400 REFUND_EXCEEDS_PAID` با `refundable`.
-- [ ] دو استرداد همزمان که هر کدوم به‌تنهایی جا می‌شه ولی با هم نه، ۲۰ بار ← یکی `201` و یکی `400`، جمع هیچ‌وقت بیشتر از پرداخت نیست.
-- [ ] `PATCH`: هر انتقال مجاز، و `COMPLETED` بدون `referenceId` ← ۴۰۰؛ `COMPLETED` ← `refunded` ِ سفارش بالا می‌ره، ردیف تایم‌لاین، پیامک؛ دوباره `COMPLETED` ← `422`.
-- [ ] `OPERATOR` ← 403 روی هر دو.
-- [ ] لاگ تغییرات بدون شماره‌ی پیگیری؛ اسکن لاگ برنامه هم شماره‌ی پیگیری رو پیدا نمی‌کنه.
-- [ ] خرابکاری: حذف قفل ۹ ← تست همزمانی قرمز؛ حذف چک «غیر FAILED» ← تست جمع قرمز.
+- [x] ثبت ← `201 PENDING` با `expectedBy`؛ بیشتر از قابل استرداد ← `400 REFUND_EXCEEDS_PAID` با `refundable`.
+- [x] دو استرداد همزمان که هر کدوم به‌تنهایی جا می‌شه ولی با هم نه، ۲۰ بار ← یکی `201` و یکی `400`، جمع هیچ‌وقت بیشتر از پرداخت نیست.
+- [x] `PATCH`: هر انتقال مجاز، و `COMPLETED` بدون `referenceId` ← ۴۰۰؛ `COMPLETED` ← `refunded` ِ سفارش بالا می‌ره، ردیف تایم‌لاین، پیامک؛ دوباره `COMPLETED` ← `422`.
+- [x] `OPERATOR` ← 403 روی هر دو.
+- [x] لاگ تغییرات بدون شماره‌ی پیگیری؛ اسکن لاگ برنامه هم شماره‌ی پیگیری رو پیدا نمی‌کنه.
+- [x] خرابکاری: حذف قفل ۹ ← تست همزمانی قرمز؛ حذف چک «غیر FAILED» ← تست جمع قرمز.
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- **ترتیب قفل در `UpdateRefundUc` عوض شد:** اول `orderId` ِ استرداد بی‌قفل خونده می‌شه (`RefundRepository.findOrderOf`)، بعد ردیف سفارش (قفل ۹)، بعد ردیف استرداد. ترتیب «استرداد، بعد سفارش» ِ ۷.۷ با `CreateRefundUc` (سفارش، بعد استردادها) می‌تونست بن‌بست بسازه.
+- `CreateRefundUc` و `UpdateRefundUc` خود `RefundDto` رو برمی‌گردونن (مثل `AdminNoteDto`). `PROCESSING` ِ دوباره بی‌اثره و لاگ نمی‌ذاره؛ `COMPLETED`/`FAILED` ِ دوباره ۴۲۲.
+- `OrderDetail.refunds` و `totals.refunded` (از read model) همین گام واقعی شدن، هم برای مشتری هم پنل. فیلتر `refundStatus` ِ صف (`REFUND_STATUS_FILTER_INVALID`) هم اینجا اضافه شد.
+- ستون `source` در Exposed `refundSource` اسم گرفته (`source` اسم یه عضو `Table` ـه).
+- خرابکاری: حذف قفل ۹ ← `two refunds that fit alone but not together, opened at once 20 times …` قرمز؛ شمردن استرداد `FAILED` ← `RefundDomainServiceTest … 1,500,000 is still refundable` و `a failed refund gives its amount back …` قرمز.
 
 ---
 
-#### گام ۲.۷: تغییر وضعیت از پنل و لغو (پنل و مشتری) · L ⬜
+#### گام ۲.۷: تغییر وضعیت از پنل و لغو (پنل و مشتری) · L ✅
 
 **می‌سازی:** `OrderCancellation`، `ChangeOrderStatusUc` (فقط `CANCELLED` در این گام؛ `DELIVERED` با ۲.۸)، `CancelMyOrderUc`؛ `SmsSender.sendOrderCancelled`؛ routeها؛ `CancelOrderResponseHttpResponse`، `CancelTexts`.
 
@@ -2030,76 +2208,117 @@ Route: 200 با AdminOrder ِ همون سفارش
 - چرا لغو وقتی پرداخت مانده در جریانه رد می‌شه؟ وگرنه پول اون پرداخت بعد از لغو می‌رسه و هیچ استردادی براش ساخته نشده.
 
 **تموم شده یعنی:**
-- [ ] مشتری `PROCESSING` رو لغو می‌کنه ← `CANCELLED`، موجودی برگشت (`available` ِ read model)، `soldCount` کم، استفاده‌ی کد تخفیف برگشت (کد `usageLimit = 1` دوباره قابل استفاده‌ست)، استرداد `PENDING` ِ کل پرداخت با `BANK_TRANSFER`، پیامک، و `CancelOrderResponse` با `refund`.
-- [ ] سفارش رایگان (`payable = 0`) لغو ← `refund = null`.
-- [ ] مشتری بعد از عکس ← `422 ORDER_NOT_CANCELLABLE`؛ پنل همون سفارش رو لغو می‌کنه ← موفق.
-- [ ] پنل `SHIPPED` رو لغو کنه ← `422 INVALID_STATUS_TRANSITION` با `allowed = [DELIVERED]`.
-- [ ] لغو همزمان مشتری و اپراتور، ۲۰ بار ← یه `OrderCancelled`، یه استرداد، یه آزادسازی.
-- [ ] لغو سفارش اصلی گروه رزرو ← گروه `HOLDING` می‌مونه؛ `groupOrderCodes` سفارش لغوشده رو نداره.
-- [ ] مشتری با تنها سفارش لغوشده‌ش هنوز می‌تونه `WELCOME` (خرید اول) بگیره.
-- [ ] لغو مشتری لاگ تغییرات نمی‌ذاره؛ لغو پنل `ORDER_STATUS_CHANGED`.
+- [x] مشتری `PROCESSING` رو لغو می‌کنه ← `CANCELLED`، موجودی برگشت (`available` ِ read model)، `soldCount` کم، استفاده‌ی کد تخفیف برگشت (کد `usageLimit = 1` دوباره قابل استفاده‌ست)، استرداد `PENDING` ِ کل پرداخت با `BANK_TRANSFER`، پیامک، و `CancelOrderResponse` با `refund`.
+- [x] سفارش رایگان (`payable = 0`) لغو ← `refund = null`.
+- [x] مشتری بعد از عکس ← `422 ORDER_NOT_CANCELLABLE`؛ پنل همون سفارش رو لغو می‌کنه ← موفق.
+- [x] پنل `SHIPPED` رو لغو کنه ← `422 INVALID_STATUS_TRANSITION` با `allowed = [DELIVERED]` (تستش با ۲.۸، چون تا اون موقع راهی برای رسیدن به `SHIPPED` نیست).
+- [x] لغو همزمان مشتری و اپراتور، ۲۰ بار ← یه `OrderCancelled`، یه استرداد، یه آزادسازی.
+- [x] لغو سفارش اصلی گروه رزرو ← گروه `HOLDING` می‌مونه؛ `groupOrderCodes` سفارش لغوشده رو نداره.
+- [x] مشتری با تنها سفارش لغوشده‌ش هنوز می‌تونه `WELCOME` (خرید اول) بگیره.
+- [x] لغو مشتری لاگ تغییرات نمی‌ذاره؛ لغو پنل `ORDER_STATUS_CHANGED`.
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- `OrderCancellation` قفل‌ها رو به ترتیب ۴.۱۱ می‌گیره: استفاده‌ی کد (۵، `DiscountRedemptionRepository.lockOfOrder` ِ تازه)، پرداخت‌ها (۶)، ردیف سفارش (۹)، استردادها، موجودی (۷) و جریان سفارش (۸). پرداخت `VERIFYING` ← `422 PAYMENT_IN_PROGRESS`؛ این مسیر فقط در کد هست و تست HTTP نداره (رسوندن پرداخت به `VERIFYING` وسط لغو در تست پایدار نیست).
+- لغو همزمان: هر دو UseCase روی `ConcurrentChangeException` تا ۳ بار کل تراکنش رو دوباره اجرا می‌کنن؛ دومی سفارش لغوشده رو می‌بینه و `422` می‌گیره.
+- پاسخ پنل `AdminOrder` ِ تازه‌ست (از `GetAdminOrderUc`)؛ پاسخ مشتری `{ order, refund, message }`، `message` از `CancelTexts` (با استرداد: «…تا ۷۲ ساعت کاری باهات تماس می‌گیرن»، بدون: «سفارش لغو شد.»).
+- `notifyCustomer: false` ← بدون پیامک؛ پیش‌فرض `true`. لغو مشتری همیشه پیامک داره.
+- `actions.canCancel` ِ کارت از همین گام روشنه (`OrderActionsPolicy`).
+- `PaidOrders.paid(..., discountCode)` برای تست‌ها اضافه شد.
 
 ---
 
-#### گام ۲.۸: ارسال (تکی و گروهی) و «تحویل شد» · L ⬜
+#### گام ۲.۸: ارسال (تکی و گروهی) و «تحویل شد» · L ✅
 
 **می‌سازی:** `ShipOrderUc` (تکی، گروهی، اصلاح)؛ `DELIVERED` در `ChangeOrderStatusUc`؛ `SmsSender.sendOrderShipped`، `sendOrderDelivered`؛ route؛ `trackingUrl` از تنظیمات؛ `ShipmentHttpResponse` ِ واقعی.
 
 وابسته به: ۲.۵ و ۲.۷
 
 **تموم شده یعنی:**
-- [ ] ارسال سفارش تأییدشده ← `SHIPPED`، `onHand` و `reserved` با هم کم شدن، پیامک با کد، تو رهگیری روزانه.
-- [ ] `carrier` ِ دیگه ← ۴۰۰؛ `shippedAt` فردا یا ۸ روز پیش ← ۴۰۰؛ کد ۵ نویسه ← ۴۰۰.
-- [ ] گروه سه‌تایی که یکیش عکسش تأیید نشده ← `422 GROUP_NOT_READY` با همون یه کد، و هیچ‌کدوم ارسال نمی‌شن؛ بعد از تأیید ← هر سه با یه کد، یه پیامک.
-- [ ] عضو لغوشده‌ی گروه ارسال نمی‌شه و مانع هم نیست.
-- [ ] گروه هنوز `HOLDING` ← `422 INVALID_STATUS_TRANSITION`.
-- [ ] اصلاح کد روی `SHIPPED` ← کد عوض می‌شه، موجودی دست نمی‌خوره، پیامک نه؛ روی `DELIVERED` ← `422`.
-- [ ] `DELIVERED` ← `deliveredAt` و `returnableUntil` = تحویل + ۷ روز برای ردیف‌های `returnable`؛ تغییر بعدی `returnWindowDays` اون رو عوض نمی‌کنه.
-- [ ] دو ارسال همزمان یه سفارش ← یکی موفق، یکی `409 CHANGED_BY_SOMEONE_ELSE` یا `422`؛ موجودی یه بار کسر.
-- [ ] ارسال سفارش A (رنگ ۱، رنگ ۲) و B (رنگ ۲، رنگ ۱) همزمان، ۵۰ بار ← هیچ بن‌بست.
+- [x] ارسال سفارش تأییدشده ← `SHIPPED`، `onHand` و `reserved` با هم کم شدن، پیامک با کد، تو رهگیری روزانه.
+- [x] `carrier` ِ دیگه ← ۴۰۰؛ `shippedAt` فردا یا ۸ روز پیش ← ۴۰۰؛ کد ۵ نویسه ← ۴۰۰.
+- [x] گروه سه‌تایی که یکیش عکسش تأیید نشده ← `422 GROUP_NOT_READY` با همون یه کد، و هیچ‌کدوم ارسال نمی‌شن؛ بعد از تأیید ← هر سه با یه کد، یه پیامک.
+- [x] عضو لغوشده‌ی گروه ارسال نمی‌شه و مانع هم نیست.
+- [x] گروه هنوز `HOLDING` ← `422 INVALID_STATUS_TRANSITION`.
+- [x] اصلاح کد روی `SHIPPED` ← کد عوض می‌شه، موجودی دست نمی‌خوره، پیامک نه؛ روی `DELIVERED` ← `422`.
+- [x] `DELIVERED` ← `deliveredAt` و `returnableUntil` = تحویل + ۷ روز برای ردیف‌های `returnable`؛ تغییر بعدی `returnWindowDays` اون رو عوض نمی‌کنه.
+- [x] دو ارسال همزمان یه سفارش ← یکی موفق، یکی `409 CHANGED_BY_SOMEONE_ELSE` یا `422`؛ موجودی یه بار کسر.
+- [x] ارسال سفارش A (رنگ ۱، رنگ ۲) و B (رنگ ۲، رنگ ۱) همزمان، ۵۰ بار ← هیچ بن‌بست.
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- **`InventoryDomainService.shipForOrders` ِ تازه:** همه‌ی رنگ‌های همه‌ی اعضای گروه با یه ترتیب کلی `(productId, variantId)`، هر رنگ یه بار خونده می‌شه و برای هر سفارشِ روش ارسال می‌شه (دو سفارش گروه که رنگ مشترک دارن یه Aggregate ِ موجودی رو دو بار ذخیره نمی‌کنن). `shipForOrder` همون رو با یه سفارش صدا می‌زنه. خرابکاری: حذف مرتب‌سازی ← تست ۵۰ باره با `deadlock detected` ِ Postgres قرمز.
+- خطاهای فیلدی ِ یه عضو (`CARRIER_MISMATCH`، `SHIPPED_AT_INVALID`) همون ۴۰۰ می‌مونن؛ فقط خطاهای ۴۲۲ ِ اعضا (`AWAITING_CUSTOMER_FEEDBACK`، وضعیت نامجاز) در گروه بیش از یکی به `GROUP_NOT_READY` تبدیل می‌شن.
+- `shippedAt` ِ بدشکل ← `400 SHIPPED_AT_INVALID`؛ `carrier` ِ ناشناخته یا خالی ← `400 CARRIER_INVALID`.
+- اصلاح هم لاگ `ORDER_SHIPPED` می‌ذاره (با `trackingCode` ِ قبل و بعد)؛ متن پنل «کد رهگیری سفارش … اصلاح شد». اصلاح با حامل دیگه ← `400 CARRIER_MISMATCH`.
+- `ShippingMethod.trackingUrlTemplate` (از `V26`) به دامنه اومد؛ `trackingUrl` موقع خوندن ساخته می‌شه (`OrderSummaryDto.ShipmentInfo`)، پس عوض شدن الگو لینک سفارش‌های قبلی رو هم درست می‌کنه.
+- «پنل `SHIPPED` رو لغو کنه ← `allowed = [DELIVERED]`» ِ گام ۲.۷ اینجا تست شد.
+- پیامک «تحویل شد» فقط با `notifyCustomer` (پیش‌فرض `true`).
 
 ---
 
-#### گام ۲.۹: رهگیری: مهمان، روزانه و «رهگیری‌های من» · M ⬜
+#### گام ۲.۹: رهگیری: مهمان، روزانه و «رهگیری‌های من» · M ✅
 
 **می‌سازی:** چهار UseCase ِ رهگیری، `DailyShipmentMask`، `TrackingTexts`، `webV1Tracking.kt`، rate limiter ِ `tracking-lookup` در `configureHttp`، route ِ `GET /me/tracking`.
 
 وابسته به: ۲.۸
 
 **تموم شده یعنی:**
-- [ ] مهمان با کد و موبایل گیرنده ← `200` بدون آدرس و قیمت؛ با موبایل خریدار ← `200`؛ با موبایل دیگه، کد سفارش پرداخت‌نشده یا کد بدشکل ← همون `404 TRACKING_NOT_FOUND` (بدنه‌ها بایت‌به‌بایت یکی).
-- [ ] یازدهمین درخواست در ۱۰ دقیقه از یه IP ← `429` با `Retry-After`.
-- [ ] `21500` (فقط رقم) و `kv-۲۱۸۳۴۰` (ارقام فارسی) پیدا می‌شن.
-- [ ] روزانه: هیچ اسم یا موبایل کاملی در پاسخ نیست (تست روی بدنه‌ی خام)؛ گروه سه‌تایی یه ردیف؛ `showInDailyList = false` نیست؛ جمعه `emptyMessage` داره.
-- [ ] `q = 4821`، `q = س`، `q = تهران` هر کدوم فقط ردیف‌های درست.
-- [ ] «رهگیری‌های من» فقط سفارش‌های خود کاربر، به روز.
+- [x] مهمان با کد و موبایل گیرنده ← `200` بدون آدرس و قیمت؛ با موبایل خریدار ← `200`؛ با موبایل دیگه، کد سفارش پرداخت‌نشده یا کد بدشکل ← همون `404 TRACKING_NOT_FOUND` (بدنه‌ها بایت‌به‌بایت یکی).
+- [x] یازدهمین درخواست در ۱۰ دقیقه از یه IP ← `429` با `Retry-After`.
+- [x] `21500` (فقط رقم) و `kv-۲۱۸۳۴۰` (ارقام فارسی) پیدا می‌شن.
+- [x] روزانه: هیچ اسم یا موبایل کاملی در پاسخ نیست (تست روی بدنه‌ی خام)؛ گروه سه‌تایی یه ردیف؛ `showInDailyList = false` نیست؛ جمعه `emptyMessage` داره.
+- [x] `q = 4821`، `q = س`، `q = تهران` هر کدوم فقط ردیف‌های درست.
+- [x] «رهگیری‌های من» فقط سفارش‌های خود کاربر، به روز.
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- «بایت‌به‌بایت یکی» جز `traceId`: هر درخواست `traceId` ِ خودش رو داره؛ تست بدنه‌ها رو بدون اون مقایسه می‌کنه (`instance` هم یکیه چون مسیر یکیه).
+- لیست یه روز و تب‌ها همه‌ی سفارش‌های اون بازه رو یه‌جا می‌خونن (`OrderQmRepository.findInDailyList`) و گروه‌بندی بر اساس کد، فیلتر `q` و صفحه‌بندی در `ListDailyShipmentsUc` انجام می‌شه: ارسال‌های یه روز ِ یه فروشگاه چند ده تاست. اگه بزرگ شد، گروه‌بندی به SQL می‌ره.
+- `id` ِ هر ردیف روزانه `orderId` ِ اولین سفارش اون بسته‌ست.
+- ۴۲۹ ِ plugin ِ RateLimit (هم کد ورود، هم رهگیری) حالا `meta.retryAfterSeconds` رو از `Retry-After` می‌گیره (`StatusPages`).
+- برچسب تب‌ها از روز اول لیست (که همیشه امروزه) حساب می‌شه، تا لایه‌ی HTTP ساعت نخواد. `label` ِ لیست یه روز «یکشنبه ۱۳ مهر ۱۴۰۵» (`JalaliDates.weekdayDayMonthAndYear` ِ تازه).
+- موبایل بدشکل قبل از کد بررسی می‌شه: هر دو بد ← `400` روی `phone`.
+- `ShippedOrders` (کمک‌کار تست: عکس، تأیید، ارسال از روی routeها) برای ۲.۹ و ۲.۱۰ اضافه شد.
+- سه تست قبلی (`WebV1PreShipmentPhotos…`، `WebV1Shipment…`، `WebV1AdminRefunds…`) ردیف‌های لاگ تغییرات رو بدون `ORDER BY` می‌خوندن و گاهی قرمز می‌شدن (دو ردیف با یه زمان)؛ حالا به ترتیب `id`.
 
 ---
 
-#### گام ۲.۱۰: «سفارش‌های من» کامل و آمار مشتری · M ⬜
+#### گام ۲.۱۰: «سفارش‌های من» کامل و آمار مشتری · M ✅
 
 **می‌سازی:** جدول ۷.۸: `OrderSummaryDto`، `OrderDetailDto`، `OrderSummaryHttpResponse`، `OrderDetailHttpResponse` (حذف هر مقدار ثابت باقی‌مونده‌ی این فاز)، `refunds` ِ جزئیات، `purchasesOf` و `AdminCustomerDto`، `Discounts` («خرید اول» با `countsAsPurchase`)، `Reservations` (`groupOrderCodes`).
 
 وابسته به: ۲.۵ تا ۲.۹
 
 **تموم شده یعنی:**
-- [ ] یه سفارش رو کل مسیر می‌بریم (پرداخت، عکس، تأیید، ارسال، تحویل) و بعد از هر قدم `GET /me/orders/{code}` با کانترکت مقایسه می‌شه (همه‌ی فیلدها، تایم‌لاین، `progress`، `actions`).
-- [ ] تو کد پاسخ‌های سفارش هیچ `= 0` یا `= emptyList()` ِ ثابتی جز فیلدهای فاز ۳، ۷، ۸ و ۱۴ (`balanceDue`، `returns`، `reviewed`، `invoiceUrl`) نمونده (grep).
-- [ ] `totalSpent` ِ مشتری با یه لغو و استرداد کامل ← بدون اون سفارش.
+- [x] یه سفارش رو کل مسیر می‌بریم (پرداخت، عکس، تأیید، ارسال، تحویل) و بعد از هر قدم `GET /me/orders/{code}` با کانترکت مقایسه می‌شه (همه‌ی فیلدها، تایم‌لاین، `progress`، `actions`).
+- [x] تو کد پاسخ‌های سفارش هیچ `= 0` یا `= emptyList()` ِ ثابتی جز فیلدهای فاز ۳، ۷، ۸ و ۱۴ (`balanceDue`، `returns`، `reviewed`، `invoiceUrl`) نمونده (grep).
+- [x] `totalSpent` ِ مشتری با یه لغو و استرداد کامل ← بدون اون سفارش.
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- `progress.steps[].at` همه واقعی: `PLACED` = `paidOn`، `PHOTO_SENT` = اولین ردیف `PHOTOS_SENT` ِ تایم‌لاین (`OrderSummaryDto.firstPhotosSentOn`)، `SHIPPED` و `DELIVERED` از بسته؛ فقط برای مرحله‌های رسیده.
+- `items[].returnableUntil` = `returnableUntil` ِ سفارش برای ردیف‌های `returnable`.
+- «مقایسه با کانترکت» با `ContractSchemas` ِ تازه‌ی تست: اسم فیلدهای هر شِما (با `allOf`) مستقیم از `api/kiva-openapi.yml` خونده می‌شه و کلیدهای هر شیء پاسخ باید دقیقاً همون‌ها باشن (`OrderDetail`، `Shipment`، `PreShipmentMedia`، `PreShipmentMediaSummary`، `OrderTotals`، `OrderProgressStep`، `OrderItem`، `OrderEvent`).
+- grep ِ مقدارهای ثابت: جز چهار فیلد مجاز، `giftWrapCost = 0` و `gift.wrap = false` موندن، که مال فاز نیستن: بسته‌بندی کادو تا `giftWrap.available = false` ـه وجود نداره (نقشه‌ی خرید). `canRequestChange`، `canReturn`، `canReview` با فازهای ۳، ۷ و ۸.
+- «خرید اول» و `groupOrderCodes` از گام ۲.۲ با `countsAsPurchase` بودن و با ۲.۷ تست شدن؛ `totalSpent` (پرداخت − برگشت) هم از ۲.۲. اینجا فقط تست کامل و توضیح `AdminCustomerHttpResponse` درست شد.
 
 ---
 
-#### گام ۲.۱۱: ریویو، حمله‌ی آزمایشی و دور با پنل · M ⬜
+#### گام ۲.۱۱: ریویو، حمله‌ی آزمایشی و دور با پنل · M ✅
 
 **می‌سازی:** `PANEL_ORDERS_REVIEW.md` (ردیف‌های ۶، ۷، ۹، ۱۰، ۱۱، ۱۵، ۱۹ ِ بخش ۳ با تست‌هاشون؛ خرابکاری: قفل ۹ در استرداد، چک «غیر FAILED»، ترتیب قفل در ارسال گروهی، چک تأیید/مهلت قبل از ارسال، چک مالکیت در `media` و `cancel`، یکسانی ۴۰۴ ِ رهگیری مهمان، ماسک روزانه، سقف درخواست رهگیری)؛ `PanelOrdersLogScanOnDatabaseTest` (کل مسیر با لغو و استرداد و رهگیری؛ هیچ موبایل کامل، اسم گیرنده، شماره‌ی پیگیری بانکی یا متن یادداشتی تو لاگ برنامه)؛ `docs/FRONTEND_PANEL_ORDERS.md` و به‌روزرسانی `docs/FRONTEND_PURCHASE.md` (لغو، عکس، رهگیری)؛ README (الگوهای پیامک)؛ دور با پنل و kiva-fe: پرداخت، عکس (آپلود و ارسال)، تأیید در kiva-fe، ارسال، رهگیری مهمان، تحویل؛ و یه سفارش لغو و استرداد کامل.
 
 وابسته به: ۲.۰ تا ۲.۱۰
 
 **تموم شده یعنی:**
-- [ ] هر ردیف بخش ۳ ِ این فاز تست داره و هر خرابکاری قرمز می‌کنه.
-- [ ] اسکن لاگ سبز، با تست همراه.
-- [ ] دور واقعی انجام شده (یا بدون پنل با اسکریپت، و دور با پنل برای تو مونده).
+- [x] هر ردیف بخش ۳ ِ این فاز تست داره و هر خرابکاری قرمز می‌کنه.
+- [x] اسکن لاگ سبز، با تست همراه.
+- [x] دور واقعی انجام شده (یا بدون پنل با اسکریپت، و دور با پنل برای تو مونده).
 - [ ] merge به `main`.
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- همه چیز در `PANEL_ORDERS_REVIEW.md`: ردیف‌های ۶، ۷، ۹، ۱۰، ۱۱، ۱۵، ۱۹ با تست‌هاشون و ۱۲ خرابکاری.
+- **دو تست مالکیت چیزی رو نمی‌پاییدن** (`cancel` و `media-feedback`): بی چک مالکیت، سفارش کس دیگه عوض می‌شد ولی Query ِ بعد از Command ِ route `404` می‌داد. هر دو تست حالا وضعیت سفارش رو هم بعد از `404` می‌سنجن.
+- برای ردیف ۷ تست «لغو و ارسال همزمان، ۲۰ بار» و برای ردیف ۱۹ تست «ارسال ساعت ۲۰:۴۵ ِ UTC در لیست روز بعد» اضافه شد.
+- «دور واقعی» با تست کل مسیر (`WebV1MyOrderJourneyOnDatabaseTest`) و اسکن لاگ انجام شد؛ دور با پنل و kiva-fe برای تو مونده (فهرستش آخر `PANEL_ORDERS_REVIEW.md`).
+- **merge به `main` انجام نشد:** منتظر تأیید تو، و فاز ۱ هم هنوز merge نشده (این برنچ از سر فاز ۱ ساخته شده).
 
 ---
 
@@ -2116,12 +2335,12 @@ Route: 200 با AdminOrder ِ همون سفارش
 
 | گام | عنوان | اندازه | وضعیت |
 |---|---|---|---|
-| ۳.۰ | کانترکت 1.10.0 | S | ⬜ |
-| ۳.۱ | دامنه: درخواست تغییر، ردیف عوض‌شده، مانده و جمع‌های بعد از تغییر | L | ⬜ |
-| ۳.۲ | پرداخت مانده | L | ⬜ |
-| ۳.۳ | درخواست تغییر مشتری | M | ⬜ |
-| ۳.۴ | رسیدگی اپراتور | L | ⬜ |
-| ۳.۵ | ریویو و دور واقعی | M | ⬜ |
+| ۳.۰ | کانترکت 1.10.0 | S | ✅ |
+| ۳.۱ | دامنه: درخواست تغییر، ردیف عوض‌شده، مانده و جمع‌های بعد از تغییر | L | ✅ |
+| ۳.۲ | پرداخت مانده | L | ✅ |
+| ۳.۳ | درخواست تغییر مشتری | M | ✅ |
+| ۳.۴ | رسیدگی اپراتور | L | ✅ |
+| ۳.۵ | ریویو و دور واقعی | M | ✅ |
 
 ### ۸.۲ تصمیم‌های این فاز
 
@@ -2138,6 +2357,12 @@ Route: 200 با AdminOrder ِ همون سفارش
 | 9 | مهلت پرداخت مانده | ندارن (سفارش تا پرداخت `PROCESSING` می‌مونه و ارسال نمی‌شه). `PaymentInit.expiresAt` برای `BALANCE` = پایان پنجره‌ی ۲۰ دقیقه‌ای همون تلاش. سقف ۱۰ تلاش برای هر `(سفارش، purpose)` | مانده موجودی رو قفل نمی‌کنه؛ موجودی از ثبت سفارش رزرو شده |
 | 10 | پیامک رسیدگی | `notifyCustomer` ← پیامک «درخواستت بررسی شد؛ جزئیات تو صفحه‌ی سفارش» بدون `note` (متن آزاد پیامک نداریم). `note` در `feedback.resolution.note` و تایم‌لاین دیده می‌شه | بخش ۱، ردیف ۱۴ |
 | 11 | عکس‌ها بعد از رسیدگی | دسته‌ی قبلی تو تاریخچه می‌مونه (رویدادها) و تا دسته‌ی تازه فرستاده نشده در `items` دیده می‌شه؛ عکس `WAITING` و پیش‌نویس خالی | کانترکت: «پاسخ قبلی مشتری با نتیجه‌اش می‌ماند تا عکس تازه برسد» |
+| 12 | `codeDiscount` بعد از حذف قلم (تازه، گام ۳.۰) | `codeDiscount` ِ نمایشی = کد ِ لحظه‌ی ثبت منهای سهم کد ِ قلم‌های حذف‌شده (`floor(lineTotal × codeDiscount ÷ subtotal)`، همون سهم تصمیم ۶). با تعویض رنگ/مدل کد ثابت می‌مونه. کد با قانون‌های خودش (حداقل خرید و …) دوباره حساب نمی‌شه | با کد ثابت، هویت تصمیم ۷ بعد از `CANCEL_ITEM` به اندازه‌ی سهم کد اون قلم نمی‌خوند (۶۹٬۰۰۰ در مثال گام ۳.۱) و مشتری عددهایی می‌دید که جمع نمی‌شن |
+| 13 | ورینت ناموجود (تازه، گام ۳.۰) | `desiredVariantId` یا `variantId` ِ ناموجود ← `400 DESIRED_VARIANT_INVALID` (سیاست ۴.۳: ارجاع به چیزی که نیست)؛ موجود ولی غیرفعال یا محصولش منتشرنشده ← `422 PRODUCT_UNAVAILABLE` | ۸.۵ فقط «هست و فعاله» رو گفته بود |
+| 14 | `variantId` ِ بی‌معنی در رسیدگی (تازه، گام ۳.۰) | با `REJECT` (قبل از تراکنش) یا با `APPLY` روی `CANCEL_ITEM`/`OTHER` (داخل تراکنش) ← `400 VARIANT_NOT_ALLOWED` روی `variantId`. `variantId` ِ `COLOR`/`MODEL` همون قانون `desiredVariantId` رو داره | ساکت نادیده گرفتنش یعنی اپراتور فکر کنه رنگ عوض شده |
+| 15 | `CANCEL_ITEM` ِ تنها قلم (تازه، گام ۳.۰) | همون لغو پنل: `OrderCancellation.run(STAFF)`، و با `notifyCustomer` پیامک «لغو شد» (نه «بررسی شد»). `feedback.resolution` نمی‌گیره؛ لغو خودش جوابه | دو پیامک برای یه کار گیج‌کننده‌ست |
+| 16 | مانده‌ی سفارش لغوشده (تازه، گام ۳.۰) | `OrderCancelled` مانده رو صفر می‌کنه: سفارش لغوشده چیزی بدهکار نیست و `canPay` نداره | پرداخت مانده‌ی سفارش لغوشده پولیه که باید بلافاصله برگرده |
+| 17 | `note` ِ درخواست و رسیدگی (تازه، گام ۳.۰) | همون VO ِ `StatusNote` (≤ ۵۰۰، `STATUS_NOTE_TOO_LONG`)، که تو لاگ چاپ نمی‌شه | یادداشتیه که مشتری می‌بینه، مثل یادداشت لغو و تحویل |
 
 ### ۸.۳ تغییرات دامنه
 
@@ -2256,19 +2481,26 @@ Route: 200 با AdminOrder
 | 5 | `/payment-callbacks/{gateway}` | «برای پرداخت مانده، verify فقط وقتی مانده هنوز همان مبلغ است» |
 | 6 | `OrderPaymentInfo` | فیلدهای تازه‌ی `purpose` (`ORDER`، `BALANCE`) و `amount` (هر دو non-null)، تا پرداخت‌های مانده تو جزئیات جدا دیده بشن |
 | 7 | `ErrorCode` | — (همه‌ی کدهای این فاز تو enum هستن) |
+| 8 | `OrderTotals` (تازه، گام ۳.۰) | `codeDiscount` بعد از حذف قلم (تصمیم ۱۲)؛ «سفارش لغوشده مانده ندارد» (تصمیم ۱۶) |
+| 9 | بخش ۵ (پیامک‌ها) (تازه، گام ۳.۰) | ردیف «درخواست تغییر بررسی شد»، بدون `note` |
+| 10 | `AdminChangeRequestResolutionRequest.variantId` و `.note` (تازه، گام ۳.۰) | `VARIANT_NOT_ALLOWED` و قانون `desiredVariantId` (تصمیم ۱۴)؛ «`note` با پیامک نمی‌ره» |
+
+**کدهای فیلدی تازه** (فقط متن فارسی): `CHANGE_TYPE_REQUIRED`، `CHANGE_TYPE_INVALID`، `ORDER_ITEM_REQUIRED`، `DESIRED_VARIANT_REQUIRED`، `DESIRED_VARIANT_INVALID`، `RESOLUTION_DECISION_INVALID`، `VARIANT_NOT_ALLOWED`.
 
 ### ۸.۷ گام‌ها
 
-#### گام ۳.۰: کانترکت 1.10.0 · S ⬜
+#### گام ۳.۰: کانترکت 1.10.0 · S ✅
 
 برنچ `change-requests`؛ ردیف‌های ۸.۶؛ متن کدهای فیلدی.
 
 **تموم شده یعنی:**
-- [ ] کانترکت معتبر، `ErrorMessagesTest` سبز.
+- [x] کانترکت معتبر، `ErrorMessagesTest` سبز.
+
+**یادداشت پیاده‌سازی:** برنچ `change-requests` از نوک فاز ۲ (`origin/panel-orders`) ساخته شد، چون فاز ۲ هنوز منتظر merge به `main` ـه. شش تصمیم تازه (۱۲ تا ۱۷ ِ ۸.۲) و سه ردیف تازه‌ی ۸.۶ (۸ تا ۱۰). متن `CHANGE_REQUEST_NOT_ALLOWED` عمومی شد (حالا قبل از عکس و با درخواست باز هم میاد، نه فقط بعد از ارسال) و متن `NOTE_REQUIRED` («توضیحش رو بنویس») که حالا برای یادداشت، لغو، درخواست و رسیدگی مشترکه. YAML با snakeyaml معتبره و هر ۱۳۲۱ `$ref` پیدا می‌شن. تست‌های روی دیتابیس این‌جا روی یه Postgres ِ موقت (پورت ۵۴۳۳، `KIVA_TEST_DB_URL`) اجرا شدن، چون Postgres ِ محلی با `kiva`/`kiva` ِ پیش‌فرض باز نمی‌شد.
 
 ---
 
-#### گام ۳.۱: دامنه · L ⬜
+#### گام ۳.۱: دامنه · L ✅
 
 **می‌سازی:** رویدادها، وضعیت و متدهای ۸.۳ با payload و JSON ِ طلایی؛ `ChangeRequestPolicy`، `OrderTotalsView`؛ `OrderLine` یه factory ِ `replacedBy(...)` می‌گیره (سازنده هنوز `internal`)؛ `InventoryDomainService.rebalanceForOrder`؛ Projector برای رویدادهای تازه (`lines`، `totals` ِ نمایشی، `balanceDue`، `feedback.resolution`، تایم‌لاین: «درخواست تغییر ثبت شد»، «درخواستت رد شد: …»، «رنگ عوض شد»، «یه قلم حذف شد»، «مانده پرداخت شد»).
 
@@ -2279,74 +2511,110 @@ Route: 200 با AdminOrder
 - چرا تفاوت قیمت علامت‌دار تو رویداد ذخیره می‌شه؟ تا replay هیچ‌وقت دوباره با قیمت امروز حساب نکنه.
 
 **تموم شده یعنی:**
-- [ ] طلایی‌ها: آیدا کاراملی ۲٬۷۹۰٬۰۰۰ ← آیدا مشکی با قیمت ۲٬۹۹۰٬۰۰۰ ← `balanceDue = 200٬000`؛ همون با ۲٬۵۹۰٬۰۰۰ ← استرداد ۲۰۰٬۰۰۰؛ اول +۳۰۰٬۰۰۰ بعد −۵۰۰٬۰۰۰ ← مانده صفر و استرداد ۲۰۰٬۰۰۰.
-- [ ] سهم پرداخت‌شده: سفارش ۳٬۴۸۰٬۰۰۰ با کد ۳۴۸٬۰۰۰، حذف ردیف ۶۹۰٬۰۰۰ ← `690000 − floor(690000 × 348000 / 3480000) = 621٬000`.
-- [ ] هویت تصمیم ۷ بعد از هر ترکیب (تست جدولی).
-- [ ] `requestChange` در `PROCESSING` یا `SHIPPED` ← `CHANGE_REQUEST_NOT_ALLOWED`؛ دومی ← همون.
-- [ ] `ship` با مانده ← `BALANCE_DUE` با مبلغ.
-- [ ] `rebalanceForOrder`: عوض کردن ردیف ۱ (رنگ A) به رنگ B که ردیف ۲ هم هست ← رزرو B با جمع تعدادها، رزرو A آزاد.
-- [ ] رویدادهای سفارش‌های قبل از این فاز بدون تغییر خونده می‌شن.
+- [x] طلایی‌ها: آیدا کاراملی ۲٬۷۹۰٬۰۰۰ ← آیدا مشکی با قیمت ۲٬۹۹۰٬۰۰۰ ← `balanceDue = 200٬000`؛ همون با ۲٬۵۹۰٬۰۰۰ ← استرداد ۲۰۰٬۰۰۰؛ اول +۳۰۰٬۰۰۰ بعد −۵۰۰٬۰۰۰ ← مانده صفر و استرداد ۲۰۰٬۰۰۰.
+- [x] سهم پرداخت‌شده: سفارش ۳٬۴۸۰٬۰۰۰ با کد ۳۴۸٬۰۰۰، حذف ردیف ۶۹۰٬۰۰۰ ← `690000 − floor(690000 × 348000 / 3480000) = 621٬000`.
+- [x] هویت تصمیم ۷ بعد از هر ترکیب (تست جدولی).
+- [x] `requestChange` در `PROCESSING` یا `SHIPPED` ← `CHANGE_REQUEST_NOT_ALLOWED`؛ دومی ← همون.
+- [x] `ship` با مانده ← `BALANCE_DUE` با مبلغ.
+- [x] `rebalanceForOrder`: عوض کردن ردیف ۱ (رنگ A) به رنگ B که ردیف ۲ هم هست ← رزرو B با جمع تعدادها، رزرو A آزاد.
+- [x] رویدادهای سفارش‌های قبل از این فاز بدون تغییر خونده می‌شن.
+
+**یادداشت پیاده‌سازی:**
+- `V29` کامل همین‌جا نوشته شد (قانون بخش ۲۱: migration ِ چندگامی در اولین گامی که لازمش داره)، چون Projector ِ این گام `balanceDue` می‌نویسه. یه ستون بیشتر از ۸.۴: `"codeDiscountRemoved"` (تصمیم ۱۲). ستون `payable` ِ `orderqm_tbl` همون مبلغ ثبت می‌مونه؛ `totalSpent` حالا `payable + balancePaid − refunded` ـه.
+- امضاها کمی با ۸.۳ فرق دارن، چون Aggregate خودش همه‌چیز رو می‌دونه: `replaceLine(newLine, newProductLimit, by, now)` (`lineId` از درخواست باز؛ سقف محصول تازه از UseCase)، `removeLine(by, now)` (سهم پرداخت‌شده رو خودش با `ChangeRequestPolicy.paidShareOf` حساب می‌کنه)، و `applyChange` به‌جای `Order` یه `Settlement` برمی‌گردونه تا UseCase استرداد رو بسازه. `OrderChangeApplied` یه فیلد بیشتر داره: `variantId` (رنگی که واقعاً گذاشته شد، برای `feedback.resolution.variantId`).
+- تفاوت تسویه‌نشده‌ی تغییر باز تو Aggregate نگه داشته می‌شه و `apply(OrderChangeApplied)` دوباره `settle` می‌کنه و با `balanceDueAfter` ِ رویداد مقایسه می‌کنه (دیوار دوم در برابر stream ِ خراب)؛ `differenceRefunded` هم همین‌جا جمع می‌شه.
+- تایم‌لاین: یه ردیف برای هر رسیدگی، نه برای هر رویداد. `OrderLineReplaced`/`OrderLineRemoved` ردیف نمی‌سازن؛ `OrderChangeApplied` بسته به نوع: «رنگ عوض شد» (`COLOR`)، «مدل عوض شد» (`MODEL`)، «یه قلم حذف شد» (`CANCEL_ITEM`)، «درخواستت انجام شد» (`OTHER`)، با `note` ِ اپراتور. «درخواستت رد شد» دلیل رو تو `note` ِ همون ردیف داره.
+- `soldCount` با تغییر جابه‌جا می‌شه (رنگ قبلی −، رنگ تازه +؛ قلم حذف‌شده −)، تا لغو بعدی دقیقاً همون چیزی رو کم کنه که الان شمرده شده. `lockFor` محصول‌های ردیف‌های قبلی (از read model) و تازه رو صعودی قفل می‌کنه.
+- پاسخ‌ها از همین گام جمع‌های نمایشی رو نشون می‌دن (`OrderDetailDto.totals` حالا `OrderTotalsView` ـه، `balanceDue` ِ کارت و صف پنل واقعیه).
 
 ---
 
-#### گام ۳.۲: پرداخت مانده · L ⬜
+#### گام ۳.۲: پرداخت مانده · L ✅
 
 **می‌سازی:** `V29__balance_payments.sql`؛ `PaymentPurpose`؛ `PaymentRepository` با `purpose`؛ `PaymentDomainService.startAttempt`/`confirmed`/`beginConfirming` برای `BALANCE`؛ `PaymentConfirmation`؛ `OrderActionsPolicy.canPay`؛ `GetPaymentResultUc` (صفحه‌ی نتیجه برای مانده)؛ `OrderPaymentInfo` با `purpose` و `amount`.
 
 وابسته به: ۳.۱
 
 **تموم شده یعنی:**
-- [ ] سفارش با مانده ← `POST …/payments` ← `201` با `amount = balanceDue` ← درگاه آزمایشی ← `balanceDue = 0`، `payable` بالا رفته، سفارش هنوز `PROCESSING`.
-- [ ] سفارش بدون مانده ← `422 ORDER_ALREADY_PAID` (مثل قبل).
-- [ ] دو تلاش مانده که هر دو پرداخت شدن، در یک لحظه، ۱۰ بار ← فقط یکی تأیید می‌شه؛ دومی `reverse` یا ERROR، و `balancePaid` هیچ‌وقت دو برابر نمی‌شه.
-- [ ] اپراتور بعد از شروع پرداخت مانده دوباره تغییر می‌ده (مانده عوض می‌شه) ← پرداخت قدیمی تأیید نمی‌شه.
-- [ ] دیتابیس رد می‌کنه: دو پرداخت موفق `ORDER` برای یه سفارش؛ ارسال سفارش با مانده.
-- [ ] همه‌ی تست‌های پرداخت فاز خرید بدون تغییر سبزن.
-- [ ] خرابکاری: حذف چک «مانده هنوز همون مبلغه» ← تست قرمز.
+- [x] سفارش با مانده ← `POST …/payments` ← `201` با `amount = balanceDue` ← درگاه آزمایشی ← `balanceDue = 0`، `payable` بالا رفته، سفارش هنوز `PROCESSING`.
+- [x] سفارش بدون مانده ← `422 ORDER_ALREADY_PAID` (مثل قبل).
+- [x] دو تلاش مانده که هر دو پرداخت شدن، در یک لحظه، ۱۰ بار ← فقط یکی تأیید می‌شه؛ دومی `reverse` یا ERROR، و `balancePaid` هیچ‌وقت دو برابر نمی‌شه.
+- [x] اپراتور بعد از شروع پرداخت مانده دوباره تغییر می‌ده (مانده عوض می‌شه) ← پرداخت قدیمی تأیید نمی‌شه.
+- [x] دیتابیس رد می‌کنه: دو پرداخت موفق `ORDER` برای یه سفارش؛ ارسال سفارش با مانده.
+- [x] همه‌ی تست‌های پرداخت فاز خرید بدون تغییر سبزن.
+- [x] خرابکاری: حذف چک «مانده هنوز همون مبلغه» ← تست قرمز.
+
+**یادداشت پیاده‌سازی:**
+- `V29` و تست‌های دیوار دیتابیس (`BalancePaymentsMigrationTest`) از گام ۳.۱ اومدن.
+- `Payment.start` یه پارامتر آخر `purpose` با پیش‌فرض `ORDER` گرفت، تا همه‌ی جاهای قبلی (ثبت سفارش، پرداخت دوباره) همون‌طور بخونن؛ repository همیشه صریح می‌نویسه و می‌خونه. `Confirmed.OrderNotPaid` حالا هر `ResultFailure` رو می‌گیره (`MarkPaidFailure` یا `PayBalanceFailure`)، و «این پول مال سفارشه» با `Order.isPaidBy` (پرداخت سفارش یا هر پرداخت مانده) جای `paidByPaymentId` رو گرفت (در `mayReverse`، `reversed` و پیامک «پرداخت موفق»). کد تخفیف فقط با پرداخت `ORDER` تأیید می‌شه.
+- سقف ۱۰ تلاش مانده با گذشت زمان برداشته نمی‌شه (مثل پرداخت سفارش)؛ چون مانده مهلت نداره، `retryAfterSeconds` همون `GATEWAY_WINDOW` (۲۰ دقیقه) ـه.
+- سفارشی که موقع ثبت چیزی برای پرداخت نداشت هیچ تلاشی نداره؛ اولین پرداخت مانده‌اش درگاه پیش‌فرض تسویه رو می‌گیره (`PaymentGateways.checkoutOptions`).
+- دو تلاش مانده‌ی همزمان: یکی تأیید می‌شه، دومی یا `NotPayable` (`FAILED`) می‌شه یا `Deferred` می‌مونه و job ِ تطبیق `FAILED`ـش می‌کنه؛ هیچ‌وقت هر دو `VERIFYING` (ایندکس `V18`).
+- `PanelTestStack` حالا `webV1Payments` رو هم داره (صفحه‌ی نتیجه برای تست‌های مانده).
 
 ---
 
-#### گام ۳.۳: درخواست تغییر مشتری · M ⬜
+#### گام ۳.۳: درخواست تغییر مشتری · M ✅
 
 **می‌سازی:** `REQUEST_CHANGE` در `SubmitMediaFeedbackUc`؛ `canRequestChange`؛ `feedback` ِ کامل در پاسخ.
 
 وابسته به: ۳.۱
 
 **تموم شده یعنی:**
-- [ ] هر شرط تصمیم ۲ یه تست ۴۰۰؛ `COLOR` با رنگ محصول دیگه ← `400 DESIRED_VARIANT_INVALID`؛ رنگ غیرفعال ← `422 PRODUCT_UNAVAILABLE`.
-- [ ] درخواست ← `CHANGE_REQUESTED`، عکس `CHANGE_REQUESTED`، `canCancel = false`، `canRequestChange = false`.
-- [ ] بعد از تأیید هم درخواست پذیرفته می‌شه.
-- [ ] مشتری دیگه ← `404`.
+- [x] هر شرط تصمیم ۲ یه تست ۴۰۰؛ `COLOR` با رنگ محصول دیگه ← `400 DESIRED_VARIANT_INVALID`؛ رنگ غیرفعال ← `422 PRODUCT_UNAVAILABLE`.
+- [x] درخواست ← `CHANGE_REQUESTED`، عکس `CHANGE_REQUESTED`، `canCancel = false`، `canRequestChange = false`.
+- [x] بعد از تأیید هم درخواست پذیرفته می‌شه.
+- [x] مشتری دیگه ← `404`.
+
+**یادداشت پیاده‌سازی:** درخواست قفل ردیف سفارش (قفل ۹) رو می‌گیره، تا با رسیدگی یا لغو همزمان پنل یکی‌یکی بره؛ «همونه!» مثل قبل بدون قفل ۹ و با تلاش دوباره. فیلدی که برای اون `changeType` معنی نداره نادیده گرفته می‌شه (نه ۴۰۰). `orderItemId` ِ صفر یا منفی `400 ORDER_ITEM_NOT_FOUND` و `desiredVariantId` ِ صفر یا منفی `400 DESIRED_VARIANT_INVALID` ـه (قبل از تراکنش). `feedback` ِ پاسخ حالا همه‌ی فیلدهای درخواست و `resolution` ِ شیء (`decision`، `variantId`، `note`، `at`) رو داره. دو تست فاز ۲ با قرارداد تازه به‌روز شدن: `REQUEST_CHANGE` ِ بی‌نوع حالا `400 CHANGE_TYPE_REQUIRED` ـه (نه `422`)، و کارت سفارشِ عکس‌گرفته (تأییدشده یا نه) `canRequestChange` داره.
 
 ---
 
-#### گام ۳.۴: رسیدگی اپراتور · L ⬜
+#### گام ۳.۴: رسیدگی اپراتور · L ✅
 
 **می‌سازی:** `ResolveChangeRequestUc`؛ route در `webV1AdminOrders.kt`؛ `SmsSender.sendChangeResolved` (الگوی `changeResolvedPattern`، متغیر `order`)؛ شرط `BALANCE_DUE` در `ShipOrderUc` (و گروه: عضو با مانده ← `GROUP_NOT_READY`).
 
 وابسته به: ۳.۲ و ۳.۳
 
 **تموم شده یعنی:**
-- [ ] `REJECT` بدون `note` ← ۴۰۰؛ با `note` ← `PROCESSING`، عکس `WAITING`، `feedback.resolution = REJECT` و `note` تو جزئیات مشتری.
-- [ ] `APPLY` ِ `COLOR` گرون‌تر ← ردیف عوض شده، موجودی رنگ قبلی برگشته و رنگ تازه رزرو شده، `balanceDue` درست، `canPay = true`؛ ارسال ← `422 BALANCE_DUE`؛ بعد از پرداخت ← ارسال موفق.
-- [ ] `APPLY` ِ `COLOR` ارزون‌تر ← استرداد `PENDING` با `source = CHANGE_REQUEST`.
-- [ ] `APPLY` ِ `COLOR` به رنگی که موجود نیست ← `422 QUANTITY_EXCEEDS_STOCK` و **هیچ** چیز عوض نشده (رزرو رنگ قبلی سر جاش).
-- [ ] `APPLY` ِ `CANCEL_ITEM` روی تنها ردیف ← سفارش `CANCELLED` با همه‌ی نتیجه‌های لغو فاز ۲.
-- [ ] `APPLY` ِ `CANCEL_ITEM` روی یکی از دو ردیف ← ردیف حذف، موجودیش برگشته، استرداد سهم پرداخت‌شده.
-- [ ] رسیدگی روی سفارشی که `CHANGE_REQUESTED` نیست ← `422 INVALID_STATUS_TRANSITION`.
-- [ ] رسیدگی همزمان با شروع پرداخت مانده ← یکی‌شون؛ هیچ پولی بی‌حساب نمی‌مونه.
-- [ ] لاگ تغییرات `ORDER_CHANGE_RESOLVED`.
+- [x] `REJECT` بدون `note` ← ۴۰۰؛ با `note` ← `PROCESSING`، عکس `WAITING`، `feedback.resolution = REJECT` و `note` تو جزئیات مشتری.
+- [x] `APPLY` ِ `COLOR` گرون‌تر ← ردیف عوض شده، موجودی رنگ قبلی برگشته و رنگ تازه رزرو شده، `balanceDue` درست، `canPay = true`؛ ارسال ← `422 BALANCE_DUE`؛ بعد از پرداخت ← ارسال موفق.
+- [x] `APPLY` ِ `COLOR` ارزون‌تر ← استرداد `PENDING` با `source = CHANGE_REQUEST`.
+- [x] `APPLY` ِ `COLOR` به رنگی که موجود نیست ← `422 QUANTITY_EXCEEDS_STOCK` و **هیچ** چیز عوض نشده (رزرو رنگ قبلی سر جاش).
+- [x] `APPLY` ِ `CANCEL_ITEM` روی تنها ردیف ← سفارش `CANCELLED` با همه‌ی نتیجه‌های لغو فاز ۲.
+- [x] `APPLY` ِ `CANCEL_ITEM` روی یکی از دو ردیف ← ردیف حذف، موجودیش برگشته، استرداد سهم پرداخت‌شده.
+- [x] رسیدگی روی سفارشی که `CHANGE_REQUESTED` نیست ← `422 INVALID_STATUS_TRANSITION`.
+- [x] رسیدگی همزمان با شروع پرداخت مانده ← یکی‌شون؛ هیچ پولی بی‌حساب نمی‌مونه.
+- [x] لاگ تغییرات `ORDER_CHANGE_RESOLVED`.
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- قفل‌ها: تلاش‌های پرداخت (۶؛ مانده‌ای در `VERIFYING` ← `422 PAYMENT_IN_PROGRESS`)، ردیف سفارش (۹)، موجودی (۷)، stream (۸). `CANCEL_ITEM` ِ تنها قلم از راه `OrderCancellation.run(STAFF, answering = همون درخواست)` می‌ره که قفل ۵ (استفاده‌ی کد) رو اول می‌گیره؛ چون این تصمیم قبل از قفل‌ها و از روی خوندن بی‌قفل گرفته می‌شه، زیر قفل دوباره چک می‌شه و اگه عوض شده بود `ConcurrentChangeException` کل تراکنش رو دوباره اجرا می‌کنه.
+- ترتیب دو ۴۲۲ ِ تعویض: سقف محصول (`QUANTITY_EXCEEDS_LIMIT`) قبل از موجودی (`QUANTITY_EXCEEDS_STOCK`).
+- `OrderItems.snapshotOf` (اسم، SKU، رنگ، عکس از read model) بین ثبت سفارش و تعویض مشترک شد.
+- استرداد تغییر هیچ‌وقت بیشتر از «قابل استرداد» نیست (`refundOf`)؛ بیشتر بود ← WARN و همون قابل استرداد.
+- پیامک «درخواستت بررسی شد» کل مسیر ۹ مرحله‌ای پیامک رو داره (پورت، `LogSmsSender`، فراز، `changeResolvedPattern`/`KIVA_FARAZ_CHANGE_RESOLVED_PATTERN`، README، `RecordingSmsSender`).
+- ۱۲ تست route در `WebV1ChangeResolutionOnDatabaseTest`؛ کل مجموعه با گام ۳.۵ دوباره اجرا شد.
 
 ---
 
-#### گام ۳.۵: ریویو و دور واقعی · M ⬜
+#### گام ۳.۵: ریویو و دور واقعی · M ✅
 
 **می‌سازی:** `CHANGE_REQUESTS_REVIEW.md` (ردیف‌های ۷، ۸، ۲۱ ِ بخش ۳؛ خرابکاری: چک مانده قبل از ارسال، شرط تأیید پرداخت مانده، ترتیب قفل در عوض کردن رنگ، چک موجودی رنگ تازه، گرد کردن رو به پایین سهم پرداخت‌شده)؛ `docs/FRONTEND_PANEL_ORDERS.md` و `docs/FRONTEND_PURCHASE.md` (درخواست تغییر و پرداخت مانده)؛ دور واقعی: مشتری بعد از عکس رنگ گرون‌تر می‌خواد، اپراتور اجرا می‌کنه، مشتری مانده رو تو درگاه آزمایشی می‌پردازه، عکس تازه، تأیید، ارسال.
 
 وابسته به: ۳.۰ تا ۳.۴
 
 **تموم شده یعنی:**
-- [ ] همه‌ی خرابکاری‌ها قرمز می‌کنن؛ دور واقعی انجام شده؛ merge به `main`.
+- [x] همه‌ی خرابکاری‌ها قرمز می‌کنن.
+- [x] دور واقعی انجام شده (بدون پنل با تست کل مسیر؛ دور با پنل و kiva-fe برای تو مونده).
+- [ ] merge به `main`.
+
+**یادداشت پیاده‌سازی (تصمیم‌های وسط کار):**
+- همه چیز در `CHANGE_REQUESTS_REVIEW.md`: ردیف‌های ۷، ۸، ۲۱ (و ۱۵) با تست‌هاشون و شش خرابکاری (پنج‌تای این گام، و `IdempotencyGuard` برای ردیف ۲۱).
+- **چهار تست تازه:** «آخرین کیف یه رنگ: تغییر به اون و خرید اون همزمان، ۲۰ بار» و «دو تعویض ضربدری همزمان (نیلا ↔ مهک)، ۲۰ بار» (ردیف ۸؛ دومی بدون مرتب‌سازی با `deadlock detected` قرمز شد)؛ «یه کلید idempotency برای پرداخت مانده دو بار» (ردیف ۲۱)؛ اسکن لاگ ِ مسیر درخواست تغییر.
+- «دور واقعی» با `WebV1MyOrderJourneyOnDatabaseTest` › `a dearer color after the photos - …`: درخواست، رسیدگی، پرداخت مانده با درگاه آزمایشی، عکس تازه، تأیید، ارسال؛ بعد از هر قدم کانترکت (`ContractSchemas`) و هویت جمع‌های تصمیم ۷.
+- یه assertion ِ گام ۳.۴ (`meta.balanceDue` ِ `BALANCE_DUE`) با `?: 200_000L` هیچ‌وقت قرمز نمی‌شد؛ درست شد.
+- **دو ناهمخوانی متن، بدون تغییر رفتار، برای تصمیم تو:** (۱) تصمیم ۶ می‌گه `floor` یعنی «هیچ‌وقت بیشتر از پرداخت‌شده برنمی‌گرده»، ولی `floor` روی سهم کد ـه و سهم پرداخت‌شده رو تا کمتر از ۱ تومان به نفع مشتری بالا می‌بره؛ دیوار واقعی سقف `refundable` ـه. (۲) KDoc ِ `ResolveChangeRequestUc` قفل استردادها رو قبل از موجودی می‌گه، کد آخر می‌گیره (بن‌بست نمی‌سازه چون هر نویسنده‌ی استرداد اول قفل ۹ رو می‌گیره).
+- **merge به `main` انجام نشد:** منتظر تأیید تو، و فاز ۱ و ۲ هم هنوز merge نشدن (این برنچ از سر فاز ۲ ساخته شده).
 
 ---
 
@@ -2363,12 +2631,12 @@ Route: 200 با AdminOrder
 
 | گام | عنوان | اندازه | وضعیت |
 |---|---|---|---|
-| ۴.۰ | کانترکت 1.11.0 | M | ⬜ |
-| ۴.۱ | تنظیمات فروشگاه | L | ⬜ |
-| ۴.۲ | کدهای تخفیف در پنل | M | ⬜ |
-| ۴.۳ | جزئیات مشتری، فیلتر نقش و «آخرین ادمین» | M | ⬜ |
-| ۴.۴ | گزارش مدیریتی | M | ⬜ |
-| ۴.۵ | ریویو | S | ⬜ |
+| ۴.۰ | کانترکت 1.11.0 | M | ✅ |
+| ۴.۱ | تنظیمات فروشگاه | L | ✅ |
+| ۴.۲ | کدهای تخفیف در پنل | M | ✅ |
+| ۴.۳ | جزئیات مشتری، فیلتر نقش و «آخرین ادمین» | M | ✅ |
+| ۴.۴ | گزارش مدیریتی | M | ✅ |
+| ۴.۵ | ریویو | S | ✅ |
 
 ### ۹.۲ تصمیم‌های این فاز
 
@@ -2391,6 +2659,28 @@ Route: 200 با AdminOrder
 | 15 | فیلتر نقش | پارامتر تازه‌ی `role` روی `GET /admin/customers` | صفحه‌ی نقش‌ها باید کارمندها رو پیدا کنه |
 | 16 | جزئیات مشتری | `recentOrders` = ۵ سفارش آخر **در هر وضعیتی** (پرداخت‌نشده هم، تا پشتیبانی ببینه)، تازه‌ترین اول. خوندن ثبت نمی‌شه (کانترکت)، ولی شماره‌ی مشتری هیچ‌وقت تو لاگ برنامه نمیاد | |
 | 17 | گزارش: کدوم سفارش | «سفارش دوره» = `paidOn` در بازه و لغو نشده. همه‌ی عددهای پولی از همین سفارش‌ها | تعریف یکسان برای همه‌ی کارت‌ها |
+| 18 | ترتیب درگاه‌ها (تازه، گام ۴.۰) | مثل روش‌های ارسال: ترتیب لیست `paymentGateways` = ترتیب نمایش در تسویه (`sortOrder`) | تصمیم ۳ نگفته بود؛ پنل فقط با جابه‌جا کردن ردیف‌ها ترتیب رو عوض می‌کنه |
+| 19 | «لازم ولی nullable» (تازه، گام ۴.۰) | `supportPhone` و `supportEmail` لازم‌ان ولی `null` می‌گیرن: نیومده ← `400 FIELD_REQUIRED`، `null` ← پاک. route فیلد نیومده رو از `null` جدا می‌کنه | تصمیم ۱ «نیومده یعنی ۴۰۰» رو گفته؛ بدون جدا کردن، نیومدن ِ بی‌صدا شماره‌ی پشتیبانی رو پاک می‌کرد |
+| 20 | `siteStats` (تازه، گام ۴.۰) | همه‌ی فیلدهای `SiteStats` لازم؛ عددها ۰ تا ۱۰٬۰۰۰٬۰۰۰، درصدها ۰ تا ۱۰۰؛ `satisfaction` nullable، با مقدار: `averageRating` ۰ تا ۵ با یه رقم اعشار (به‌صورت «دهم» ذخیره می‌شه، بدون `Double`)، `scale` همیشه ۵ و فقط‌خوندنی، `metrics[].label` از `key` ساخته می‌شه (فقط‌خوندنی)، هر `key` یه بار، `sources` بدون تکرار | تصمیم ۴ فقط «عددها ≥ ۰، درصدها ۰ تا ۱۰۰» رو گفته بود؛ متن فارسی فقط لایه‌ی HTTP (بخش ۱، ردیف ۱۶) |
+| 21 | کدهای فیلدی عمومی (تازه، گام ۴.۰) | `NUMBER_OUT_OF_RANGE` (`meta.min`/`meta.max`) برای همه‌ی سقف‌های تصمیم ۴؛ `TEXT_TOO_LONG` (`meta.maxLength`)؛ `TOO_MANY_ITEMS` (`meta.maxItems`)؛ `LIST_ITEM_DUPLICATE`؛ و `SHIPPING_METHOD_LIST_INVALID`، `PAYMENT_GATEWAY_LIST_INVALID`، `ICON_INVALID`، `WEEKDAY_INVALID`، `NON_SHIPPING_WEEKDAYS_INVALID`، `DISCOUNT_TYPE_INVALID` | فهرست ۴.۰ برای سقف عددها، طول اسم روش، تعداد ردیف‌ها و لیستی که روش یا درگاهی رو کم یا دو بار داره کدی نداشت. یه کد عمومی با `meta` به‌جای ده‌ها کد هم‌معنی |
+| 22 | کد تخفیف: سقف‌های دیگه (تازه، گام ۴.۰) | `label` ۱ تا ۲۰۰؛ `minSubtotal` ۰ تا ۱٬۰۰۰٬۰۰۰٬۰۰۰؛ `maxDiscount` ۱٬۰۰۰ تا ۱۰۰٬۰۰۰٬۰۰۰؛ `usageLimit`/`perUserLimit` ۱ تا ۱٬۰۰۰٬۰۰۰؛ `categoryIds` حداکثر ۵۰ و `productIds` حداکثر ۲۰۰، بدون تکرار. ناموجود ← `400 CATEGORY_NOT_FOUND` روی `categoryIds.i` و `400 PRODUCT_NOT_FOUND` روی `productIds.i`. `PUT` کل کد رو جایگزین می‌کنه (نیومده = پیش‌فرض کانترکت). پاسخ فیلد تازه‌ی `updatedAt` داره | `V30` ستون `updatedOn` می‌سازه و پنل باید بدونه آخرین بار کی عوض شده؛ سقف‌ها جلوی عدد بی‌معنی (و سرریز `Int`) رو می‌گیرن |
+| 23 | متن `ROLE_CHANGE_NOT_ALLOWED` (تازه، گام ۴.۰) | عمومی شد (نقش‌های خودت، و آخرین ادمین)؛ پنل با `meta.reason = LAST_ADMIN` جمله‌ی خودش رو می‌تونه نشون بده | با `LAST_ADMIN` همون کد میاد و متن قبلی فقط «نقش‌های خودت» رو می‌گفت |
+| 24 | گزارش: خطاها و کلیدها (تازه، گام ۴.۰) | `from`/`to` نیومده ← `400 FIELD_REQUIRED`؛ بدشکل ← `DATE_INVALID`؛ `DATE_RANGE_INVALID` و `DATE_RANGE_TOO_LONG` (`meta.maxDays = 366`) روی `to`. `shippingMix` همه‌ی مقدارهای `ShippingMethodCode` (`COURIER` هم، با صفر) و `messengerMix` همه‌ی `PhotoMessengerChannel` | «هر روش، صفر هم» یعنی کلیدها ثابت باشن تا نمودار پنل شکل عوض نکنه |
+| 25 | `V30` یه‌جا (تازه، گام ۴.۱) | `V30` در گام ۴.۱ **کامل** نوشته شد (ستون‌های کد تخفیف و گزارش و backfill ِ `firstPhotosSentOn`/`changeRequestedEver` هم)، طبق قانون بخش ۲۱؛ گام‌های ۴.۲ و ۴.۴ فقط ازش استفاده می‌کنن. Projector ِ دو ستون گزارش در ۴.۴ | migration ِ commit‌شده ویرایش نمی‌شه |
+| 26 | خطاهای تازه‌ی `siteStats` و ایمیل (تازه، گام ۴.۱) | `RATING_INVALID` (امتیاز با بیشتر از یه رقم اعشار، یا بیرون ۰ تا ۵)، `SATISFACTION_METRIC_INVALID` (کلید ناشناخته‌ی `metrics`)، `SOCIAL_CHANNEL_INVALID` (`sources` ِ ناشناخته)؛ `supportEmail` بیشتر از ۱۰۰ ← `EMAIL_TOO_LONG` با `meta.maxLength = 100` | `NUMBER_OUT_OF_RANGE` برای «۴.۹۵» جمله‌ی غلطی می‌گفت |
+| 27 | متن خالی ِ پشتیبانی (تازه، گام ۴.۱) | `supportPhone`/`supportEmail` ِ خالی (`""`) مثل `null` یعنی پاک | فرم پنل فیلد پاک‌شده رو خالی می‌فرسته |
+| 28 | `ShippingCost.makeNew` (تازه، گام ۴.۱) | ساخته نشد: `baseCost` همون `Money` ـه و سقفش با `NUMBER_OUT_OF_RANGE` ِ عمومی (تصمیم ۲۱) چک می‌شه. به‌جاش `ShippingMethodName` و `IconName` ساخته شدن (اسم و آیکن روش حالا از پنل میان) | یه VO ِ تک‌قانونه که همون کار `requiredIn` رو می‌کرد |
+| 29 | جواب ساخت و ویرایش کد (تازه، گام ۴.۲) | `GetDiscountCodeUc` (Query ِ پنجم): Command فقط شناسه برمی‌گردونه (بخش ۴.۵، قانون ۶)، route بدنه رو با این Query می‌سازه | |
+| 30 | کد دوحرفی ِ قدیمی (تازه، گام ۴.۲) | `PUT` شکل رو با «دوحرفی هم مجاز» می‌سنجه؛ داخل تراکنش، متن دوحرفی فقط وقتی پذیرفته می‌شه که متن همون کد باشه، وگرنه `400 DISCOUNT_CODE_TEXT_INVALID` روی `code` | تصمیم ۹ گفته کدهای قبلی معتبر می‌مونن ولی کد تازه حداقل ۳ |
+| 31 | لاگ کد تخفیف (تازه، گام ۴.۲) | `DISCOUNT_CODE_CREATED` بدون `changes` (مثل `PRODUCT_CREATED`)؛ `DISCOUNT_CODE_DEACTIVATED` با `isActive` از `true` به `false`؛ `DISCOUNT_CODE_UPDATED` با هر شرط عوض‌شده (لیست‌ها شناسه‌های مرتب) | |
+| 32 | `requiresLogin` ِ پاسخ (تازه، گام ۴.۲) | همیشه مقدار مؤثر (`DiscountCode.needsCustomer`)، حتی برای کدی که با SQL و بدون این پرچم ساخته شده | پنل باید همونی رو ببینه که سبد اجرا می‌کنه |
+| 33 | «آخرین ADMIN» در عمل (تازه، گام ۴.۳) | با خوندن دوباره‌ی نقش‌های انجام‌دهنده زیر قفل، انجام‌دهنده خودش همیشه یه ADMIN ـه، پس قانون `LAST_ADMIN` با یه درخواست تنها هیچ‌وقت نمی‌رسه؛ دیوار دومه. خرابکاری ِ خوندن دوباره نشونش می‌ده: دو ادمین همزمان ← دومی به‌جای `403` همون `422 LAST_ADMIN` می‌گیره | بدون هر دو، دو ادمین همزمان همه‌ی ADMINها رو برمی‌داشتن |
+| 34 | گزارش: گرد کردن دو نرخ عکس (تازه، گام ۴.۴) | `mediaApprovalRate` به هزارم با نیمه به بالا، و `changeRequestRate` = ۱۰۰۰ منهای اون (بدون چنین سفارشی هر دو ۰) | کانترکت می‌گه جمعشون ۱۰۰ ـه؛ با دو گرد کردن جدا، ۱ از ۱۶ (۶٫۲۵ و ۹۳٫۷۵) می‌شد ۶٫۳ + ۹۳٫۸ = ۱۰۰٫۱ |
+| 35 | گزارش: `discountTotal` بعد از حذف قلم (تازه، گام ۴.۴) | جمع `codeDiscount` ِ **نمایشی** ِ سفارش‌های دوره: ثبت منهای سهم کد ِ قلم‌های حذف‌شده (`OrderTotalsView`) | همون عددی که پنل و مشتری روی خود سفارش می‌بینن؛ سهم قلم حذف‌شده با استردادش برگشته |
+| 36 | گزارش: لغو و دو نرخ عکس (تازه، گام ۴.۴) | مخرج دو نرخ عکس همه‌ی سفارش‌هاییه که اولین عکسشون تو بازه رفته، **لغوشده هم**؛ «سفارش دوره» (تصمیم ۱۷) فقط برای عددهای پولی، تعدادها، رزرو، ارسال، پیام‌رسان و پرفروش‌هاست | تعریف ۹.۳ برای این دو لغو رو کنار نذاشته؛ جواب مشتری به عکس قبل از لغو هم جوابه |
+| 37 | گزارش: `topProducts` (تازه، گام ۴.۴) | اسم، `slug` و `sku` از ردیف **امروز** ِ محصول (`productqm_tbl`)؛ `imageUrl` اولین عکس (نه ویدیو) ِ رنگ پیش‌فرض، در عرض ۴۸۰ (مثل ردیف سفارش)، یا `null`؛ `colorKey` همیشه `null` (ردیف محصوله نه رنگ). `revenue` = جمع قیمت × تعداد ِ ردیف‌ها، قبل از کد تخفیف | پنل به صفحه‌ی امروز محصول لینک می‌ده؛ سهم کد ِ هر ردیف جایی ذخیره نیست |
+| 38 | گزارش: `returnRate` و «۳۶۶ روز» (تازه، گام ۴.۴) | `returnRate` تا فاز ۷ ثابت ۰ و بدون کوئری؛ «حداکثر ۳۶۶ روز» یعنی `to − from + 1 ≤ 366` (هر دو سر شامل). `from`/`to` ِ پاسخ همون روزهای درخواست | سال کبیسه هم یه بازه‌ی کامل سالانه‌ست |
+| 39 | `meta` ِ خطای فیلد (تازه، بعد از گام ۴.۵؛ کانترکت 1.11.1) | `FieldError.meta` ِ اختیاری و nullable: همون مقدارهایی که `message` ازشون ساخته شده (`min`، `max`، `maxLength`، `maxItems`، `maxDays`، `maxSize`، `allowed`، …)؛ سرور همیشه می‌فرستدش، بی‌داده `null` | کانترکت 1.11.0 این `meta`ها رو قول داده بود ولی شِمای `FieldError` نداشتشون؛ پنل سقف رو کنار input لازم داره (انتخاب صاحب پروژه، راه الف) |
 
 ### ۹.۳ تعریف عددهای گزارش (`GET /admin/reports/overview`)
 
@@ -2509,89 +2799,110 @@ Route: 200 با AdminSettings ِ تازه
 | 4 | `PUT /admin/customers/{customerId}/roles` | «آخرین ADMIN نقشش را از دست نمی‌دهد» (`meta.reason = LAST_ADMIN`)؛ «تغییر در رویدادهای امنیتی و لاگ تغییرات ثبت می‌شود» |
 | 5 | `AdminCustomerDetail` | «`recentOrders` پنج سفارش آخر در هر وضعیت» |
 | 6 | `GET /admin/reports/overview` | جدول ۹.۳؛ `400 DATE_RANGE_INVALID` و `DATE_RANGE_TOO_LONG`؛ `required` روی همه‌ی فیلدهای `AdminReportOverview` |
+| 7 | `SiteStats` و `SatisfactionSummary` (تازه، گام ۴.۰) | `required` روی همه، سقف‌ها، `satisfaction` nullable، `scale` و `metrics[].label` فقط‌خوندنی (تصمیم ۲۰) |
+| 8 | `DiscountCode` (تازه، گام ۴.۰) | `updatedAt` (تازه) و `required` روی فیلدهای خودش؛ سقف‌های تصمیم ۲۲؛ `409` ِ `POST`/`PUT` و توضیح `DELETE` |
+| 9 | `AdminSettings.supportPhone`/`supportEmail` (تازه، گام ۴.۰) | لازم و nullable (تصمیم ۱۹) |
+| 10 | `AdminSettings.siteStats`، `supportEmail` (تازه، گام ۴.۱) | کدهای تصمیم ۲۶؛ «خالی یعنی پاک» (تصمیم ۲۷) |
+| 11 | `FieldError` (تازه، 1.11.1) | `meta` ِ اختیاری و nullable (تصمیم ۳۹)؛ `info.version` 1.11.1 |
+
+**کدهای فیلدی تازه** (فقط متن فارسی، تو `ErrorCode` نمی‌رن): همه‌ی کدهای گام ۴.۰ و تصمیم ۲۱. `DUPLICATE_CODE`، `CHANGED_BY_SOMEONE_ELSE` و `ROLE_CHANGE_NOT_ALLOWED` از قبل تو `ErrorCode` هستن.
 
 ### ۹.۸ گام‌ها
 
-#### گام ۴.۰: کانترکت 1.11.0 · M ⬜
+#### گام ۴.۰: کانترکت 1.11.0 · M ✅
 
 برنچ `panel-settings`؛ ردیف‌های ۹.۷؛ متن کدهای تازه (`SHIPPING_METHOD_NOT_SUPPORTED`، `NO_ACTIVE_SHIPPING_METHOD`، `NO_ACTIVE_GATEWAY`، `DEFAULT_GATEWAY_INVALID`، `DEFAULT_SHIPPING_METHOD_INVALID`، `FEATURE_NOT_AVAILABLE`، `FEATURE_UNKNOWN`، `TRACKING_URL_TEMPLATE_INVALID`، `SUPPORT_PHONE_INVALID`، `EMAIL_INVALID`، `SUPPORT_HOURS_INVALID`، `SOCIAL_LINK_INVALID`، `MAX_DISCOUNT_NOT_ALLOWED`، `DISCOUNT_VALUE_INVALID`، `DISCOUNT_CODE_TEXT_INVALID`، `DATE_RANGE_TOO_LONG`).
 
 **تموم شده یعنی:**
-- [ ] کانترکت معتبر، `ErrorMessagesTest` سبز.
+- [x] کانترکت معتبر، `ErrorMessagesTest` سبز.
+
+**یادداشت پیاده‌سازی:** برنچ `panel-settings` از نوک فاز ۳ (`change-requests`) ساخته شد، چون فازهای ۱ تا ۳ هنوز منتظر merge به `main` ـن. هفت تصمیم تازه (۱۸ تا ۲۴ ِ ۹.۲) و سه ردیف تازه‌ی ۹.۷ (۷ تا ۹). `AdminSettings` کامل بازنویسی شد (هر قانون و سقف روی همون فیلد، «از کِی اثر داره»، ۴۰۹)؛ `AdminPaymentGatewaySetting` تازه؛ `defaultShippingMethod` تازه؛ `features` با سه کلید و `additionalProperties: false`. `EMAIL_INVALID` از قبل متن داشت. YAML با snakeyaml معتبره و هر ۱۳۲۷ `$ref` پیدا می‌شن. تست‌ها روی یه Postgres ِ موقت (پورت ۵۴۳۳) و با `JAVA_TOOL_OPTIONS=-Djdk.net.unixdomain.tmpdir=C:\t` اجرا شدن (بدونش Gradle «Unable to establish loopback connection» می‌ده).
 
 ---
 
-#### گام ۴.۱: تنظیمات فروشگاه · L ⬜
+#### گام ۴.۱: تنظیمات فروشگاه · L ✅
 
 **می‌سازی:** `V30` (بخش تنظیمات)؛ `ShopSettings` با فیلدهای تازه و `change(...)` و Failureهاش؛ `DeliveryDays.makeNew`، `ShippingCost.makeNew`، `TrackingUrlTemplate`، `SupportHours`، `SocialLink`، `SiteStats`، `ShopFeatures` (VOها)؛ `ShopSettingsRepository.save(settings)` با نسخه؛ `GetAdminSettingsUc`، `UpdateSettingsUc`؛ `webV1AdminSettings.kt`؛ `StockPolicy.stockOf(available, maxPerOrder, threshold)` و همه‌ی صدازننده‌هاش (کاتالوگ، سبد) آستانه رو از تنظیمات می‌خونن؛ `SendPreShipmentMediaUc` مهلت رو از تنظیمات می‌خونه؛ `trackingUrlTemplate` در `ShippingMethod`.
 
 وابسته به: ۴.۰
 
 **تموم شده یعنی:**
-- [ ] `GET` همه‌ی فیلدها رو داره؛ همون رو `PUT` کن ← `200` بدون هیچ تغییری و بدون ردیف لاگ.
-- [ ] هر سقف تصمیم ۴ یه تست ۴۰۰ با مسیر درست.
-- [ ] غیرفعال کردن روش پیش‌فرض ← `400 DEFAULT_SHIPPING_METHOD_INVALID`؛ هیچ درگاه فعال ← `400 NO_ACTIVE_GATEWAY`؛ `COURIER` ← `400`.
-- [ ] `lowStockThreshold = 3` ← کارت محصولی با ۴ عدد دیگه «موجودی کم» نیست؛ با ۲ عدد هست.
-- [ ] `preShipmentFeedbackHours = 48` ← عکس بعدی مهلت ۴۸ ساعته؛ عکس‌های قبلی همون ۲۴.
-- [ ] `freeShippingThreshold` عوض می‌شه ← سبد بعدی با آستانه‌ی تازه.
-- [ ] دو `PUT` همزمان ← یکی ۲۰۰ و یکی ۴۰۹.
-- [ ] `SUPPORT` و `OPERATOR` ← 403.
-- [ ] لاگ `SETTINGS_UPDATED` فقط با فیلدهای عوض‌شده.
+- [x] `GET` همه‌ی فیلدها رو داره؛ همون رو `PUT` کن ← `200` بدون هیچ تغییری و بدون ردیف لاگ.
+- [x] هر سقف تصمیم ۴ یه تست ۴۰۰ با مسیر درست.
+- [x] غیرفعال کردن روش پیش‌فرض ← `400 DEFAULT_SHIPPING_METHOD_INVALID`؛ هیچ درگاه فعال ← `400 NO_ACTIVE_GATEWAY`؛ `COURIER` ← `400`.
+- [x] `lowStockThreshold = 3` ← کارت محصولی با ۴ عدد دیگه «موجودی کم» نیست؛ با ۲ عدد هست.
+- [x] `preShipmentFeedbackHours = 48` ← عکس بعدی مهلت ۴۸ ساعته؛ عکس‌های قبلی همون ۲۴.
+- [x] `freeShippingThreshold` عوض می‌شه ← سبد بعدی با آستانه‌ی تازه.
+- [x] دو `PUT` همزمان ← یکی ۲۰۰ و یکی ۴۰۹.
+- [x] `SUPPORT` و `OPERATOR` ← 403.
+- [x] لاگ `SETTINGS_UPDATED` فقط با فیلدهای عوض‌شده.
+
+**یادداشت پیاده‌سازی:** `ShopSettings.change(Change)` قانون‌های بین فیلدها رو همه با هم می‌ده (روش‌ها و درگاه‌ها دقیقاً همونایی که هستن، حداقل یکی فعال، پیش‌فرض‌ها فعال، دقیقاً یه درگاه پیش‌فرض، `freeShippingMethods` از روش‌های فروشگاه)؛ شکل هر فیلد قبلش در `ShopSettingsFields.check()` با مسیر کامل (`shippingMethods.1.maxDays`). `ShopSettingsRepositoryImpl.save` اول ردیف تنظیمات رو فقط روی نسخه‌ی خونده‌شده می‌نویسه (قفل ردیف، پس ذخیره‌ی دوم صبر می‌کنه و بعد نسخه رو رفته می‌بینه ← `ConcurrentChangeException` ← ۴۰۹)، بعد روش‌ها، بعد درگاه‌ها (اول همه بدون پیش‌فرض، تا ایندکس «یه پیش‌فرض» هیچ‌وقت دوتا نبینه). لاگ: هر مقدار روش و درگاه زیر کدش (`shippingMethods.TIPAX.baseCost`)، ترتیب‌ها جدا (`shippingMethods.order`)؛ شماره و ایمیل پشتیبانی عمومی‌ان و همون‌طور ثبت می‌شن. `lowStockThreshold` در `StockPolicy.stockOf`، کارت و صفحه‌ی محصول، سبد و فیلتر `stockStatus` ِ پنل؛ `PreShipmentPolicy.FEEDBACK_HOURS` حذف شد. `Problems` (جمع‌کننده‌ی خطاهای فرم) از `ProductInput` به `common` رفت، با `under(field)` برای مسیر تودرتو و `NumberOutOfRange`/`TextTooLong`/`TooManyItems`/`ListItemDuplicate`. `PanelTestStack` routeهای سبد رو هم داره. همزمانی: دو ذخیره‌ی repository ۱۰ بار، و دو `PUT` ِ route با یه latch بعد از خوندن (یکی ۲۰۰، یکی ۴۰۹، یه ردیف لاگ). ۲۵۷۲ تست سبز.
 
 ---
 
-#### گام ۴.۲: کدهای تخفیف در پنل · M ⬜
+#### گام ۴.۲: کدهای تخفیف در پنل · M ✅
 
 **می‌سازی:** `V30` (بخش کد تخفیف)؛ `DiscountCode.makeNew`/`change` و Failureها؛ `DiscountCodeRepository`: `findById`، `list(active, pageable)`، `add`، `save` (نسخه)، `usageStatsOf(ids)`؛ چهار UseCase؛ `webV1AdminDiscountCodes.kt`؛ `DiscountCodeHttpResponse`.
 
 وابسته به: ۴.۰
 
 **تموم شده یعنی:**
-- [ ] ساخت با ` paeez۱۵ ` ← ذخیره به‌صورت `PAEEZ15`؛ دوباره ← `409 DUPLICATE_CODE`.
-- [ ] `PERCENT` با ۱۲۰، `FIXED` با ۵۰۰، `FIXED` با `maxDiscount` ← ۴۰۰ هر کدوم با کد خودش.
-- [ ] `firstOrderOnly = true` و `requiresLogin = false` ← پاسخ `requiresLogin = true`.
-- [ ] `categoryIds` با دسته‌ی ناموجود ← `400` روی `categoryIds.0`.
-- [ ] کدی که در پنل ساخته شد، در سبد (`POST /cart/discount-code`) کار می‌کنه؛ بعد از غیرفعال کردن، سبد با همگام‌سازی بعدی `DISCOUNT_REMOVED` می‌گیره.
-- [ ] `usedCount` و `totalDiscountGiven` فقط سفارش‌های پرداخت‌شده‌ی برنگشته رو می‌شمرن (سفارش لغوشده‌ی فاز ۲ از شمارش بیرون می‌ره).
-- [ ] `OPERATOR` و `CONTENT_EDITOR` ← 403.
+- [x] ساخت با ` paeez۱۵ ` ← ذخیره به‌صورت `PAEEZ15`؛ دوباره ← `409 DUPLICATE_CODE`.
+- [x] `PERCENT` با ۱۲۰، `FIXED` با ۵۰۰، `FIXED` با `maxDiscount` ← ۴۰۰ هر کدوم با کد خودش.
+- [x] `firstOrderOnly = true` و `requiresLogin = false` ← پاسخ `requiresLogin = true`.
+- [x] `categoryIds` با دسته‌ی ناموجود ← `400` روی `categoryIds.0`.
+- [x] کدی که در پنل ساخته شد، در سبد (`POST /cart/discount-code`) کار می‌کنه؛ بعد از غیرفعال کردن، سبد با همگام‌سازی بعدی `DISCOUNT_REMOVED` می‌گیره.
+- [x] `usedCount` و `totalDiscountGiven` فقط سفارش‌های پرداخت‌شده‌ی برنگشته رو می‌شمرن (سفارش لغوشده‌ی فاز ۲ از شمارش بیرون می‌ره).
+- [x] `OPERATOR` و `CONTENT_EDITOR` ← 403.
+
+**یادداشت پیاده‌سازی:** `DiscountTerms` (دامنه) شکل کامل فرم رو با همه‌ی خطاها با هم می‌سنجه و `requiresLogin` ِ ذخیره‌شده رو می‌سازه؛ `DiscountCode.create`/`change` (بی‌تغییر ← `null`)/`deactivate` (از قبل خاموش ← `null`) با `createdOn`، `updatedOn` و `version`؛ `DiscountCodeText.makeNewInPanel`. شناسه‌ی کد تازه از sequence ِ ستون identity (`nextId`). `DiscountCodeReferences` (سرویس مشترک ساخت و ویرایش) وجود دسته‌ها و محصول‌ها رو با `ProductQmRepository.findExistingIds` چک می‌کنه. `usedCount`/`totalDiscountGiven` با یه کوئری `GROUP BY` برای کل صفحه از ردیف‌های `CONFIRMED`. `PUT` و `DELETE` زیر قفل ردیف کد (قفل ۵). تست‌ها: ۹ تست دامنه، ۳ تست repository (نسخه و متن یکتا)، ۱۱ تست route با کل فهرست بالا. ۲۵۹۵ تست سبز.
 
 ---
 
-#### گام ۴.۳: جزئیات مشتری، فیلتر نقش و «آخرین ادمین» · M ⬜
+#### گام ۴.۳: جزئیات مشتری، فیلتر نقش و «آخرین ادمین» · M ✅
 
 **می‌سازی:** `GetCustomerDetailUc` (به‌جای استفاده‌ی فعلی از `GetCustomerUc` فقط برای پاسخ نقش‌ها)؛ `OrderQmRepository.recentOfCustomer`؛ فیلتر `role` در `AdminCustomerRepository.find`؛ قانون تصمیم ۱۴ در `SetUserRolesUc`؛ route ِ `GET /admin/customers/{customerId}`؛ `AdminCustomerDetailHttpResponse`؛ اصلاح KDoc ِ کهنه‌ی `AdminCustomerHttpResponse`.
 
 وابسته به: ۴.۰
 
 **تموم شده یعنی:**
-- [ ] جزئیات با آدرس‌ها (پیش‌فرض اول) و ۵ سفارش آخر (پرداخت‌نشده هم)؛ مشتری ناموجود و `abc` ← ۴۰۴.
-- [ ] `role=OPERATOR` فقط اپراتورها.
-- [ ] دو ادمین (A و B) همزمان ADMIN ِ همدیگه رو برمی‌دارن، ۱۰ بار ← یکی موفق و دومی `403`؛ همیشه حداقل یه ADMIN می‌مونه.
-- [ ] اسکن لاگ: خوندن جزئیات مشتری هیچ موبایل کامل یا آدرسی تو لاگ برنامه نمی‌ذاره.
-- [ ] خرابکاری: حذف خوندن دوباره‌ی نقش انجام‌دهنده ← تست همزمانی قرمز.
+- [x] جزئیات با آدرس‌ها (پیش‌فرض اول) و ۵ سفارش آخر (پرداخت‌نشده هم)؛ مشتری ناموجود و `abc` ← ۴۰۴.
+- [x] `role=OPERATOR` فقط اپراتورها.
+- [x] دو ادمین (A و B) همزمان ADMIN ِ همدیگه رو برمی‌دارن، ۱۰ بار ← یکی موفق و دومی `403`؛ همیشه حداقل یه ADMIN می‌مونه.
+- [x] اسکن لاگ: خوندن جزئیات مشتری هیچ موبایل کامل یا آدرسی تو لاگ برنامه نمی‌ذاره.
+- [x] خرابکاری: حذف خوندن دوباره‌ی نقش انجام‌دهنده ← تست همزمانی قرمز.
+
+**یادداشت پیاده‌سازی:** `UserRepository.lockRoleChanges()` (قفل advisory ِ `roles`، کلیدش پارامتر) و `countAdmins()`؛ `SetUserRolesUc` به ترتیب: قفل ← نقش‌های فعلی انجام‌دهنده (`403`) ← کاربر (`404`) ← نقش‌های خودش (`422`) ← آخرین ADMIN (`422`، `meta.reason = LAST_ADMIN`). `UserTbl.hasRole` (عملگر `@>`) هم برای شمردن ADMINها و هم فیلتر `role` (`CUSTOMER` یعنی همه، ناشناخته `400 ROLE_INVALID`). `GetCustomerDetailUc` با `OrderQmRepository.recentOfCustomer` و `AdminOrderItems` (ساختن ردیف لیست سفارش، حالا مشترک با `FindAdminOrdersUc`). تست همزمانی با یه latch در `lockRoleChanges`، تا هر دو درخواست از نگهبان route رد شده باشن (۱۰ بار). خرابکاری: حذف خوندن دوباره‌ی نقش‌ها ← `two admins taking ADMIN from each other at once` قرمز (`[200, 422]`). کل مجموعه برای این گام دوباره اجرا نشد (آخرین اجرای کامل: ۲۵۹۵ تست سبز در گام ۴.۲)؛ تست‌های این گام و کلاس‌های پنل ِ مرتبط سبزن.
 
 ---
 
-#### گام ۴.۴: گزارش مدیریتی · M ⬜
+#### گام ۴.۴: گزارش مدیریتی · M ✅
 
 **می‌سازی:** `V30` (بخش سفارش و backfill)؛ Projector: `firstPhotosSentOn`، `changeRequestedEver`؛ پورت `ReportQmRepository` و پیاده‌سازیش (کوئری‌های جمعی)؛ `GetReportOverviewUc` (ساختن روزهای خالی، درصدها)؛ `webV1AdminReports.kt`.
 
 وابسته به: ۴.۰ (و فاز ۳ برای داده‌ی درخواست تغییر)
 
 **تموم شده یعنی:**
-- [ ] داده‌ی آزمایشی ثابت (۱۲ سفارش با پرداخت، لغو، استرداد، رزرو، عکس و درخواست تغییر در روزهای مختلف) ← هر فیلد جدول ۹.۳ دقیقاً عدد حساب‌شده‌ی دستی.
-- [ ] روز بدون سفارش تو `dailySeries` با صفر هست؛ مرز روز تهران (سفارش ۲۱:۰۰ ِ UTC) درست.
-- [ ] `from > to` و بازه‌ی ۴۰۰ روزه ← ۴۰۰.
-- [ ] `SUPPORT` ← 403.
+- [x] داده‌ی آزمایشی ثابت (۱۲ سفارش با پرداخت، لغو، استرداد، رزرو، عکس و درخواست تغییر در روزهای مختلف) ← هر فیلد جدول ۹.۳ دقیقاً عدد حساب‌شده‌ی دستی.
+- [x] روز بدون سفارش تو `dailySeries` با صفر هست؛ مرز روز تهران (سفارش ۲۱:۰۰ ِ UTC) درست.
+- [x] `from > to` و بازه‌ی ۴۰۰ روزه ← ۴۰۰.
+- [x] `SUPPORT` ← 403.
+
+**یادداشت پیاده‌سازی:** پنج تصمیم تازه (۳۴ تا ۳۸ ِ ۹.۲). `OrderQmTbl` دو ستون V30 رو گرفت و `OrderQmProjector` نگهشون می‌داره (`firstPhotosSentOn` فقط با اولین `OrderPhotosSent`، `changeRequestedEver` با هر `OrderChangeRequested`). پورت `ReportQmRepository` با پنج تابع جمعی (`periodTotals` و دو شمارش ِ روش و پیام‌رسان، `dailyTotals` با `AT TIME ZONE`، `newCustomers`، `photoOutcomes`، `topProducts` با `jsonb_array_elements` و `JOIN` به ردیف امروز ِ محصول، بعد یه کوئری برای عکس ِ رنگ پیش‌فرض)؛ `ReportQmRepositoryImpl` SQL ِ خامه، چون Exposed اینجا فقط پنهانش می‌کرد. `GetReportOverviewUc` اعتبارسنجی (هر دو با هم)، روزهای خالی، کلیدهای صفر و تقسیم‌ها با `perMille`/`averageOf` (عدد صحیح، نیمه به بالا). `webV1AdminReports.kt` با `ProductRefHttpResponse` (اولین استفاده از `ProductRef` ِ کانترکت). `NoFloatingPointMoneyTest` پکیج گزارش رو هم می‌گرده. تست‌ها: ۱۱ تست واحد، ۴ تست دیتابیس ِ گزارش (۱۲ سفارش با دامنه و Projector ِ واقعی، در ۲۰۳۱)، ۲ تست Projector، تست backfill ِ V30 (دو UPDATE از خود فایل migration، دوباره روی ردیف‌های خالی‌شده)، ۴ تست route. خرابکاری: بدون شرط لغو ← `twelve orders` قرمز؛ روز به UTC ← `twelve orders` و `a day further` قرمز؛ هر دسته‌ی عکس روی زمان اول ← تست Projector و `twelve orders` قرمز.
 
 ---
 
-#### گام ۴.۵: ریویو · S ⬜
+#### گام ۴.۵: ریویو · S ✅
 
 **می‌سازی:** `PANEL_SETTINGS_REVIEW.md` (ردیف ۲ ِ بخش ۳؛ خرابکاری: نسخه‌ی تنظیمات، قفل نقش‌ها، چک یکتایی کد)؛ `docs/FRONTEND_PANEL_SETTINGS.md`؛ دور با پنل (تنظیمات، ساخت کد و استفاده در kiva-fe، صفحه‌ی مشتری، داشبورد).
 
 **تموم شده یعنی:**
-- [ ] همه‌ی خرابکاری‌ها قرمز می‌کنن؛ merge به `main`.
+- [x] همه‌ی خرابکاری‌ها قرمز می‌کنن.
+- [ ] دور با پنل (پنل و kiva-fe اینجا نبودن؛ مراحلش در `PANEL_SETTINGS_REVIEW.md`).
+- [ ] merge به `main` (منتظر تأیید؛ فازهای ۱ تا ۳ هم هنوز merge نشدن).
+
+**یادداشت پیاده‌سازی:** `PANEL_SETTINGS_REVIEW.md` (ردیف‌های ۱، ۲، ۵، ۱۵ و ۱۹ با تست‌هاشون؛ هشت خرابکاری). تست تازه: دو ساخت همزمان ِ کد با یه متن (۱۰ بار)؛ بدون `catch` ِ قید یکتا دومی `500` می‌گرفت. حذف چک متن تکراری به‌تنهایی چیزی رو قرمز نمی‌کنه، چون قید یکتا دیوار دومه و همون ۴۰۹ رو می‌ده. پیدا شد و درست شد: یه تست فاز ۳ با ترتیب بی‌`ORDER BY`، و هشدار `copy()` ِ `DiscountTerms`. `meta` ِ خطای فیلد که کانترکت قول داده بود و `FieldError` نداشت، بعد از ریویو با 1.11.1 اضافه شد (تصمیم ۳۹). `docs/FRONTEND_PANEL_SETTINGS.md` و README.
 
 ---
 
@@ -2606,12 +2917,12 @@ Route: 200 با AdminSettings ِ تازه
 
 | گام | عنوان | اندازه | وضعیت |
 |---|---|---|---|
-| ۵.۰ | کانترکت 1.12.0 | S | ⬜ |
-| ۵.۱ | صفحه‌های ثابت، و لینک نسبی در HTML | M | ⬜ |
-| ۵.۲ | سؤالات متداول | M | ⬜ |
-| ۵.۳ | نوار اطلاعیه | S | ⬜ |
-| ۵.۴ | `GET /config` | M | ⬜ |
-| ۵.۵ | ریویو | S | ⬜ |
+| ۵.۰ | کانترکت 1.12.0 | S | ✅ |
+| ۵.۱ | صفحه‌های ثابت، و لینک نسبی در HTML | M | ✅ |
+| ۵.۲ | سؤالات متداول | M | ✅ |
+| ۵.۳ | نوار اطلاعیه | S | ✅ |
+| ۵.۴ | `GET /config` | M | ✅ |
+| ۵.۵ | ریویو | S | ✅ |
 
 ### ۱۰.۲ تصمیم‌های این فاز
 
@@ -2629,6 +2940,19 @@ Route: 200 با AdminSettings ِ تازه
 | 10 | جستجوی سؤالات | `q` (≤ ۱۰۰) بعد از `normalizePersian`، شامل‌بودن در متن سؤال یا متن ساده‌ی جواب (HTML بدون تگ، نرمال‌شده). با `q`: فقط گروه‌هایی که سؤال جور دارن، `totalMatches` = تعداد سؤال‌های جور، و `questionHighlighted`/`answerHighlighted` با `<mark>` دور هر تطابق (فقط در متن، نه داخل تگ). بدون `q`: همه، `totalMatches` = همه‌ی سؤال‌ها، هایلایت‌ها `null`. بدون نتیجه: `emptyMessage` | کانترکت این‌ها رو مبهم گذاشته بود |
 | 11 | نوار اطلاعیه | `PUT` کل لیست، حداکثر ۱۰. `text` ۱ تا ۲۰۰، `url` `null` یا `https://` ِ کامل یا مسیر نسبی (`/…`)، `icon` ≤ ۳۰، `endsAt > startsAt` اگه هر دو هست. `id` مثل سؤالات (`400 ANNOUNCEMENT_NOT_FOUND` برای ناشناخته). ترتیب = ترتیب آرایه | کانترکت |
 | 12 | محتوای سؤالات و قانون لغو | متن سؤالات متداول **داده‌ست** و چک‌لیست انتشار باید چک کنه با قانون‌های این سند جوره (مثلاً «لغو تا قبل از تغییر وضعیت»، «استرداد با تماس تلفنی») | کانترکت یه جمله از FAQ رو نقل کرده که دیگه درست نیست |
+| 13 | شِمای ورودی جدا (تازه، گام ۵.۰) | `StaticPageUpsertRequest`، `FaqGroupInput`/`FaqItemInput` و `AnnouncementInput` فقط فیلدهایی‌ان که پنل می‌فرسته (`id` ِ اختیاری)؛ شِماهای پاسخ (`StaticPage`، `FaqGroup`، `FaqItem`، `Announcement`، `FaqResponse`، `SiteConfig`) `required` روی همه‌ی فیلدها | `id` ِ اختیاری ِ ورودی و «همیشه هست» ِ پاسخ تو یه شِما جا نمی‌شن |
+| 14 | `preShipmentPhoto.enabled`/`required` و `currency.code` (تازه، گام ۵.۰) | هر دو همیشه `true` و `IRT`، ثابت کد | عکس قبل از ارسال قدم ِ هر سفارشه (فاز ۲)؛ خاموش کردنش ماشین وضعیت دیگه‌ای می‌خواد، نه یه پرچم |
+| 15 | `isOpenNow` (تازه، گام ۵.۰) | الان (تهران) در یکی از ردیف‌های `supportHours` که روز امروز رو داره، `from ≤ الان < to` و `messengerOnly = false`. ردیف بی‌ساعت یا «فقط پیام‌رسان» هیچ‌وقت `true` نمی‌ده | «فقط پیام‌رسان» یعنی کسی پشت تلفن نیست |
+| 16 | پشتیبانی بی‌مقدار و `phoneDisplay` (تازه، گام ۵.۰) | `phone`/`phoneDisplay`/`email` بی‌مقدار ← `null` (تنظیمات فاز ۴ nullable ـه). `phoneDisplay` با ارقام فارسی: ثابت `۰۲۱-۹۱۰۰۱۲۳۴` (سه رقم اول، خط تیره، بقیه)، موبایل `۰۹۱۲-۳۴۵-۶۷۸۹` | کانترکت فقط مثال ثابت رو داشت |
+| 17 | تطابق و هایلایت سؤالات (تازه، گام ۵.۰؛ جایگزین بخشی از تصمیم ۱۰) | تطابق **حرف‌به‌حرف**: `ي`/`ى` ← `ی`، `ك` ← `ک`، رقم فارسی و عربی ← لاتین، حرف لاتین کوچک (طول متن عوض نمی‌شه)؛ `q` قبلش `normalizePersian` (فاصله‌های اضافه حذف). در متن سؤال و متن ساده‌ی جواب. `questionHighlighted` = متن سؤال **escape‌شده** با `<mark>`؛ `answerHighlighted` = HTML ِ جواب با `<mark>` فقط داخل text nodeها | `normalizePersian` فاصله و نیم‌فاصله رو فشرده می‌کنه و جای `<mark>` تو متن اصلی گم می‌شد؛ سؤال متن ساده‌ست و بدون escape، هایلایتش HTML ِ نوشته‌ی ادیتور رو اجرا می‌کرد |
+| 18 | `id` ِ تکراری و جابه‌جایی (تازه، گام ۵.۰) | `id` ِ سؤال یا اطلاعیه دو بار در یه بدنه ← `400 LIST_ITEM_DUPLICATE` روی دومی. سؤال با `id` ـش می‌تونه به گروه دیگه بره | جابه‌جایی بین گروه‌ها کار عادی ِ ادیتوره |
+| 19 | لینک نسبی امن (تازه، گام ۵.۰؛ دقیق‌تر ِ تصمیم ۶) | `href` اول trim؛ نویسه‌ی کنترلی ← حذف. می‌مونه: `http://`/`https://` (بی‌حساس به حروف)، `/` یا `/…` به‌جز `//` و `/\`، و `#…`. هر چیز دیگه (`faq`، `../x`، `mailto:`) `href` ـش رو از دست می‌ده | مرورگر `//evil.com` و `/\evil.com` رو هر دو آدرس خارجی می‌خونه |
+| 20 | لاگ تغییرات ِ محتوا (تازه، گام ۵.۰) | `PAGE_SAVED` (`entityId` = slug، `entityLabel` = عنوان، `changes` فقط عنوان و سئو، متن صفحه فقط «عوض شد»)؛ `FAQ_SAVED` (`entityId` = `faq`، تعداد گروه و سؤال قبل و بعد)؛ `ANNOUNCEMENTS_SAVED` (`entityId` = `announcements`، تعداد). ذخیره‌ی بی‌تغییر بدون ردیف | متن بلند تو لاگ جا نداره (بخش ۵.۱) |
+| 21 | کش ِ `GET /pages/{slug}` (تازه، گام ۵.۰) | مثل `/faq`: `ETag` و `max-age=300`؛ پنل از `GET /admin/pages` و پاسخ `PUT` می‌خونه، نه از این | صفحه‌های قانونی کم عوض می‌شن و پربازدیدن |
+| 22 | `SLUG_IMMUTABLE` (تازه، گام ۵.۰) | متن عمومی شد («آدرس بعد از ساخت عوض نمی‌شه»)، چون صفحه‌ی ثابت هم ازش استفاده می‌کنه | متن قبلی «محصول تازه بساز» می‌گفت |
+| 23 | عددها در متن‌های ثابت (تازه، گام ۵.۱) | متن‌های `sitecontent_tbl` می‌تونن `{holdDays}`، `{returnWindowDays}` و `{freeShippingThreshold}` داشته باشن و `GET /config` با مقدار همون لحظه‌ی تنظیمات (ارقام فارسی) پرشون می‌کنه. `trustBadges` تا داشتن کد اینماد و ساماندهی خالیه (چک‌لیست ۶.۷)؛ مسیرهای برند که با `/` شروع می‌شن با آدرس سایت کامل می‌شن | «رزرو ۴ روزه» و «۷ روز بازگشت» ِ نمونه با عوض شدن تنظیمات دروغ می‌شدن؛ یه منبع برای هر عدد (تصمیم ۲) |
+| 24 | خطای کل آرایه (تازه، گام ۵.۲) | بدنه‌ی `PUT /admin/faq/groups` و `PUT /admin/announcements` آرایه‌ست و اسم نداره: «بیشتر از ۲۰ گروه» روی فیلد `groups` و «بیشتر از ۱۰ پیام» روی فیلد `announcements` میان (کانترکت هم گفت) | `FieldError` بدون `field` معنی نداره و پنل باید جایی نشونش بده |
+| 25 | `SiteContent` (تازه، گام ۵.۴) | به‌جای Aggregate ِ دامنه (بخش ۱۰.۳)، یه read model در application (`SiteContentRepository`/`SiteContentQm`) با چک شکل در infrastructure | هیچ قانونی نداره، فقط خونده می‌شه و فعلاً با SQL عوض می‌شه؛ Aggregate ِ بی‌رفتار فقط لایه‌ی اضافه بود. روزی که فرم پنل بیاد، Aggregate با قانون‌هاش ساخته می‌شه |
 
 ### ۱۰.۳ جدول‌ها
 
@@ -2714,82 +3038,99 @@ CREATE TABLE announcement_tbl (
 | 3 | `GET /pages/{slug}`، `PUT /admin/pages/{slug}` | تصمیم ۷؛ حذف `404` از `PUT`؛ «`slug` ِ بدنه یا نیامده یا همان مسیر»؛ «`updatedAt` و `seo.canonicalUrl` فقط خواندنی» |
 | 4 | `GET /faq`، `PUT /admin/faq/groups` | تصمیم‌های ۹ و ۱۰ |
 | 5 | `PUT /admin/announcements` | تصمیم ۱۱ |
+| 6 | شِماهای ورودی (تازه، گام ۵.۰) | `StaticPageUpsertRequest`، `FaqGroupInput`، `FaqItemInput`، `AnnouncementInput` (تصمیم ۱۳)؛ `required` روی پاسخ‌ها |
+| 7 | `HtmlString` (تازه، گام ۵.۰) | قانون دقیق لینک (تصمیم ۱۹) |
+| 8 | `GET /pages/{slug}` و `GET /faq` (تازه، گام ۵.۰) | `ETag`، `304` (تصمیم ۲۱)؛ هایلایت امن و تطابق حرف‌به‌حرف (تصمیم ۱۷) |
 
 ### ۱۰.۶ گام‌ها
 
-#### گام ۵.۰: کانترکت 1.12.0 · S ⬜
+#### گام ۵.۰: کانترکت 1.12.0 · S ✅
 
 برنچ `content-basics`؛ ردیف‌های ۱۰.۵؛ متن کدهای فیلدی (`PAGE_TITLE_*`، `PAGE_CONTENT_*`، `FAQ_ANCHOR_INVALID`، `FAQ_ANCHOR_DUPLICATE`، `FAQ_ITEM_NOT_FOUND`، `FAQ_TOO_MANY`، `QUESTION_*`، `ANSWER_*`، `ANNOUNCEMENT_*`، `URL_INVALID`).
 
 **تموم شده یعنی:**
-- [ ] کانترکت معتبر، `ErrorMessagesTest` سبز.
+- [x] کانترکت معتبر، `ErrorMessagesTest` سبز.
+
+**یادداشت پیاده‌سازی:** برنچ `content-basics` از نوک فاز ۴ (`panel-settings`) ساخته شد، چون فازهای ۱ تا ۴ هنوز منتظر merge به `main` ـن. ده تصمیم تازه (۱۳ تا ۲۲ ِ ۱۰.۲) و سه ردیف تازه‌ی ۱۰.۵ (۶ تا ۸). `SiteConfig` با منبع هر بخش و `required` در هر سطح، `support.*` ِ nullable، `nonShippingWeekdays` با enum؛ چهار شِمای ورودی تازه؛ `PUT /admin/pages/{slug}` بدون `404`. YAML با PyYAML معتبره و هر ۱۳۲۸ `$ref` پیدا می‌شن. متن ۱۲ کد فیلدی تازه؛ بقیه‌ی خطاها کدهای عمومی ِ فاز ۴ان (`TEXT_TOO_LONG`، `TOO_MANY_ITEMS`، `LIST_ITEM_DUPLICATE`، `ICON_INVALID`، `DATE_RANGE_INVALID`، `DATE_TIME_INVALID`، `SLUG_INVALID`).
 
 ---
 
-#### گام ۵.۱: صفحه‌های ثابت، و لینک نسبی در HTML · M ⬜
+#### گام ۵.۱: صفحه‌های ثابت، و لینک نسبی در HTML · M ✅
 
 **می‌سازی:** `V31` (بخش صفحه‌ها)؛ تغییر `JsoupHtmlSanitizer` (تصمیم ۶) و تست‌هاش؛ `StaticPage` و repository؛ سه UseCase؛ routeها؛ `StaticPageHttpResponse`.
 
 وابسته به: ۵.۰
 
 **تموم شده یعنی:**
-- [ ] `PUT /admin/pages/terms` ← ساخته می‌شه؛ دوباره ← ویرایش؛ هر دو `200`؛ `GET /pages/terms` محتوای پاک‌شده.
-- [ ] `<script>`، `onclick` و `javascript:` پاک؛ `/faq#return` و `#top` و `https://enamad.ir/...` می‌مونن؛ `//evil.com` پاک.
-- [ ] `slug` ِ بدنه‌ی متفاوت ← `400 SLUG_IMMUTABLE`؛ صفحه‌ی ننوشته ← `404`.
-- [ ] `OPERATOR` ← 403؛ لاگ `PAGE_SAVED` بدون متن صفحه.
-- [ ] توضیح محصولی که لینک `/products?onSale=true` داره دیگه لینکش رو از دست نمی‌ده.
+- [x] `PUT /admin/pages/terms` ← ساخته می‌شه؛ دوباره ← ویرایش؛ هر دو `200`؛ `GET /pages/terms` محتوای پاک‌شده.
+- [x] `<script>`، `onclick` و `javascript:` پاک؛ `/faq#return` و `#top` و `https://enamad.ir/...` می‌مونن؛ `//evil.com` پاک.
+- [x] `slug` ِ بدنه‌ی متفاوت ← `400 SLUG_IMMUTABLE`؛ صفحه‌ی ننوشته ← `404`.
+- [x] `OPERATOR` ← 403؛ لاگ `PAGE_SAVED` بدون متن صفحه.
+- [x] توضیح محصولی که لینک `/products?onSale=true` داره دیگه لینکش رو از دست نمی‌ده.
+
+**یادداشت پیاده‌سازی:** `V31` در همین گام **کامل** نوشته شد (چهار جدول و ردیف `sitecontent_tbl` با متن‌های نمونه‌ی `kiva.js`؛ تصمیم ۲۳)، طبق قانون بخش ۲۱؛ گام‌های بعد فقط ازش استفاده می‌کنن. `JsoupHtmlSanitizer` با `preserveRelativeLinks` و بعدش چک خودش (`isAllowedHref`، تصمیم ۱۹). دامنه: `PageDraft` (فرم، همه‌ی خطاها صاف و با هم، محتوا بعد از پاک‌سازی سنجیده می‌شه) و `StaticPage` (`write`/`rewrite`، بی‌تغییر ← `null`). `StaticPageRepository` با قفل advisory روی slug (برای صفحه‌ای که هنوز ردیف نداره). `GetPageUc`، `ListPagesUc`، `SavePageUc`؛ `webV1Content.kt` (عمومی، کش‌شونده) و `webV1AdminContent.kt`؛ `PAGE_SAVED` با عنوان و سئو و فقط «عوض شد» ِ متن. تست‌ها: ۶ تست دامنه، ۱۷ مورد ِ sanitizer، ۱۰ تست route (با دو اولین‌ذخیره‌ی همزمان، ۱۰ بار)، ۴ تست migration، تست لینک نسبی در توضیح محصول. خرابکاری: بدون قفل صفحه ← `two first saves of one page at the same moment` قرمز (دومی ۵۰۰)؛ بدون چک `//` ← تست sanitizer، صفحه و توضیح محصول قرمز.
 
 ---
 
-#### گام ۵.۲: سؤالات متداول · M ⬜
+#### گام ۵.۲: سؤالات متداول · M ✅
 
 **می‌سازی:** `V31` (بخش سؤالات)؛ `FaqBook`؛ هایلایت (`FaqHighlighter` با jsoup، فقط روی text nodeها)؛ سه UseCase؛ routeها (عمومی با `respondResultCacheable`).
 
 وابسته به: ۵.۱
 
 **تموم شده یعنی:**
-- [ ] ذخیره‌ی درخت با سه گروه، و دوباره با یه سؤال کمتر و یه سؤال تازه ← سؤال حذف‌شده نیست، سؤال قبلی همون `id` رو داره، تازه `id` ِ تازه.
-- [ ] دو گروه با یه anchor ← ۴۰۰؛ `id` ِ سؤال ناشناخته ← ۴۰۰.
-- [ ] `q = رزرو` (با `ي` عربی هم) ← فقط گروه‌های جور، `<mark>` دور تطابق، و تطابق داخل اسم تگ HTML هایلایت نمی‌شه.
-- [ ] `q` بی‌نتیجه ← `groups = []` و `emptyMessage`.
-- [ ] `GET /faq` با `If-None-Match` ِ درست ← `304`؛ `GET /admin/faq/groups` کش نمی‌شه.
+- [x] ذخیره‌ی درخت با سه گروه، و دوباره با یه سؤال کمتر و یه سؤال تازه ← سؤال حذف‌شده نیست، سؤال قبلی همون `id` رو داره، تازه `id` ِ تازه.
+- [x] دو گروه با یه anchor ← ۴۰۰؛ `id` ِ سؤال ناشناخته ← ۴۰۰.
+- [x] `q = رزرو` (با `ي` عربی هم) ← فقط گروه‌های جور، `<mark>` دور تطابق، و تطابق داخل اسم تگ HTML هایلایت نمی‌شه.
+- [x] `q` بی‌نتیجه ← `groups = []` و `emptyMessage`.
+- [x] `GET /faq` با `If-None-Match` ِ درست ← `304`؛ `GET /admin/faq/groups` کش نمی‌شه.
+
+**یادداشت پیاده‌سازی:** دامنه: `FaqAnchor`، `FaqItemId`، `FaqDraft` (شکل فرم با همه‌ی خطاها و مسیرها، `unknownIds`، `toBook`، `isSameAs`) و `FaqBook`؛ `FaqRepository` با قفل advisory ِ `faq`، و `save` که کل درخت رو جایگزین می‌کنه (گروه‌ها پاک و سؤال‌ها با cascade، بعد درج به ترتیب). جستجو در application (`FaqSearch`: تا کردن حرف‌به‌حرف، بازه‌ها، `markText` با escape) و پورت `HtmlText` با `JsoupHtmlText` (متن ساده، و `<mark>` فقط در text nodeها). `GetFaqUc` (کش‌شونده)، `ListFaqForEditUc`، `SaveFaqUc`؛ `FAQ_SAVED` با تعداد گروه و سؤال. تصمیم ۲۴. تست‌ها: ۵ تست دامنه، ۴ تست `FaqSearch`، ۴ تست `JsoupHtmlText`، ۱۱ تست route (با دو ذخیره‌ی همزمان، ۱۰ بار). خرابکاری: بدون قفل ← `two saves at the same moment` قرمز (دو درخت با هم)؛ بدون escape ِ سؤال ← تست `FaqSearch` و `a question's own HTML is shown escaped` قرمز. جاافتاده: Gradle یه بار با `OutOfMemoryError` ِ daemon ِ Kotlin شکست (چهار daemon ِ کهنه)؛ `--stop` و دوباره درست شد.
 
 ---
 
-#### گام ۵.۳: نوار اطلاعیه · S ⬜
+#### گام ۵.۳: نوار اطلاعیه · S ✅
 
 **می‌سازی:** `V31` (بخش اطلاعیه)؛ `AnnouncementBar`؛ دو UseCase؛ routeها.
 
 وابسته به: ۵.۰
 
 **تموم شده یعنی:**
-- [ ] ذخیره، ویرایش با `id`، حذف با نیاوردن؛ ترتیب از آرایه.
-- [ ] ۱۱ اطلاعیه ← ۴۰۰؛ `url = javascript:alert(1)` ← ۴۰۰.
-- [ ] لیست پنل اطلاعیه‌ی تموم‌شده و زمان‌بندی‌شده رو هم داره.
+- [x] ذخیره، ویرایش با `id`، حذف با نیاوردن؛ ترتیب از آرایه.
+- [x] ۱۱ اطلاعیه ← ۴۰۰؛ `url = javascript:alert(1)` ← ۴۰۰.
+- [x] لیست پنل اطلاعیه‌ی تموم‌شده و زمان‌بندی‌شده رو هم داره.
+
+**یادداشت پیاده‌سازی:** `SiteLink` (VO ِ مشترک در `common`: `https://` ِ کامل یا مسیر سایت، نه `//` و `/\`، بی فاصله، ≤ ۳۰۰؛ بنرهای فاز ۱۱ هم ازش استفاده می‌کنن)؛ دامنه: `AnnouncementId`، `AnnouncementDraft` (شکل فرم با همه‌ی خطاها و مسیرها، زمان‌ها از `MomentField` ِ صدازننده)، `AnnouncementBar` با `showingAt(now)` (برای `/config` ِ گام ۵.۴)؛ `AnnouncementBarRepository` با قفل advisory ِ `announcements` و جایگزینی کل لیست. `ListAnnouncementsUc`، `SaveAnnouncementsUc`، دو route در `webV1AdminContent.kt`؛ `ANNOUNCEMENTS_SAVED` با تعداد. تست‌ها: ۱۶ مورد ِ `SiteLink`، ۶ تست دامنه (با «الان نمایش داده می‌شه»: باز، شروع‌شده، فردا، تمام‌شده، دقیقاً الان تمام)، ۶ تست route (با دو ذخیره‌ی همزمان، ۱۰ بار). خرابکاری: بدون قفل ← `two saves at the same moment` قرمز؛ `SiteLink` بی‌قانون ← تست‌های `SiteLink` و `a javascript link … 400` قرمز.
 
 ---
 
-#### گام ۵.۴: `GET /config` · M ⬜
+#### گام ۵.۴: `GET /config` · M ✅
 
 **می‌سازی:** `V31` (بخش `sitecontent_tbl` با مقدار اولیه)؛ `SiteContent` و repository؛ `GetSiteConfigUc` (ترکیب محتوا، تنظیمات، درگاه‌ها، اطلاعیه‌های در حال نمایش، `isOpenNow`)؛ `SiteConfigHttpResponse`؛ route با `respondResultCacheable`.
 
 وابسته به: ۵.۳ و فاز ۴
 
 **تموم شده یعنی:**
-- [ ] همه‌ی فیلدهای `SiteConfig` با کانترکت مقایسه می‌شن (تست شکل)؛ هیچ فیلدی حذف یا `null` ِ غیرمجاز نیست.
-- [ ] `freeShippingThreshold` و هزینه‌ی روش‌ها دقیقاً همون عددهای سبدن (تست: تنظیمات رو عوض کن، هر دو با هم عوض می‌شن).
-- [ ] `isOpenNow`: شنبه ساعت ۱۰ ِ تهران با ساعت کاری ۹ تا ۲۱ ← `true`؛ ساعت ۲۲ ← `false`؛ جمعه با `messengerOnly` ← `false`.
-- [ ] اطلاعیه‌ی زمان‌بندی‌شده برای فردا نیست، تموم‌شده نیست.
-- [ ] `If-None-Match` ِ درست ← `304`.
+- [x] همه‌ی فیلدهای `SiteConfig` با کانترکت مقایسه می‌شن (تست شکل)؛ هیچ فیلدی حذف یا `null` ِ غیرمجاز نیست.
+- [x] `freeShippingThreshold` و هزینه‌ی روش‌ها دقیقاً همون عددهای سبدن (تست: تنظیمات رو عوض کن، هر دو با هم عوض می‌شن).
+- [x] `isOpenNow`: شنبه ساعت ۱۰ ِ تهران با ساعت کاری ۹ تا ۲۱ ← `true`؛ ساعت ۲۲ ← `false`؛ جمعه با `messengerOnly` ← `false`.
+- [x] اطلاعیه‌ی زمان‌بندی‌شده برای فردا نیست، تموم‌شده نیست.
+- [x] `If-None-Match` ِ درست ← `304`.
+
+**یادداشت پیاده‌سازی:** `SupportHours.isOpenAt(day, time)` در دامنه (تصمیم ۱۵)؛ `SiteContentRepository`/`SiteContentQm` (خوندنی، تصمیم ۲۵) با `SiteContentTbl` که سند JSONB رو سخت‌گیرانه می‌خونه (کلید نیومده یا غلط ← خطا، نه سایت خالی)؛ `GetSiteConfigUc` در یه تراکنش: محتوا، تنظیمات، `checkoutOptions` ِ درگاه‌ها، `showingAt(now)` ِ اطلاعیه‌ها، `isOpenNow` با `ShopCalendar.ZONE`، و ثابت‌های `OtpPolicy`. `SiteConfigHttpResponse` با پر کردن عددهای متن (`ContentTexts.fill`)، `phoneDisplay`، آدرس کامل فایل‌های برند، فقط روش‌های فعال؛ نگاشت روش ارسال، ساعت پشتیبانی، شبکه‌ها، `features` و ترتیب هفته‌ی ایرانی حالا با پاسخ تنظیمات پنل مشترکه. `GET /config` کش‌شونده. تست‌ها: ۲ تست دامنه، ۲ تست متن، ۶ تست route (شکل همه‌ی بخش‌ها با کانترکت؛ تغییر تنظیمات در پنل و برابری با سبد؛ `isOpenNow` در سه لحظه‌ی تهران؛ اطلاعیه‌ها با زمان؛ ۳۰۴). خرابکاری: بدون `showingAt` ← تست اطلاعیه‌ها قرمز؛ بدون چک `messengerOnly` ← تست دامنه و `isOpenNow` قرمز.
 
 ---
 
-#### گام ۵.۵: ریویو · S ⬜
+#### گام ۵.۵: ریویو · S ✅
 
 **می‌سازی:** `CONTENT_REVIEW.md` (ردیف ۴ ِ بخش ۳؛ خرابکاری: پاک‌سازی HTML در صفحه، جواب سؤال و توضیح محصول، و هایلایت امن)؛ `docs/FRONTEND_CONTENT.md` (چه چیزی از `/config` میاد و چی دیگه نباید تو `kiva.js` ثابت بمونه)؛ دور با پنل و kiva-fe.
 
 **تموم شده یعنی:**
-- [ ] همه‌ی خرابکاری‌ها قرمز می‌کنن؛ merge به `main`.
+- [x] همه‌ی خرابکاری‌ها قرمز می‌کنن.
+- [ ] دور با پنل و kiva-fe (اینجا نبودن؛ مراحلش در `CONTENT_REVIEW.md`).
+- [ ] merge به `main` (منتظر تأیید؛ فازهای ۱ تا ۴ هم هنوز merge نشدن).
+
+**یادداشت پیاده‌سازی:** `CONTENT_REVIEW.md` (ردیف‌های ۴، ۱ و ۱۵ با تست‌هاشون؛ دوازده خرابکاری، چهارتاش تازه در این گام: پاک‌سازی متن صفحه، جواب سؤال و توضیح محصول، و علامت زدن فقط در متن). `docs/FRONTEND_CONTENT.md` (چی از `/config` میاد و چی دیگه نباید تو `kiva.js` ثابت بمونه) و README. کامپایل همه‌ی تست‌ها از صفر با `OutOfMemoryError` ِ daemon ِ Kotlin می‌شکست؛ `kotlin.daemon.jvmargs=-Xmx3g` در `gradle.properties`. اجرای کامل: ۲۷۲۲ تست سبز، صفر هشدار.
 
 ---
 
@@ -2804,19 +3145,19 @@ CREATE TABLE announcement_tbl (
 
 | گام | عنوان | کِی | وضعیت |
 |---|---|---|---|
-| ۶.۱ | پنل روی سرور (زودهنگام) | بعد از فاز ۱ | ⬜ |
-| ۶.۲ | مدیا روی سرور | با ۶.۱ | ⬜ |
-| ۶.۳ | بکاپ روزانه و تست بازگردانی | قبل از اولین پرداخت واقعی | ⬜ |
-| ۶.۴ | اسکریپت یک‌دستوره‌ی deploy | قبل از ۶.۹ | ⬜ |
-| ۶.۵ | امنیت سرور | قبل از ۶.۹ | ⬜ |
-| ۶.۶ | حساب‌ها و رازها: زرین‌پال و الگوهای پیامک | قبل از ۶.۹ | ⬜ |
-| ۶.۷ | داده و محتوای واقعی | بعد از فاز ۵ | ⬜ |
-| ۶.۸ | هشدارها | قبل از ۶.۹ | ⬜ |
-| ۶.۹ | دور واقعی و چک‌لیست نهایی | آخر | ⬜ |
+| ۶.۱ | پنل روی سرور (زودهنگام) | بعد از فاز ۱ | 🔧 |
+| ۶.۲ | مدیا روی سرور | با ۶.۱ | 🔧 |
+| ۶.۳ | بکاپ روزانه و تست بازگردانی | قبل از اولین پرداخت واقعی | 🔧 |
+| ۶.۴ | اسکریپت یک‌دستوره‌ی deploy | قبل از ۶.۹ | 🔧 |
+| ۶.۵ | امنیت سرور | قبل از ۶.۹ | 🔧 |
+| ۶.۶ | حساب‌ها و رازها: زرین‌پال و الگوهای پیامک | قبل از ۶.۹ | 🔧 |
+| ۶.۷ | داده و محتوای واقعی | بعد از فاز ۵ | 🔧 |
+| ۶.۸ | هشدارها | قبل از ۶.۹ | 🔧 |
+| ۶.۹ | دور واقعی و چک‌لیست نهایی | آخر | 🔧 |
 
 ### ۱۱.۲ گام‌ها
 
-#### گام ۶.۱: پنل روی سرور (زودهنگام)
+#### گام ۶.۱: پنل روی سرور (زودهنگام) · 🔧
 
 - زیردامنه‌ی پنل: `admin.kivashop.ir` (هم‌سایت با `api.kivashop.ir`، تا کوکی `SameSite=Strict` ِ نشست پنل کار کنه؛ کانترکت بخش ۲). رکورد DNS در آروان با CDN روشن.
 - `kiva-backoffice-fe` روی ویندوز build می‌شه با `NEXT_PUBLIC_API_URL=https://api.kivashop.ir/api/v1/` (متغیر زمان build)، و مثل فروشگاه با tar و scp به `/opt/kiva-bo` (کاربر سیستمی `kivabo`، pm2 با `PM2_HOME` ِ خودش، پورت ۳۲۰۰ روی `127.0.0.1`).
@@ -2826,7 +3167,9 @@ CREATE TABLE announcement_tbl (
 
 **تموم شده یعنی:** صاحب پروژه با موبایل خودش وارد پنل روی سرور می‌شه، `ADMIN` ـه، و می‌تونه دسته و محصول بسازه.
 
-#### گام ۶.۲: مدیا روی سرور
+**یادداشت پیاده‌سازی:** `tools/ops/` و `LAUNCH.md` (پیش از گام‌ها و گام ۶.۱). `nginx/admin.kivashop.ir.http.conf` (پورت ۸۰، فقط برای certbot و redirect) و `nginx/admin.kivashop.ir.conf` (۴۴۳، `X-Frame-Options DENY`، `noindex`، بدنه‌ی ۱ مگ)، `nginx/kiva-proxy-params.conf` (یه `X-Forwarded-For` ِ واقعی، نه چیزی که کلاینت نوشته)، `deploy-fe.ps1` و `deploy-fe-remote.sh` (`app`، `app.prev`، `app.failed`، `.pm2`؛ standalone یا npm خودش تشخیص داده می‌شه؛ ۶۰ ثانیه صبر روی `127.0.0.1` و برگشت خودکار)، `fe/*.build.env`، `set-env.sh` (رازها با `read -rsp` و دو بار)، `install-ops.sh`، `.gitattributes` (فایل‌های سرور همیشه LF). بسته‌بندی با یه پروژه‌ی Next ِ ساختگی در هر دو حالت امتحان شد؛ دو باگ ِ PowerShell 5.1 (stderr ِ ابزار با `Stop`، و پوشه‌ی بی‌git) پیدا و درست شد.
+
+#### گام ۶.۲: مدیا روی سرور · 🔧
 
 - `apt install libvips-tools ffmpeg` (از mirror ِ آروان).
 - پوشه: `/var/lib/kiva/media` (مالک `kiva`، `750`)؛ `KIVA_MEDIA_ROOT=/var/lib/kiva/media`، `KIVA_MEDIA_PUBLIC_URL=https://api.kivashop.ir/media`، `KIVA_MEDIA_SERVE_LOCALLY=false`.
@@ -2835,7 +3178,9 @@ CREATE TABLE announcement_tbl (
 
 **تموم شده یعنی:** آپلود یه عکس و یه ویدیو از پنل روی سرور کار می‌کنه و فایل‌ها از `https://api.kivashop.ir/media/...` با هدر `immutable` باز می‌شن.
 
-#### گام ۶.۳: بکاپ روزانه و تست بازگردانی
+**یادداشت پیاده‌سازی:** `nginx/kiva-http.conf` (zoneها و `map` ِ CORS ِ ۴۲۹، در http context) و `nginx/api.kivashop.ir.conf` (مرجع کامل بلوک API: `/media/` با `immutable` و `nosniff`، `admin/media` با `210m` و `proxy_request_buffering off`، `me/uploads` با `55m`). پوشه‌ی مدیا `kiva:www-data` با `2750` و `UMask=0027` در unit (تصمیم ۴). سقف آپلود CDN با خودت (سؤال باز ۴).
+
+#### گام ۶.۳: بکاپ روزانه و تست بازگردانی · 🔧
 
 - `tools/ops/backup.sh` (در ریپو): `pg_dump -Fc` ِ دیتابیس `kiva` و tar ِ پوشه‌ی مدیا به `/root/backups/{date}/`، نگه‌داری ۱۴ روز. با یه systemd timer ساعت ۳ ِ تهران.
 - یه کپی بیرون از سرور (فضای ابری آروان یا دانلود دوره‌ای روی کامپیوتر صاحب پروژه؛ تصمیم با خودش در همین گام).
@@ -2843,14 +3188,18 @@ CREATE TABLE announcement_tbl (
 
 **تموم شده یعنی:** بکاپ دیشب هست، بازگردانی تست شده و نتیجه‌ش تو گزارش کار اومده.
 
-#### گام ۶.۴: اسکریپت یک‌دستوره‌ی deploy
+**یادداشت پیاده‌سازی:** `backup.sh` (پوشه‌ی روز فقط وقتی کامله پیدا می‌شه؛ dump یه بار خونده می‌شه؛ ۱۴ روز؛ `rclone` اگه `/etc/kiva/backup.env` بگه)، `restore-test.sh` (checksum، `pg_restore` در `kiva_restore_test`، شمارش‌ها کنار دیتابیس زنده، migration، فهرست مدیا، خط `OK` برای گزارش کار)، `kiva-backup.service`/`.timer` (`OnCalendar=… Asia/Tehran`، با `systemd-analyze` ساعت ۰۳:۰۰ ِ ‎+0330 تأیید شد)، `pull-backup.ps1` (راه ب ِ سؤال باز ۲). بکاپ و بازگردانی ِ واقعی روی سرور با توئه.
+
+#### گام ۶.۴: اسکریپت یک‌دستوره‌ی deploy · 🔧
 
 - `tools/ops/deploy.ps1` (روی ویندوز): build (`installDist`)، tar، scp، و اجرای `tools/ops/deploy-remote.sh` روی سرور: بکاپ سریع (`pg_dump`)، باز کردن در `/opt/kiva.new`، کپی `conf`، stop، جابه‌جایی به `/opt/kiva.prev`، start، و صبر برای `/health`. اگه `/health` تا ۹۰ ثانیه سبز نشد ← برگردوندن `kiva.prev` و start.
 - همین برای فروشگاه و پنل (`deploy-fe.ps1` با `NEXT_PUBLIC_*` ِ درست).
 
 **تموم شده یعنی:** یه deploy ِ عمداً خراب (جاوای بی‌آرگومان) خودکار برمی‌گرده و سایت پایین نمی‌مونه.
 
-#### گام ۶.۵: امنیت سرور
+**یادداشت پیاده‌سازی:** `deploy.ps1` و `deploy-remote.sh` (dump ِ سریع با پنج تای آخر، قفل، کد مال root و فقط `conf` کپی، ۹۰ ثانیه صبر برای `UP`، برگشت به `kiva.prev`، نسخه‌ی خراب در `kiva.failed`) و `systemd/kiva.service` ِ مرجع. `-BreakOnPurpose` واقعاً build و بسته‌بندی شد (۸۵ jar، ۳۲ مگ، `bin/kiva-be` با LF) و برگشت خودکار با بسته‌های ساختگی روی لینوکس تست شد.
+
+#### گام ۶.۵: امنیت سرور · 🔧
 
 - ورود SSH با رمز بسته (`/etc/ssh/sshd_config.d/00-kiva.conf` با `PasswordAuthentication no` و `PermitRootLogin prohibit-password`؛ اول مطمئن شو کلید کار می‌کنه و کنسول وب آروان راه برگشته).
 - `ufw`: فقط ۲۲، ۸۰، ۴۴۳.
@@ -2860,7 +3209,9 @@ CREATE TABLE announcement_tbl (
 
 **تموم شده یعنی:** ورود با رمز رد می‌شه، `ufw status` فقط سه پورت، و بیستمین درخواست پشت‌سرهم به `/api/v1/orders` از یه IP `429` می‌گیره.
 
-#### گام ۶.۶: حساب‌ها و رازها
+**یادداشت پیاده‌سازی:** `ssh/00-kiva.conf`، `firewall.sh` (اول پورت SSH ِ واقعی، قانون‌های اضافه فقط نام برده می‌شن)، `arvan-real-ip.sh` (فهرست آروان با چک شکل و `nginx -t`، برگشت فایل قبلی اگه خراب بود)، و locationهای محدود در مرجع API. ۴۲۹ ِ nginx همون Problem ِ برنامه با CORS (تصمیم ۷).
+
+#### گام ۶.۶: حساب‌ها و رازها · 🔧
 
 - **زرین‌پال:** حساب پذیرنده با سطح احراز لازم (خطای ‎`-16`)، دامنه‌ی callback = `api.kivashop.ir` (خطای ‎`-14`)، IP ِ سرور (برای `reverse`). `KIVA_PAYMENT_PROVIDER=zarinpal`، `KIVA_ZARINPAL_SANDBOX=false`، `KIVA_ZARINPAL_MERCHANT_ID` (صاحب پروژه روی سرور).
 - **فراز اس‌ام‌اس:** همه‌ی الگوهای بخش ۲۴ ساخته، تأیید و متغیرهای `KIVA_FARAZ_*_PATTERN` ـشون در `kiva.env`. کلیدی که یه بار تو گفتگو فرستاده شده بود عوض بشه.
@@ -2868,7 +3219,9 @@ CREATE TABLE announcement_tbl (
 
 **تموم شده یعنی:** لاگ شروع برنامه هیچ WARN ِ «الگو نیست» نداره و `provider is Zarinpal (sandbox=false)` می‌گه.
 
-#### گام ۶.۷: داده و محتوای واقعی
+**یادداشت پیاده‌سازی:** `kiva.env.example` (همه‌ی متغیرهای سرور بدون راز) و در `LAUNCH.md` جدول الگوهای فراز با متن پیشنهادی. برنامه خط `provider is Zarinpal (sandbox=false)` نداره؛ چک از راه `kiva.env` و نبود WARN ِ `fake` (تصمیم ۸). ساخت حساب‌ها و الگوها با خودت.
+
+#### گام ۶.۷: داده و محتوای واقعی · 🔧
 
 - **پاک کردن داده‌ی نمونه:** `tools/ops/purge_seed.sql` (بعد از بکاپ): همه‌ی رویدادها و read model ِ ۱۶ محصول نمونه، موجودی‌شون، و هر سفارش، پرداخت، استرداد و لاگ تغییراتی که تو تست‌ها روی سرور ساخته شده. sequenceها ریست **نمی‌شن** (شماره‌ها ادامه پیدا می‌کنن). `KIVA_SEED_ENABLED` خاموش.
 - محصول‌های واقعی با عکس و ویدیو از پنل.
@@ -2878,20 +3231,44 @@ CREATE TABLE announcement_tbl (
 
 **تموم شده یعنی:** فروشگاه روی سرور فقط محصول واقعی داره و هر صفحه‌ی لازم اینماد باز می‌شه.
 
-#### گام ۶.۸: هشدارها
+**یادداشت پیاده‌سازی:** `purge_seed.sql` و `purge-seed.sh` (پیش‌فرض dry run؛ dump قبل از `--apply`؛ رد وقتی برنامه روشنه، پرداختی بازه یا سفارش تستی موجودی ِ محصول واقعی رو نگه داشته؛ تصمیم ۹)، `trust_badges.sql` (با سه حالت روی Postgres امتحان شد). `PurgeSeedSqlOnDatabaseTest`: شش تست روی kiva_test، در یه تراکنش که rollback می‌شه؛ سه خرابکاری (بدون چک پرداخت باز، کیف فقط با کد، نگه داشتن Idempotency-Keyها) هر کدوم یه تست رو قرمز کردن. `SeededCatalog` حالا `createProduct` و `deleteProducts` داره.
+
+#### گام ۶.۸: هشدارها · 🔧
 
 - `tools/ops/alerts.sh` با systemd timer هر ۵ دقیقه: `journalctl -u kiva --since` ِ اجرای قبلی، و اگه یکی از این‌ها پیدا شد، یه پیامک با الگوی `KIVA_FARAZ_ALERT_PATTERN` (متغیر `what`) به موبایل صاحب پروژه: `PAID_BUT_ORDER_NOT_PAYABLE`، `GatewayFailure.Rejected`، `AmountMismatch`، `VERIFYING for over 10 minutes`، `Job .* failed`، و هر ERROR ِ دیگه حداکثر یه بار در ساعت.
 - `/health` هر دقیقه از بیرون (پایش آروان یا یه سرویس ساده).
 
 **تموم شده یعنی:** یه ERROR ِ ساختگی تو لاگ ← پیامک تا ۵ دقیقه بعد.
 
-#### گام ۶.۹: دور واقعی و چک‌لیست نهایی
+**یادداشت پیاده‌سازی:** `alerts.sh` (cursor ِ journalctl، هشت نوع، `what` فقط کلمه‌ی ثابت، فوری‌ها هر ۱۵ دقیقه و بقیه ساعتی، `--test`، `KIVA_ALERTS_DRY_RUN`) و `kiva-alerts.service`/`.timer`. چک `/health` و بکاپ دیشب هم اینجاست (تصمیم ۱۰).
+
+#### گام ۶.۹: دور واقعی و چک‌لیست نهایی · 🔧
 
 - kiva-fe و پنل آخرین نسخه روی سرور.
 - یه خرید واقعی با کارت واقعی (یه محصول ارزون یا قیمت موقت)، عکس از پنل، تأیید در kiva-fe، ارسال، رهگیری مهمان، «تحویل شد»؛ بعد یه خرید دوم، لغو، و ثبت استرداد دستی با شماره‌ی پیگیری واقعی.
 - چک‌لیست: jobها روشن، seed خاموش، بکاپ دیشب هست، هشدار تست شده، origins بدون localhost، الگوهای پیامک همه تأییدشده، صفحه‌های قانونی، `X-Trace-Id` تو هر خطا، لاگ برنامه بدون داده‌ی شخصی (یه دور `grep` روی `journalctl` برای `09[0-9]{9}`).
 
 **تموم شده یعنی:** همه‌ی چک‌لیست تیک خورده و گزارش کار تاریخ انتشار رو داره.
+
+**یادداشت پیاده‌سازی:** `launch-check.sh` (حدود ۵۰ چک ماشینی و فهرست کارهای آدمی؛ `--rate-limit`) و `tools/ops/test/ops-test.sh`: ۷۷ تست روی Ubuntu 24.04 (WSL) با ابزارهای ساختگی، همه سبز. دور واقعی، چک‌لیست و تاریخ انتشار با خودت.
+
+### ۱۱.۳ تصمیم‌های این فاز
+
+موقع پیاده‌سازی گرفته شدن؛ دستور کار کامل ِ هر گام در [`LAUNCH.md`](LAUNCH.md) ـه.
+
+| # | گام | تصمیم |
+|---|---|---|
+| ۱ | ۶.۱ | **کار روی سرور با صاحب پروژه‌ست.** این برنچ اسکریپت، فایل مرجع و دستور کار (`LAUNCH.md`) می‌سازه و تست می‌کنه؛ به سرور وصل نمی‌شه. وضعیت 🔧 یعنی «از طرف ریپو آماده و تست‌شده، اجرای روی سرور مونده»؛ ✅ بعد از «تموم شده یعنی» ِ روی سرور. |
+| ۲ | ۶.۱ | **فرض‌های layout** (مسیرها، کاربرها، پورت‌ها، webroot) اول `LAUNCH.md` با دستور چکشون اومده؛ هر کدوم با متغیر محیطی ِ اسکریپت یا پارامتر `deploy-fe.ps1` عوض می‌شه. |
+| ۳ | ۶.۱ | **هر متغیر `kiva.env` فقط با `set-env.sh`:** خط سر جاش عوض می‌شه، فایل `root` و `600` می‌مونه، نسخه‌ی قبلی `kiva.env.previous`، و راز با `--secret` (نمایش داده نمی‌شه و دو بار پرسیده می‌شه). |
+| ۴ | ۶.۲ | **پوشه‌ی مدیا `kiva:www-data` با `2750`، و `UMask=0027`.** «مالک `kiva`، `750`» ِ گام ۶.۲ تنها، nginx (`www-data`) رو بیرون می‌ذاشت؛ گروه `www-data` با setgid یعنی nginx می‌خونه، برنامه می‌نویسه، و کس دیگه‌ای هیچ‌کدوم. |
+| ۵ | ۶.۳ | **بکاپ نیمه‌کاره هیچ‌وقت شبیه بکاپ نیست:** اول در `<روز>.partial`، و فقط وقتی dump خونده شد و tar و checksum تموم شد، اسم روز می‌گیره. در `restore-test.sh` کمتر بودن شمارش زنده از بکاپ فقط هشداره (jobهای شبانه و پاک‌سازی ۶.۷ ردیف کم می‌کنن)؛ checksum، `pg_restore` و migration ِ جلوتر شکست‌ان. |
+| ۶ | ۶.۴ | **کد مال `root`، فقط `conf` کپی می‌شه، و deployها قفل دارن.** برنامه با کاربر `kiva` نمی‌تونه کد خودش رو عوض کنه. برگشت به نسخه‌ی قبلی بعد از یه migration ِ تازه امنه چون Flyway migrationهای آینده رو نادیده می‌گیره؛ برای داده‌ی خراب‌شده، dump ِ قبل از همون deploy. |
+| ۷ | ۶.۵ | **عددهای `limit_req`** جدول گام ۶.۵ ِ `LAUNCH.md`. ۴۲۹ ِ nginx همون `Problem` ِ `RATE_LIMITED` ِ برنامه‌ست با `Retry-After` و هدرهای CORS؛ بدون CORS مرورگر جواب رو قایم می‌کرد و فرانت «خطای شبکه» می‌دید. IP ِ واقعی فقط از لبه‌های آروان پذیرفته می‌شه. |
+| ۸ | ۶.۶ | **«`provider is Zarinpal (sandbox=false)`» در لاگ نیست** و این برنچ کد برنامه رو عوض نمی‌کنه. «تموم شده» ِ ۶.۶ با `launch-check.sh` چک می‌شه: `KIVA_PAYMENT_PROVIDER=zarinpal`، `KIVA_ZARINPAL_SANDBOX=false`، merchant هست، و از شروع برنامه WARN ِ `Payment gateway is 'fake'` و `no pattern for` نیومده. |
+| ۹ | ۶.۷ | **پاک کردن نمونه‌ها** پیش‌فرض dry run ـه و با `--apply` اول dump می‌گیره. کیف نمونه با کد **و** آدرس با هم شناخته می‌شه؛ کد تخفیف نمونه فقط با متن seed ِ خودش؛ `soldCount` ِ همه صفر (سفارشی نمونده). رد می‌کنه وقتی برنامه روشنه، پرداختی بازه، یا سفارش تستی موجودی ِ محصول واقعی رو نگه داشته؛ ارسال تستی ِ محصول واقعی فقط نام برده می‌شه. عکس‌ها پاک نمی‌شن، آزاد می‌شن تا job ِ شبانه با فایلشون پاکشون کنه. |
+| ۱۰ | ۶.۸ | **هشدارها:** فوری‌ها (`PAID_NOT_PAYABLE`، `AMOUNT_MISMATCH`، `GATEWAY_REJECTED`، `VERIFYING_STUCK`، `JOB_FAILED`، `HEALTH_DOWN`) هر کدوم حداکثر هر ۱۵ دقیقه، بقیه‌ی ERRORها و `BACKUP_OLD` ساعتی؛ job ِ خراب هر دقیقه ۶۰ پیامک در ساعت نمی‌فرسته. `what` فقط کلمه‌ی ثابت و شمارشه، هیچ‌وقت متن لاگ. |
+| ۱۱ | ۶.۹ | **چک‌لیست نهایی ماشینیه** هر جا ماشین می‌تونه (`launch-check.sh`)؛ اسکن موبایل در لاگ فقط شمارش می‌ده، نه خط‌ها. |
 
 ---
 
@@ -2908,13 +3285,13 @@ CREATE TABLE announcement_tbl (
 
 | گام | عنوان | اندازه | وضعیت |
 |---|---|---|---|
-| ۷.۰ | کانترکت 1.13.0 | S | ⬜ |
-| ۷.۱ | آپلود مشتری (`/me/uploads`) | M | ⬜ |
-| ۷.۲ | دامنه‌ی مرجوعی، رویدادهای سفارش و جدول | L | ⬜ |
-| ۷.۳ | درخواست مرجوعی و «مرجوعی‌های من» | M | ⬜ |
-| ۷.۴ | صف پنل، تصمیم و جمع‌آوری | M | ⬜ |
-| ۷.۵ | رسیدن به انبار، بستن، و استرداد ِ مرجوعی | L | ⬜ |
-| ۷.۶ | ریویو و دور با پنل | M | ⬜ |
+| ۷.۰ | کانترکت 1.13.0 | S | ✅ |
+| ۷.۱ | آپلود مشتری (`/me/uploads`) | M | ✅ |
+| ۷.۲ | دامنه‌ی مرجوعی، رویدادهای سفارش و جدول | L | ✅ |
+| ۷.۳ | درخواست مرجوعی و «مرجوعی‌های من» | M | ✅ |
+| ۷.۴ | صف پنل، تصمیم و جمع‌آوری | M | ✅ |
+| ۷.۵ | رسیدن به انبار، بستن، و استرداد ِ مرجوعی | L | ✅ |
+| ۷.۶ | ریویو و دور با پنل | M | ✅ |
 
 ### ۱۲.۲ تصمیم‌های این فاز
 
@@ -2944,6 +3321,34 @@ CREATE TABLE announcement_tbl (
 | 22 | چی رو مشتری می‌بینه | `ReturnRequest` همه‌چیز جز نتیجه‌ی بازبینی. `AdminReturnRequest` به‌علاوه‌ی `customer`، `receipt`، `allowedTransitions`، `suggestedRefund` | یادداشت بازبینی داخلیه |
 | 23 | آپلود مشتری | `POST /me/uploads` با purpose ِ `RETURN_EVIDENCE` یا `REVIEW_PHOTO` (فاز ۸ هم ازش استفاده می‌کنه)، سقف‌های جدول ۵.۲، بدون `alt`. **حداکثر ۲۰ آپلود در ساعت برای هر کاربر** ← `429 RATE_LIMITED` با `Retry-After`. آپلودی که ۴۸ ساعت به چیزی وصل نشه با job ِ فاز ۱ پاک می‌شه | هر آپلود پردازش libvips/ffmpeg داره؛ بی‌سقف یعنی پر کردن CPU و دیسک |
 | 24 | لاگ تغییرات | `RETURN_DECIDED`، `RETURN_PICKUP_SCHEDULED`، `RETURN_RECEIVED`، `RETURN_CLOSED` (بخش ۵.۱). برگشت به موجودی جداگانه `INVENTORY_ADJUSTED` نمی‌گیره (ردیف `RETURN_RECEIVED` و تاریخچه‌ی موجودی هر دو هستن). استرداد همون `REFUND_*` | یه کار، یه ردیف |
+| 25 | کدهای فیلدی و `ErrorCode` (تازه، گام ۷.۰) | فقط کدهایی که `code` ِ اصلی پاسخ می‌شن به enum ِ `ErrorCode` می‌رن: `RETURN_NOT_FOUND` (۴۰۴ ِ مسیر)، `RETURN_REFUND_EXISTS`، `RETURN_REFUND_OPEN`. کدهای فیلدی ِ ردیف ۱۳ ِ ۱۲.۱۰ (`ITEM_NOT_RETURNABLE`، `EVIDENCE_REQUIRED`، …) فقط در `errors[].code` میان: متن در `ErrorMessages.kt` و اسم در توضیح همون endpoint | کانترکت می‌گه `FieldError.code` فهرست ثابت نداره و `ErrorCode` کد اصلی ِ پاسخه؛ فازهای ۴ و ۵ هم کدهای فیلدی رو به enum نبردن |
+| 26 | کدهای عمومی به‌جای هم‌معنی (تازه، گام ۷.۰) | `DUPLICATE_ITEM` ساخته نمی‌شه: قلم یا `mediaId` ِ تکراری ← `LIST_ITEM_DUPLICATE` (تصمیم ۲۱ ِ فاز ۴). متن‌های آزاد ← `TEXT_TOO_LONG` (`meta.maxLength`) و کد عمومی ِ تازه‌ی `TEXT_INVALID` (نویسه‌ی کنترلی)؛ فیلد نیومده ← `FIELD_REQUIRED`؛ `quantity` ِ درخواست بیرون ۱ تا ۲۰ ← `QUANTITY_INVALID`؛ عددهای رسید بیرون ۰ تا ۲۰ ← `NUMBER_OUT_OF_RANGE`؛ `items` بیشتر از ۲۰ و `mediaIds` بیشتر از ۶ ← `TOO_MANY_ITEMS`؛ `mediaId` ِ بدشکل ← `MEDIA_ID_INVALID` (شکله و چیزی لو نمی‌ده). کدهای تازه‌ی فیلدی: `RETURN_REASON_INVALID`، `SHIPPING_PAYER_INVALID`، `RETURN_STATUS_INVALID` (فیلتر صف)، `CLOSE_REASON_REQUIRED` | یه کد عمومی با `meta` به‌جای ده‌ها کد هم‌معنی |
+| 27 | کد رهگیری ِ جمع‌آوری (تازه، گام ۷.۰) | همون VO ِ `TrackingCode` ِ ارسال (۶ تا ۴۰، `[0-9A-Z-]` بعد از حروف بزرگ و ارقام لاتین، `TRACKING_CODE_INVALID`)؛ `PickupTrackingCode` ساخته نمی‌شه. خالی = بی‌کد | قانون یکیه؛ حامل‌ها همون تیپاکس و پستن |
+| 28 | `refund` و `instructions` ِ پاسخ (تازه، گام ۷.۰) | `ReturnRequest.refund` = تازه‌ترین استرداد ِ همین مرجوعی، `FAILED` هم (مشتری `statusNote` ِ «شماره شبا تأیید نشد» رو می‌بینه)؛ قبل از هر استرداد `null`. `instructions` در `REQUESTED` و `REJECTED` `null`، بعدش متن اپراتور یا متن پیش‌فرض ِ `shippingPaidBy` (تصمیم ۸) | کانترکت نگفته بود کدوم استرداد؛ دستورالعمل قبل از تأیید معنی نداره |
+| 29 | سقف ساعتی ِ آپلود در عمل (تازه، گام ۷.۰) | یه بار **قبل** از پردازش شمرده می‌شه (۲۰ تا یا بیشتر ← `429` بدون کار ِ libvips)، و یه بار دیگه در تراکنش ِ insert زیر قفل advisory ِ `media-uploads:{userId}` (۲۰ تا یا بیشتر ← فایل‌ها پاک و `429`). `Retry-After` = قدیمی‌ترین آپلود ِ ساعت گذشته + ۱ ساعت − الان (حداقل ۱). این قفل تنها قفل ِ همون تراکنشه، پس در ترتیب ۴.۱۱ جایی نمی‌خواد | بدون شمارش دوم، ۵۰ آپلود همزمان همه از چک اول رد می‌شدن |
+| 30 | `required` ِ پاسخ‌ها (تازه، گام ۷.۰) | `ReturnRequest` و `AdminReturnRequest` (و `customer`) `required` روی همه‌ی فیلدها، مثل تصمیم ۱۳ ِ فاز ۵ | همه‌ی فیلدها همیشه فرستاده می‌شن (بخش ۱ ِ کانترکت) |
+| 31 | `MediaUploader` (تازه، گام ۷.۱) | `MediaUploader.Staff(userId)` و `MediaUploader.Customer(userId)`، بدون نقش‌ها: purposeهای پنل به نقش بستگی ندارن (`x-roles` ِ route دروازه‌ست)، پس `Staff(roles)` ِ گام ۷.۱ داده‌ی بی‌استفاده می‌شد. خوندن multipart برای هر دو route یکیه (`withUpload` در `httpserver/media/UploadForm.kt`) | یه پردازش، یه خوندن |
+| 32 | مرز پنجره‌ی ساعتی (تازه، گام ۷.۱) | آپلودِ **دقیقاً** یه ساعت پیش دیگه شمرده نمی‌شه (`uploadedOn > now − 1h`)، پس `Retry-After` درست همون لحظه‌ای تموم می‌شه که آپلود بعدی پذیرفته می‌شه | با `≥`، کلاینتی که دقیقاً `Retry-After` صبر کرد باز `429` می‌گرفت |
+| 33 | ایندکس ِ شمارش (تازه، گام ۷.۱) | `media_uploader_idx ("uploadedBy", "uploadedOn")` در `V32` (گام ۷.۲) ساخته می‌شه، نه یه migration ِ جدا برای ۷.۱؛ تا اون موقع شمارش روی `media_tbl` بدون ایندکسه (چند هزار ردیف) | یه migration برای فاز، بخش ۲۱ |
+| 34 | ورودی‌های `canReturn` (تازه، گام ۷.۲) | `OrderActionFacts` برخلاف متن ۱۲.۴ `returnableUntil` نداشت؛ حالا `returnableUntil` و `returnSettled` داره. `hasReturnableLine` جدا لازم نیست: `returnableUntil` فقط وقتی پره که موقع تحویل یه ردیف قابل مرجوعی بوده (`markDelivered`)، و بعد از تحویل ردیف‌ها عوض نمی‌شن | لیست «سفارش‌های من» فقط read model رو می‌خونه؛ `orderqm_tbl` هر دو ستون رو داره |
+| 35 | ترتیب خطاهای درخواست (تازه، گام ۷.۲) | `ReturnDomainService.open` به ترتیب «ترتیب قانون‌ها» ِ کانترکت (گام ۷.۰): مدیا (`400 MEDIA_NOT_FOUND`) ← وضعیت سفارش (`422 ORDER_NOT_RETURNABLE`، `RETURN_WINDOW_EXPIRED`، با `Order.returnRefusal`) ← قلم‌ها (`ReturnPolicy.itemProblems`، همون قانونی که `Order.requestReturn` نگه می‌داره)، مدرک و توضیح با هم. هر قدم همه‌ی خطاهای خودش رو با هم می‌ده؛ `Order.requestReturn` همه‌ی خطاهای قلم رو با هم برمی‌گردونه (`ItemsInvalid`) | کانترکت همین ترتیب رو نوشته؛ هیچ پاسخی قبل از چک مالکیت مدیا چیزی درباره‌ی سفارش نمی‌گه |
+| 36 | ردیف‌های تایم‌لاین (تازه، گام ۷.۲) | پنج `OrderTimelineKind` ِ تازه: `RETURN_REQUESTED`، `RETURN_RECEIVED`، `RETURN_REJECTED`، `RETURN_CLOSED`، `RETURN_REFUNDED`. برچسبشون در `OrderTexts.timelineLabel` (همون `when` ِ کامل ِ تایم‌لاین)، نه `ReturnTexts` | یه `when` ِ کامل برای همه‌ی ردیف‌های تایم‌لاین؛ استرداد ِ مرجوعی ردیف `REFUNDED` ِ خودش رو با مبلغ هم داره |
+| 37 | `meta.allowed` ِ مرجوعی (تازه، گام ۷.۲) | `ReturnRequest.InvalidTransition` ِ Aggregate `allowed` رو انگار هیچ استردادی باز نیست می‌گه (Aggregate استردادهاش رو نمی‌بینه)؛ `close` اول `RETURN_REFUND_OPEN` رو چک می‌کنه. `allowedTransitions` ِ پاسخ پنل با استرداد واقعی حساب می‌شه | تنها حالت فرق `RECEIVED` با استرداد بازه، که همون `RETURN_REFUND_OPEN` جوابشه |
+| 38 | `by` ِ جمع‌آوری و بستن (تازه، گام ۷.۲) | `schedulePickup(pickup)` و `close(reason, hasOpenRefund, now)` `by` نمی‌گیرن: جدول ستون `pickedBy`/`closedBy` نداره و انجام‌دهنده در لاگ تغییراته | پارامتر بی‌استفاده هشدار کامپایلره |
+| 39 | دیوار ِ `openReturnId` (تازه، گام ۷.۲) | `orderqm_open_return_check`: `openReturnId` پره دقیقاً وقتی سفارش `RETURN_REQUESTED` یا `RETURNED` ـه. کد عمومی ِ `TextInvalid` در `common` (کنار `TextTooLong`) | هر قانون یه `CHECK` ِ هم‌معنی |
+| 40 | پاسخ ِ درخواست (تازه، گام ۷.۳) | `CreateReturnUc` فقط `ReturnId` برمی‌گردونه و route بدنه رو با Query ِ تازه‌ی `GetMyReturnUc` می‌خونه (قانون ۶ ِ ۴.۵)؛ مرجوعی ِ کس دیگه یا ناموجود ← `RETURN_NOT_FOUND` | Command شناسه برمی‌گردونه |
+| 41 | ساختن ِ `ReturnRequest` (تازه، گام ۷.۳) | سرویس مشترک `ReturnRequests` (`ofOrder` برای صفحه‌ی سفارش و پنل، `of` برای لیست): اسم و رنگ از ردیف ِ سفارش، مدیا، تازه‌ترین استرداد. برای «مرجوعی‌های من» بدون N+1: `OrderQmRepository.findByIds` و `RefundRepository.findAllOfReturns`. `pickup.carrierName` از تنظیمات ِ الان | قانون ۱۵: یه ساختن برای سه جا |
+| 42 | برچسب دلیل (تازه، گام ۷.۳) | `ReturnTexts.reasonLabel` ساخته نشد: کانترکت `reasonLabel` نداره و برچسب دلیل‌ها کار فرانت‌ـه. `ReturnTexts` برچسب ۷ وضعیت و دو متن پیش‌فرض دستورالعمل رو داره | کد بی‌مصرف نه |
+| 43 | مدیای پاک‌شده وسط درخواست (تازه، گام ۷.۳) | اگه `markAttached` کمتر از تعداد خواسته‌شده رو علامت بزنه (پاک‌کن ِ ۴۸ ساعته وسط کار) ← کل تراکنش برمی‌گرده و `400 MEDIA_NOT_FOUND` روی `mediaIds` | مثل اینکه از اول نبوده |
+| 44 | پاسخ ِ قدم‌های پنل (تازه، گام ۷.۴) | `DecideReturnUc` و `ScheduleReturnPickupUc` (و ۷.۵) `Unit` برمی‌گردونن و route بدنه رو با Query ِ تازه‌ی `GetAdminReturnUc` می‌خونه؛ شناسه‌ی بدشکل یا ناموجود ← `404 RETURN_NOT_FOUND` | قانون ۶ ِ ۴.۵ |
+| 45 | جمع‌آوری ِ تکراری (تازه، گام ۷.۴) | همون جمع‌آوری (بعد از نرمال شدن کد رهگیری) دوباره ← `200` بدون ذخیره، بدون ردیف لاگ و بدون پیامک. `changes` ِ `RETURN_PICKUP_SCHEDULED` `status` رو هم داره (اولین بار `APPROVED` ← `PICKUP_SCHEDULED`) | کاری که چیزی رو عوض نکرد ردیف نمی‌ذاره (۵.۱) |
+| 46 | ترتیب `allowedTransitions` (تازه، گام ۷.۴) | به ترتیب قدم‌ها (ترتیب `ReturnStatus`)، نه الفبا: `[PICKUP_SCHEDULED, RECEIVED, CLOSED]`، `[REFUNDED, CLOSED]` | همون مثال‌های کانترکت و جدول ۱۲.۳ |
+| 47 | ساختن ِ `AdminReturnRequest` (تازه، گام ۷.۴) | سرویس مشترک `AdminReturnRequests` روی `ReturnRequests` (`ordersOf` و `of(returns, orders, settings)` ِ تازه): حساب‌ها، استردادهای سفارش‌ها (`RefundRepository.findAllOfOrders`) و فقط برای `RECEIVED` ها پرداخت‌ها (`PaymentRepository.findAttemptsOfOrders`)، هر کدوم یه خوندن برای کل صفحه. `suggestedRefund` همین‌جا ساخته شد (تستش با ۷.۵). `customer.phone` ِ حساب ِ نبوده ← موبایل گیرنده‌ی سفارش (مثل `AdminOrder`) | بدون N+1؛ یه ساختن برای صف و هر قدم |
+| 48 | ترتیب قفل ِ استرداد ِ مرجوعی (تازه، گام ۷.۵) | ثبت: ۹ ← ۱۰ ← ردیف‌های استرداد (`lockAllOf`)؛ پیگیری (`PATCH`): ۹ ← ردیف استرداد ← ۱۰. هر دو اول ۹ رو می‌گیرن، پس بن‌بست نمی‌سازن | قفل ۹ هر کار روی پول یه سفارش رو پشت هم می‌ذاره |
+| 49 | `returnId` ِ بدشکل و ناموجود (تازه، گام ۷.۵) | `returnId ≤ 0` خطای شکله (با بقیه‌ی خطاها، `400 RETURN_NOT_FOUND`)؛ ناموجود یا مال سفارش دیگه در تراکنش، بعد از پیدا شدن سفارش، همون `400 RETURN_NOT_FOUND` روی `returnId` | قانون «شکل قبل از تراکنش» |
+| 50 | قلم تکراری در رسید (تازه، گام ۷.۵) | `RECEIPT_ITEMS_MISMATCH` (کانترکت: «کم، اضافه یا تکراری»)، نه `LIST_ITEM_DUPLICATE` | کانترکت |
+| 51 | `changes` ِ `RETURN_RECEIVED` (تازه، گام ۷.۵) | `status` و `items` (لیست JSON ِ `{orderItemId, receivedQuantity, restockQuantity}` به ترتیب قلم)؛ یادداشت بازبینی نه | «تعداد رسیده و برگشتی به ازای هر قلم»؛ یادداشت داخلیه |
+| 52 | دیوار دامنه‌ی استرداد (تازه، گام ۷.۵) | `Refund` `require((source == RETURN) == (returnId != null))`، هم‌معنی ِ `refund_return_source_check` ِ V32 | هر قانون یه `CHECK` و یه `require` |
 
 ### ۱۲.۳ ماشین وضعیت مرجوعی
 
@@ -3257,15 +3662,20 @@ Route: 200
 | 13 | `ErrorCode` | `ITEM_NOT_RETURNABLE`، `DUPLICATE_ITEM`، `RETURN_QUANTITY_EXCEEDS`، `EVIDENCE_REQUIRED`، `DESCRIPTION_REQUIRED`، `REJECTION_REASON_REQUIRED`، `PICKUP_TIME_INVALID`، `RECEIPT_ITEMS_MISMATCH`، `RECEIVED_QUANTITY_EXCEEDS`، `RESTOCK_EXCEEDS_RECEIVED`، `RETURN_REFUND_EXISTS`، `RETURN_REFUND_OPEN` (و `RETURN_NOT_FOUND` اگه فاز ۲ اضافه نکرده) | — |
 | 14 | بخش ۴ ِ کانترکت (مرجوعی) | جدول نگاشت وضعیت مرجوعی به وضعیت سفارش؛ «بستن خودکار نداریم» | تصمیم‌های ۱۴، ۱۹ |
 | 15 | بخش ۵ (پیامک‌ها) | چهار پیامک ۱۲.۹ | — |
+| 16 | `ErrorCode` (تازه، گام ۷.۰؛ جایگزین ردیف ۱۳) | فقط `RETURN_NOT_FOUND`، `RETURN_REFUND_EXISTS`، `RETURN_REFUND_OPEN`؛ کدهای فیلدی در توضیح هر endpoint و فیلد | تصمیم‌های ۲۵ و ۲۶ |
+| 17 | `ReturnRequest`، `AdminReturnRequest` (تازه، گام ۷.۰) | `required`؛ `code` با الگو؛ `refund` = تازه‌ترین استرداد؛ `instructions` در `REQUESTED`/`REJECTED` `null` | تصمیم‌های ۲۸ و ۳۰ |
+| 18 | `POST /me/uploads` (تازه، گام ۷.۰) | سقف‌های مشتری با `VIDEO_TOO_LONG`، `MEDIA_PURPOSE_INVALID`، `429` با هدر `RetryAfter` ِ مشترک | تصمیم‌های ۲۳ و ۲۹ |
 
 ### ۱۲.۱۱ گام‌ها
 
-#### گام ۷.۰: کانترکت 1.13.0 · S ⬜
+#### گام ۷.۰: کانترکت 1.13.0 · S ✅
 
 **می‌سازی:** برنچ `returns`؛ ردیف‌های ۱۲.۱۰؛ متن فارسی همه‌ی کدهای تازه در `ErrorMessages.kt`.
 
 **تموم شده یعنی:**
-- [ ] کانترکت معتبر، `ErrorMessagesTest` و `RouteGuardsTest` سبز (`x-roles` ِ پنج route ِ مرجوعی دست نخورده: `[ADMIN, OPERATOR]`).
+- [x] کانترکت معتبر، `ErrorMessagesTest` و `RouteGuardsTest` سبز (`x-roles` ِ پنج route ِ مرجوعی دست نخورده: `[ADMIN, OPERATOR]`).
+
+**یادداشت پیاده‌سازی:** برنچ `returns` از نوک فاز ۶ (`launch`) ساخته شد، چون فازهای قبل هنوز منتظر merge به `main` ـن. شش تصمیم تازه (۲۵ تا ۳۰ ِ ۱۲.۲) و سه ردیف تازه‌ی ۱۲.۱۰ (۱۶ تا ۱۸؛ ۱۶ جای ردیف ۱۳ رو می‌گیره). جدول مرجوعی ↔ سفارش و «بستن خودکار نداریم» در بخش ۴ ِ کانترکت، قانون ۷ روز و چهار دلیل «تقصیر کیوا» در بخش ۳، چهار پیامک در بخش ۵؛ `iban` از هر دو شِما رفت؛ `sort` ِ صف؛ `suggestedRefund`. YAML با snakeyaml معتبره و هر ۱۳۳۱ `$ref` پیدا می‌شن. متن ۱۶ کد تازه (و `ORDER_NOT_RETURNABLE` که حالا «قبلاً مرجوعی داره» رو هم می‌گه).
 
 ---
 
@@ -3280,15 +3690,17 @@ Route: 200
 - چرا همون `UploadMediaUc`؟ پردازش، پاک کردن metadata و قانون نوع باید **دقیقاً** یکی باشن؛ آپلود مشتری خطرناک‌تر از پنله، نه کمتر.
 
 **تموم شده یعنی:**
-- [ ] عکس ۷ مگ ← `201`؛ ۹ مگ ← `413`؛ ویدیو ۴۰ مگ و ۵۰ ثانیه ← `201`؛ ۷۰ ثانیه ← `400`.
-- [ ] purpose = `PRODUCT` از مشتری ← `400`؛ بدون توکن ← `401`.
-- [ ] بیست و یکمین آپلود در یه ساعت ← `429` با `Retry-After`.
-- [ ] GPS ِ یه عکس آزمایشی تو خروجی نیست (تست با ابزار واقعی، `assumeTrue`).
-- [ ] آپلود ِ وصل‌نشده بعد از ۴۸ ساعت با job پاک می‌شه (همون تست فاز ۱ با purpose ِ مشتری).
+- [x] عکس ۷ مگ ← `201`؛ ۹ مگ ← `413`؛ ویدیو ۴۰ مگ و ۵۰ ثانیه ← `201`؛ ۷۰ ثانیه ← `400`.
+- [x] purpose = `PRODUCT` از مشتری ← `400`؛ بدون توکن ← `401`.
+- [x] بیست و یکمین آپلود در یه ساعت ← `429` با `Retry-After`.
+- [x] GPS ِ یه عکس آزمایشی تو خروجی نیست (تست با ابزار واقعی، `assumeTrue`).
+- [x] آپلود ِ وصل‌نشده بعد از ۴۸ ساعت با job پاک می‌شه (همون تست فاز ۱ با purpose ِ مشتری).
+
+**یادداشت پیاده‌سازی:** سه تصمیم تازه (۳۱ تا ۳۳). `UploadMediaUc` با `MediaUploader`؛ purpose ِ مشتری با `MediaPurpose.makeNewForCustomer`؛ سقف در `MediaLimitsPolicy.customerUploadRefusal` (قدیمی‌ترین آپلودی که باید از پنجره بره، حداقل ۱ ثانیه)؛ `MediaRepository.uploadTimesOf` و `lockUploadsOf` (advisory ِ `media-uploads:{userId}`)؛ شمارش اول قبل از libvips، شمارش دوم زیر قفل در تراکنش insert (رد ← پوشه پاک). `withUpload` خوندن جریانی ِ مشترک دو route. `WebV1MyUploadsOnDatabaseTest` (۹ تست؛ تست ابزار واقعی اینجا skip). خرابکاری: بدون `lockUploadsOf` ← «۲۵ آپلود همزمان ← دقیقاً ۲۰ ردیف» قرمز (۱۶ به‌جای ۱۵) و دو تست `UploadMediaUcTest` قرمز. تست همزمانی HTTP ِ اول این رو نمی‌گرفت (کلاینت تست درخواست‌ها رو پشت هم می‌فرسته)، پس با ۲۵ thread و یه `CyclicBarrier` بعد از پردازش نوشته شد.
 
 ---
 
-#### گام ۷.۲: دامنه‌ی مرجوعی، رویدادهای سفارش و جدول · L ⬜
+#### گام ۷.۲: دامنه‌ی مرجوعی، رویدادهای سفارش و جدول · L ✅
 
 **می‌سازی:** همه‌ی ۱۲.۴: Aggregate و VOها و سیاست‌ها و `ReturnDomainService`؛ سه رویداد سفارش با payload، شاخه‌های serializer، نمونه‌ها و JSON ِ طلایی؛ `Order.requestReturn`/`receiveReturn`/`endReturn`؛ `canReturn`؛ `InventoryDomainService.restockForReturn`؛ `V32__returns.sql`؛ `ReturnRequestRepositoryImpl`، `ReturnIdGeneratorImpl`؛ Projector سفارش برای سه رویداد.
 
@@ -3300,46 +3712,52 @@ Route: 200
 - چرا `returnSettled` و نه شمردن مرجوعی‌ها موقع خوندن؟ `canReturn` در لیست «سفارش‌های من» حساب می‌شه، و لیست فقط read model ِ سفارش رو می‌خونه (قانون `OrderActionsPolicy`).
 
 **تموم شده یعنی:**
-- [ ] تست واحد هر انتقال مجاز و غیرمجاز مرجوعی (۷ × ۷)، و `allowedTransitions` برای هر وضعیت با و بدون استرداد باز.
-- [ ] `requestReturn`: قبل از تحویل، بعد از مهلت (مرز دقیق `returnableUntil`)، ردیف غیرقابل مرجوعی، تعداد بیشتر، قلم تکراری، `returnSettled`.
-- [ ] `ReturnRefundPolicy` تست طلایی با کد تخفیف درصدی و سقفی: سه ردیف، مرجوعی دو تاش، یکی نیمه.
-- [ ] JSON ِ طلایی هر سه رویداد؛ replay ِ سفارش مرجوعی‌شده همون وضعیت.
-- [ ] migration روی دیتابیس با داده‌ی فاز ۲ (استرداد لغو و دستی) بدون خطا؛ هر `CHECK` با یه insert ِ غلط رد می‌شه.
+- [x] تست واحد هر انتقال مجاز و غیرمجاز مرجوعی (۷ × ۷)، و `allowedTransitions` برای هر وضعیت با و بدون استرداد باز.
+- [x] `requestReturn`: قبل از تحویل، بعد از مهلت (مرز دقیق `returnableUntil`)، ردیف غیرقابل مرجوعی، تعداد بیشتر، قلم تکراری، `returnSettled`.
+- [x] `ReturnRefundPolicy` تست طلایی با کد تخفیف درصدی و سقفی: سه ردیف، مرجوعی دو تاش، یکی نیمه.
+- [x] JSON ِ طلایی هر سه رویداد؛ replay ِ سفارش مرجوعی‌شده همون وضعیت.
+- [x] migration روی دیتابیس با داده‌ی فاز ۲ (استرداد لغو و دستی) بدون خطا؛ هر `CHECK` با یه insert ِ غلط رد می‌شه.
+
+**یادداشت پیاده‌سازی:** شش تصمیم تازه (۳۴ تا ۳۹). Aggregate ِ `ReturnRequest` با `ReturnTransitionPolicy`، `ReturnPolicy` (قانون قلم‌ها، مدرک، توضیح، بازه‌ی جمع‌آوری)، `ReturnRefundPolicy`؛ VOها در `ReturnId.kt` (با `ReturnCode.forId`)، `ReturnValues.kt` (چهار enum با `ReturnOutcome`)، `ReturnText.kt` (`makeNew` و `makeReason`)، `ReturnParts.kt` (`ReturnItem`، `ReturnPickup`، `ReceiptLine`، `ReturnReceipt`). `Order.returnRefusal`/`requestReturn`/`receiveReturn`/`endReturn` با `openReturnId` و `returnSettled`؛ سه رویداد با payload و JSON ِ طلایی؛ `canReturn`. `InventoryDomainService.restockForReturn` (یه رنگ روی دو ردیف یه بار، به ترتیب قفل). `V32` ِ کامل با اسم قیدها و `orderqm_open_return_check`؛ `ReturnRequestRepositoryImpl` (بدون `page`: اون با صف پنل در ۷.۴ میاد)، `ReturnIdGeneratorImpl`، Projector. خرابکاری: بدون `returnrequest_one_per_order_idx` ← «a second return of an order that isn't REJECTED is refused…» قرمز؛ بدون چک `returnSettled` در `returnRefusal` ← «after a return was closed or refunded it is never returned again…» قرمز.
 
 ---
 
-#### گام ۷.۳: درخواست مرجوعی و «مرجوعی‌های من» · M ⬜
+#### گام ۷.۳: درخواست مرجوعی و «مرجوعی‌های من» · M ✅
 
 **می‌سازی:** `CreateReturnUc`، `ListMyReturnsUc`؛ `webV1MyReturns.kt`؛ `ReturnRequestHttpResponse`، `ReturnTexts`؛ `returns` و `canReturn` در `GetMyOrderUc`، `ListMyOrdersUc` و `GetAdminOrderUc`.
 
 وابسته به: ۷.۱، ۷.۲
 
 **تموم شده یعنی:**
-- [ ] سفارش تحویل‌شده، یه قلم `NOT_AS_PICTURED` با یه عکس ← `201`، `code = RT-…`، `shippingPaidBy = KIVA`؛ سفارش `RETURN_REQUESTED`؛ مدیا `attachedOn` گرفت.
-- [ ] همون بدون عکس ← `400 EVIDENCE_REQUIRED`؛ `OTHER` بدون توضیح ← `400 DESCRIPTION_REQUIRED`؛ `CHANGED_MIND` بدون عکس ← `201` با `CUSTOMER`.
-- [ ] عکس کاربر دیگه ← `400 MEDIA_NOT_FOUND` (همون پاسخ مدیای ناموجود)؛ سفارش کاربر دیگه ← `404`.
-- [ ] درخواست دوم ← `422 ORDER_NOT_RETURNABLE`؛ دو درخواست همزمان ۲۰ بار ← همیشه یه مرجوعی.
-- [ ] روز هشتم ← `422 RETURN_WINDOW_EXPIRED` با `returnableUntil`.
-- [ ] `canReturn` در لیست و جزئیات قبل، حین و بعد از مرجوعی درسته؛ `GET /me/returns` آرایه‌ی ساده.
+- [x] سفارش تحویل‌شده، یه قلم `NOT_AS_PICTURED` با یه عکس ← `201`، `code = RT-…`، `shippingPaidBy = KIVA`؛ سفارش `RETURN_REQUESTED`؛ مدیا `attachedOn` گرفت.
+- [x] همون بدون عکس ← `400 EVIDENCE_REQUIRED`؛ `OTHER` بدون توضیح ← `400 DESCRIPTION_REQUIRED`؛ `CHANGED_MIND` بدون عکس ← `201` با `CUSTOMER`.
+- [x] عکس کاربر دیگه ← `400 MEDIA_NOT_FOUND` (همون پاسخ مدیای ناموجود)؛ سفارش کاربر دیگه ← `404`.
+- [x] درخواست دوم ← `422 ORDER_NOT_RETURNABLE`؛ دو درخواست همزمان ۲۰ بار ← همیشه یه مرجوعی.
+- [x] روز هشتم ← `422 RETURN_WINDOW_EXPIRED` با `returnableUntil`.
+- [x] `canReturn` در لیست و جزئیات قبل، حین و بعد از مرجوعی درسته؛ `GET /me/returns` آرایه‌ی ساده.
+
+**یادداشت پیاده‌سازی:** چهار تصمیم تازه (۴۰ تا ۴۳). `CreateReturnUc` (شکل با همه‌ی خطاها با هم، `iban` ِ کلاینت قدیمی نادیده)، `ListMyReturnsUc`، `GetMyReturnUc`، `ReturnRequests`؛ `ReturnRequestDto` و `OrderDetailDto.returns`؛ `webV1MyReturns.kt`، `ReturnRequestHttpResponse`، `ReturnTexts`؛ `returns` ِ صفحه‌ی سفارش (مشتری و پنل) حالا `ReturnRequest` ِ واقعی. «بعد از مرجوعی» ِ `canReturn` (رد و بستن) با endpointهای ۷.۴ و ۷.۵ در route تست می‌شه؛ در دامنه و Projector از ۷.۲ تست شده. `WebV1MyReturnsOnDatabaseTest` (۱۰ تست، همه با شِمای کانترکت). تست همزمانی هر سفارش رو درست بعد از تحویلش می‌فرسته (ساعت تست با هر تحویل دو روز جلو می‌ره). خرابکاری: بدون `lockOrder` در `CreateReturnUc` ← «two returns of one order asked at the same moment, 20 times…» قرمز (دومی به‌جای `422` با رقابت stream می‌خوره)؛ بدون چک `uploadedBy` ← «someone else's photo is the same MEDIA_NOT_FOUND…» و تست دامنه‌اش قرمز.
 
 ---
 
-#### گام ۷.۴: صف پنل، تصمیم و جمع‌آوری · M ⬜
+#### گام ۷.۴: صف پنل، تصمیم و جمع‌آوری · M ✅
 
 **می‌سازی:** `ReturnByIdForPanel`؛ `FindAdminReturnsUc`، `DecideReturnUc`، `ScheduleReturnPickupUc`؛ `webV1AdminReturns.kt` (سه route)؛ `AdminReturnRequestHttpResponse`؛ پیامک‌های تأیید، رد و جمع‌آوری (مسیر ۹ مرحله‌ای بخش ۲۴)؛ لاگ تغییرات.
 
 وابسته به: ۷.۳
 
 **تموم شده یعنی:**
-- [ ] تأیید ← `APPROVED`، پیامک، لاگ؛ رد بدون دلیل ← `400`؛ رد ← `REJECTED`، سفارش `DELIVERED`، `canReturn` دوباره `true` (اگه مهلت مونده).
-- [ ] تصمیم دوباره ← `422`.
-- [ ] جمع‌آوری از `REQUESTED` ← `422`؛ از `APPROVED` ← `PICKUP_SCHEDULED`؛ دوباره ← فیلدها جایگزین؛ `COURIER` ← `400`؛ زمان ۴۰ روز بعد ← `400`.
-- [ ] `CUSTOMER` ← `403` روی هر سه؛ `CATALOG_MANAGER` ← `403`.
-- [ ] `GET /admin/returns?status=APPROVED&sort=oldest` ترتیب درست؛ `status=FOO` ← `400`.
+- [x] تأیید ← `APPROVED`، پیامک، لاگ؛ رد بدون دلیل ← `400`؛ رد ← `REJECTED`، سفارش `DELIVERED`، `canReturn` دوباره `true` (اگه مهلت مونده).
+- [x] تصمیم دوباره ← `422`.
+- [x] جمع‌آوری از `REQUESTED` ← `422`؛ از `APPROVED` ← `PICKUP_SCHEDULED`؛ دوباره ← فیلدها جایگزین؛ `COURIER` ← `400`؛ زمان ۴۰ روز بعد ← `400`.
+- [x] `CUSTOMER` ← `403` روی هر سه؛ `CATALOG_MANAGER` ← `403`.
+- [x] `GET /admin/returns?status=APPROVED&sort=oldest` ترتیب درست؛ `status=FOO` ← `400`.
+
+**یادداشت پیاده‌سازی:** چهار تصمیم تازه (۴۴ تا ۴۷). `ReturnByIdForPanel` (بی‌قفل ← ۹ ← ۱۰ ← سفارش)، `AdminReturnRequests`، `FindAdminReturnsUc` (با `ReturnRequestRepository.page` و `ReturnSorts`)، `GetAdminReturnUc`، `DecideReturnUc` (رد ← `OrderReturnEnded(REJECTED)`)، `ScheduleReturnPickupUc`؛ `ReturnNotices` و چهار پیامک ِ ۱۲.۹ با مسیر کامل ۹ مرحله‌ای (پیامک بستن هم الان، چون مسیرش یکیه)؛ چهار `AuditAction` ِ مرجوعی با جمله‌شون؛ `webV1AdminReturns.kt`، `AdminReturnRequestHttpResponse`. تست: `WebV1AdminReturnsOnDatabaseTest` (۱۰ تست، هر پاسخ با شِمای کانترکت)، و `AskedReturns` (کمک‌تست ِ مشترک ِ ۷.۴ تا ۷.۶). خرابکاری: بدون `order.endReturn` در رد ← «turned down without a reason is 400 - with one REJECTED, the order DELIVERED again…» قرمز. تست‌ها روی یه Postgres ِ موقت (پورت ۵۴۳۳) اجرا شدن، چون سرویس Postgres ِ این ماشین رمز `kiva` رو قبول نمی‌کنه (`KIVA_TEST_DB_URL`).
 
 ---
 
-#### گام ۷.۵: رسیدن به انبار، بستن، و استرداد ِ مرجوعی · L ⬜
+#### گام ۷.۵: رسیدن به انبار، بستن، و استرداد ِ مرجوعی · L ✅
 
 **می‌سازی:** `ReceiveReturnUc`، `CloseReturnUc`؛ گسترش `CreateRefundUc` و `UpdateRefundUc` (قانون‌های ۱۵ و ۱۷)؛ `suggestedRefund` در پاسخ؛ پیامک بستن؛ دو route ِ دیگه.
 
@@ -3350,27 +3768,31 @@ Route: 200
 - چرا `RETURN_REFUND_OPEN` موقع بستن؟ بستن یعنی «بدون استرداد»؛ اگه استرداد در جریانه و بعد کامل بشه، مرجوعی ِ بسته‌شده نمی‌تونه `REFUNDED` بشه و پول بی‌صاحب می‌مونه.
 
 **تموم شده یعنی:**
-- [ ] رسید با دو قلم (یکی سالم، یکی خراب) ← `RECEIVED`، سفارش `RETURNED`، موجودی رنگ سالم +۱ با دلیل `RETURNED` در `GET /admin/inventory/adjustments` با `note` = کد مرجوعی و `createdBy` = اپراتور؛ رنگ خراب بی‌تغییر.
-- [ ] رسید بدون یکی از قلم‌ها ← `400 RECEIPT_ITEMS_MISMATCH`؛ `restock > received` ← `400`.
-- [ ] `OPERATOR` رسید ثبت می‌کنه (با اینکه تنظیم موجودی دستی براش ممنوعه).
-- [ ] `suggestedRefund` با کد تخفیف همون عدد تست طلایی ۷.۲.
-- [ ] استرداد با `returnId` ِ سفارش دیگه ← `400`؛ قبل از `RECEIVED` ← `422`؛ دومی ← `422 RETURN_REFUND_EXISTS`؛ بعد از `FAILED` ِ اولی ← دومی `201`.
-- [ ] `COMPLETED` ← مرجوعی `REFUNDED`، سفارش `REFUNDED`، `totals.refunded`، پیامک.
-- [ ] بستن با استرداد باز ← `422 RETURN_REFUND_OPEN`؛ بستن از `RECEIVED` ← `CLOSED`، سفارش `DELIVERED`، `canReturn = false` (حتی با مهلت باز).
-- [ ] رسید همزمان دو اپراتور ← یکی `200`، یکی `422`؛ موجودی فقط یه بار بالا رفته.
+- [x] رسید با دو قلم (یکی سالم، یکی خراب) ← `RECEIVED`، سفارش `RETURNED`، موجودی رنگ سالم +۱ با دلیل `RETURNED` در `GET /admin/inventory/adjustments` با `note` = کد مرجوعی و `createdBy` = اپراتور؛ رنگ خراب بی‌تغییر.
+- [x] رسید بدون یکی از قلم‌ها ← `400 RECEIPT_ITEMS_MISMATCH`؛ `restock > received` ← `400`.
+- [x] `OPERATOR` رسید ثبت می‌کنه (با اینکه تنظیم موجودی دستی براش ممنوعه).
+- [x] `suggestedRefund` با کد تخفیف همون عدد تست طلایی ۷.۲.
+- [x] استرداد با `returnId` ِ سفارش دیگه ← `400`؛ قبل از `RECEIVED` ← `422`؛ دومی ← `422 RETURN_REFUND_EXISTS`؛ بعد از `FAILED` ِ اولی ← دومی `201`.
+- [x] `COMPLETED` ← مرجوعی `REFUNDED`، سفارش `REFUNDED`، `totals.refunded`، پیامک.
+- [x] بستن با استرداد باز ← `422 RETURN_REFUND_OPEN`؛ بستن از `RECEIVED` ← `CLOSED`، سفارش `DELIVERED`، `canReturn = false` (حتی با مهلت باز).
+- [x] رسید همزمان دو اپراتور ← یکی `200`، یکی `422`؛ موجودی فقط یه بار بالا رفته.
+
+**یادداشت پیاده‌سازی:** پنج تصمیم تازه (۴۸ تا ۵۲). `ReceiveReturnUc` (تا ۳ بار با `ConcurrentChangeException`، `restockForReturn` به ترتیب قفل ۷، `OrderReturnReceived`)، `CloseReturnUc` (`RETURN_REFUND_OPEN` اول، بعد انتقال؛ `OrderReturnEnded(CLOSED)`)، `CreateRefundUc` با `returnId` (قفل ۱۰، `RECEIVED`، `RETURN_REFUND_EXISTS`، روش ِ مرجوعی، `source = RETURN`)، `UpdateRefundUc` (`COMPLETED` ← `markRefunded` و `OrderReturnEnded(REFUNDED)` کنار `OrderRefunded` در یه `save`)؛ `Refund.start`/`RefundDomainService.open` با `returnId`؛ دو route ِ دیگه. `suggestedRefund` از ۷.۴ (`AdminReturnRequests`). تست: `WebV1AdminReturnReceiptOnDatabaseTest` (۹ تست، با رسید همزمان ِ دو اپراتور ۱۰ بار)، تست `WebV1AdminRefundsOnDatabaseTest` برای قانون تازه‌ی `returnId` به‌روز شد، `RefundTest` (مرجوعی ⇔ `returnId`). تست‌های لاگ تغییرات حالا `entityType` رو هم فیلتر می‌کنن (شناسه‌ی استرداد و مرجوعی با هم برخورد می‌کردن). خرابکاری: بدون چک `RETURN_REFUND_EXISTS` ← «a return's refund - … a second one 422 RETURN_REFUND_EXISTS…» قرمز (ایندکس یکتا ۵۰۰ می‌داد، نه ۴۲۲).
 
 ---
 
-#### گام ۷.۶: ریویو و دور با پنل · M ⬜
+#### گام ۷.۶: ریویو و دور با پنل · M ✅
 
 **می‌سازی:** `RETURNS_REVIEW.md` (ردیف ۳ ِ بخش ۳ برای آپلود مشتری، و خطرهای این فاز: مدیای کاربر دیگه، دو مرجوعی، استرداد دوباره، موجودی دوباره؛ خرابکاری: چک `uploadedBy`، ایندکس یکتای «یک مرجوعی»، چک `RETURN_REFUND_EXISTS` و ایندکسش، چک مهلت، سقف ساعتی آپلود)؛ `ReturnsLogScanOnDatabaseTest` (کل مسیر؛ هیچ موبایل، متن توضیح مشتری یا شماره‌ی پیگیری بانکی تو لاگ برنامه)؛ `docs/FRONTEND_RETURNS.md` (kiva-fe: آپلود، فرم مرجوعی، «مرجوعی‌های من»؛ پنل: صف و قدم‌ها و مبلغ پیشنهادی)؛ README (چهار الگوی پیامک)؛ دور واقعی روی سرور: یه مرجوعی کامل تا استرداد، و یکی تا بستن.
 
 وابسته به: ۷.۵
 
 **تموم شده یعنی:**
-- [ ] همه‌ی خرابکاری‌ها قرمز می‌کنن و برگردونده می‌شن.
+- [x] همه‌ی خرابکاری‌ها قرمز می‌کنن و برگردونده می‌شن.
 - [ ] الگوهای پیامک در فراز تأیید و `kiva.env` به‌روز (چک‌لیست ۶.۶).
 - [ ] merge به `main` و deploy.
+
+**یادداشت پیاده‌سازی:** `RETURNS_REVIEW.md` (ردیف‌های ۱، ۳، ۶، ۹ و ۱۵ و خطرهای این فاز با تست‌هاشون؛ نه خرابکاری، همه قرمز)، `ReturnsLogScanOnDatabaseTest` (کل مسیر سه مرجوعی: استرداد، رد، بستن؛ و تست همراه)، `docs/FRONTEND_RETURNS.md`. README و چهار الگوی پیامک با ۷.۴ اومدن. کل مجموعه: ۲۸۵۴ تست سبز، ۵ skip. **مونده برای تو:** الگوهای فراز و `kiva.env`، دور واقعی روی سرور (چک‌لیست آخر `RETURNS_REVIEW.md`)، merge به `main` و deploy.
 
 ---
 
@@ -3387,13 +3809,13 @@ Route: 200
 
 | گام | عنوان | اندازه | وضعیت |
 |---|---|---|---|
-| ۸.۰ | کانترکت 1.14.0 | S | ⬜ |
-| ۸.۱ | دامنه‌ی نظر، جدول‌ها و امتیاز محصول | L | ⬜ |
-| ۸.۲ | ثبت، ویرایش و حذف نظر؛ «نظرهای من» و «منتظر نظر تو» | L | ⬜ |
-| ۸.۳ | لیست عمومی، خلاصه‌ی امتیاز و رأی «مفید بود» | M | ⬜ |
-| ۸.۴ | امتیاز روی کارت، صفحه و مرتب‌سازی محصول؛ «نظر بده» در سفارش‌ها | M | ⬜ |
-| ۸.۵ | صف پنل، تأیید و رد، «پاسخ کیوا» | M | ⬜ |
-| ۸.۶ | ریویو و دور با پنل | M | ⬜ |
+| ۸.۰ | کانترکت 1.14.0 | S | ✅ |
+| ۸.۱ | دامنه‌ی نظر، جدول‌ها و امتیاز محصول | L | ✅ |
+| ۸.۲ | ثبت، ویرایش و حذف نظر؛ «نظرهای من» و «منتظر نظر تو» | L | ✅ |
+| ۸.۳ | لیست عمومی، خلاصه‌ی امتیاز و رأی «مفید بود» | M | ✅ |
+| ۸.۴ | امتیاز روی کارت، صفحه و مرتب‌سازی محصول؛ «نظر بده» در سفارش‌ها | M | ✅ |
+| ۸.۵ | صف پنل، تأیید و رد، «پاسخ کیوا» | M | ✅ |
+| ۸.۶ | ریویو و دور با پنل | M | ✅ |
 
 ### ۱۳.۲ تصمیم‌های این فاز
 
@@ -3426,6 +3848,30 @@ Route: 200
 | 25 | صف پنل | فیلترهای کانترکت؛ بدون `status` همه، تازه‌ترین اول؛ `pendingCount` = کل `PENDING`، مستقل از فیلترها. هر ردیف به‌علاوه‌ی `customerId` و `contact` (ردیف ۶) | کانترکت |
 | 26 | محصول غیرفعال | نظرها می‌مونن. لیست و خلاصه‌ی عمومی ِ محصول منتشرنشده ← `404` (مثل صفحه‌ی محصول). پنل همه رو می‌بینه | — |
 | 27 | لاگ تغییرات | `REVIEW_MODERATED` (`status`)، `REVIEW_REPLIED`، `REVIEW_REPLY_DELETED` (بخش ۵.۱). کارهای مشتری ثبت نمی‌شن | قانون لاگ: فقط پنل |
+| 28 | کدها در `ErrorCode` (تازه، گام ۸.۰) | مثل تصمیم ۲۵ ِ فاز ۷ فقط کدهایی که `code` ِ اصلی پاسخ می‌شن: `REVIEW_NOT_FOUND`، `REVIEW_PURCHASE_NOT_DELIVERED`، `OWN_REVIEW_VOTE`. کدهای فیلدی (`ORDER_ITEM_PRODUCT_MISMATCH`، `CONTACT_INVALID`، `REVIEW_MEDIA_DISABLED`، `REPLY_REQUIRES_APPROVAL`، `REJECTION_REASON_REQUIRED`) فقط در `errors[].code` و توضیح همون فیلد | کانترکت: `ErrorCode` کد اصلی ِ پاسخه |
+| 29 | کدهای فیلدی ِ عمومی (تازه، گام ۸.۰) | متن کوتاه‌تر از حداقل ← کد عمومی ِ تازه‌ی `TEXT_TOO_SHORT` (`meta.minLength`)، کنار `TEXT_TOO_LONG` و `TEXT_INVALID`؛ امتیاز بیرون ۱ تا ۵ ← `RATING_INVALID` ِ موجود؛ فیلتر صف ← `REVIEW_STATUS_INVALID`؛ `action` ِ ناشناخته ← `MODERATION_ACTION_INVALID`؛ فقط یکی از `orderCode`/`orderItemId` ← `FIELD_REQUIRED` روی اون یکی | یه کد عمومی با `meta` به‌جای کدهای هم‌معنی |
+| 30 | `required` ِ پاسخ‌ها (تازه، گام ۸.۰) | `Review` (همه‌ی فیلدها)، `ReviewablePurchase`، `MyReviewListResponse.counts`، پاسخ رأی، `AdminReviewListResponse.items` (`customerId`، `contact`) و `RatingSummary.verifiedBuyerPercent` `required` شدن | همه‌ی فیلدها همیشه فرستاده می‌شن (بخش ۱ ِ کانترکت) |
+| 31 | پاسخ‌های خطای ثبت (تازه، گام ۸.۰) | `404` ِ ثبت هر دو کد رو داره (`PRODUCT_NOT_FOUND`، `ORDER_NOT_FOUND`)؛ `429` همون `TooManyRequests` ِ مشترک (با `Retry-After`)؛ `401` به لیست عمومی، و `404`/`422` به رأی و `409` به ویرایش اضافه شدن | کانترکت هر کدی که ممکنه بیاد رو می‌گه |
+| 32 | گرد کردن امتیاز (تازه، گام ۸.۱) | `RatingTally` با `BigDecimal` و `HALF_UP`: میانگین و درصد یه رقم اعشار، سهم خریدارها عدد صحیح. `stars` لیست پنج‌تایی (ستاره‌ی ۱ اول) | تصمیم ۱۶؛ `Double` ِ خام نیم‌ها رو اشتباه گرد می‌کنه |
+| 33 | قدم‌های `ReviewDomainService` (تازه، گام ۸.۱) | به‌جای یه `submit` ِ بزرگ، چهار قدم که UseCase به ترتیب کانترکت صدا می‌زنه: `gate` (محصول، نظر زنده، سقف روزانه با `Retry-After`)، `mediaProblems`، `purchaseLink` (با `PurchaseLine` ِ خوندنی از read model ِ سفارش)، `submit` | ترتیب خطاهای کانترکت (گام ۸.۰) بین قانون‌ها خرید رو بعد از مدیا می‌خواد |
+| 34 | `rating_desc` بدون join (تازه، گام ۸.۱) | دو زیرپرسش ِ همبسته روی `productrating_tbl` (`sum/count` و `count`، هر دو `DESC NULLS LAST`) و بعد `firstPublishedOn`؛ کوئری لیست و `paginate` دست نخورد | ترتیب‌ها ثابت‌های `SortOrders` ان؛ join فقط برای یه ترتیب کل کوئری رو عوض می‌کرد |
+| 35 | `RatingBook` (تازه، گام ۸.۱) | `changed(before, review, now)` (تأیید، رد؛ `Counted` ِ قبل از تغییر) و `deleted(review, now)`؛ هر دو فقط وقتی جای نظر در امتیاز عوض شده ردیف امتیاز رو قفل و ذخیره می‌کنن | یه راه برای عوض شدن امتیاز |
+| 36 | دیوارهای `V33` (تازه، گام ۸.۱) | اسم‌دار: `review_rejected_reason_check`، `review_purchase_check` (سفارش، ردیف و رنگ با هم)، `review_reply_check`، `review_moderated_check`، `productrating_count_check`/`sum_check`/`verified_check`؛ `contact` موبایل یا ایمیل؛ ایندکس `reviewvote_user_idx` برای رأی‌های یه کاربر | هر قانون یه `CHECK` ِ هم‌معنی |
+| 37 | پاسخ ِ ثبت و ویرایش (تازه، گام ۸.۲) | `CreateReviewUc` و `UpdateMyReviewUc` شناسه برمی‌گردونن و route نظر رو با `GetMyReviewUc` می‌خونه | قانون ۶ ِ ۴.۵ |
+| 38 | خریدها برای نظر (تازه، گام ۸.۲) | سرویس مشترک `ReviewPurchases` روی read model ِ سفارش (`findOfCustomer` و `findDeliveredOfCustomer` ِ تازه، به‌جای `deliveredLinesOf`)؛ `orderCode` ِ بدشکل همون `404 ORDER_NOT_FOUND` ِ سفارش ناموجود | یه خوندن برای وصل خرید و «منتظر نظر تو» |
+| 39 | `product` ِ نظر (تازه، گام ۸.۲) | `ProductQmRepository.findBriefs` (هر وضعیتی، با اولین عکس رنگ پیش‌فرض) و `ProductRef` ِ پاسخ با `imageUrl` ِ نسخه‌ی کوچیک؛ هم «نظرات من»، هم «منتظر نظر تو»، هم چک «منتشرشده» ِ ثبت | یه خوندن برای کل صفحه |
+| 40 | ترتیب «نظرات من» (تازه، گام ۸.۲) | فقط `newest` (کانترکت `sort` نداره)؛ `sort` ِ دیگه ← `400 SORT_NOT_ALLOWED` | قانون عمومی صفحه‌بندی |
+| 41 | ویرایش ِ ردشده با نظر زنده‌ی دیگه (تازه، گام ۸.۲) | `409` فقط وقتی ویرایش واقعاً چیزی رو عوض می‌کنه (و نظر رو به صف برمی‌گردونه)؛ `{}` یا همون مقدارها ← `200` بی‌تغییر | تصمیم ۱۳: «`{}` ← `200` بی‌تغییر» |
+| 42 | نظرهای در انتظار ِ خود کاربر (تازه، گام ۸.۳) | `ReviewRepository.pendingOf(userId, productId)` جدا از صفحه خونده و اول ِ صفحه‌ی ۱ گذاشته می‌شن؛ `meta` فقط تأییدشده‌ها رو می‌شمره | تصمیم ۱۸ |
+| 43 | فیلترهای لیست عمومی (تازه، گام ۸.۳) | `rating` بیرون ۱ تا ۵ ← `400 RATING_INVALID` روی `rating`؛ `withMedia`/`verifiedOnly` فقط `true`/`false` ← وگرنه `400 BOOLEAN_INVALID` روی همون پارامتر (مثل صف سفارش‌ها)؛ صفحه‌بندی همون `Page`/`Size` ِ کانترکت (۲۰، حداکثر ۱۰۰) | قانون عمومی پارامترها |
+| 44 | رأی بی‌اثر (تازه، گام ۸.۳) | رأی تکراری یا پس گرفتن ِ رأی ِ نداده ← `200` با همون شکل و بدون ذخیره؛ رأی همیشه زیر قفل ردیف نظر، پس `helpfulCount` با جدول رأی‌ها جوره | تصمیم ۲۰ |
+| 45 | `RatingSummaryDto` (تازه، گام ۸.۳) | یه ساختن برای خلاصه‌ی لیست، `…/summary` و (از ۸.۴) صفحه‌ی محصول؛ `RatingSummaryHttpResponse.verifiedBuyerPercent` اضافه شد (تا ۸.۴ صفحه‌ی محصول `null`) | `required` ِ کانترکت 1.14.0 |
+| 46 | امتیاز ِ کارت (تازه، گام ۸.۴) | همیشه هست: بی‌نظر ← `{average: 0, count: 0}`؛ یه خوندن ِ `productrating_tbl` برای کل صفحه (کارت، جستجو، پنل)، نه join در کوئری لیست | جدول ۱۳.۷؛ «فقط یه کوئری بیشتر» |
+| 47 | `canReview` و `reviewed` (تازه، گام ۸.۴) | `reviewed` ِ ردیف = کاربر نظر زنده (`PENDING` یا `APPROVED`) از اون محصول داره؛ `canReview` = `DELIVERED` و دست‌کم یه ردیف با محصول ِ منتشرشده و `reviewed = false`. نظر ردشده دکمه رو برمی‌گردونه | تصمیم ۲۲ و ۲ (یه نظر زنده) |
+| 48 | پاسخ ِ moderation و پاسخ کیوا (تازه، گام ۸.۵) | `ModerateReviewUc` و `ReplyToReviewUc` `Unit` برمی‌گردونن و route نظر رو با `GetAdminReviewUc` (دید پنل، با `rejectionReason`) می‌خونه؛ شناسه‌ی بدشکل یا ناموجود ← `404 REVIEW_NOT_FOUND` | قانون ۶ ِ ۴.۵ |
+| 49 | تأیید ِ ردشده با نظر زنده‌ی دیگه (تازه، گام ۸.۵) | نویسنده بعد از رد یه نظر تازه نوشته و پنل نظر قدیمی رو تأیید می‌کنه ← ایندکس یکتای نظر زنده ← `409 REVIEW_ALREADY_EXISTS`، کل تراکنش (با امتیاز) برمی‌گرده. به کانترکت اضافه شد | تصمیم ۲ (یه نظر زنده)؛ مثل تصمیم ۴۱ |
+| 50 | پارامترهای صف (تازه، گام ۸.۵) | فقط `newest` (کانترکت `sort` نداره؛ دیگه ← `400 SORT_NOT_ALLOWED`)، ۲۰ و حداکثر ۱۰۰؛ `status` ناشناخته ← `400 REVIEW_STATUS_INVALID`، `productId` ِ غیرعددی ← `400 PRODUCT_ID_INVALID`، `hasReply` جز `true`/`false` ← `400 BOOLEAN_INVALID`، همه با هم | قانون عمومی پارامترها |
+| 51 | لاگ ِ نظرها (تازه، گام ۸.۵) | `entityLabel` اسم محصول؛ `REVIEW_MODERATED` با `status` و (اگه پاسخ همراه تأیید اومد) `reply` بدون متن؛ `REVIEW_REPLIED` با `reply` بدون متن؛ `REVIEW_REPLY_DELETED` بدون `changes` و فقط وقتی پاسخی بود. دلیل رد هم در لاگ نمی‌ره | ۵.۱: متن بلند فقط «عوض شد» |
 
 ### ۱۳.۳ تغییرات دامنه
 
@@ -3663,19 +4109,23 @@ Route: 200 با Review
 | 14 | `GET /admin/reviews` | ترتیب؛ «`pendingCount` مستقل از فیلترها»؛ `contact` نیومده = موبایل حساب | تصمیم‌های ۶، ۲۵ |
 | 15 | `OrderItem.reviewed`، `OrderSummary.actions.canReview` | تعریف ردیف ۲۲ | — |
 | 16 | `ErrorCode` | `ORDER_ITEM_PRODUCT_MISMATCH`، `REVIEW_PURCHASE_NOT_DELIVERED`، `CONTACT_INVALID`، `REVIEW_MEDIA_DISABLED`، `REJECTION_REASON_REQUIRED` (اگه فاز ۷ اضافه نکرده)، `REPLY_REQUIRES_APPROVAL`، `OWN_REVIEW_VOTE`، `REVIEW_NOT_FOUND` | — |
+| 17 | `ErrorCode` (تازه، گام ۸.۰؛ جایگزین ردیف ۱۶) | فقط `REVIEW_NOT_FOUND`، `REVIEW_PURCHASE_NOT_DELIVERED`، `OWN_REVIEW_VOTE`؛ کدهای فیلدی در توضیح هر endpoint و فیلد | تصمیم ۲۸ |
+| 18 | `Review`، `ReviewablePurchase`، `counts`، رأی، صف (تازه، گام ۸.۰) | `required`؛ کدهای فیلدی ِ `TEXT_TOO_SHORT`، `RATING_INVALID`، `REVIEW_STATUS_INVALID`، `MODERATION_ACTION_INVALID`؛ `401`/`404`/`409`/`422`/`429` ِ جاافتاده | تصمیم‌های ۲۹ تا ۳۱ |
 
 ### ۱۳.۹ گام‌ها
 
-#### گام ۸.۰: کانترکت 1.14.0 · S ⬜
+#### گام ۸.۰: کانترکت 1.14.0 · S ✅
 
 **می‌سازی:** برنچ `reviews`؛ ردیف‌های ۱۳.۸؛ متن کدهای تازه.
 
 **تموم شده یعنی:**
-- [ ] کانترکت معتبر؛ `ErrorMessagesTest` و `RouteGuardsTest` سبز (`x-roles` ِ چهار route ِ پنل `[ADMIN, SUPPORT]`).
+- [x] کانترکت معتبر؛ `ErrorMessagesTest` و `RouteGuardsTest` سبز (`x-roles` ِ چهار route ِ پنل `[ADMIN, SUPPORT]`).
+
+**یادداشت پیاده‌سازی:** برنچ `reviews` از نوک فاز ۷ (`returns`)، چون فازهای قبل هنوز منتظر merge به `main` ـن. چهار تصمیم تازه (۲۸ تا ۳۱ ِ ۱۳.۲) و دو ردیف تازه‌ی ۱۳.۸ (۱۷ و ۱۸؛ ۱۷ جای ردیف ۱۶ رو می‌گیره). ترتیب قانون‌ها و همه‌ی کدهای ثبت، ویرایش، حذف، لیست عمومی (نظرهای `PENDING` ِ خود کاربر فقط صفحه‌ی ۱، ترتیب هر sort)، رأی، صف و رسیدگی و پاسخ؛ `RatingSummary.verifiedBuyerPercent` و گرد کردن‌ها؛ تساوی ِ `rating_desc`؛ `reviewed` و `canReview`. YAML معتبره و هر ۱۳۳۸ `$ref` پیدا می‌شن. متن ۱۰ کد تازه، و متن `REVIEW_ALREADY_EXISTS` حالا «نظر ثبت‌شده» (زنده) رو می‌گه.
 
 ---
 
-#### گام ۸.۱: دامنه‌ی نظر، جدول‌ها و امتیاز محصول · L ⬜
+#### گام ۸.۱: دامنه‌ی نظر، جدول‌ها و امتیاز محصول · L ✅
 
 **می‌سازی:** ۱۳.۳ (Aggregate، VOها، `RatingTally`، `ReviewDomainService`، repositoryها)؛ `V33__reviews.sql`؛ `ReviewRepositoryImpl` (با ترجمه‌ی قید یکتا)، `ReviewVoteRepositoryImpl`، `ProductRatingRepositoryImpl`، `ReviewIdGeneratorImpl`؛ `RatingBook`؛ جدا کردن `ProductQmTbl` و `ProductSorts` از `ratingAvg`.
 
@@ -3686,83 +4136,96 @@ Route: 200 با Review
 - چرا `CHECK` های جمع روی `productrating_tbl`؟ اگه یه UseCase یادش بره `minus` بزنه، دیتابیس جلوی عدد ناسازگار رو می‌گیره (دیوار دوم).
 
 **تموم شده یعنی:**
-- [ ] تست واحد همه‌ی انتقال‌ها و ویرایش‌ها (جدول تصمیم‌های ۱۰ و ۱۳).
-- [ ] `RatingTally`: سه نظر ۵، ۴، ۴ ← میانگین `4.3`، درصد ستاره‌ی ۴ `66.7`؛ `minus` تا صفر؛ `init` با داده‌ی ناسازگار می‌ترکه.
-- [ ] `purchaseLink`: وصل صریح (هر چهار خطا)، پیدا کردن خودکار (دو سفارش تحویل‌شده ← آخری)، سفارش لغوشده هیچ‌وقت.
-- [ ] migration روی دیتابیس فاز ۷ بدون خطا؛ لیست محصولات با `sort=rating_desc` بعد از حذف ستون کار می‌کنه.
+- [x] تست واحد همه‌ی انتقال‌ها و ویرایش‌ها (جدول تصمیم‌های ۱۰ و ۱۳).
+- [x] `RatingTally`: سه نظر ۵، ۴، ۴ ← میانگین `4.3`، درصد ستاره‌ی ۴ `66.7`؛ `minus` تا صفر؛ `init` با داده‌ی ناسازگار می‌ترکه.
+- [x] `purchaseLink`: وصل صریح (هر چهار خطا)، پیدا کردن خودکار (دو سفارش تحویل‌شده ← آخری)، سفارش لغوشده هیچ‌وقت.
+- [x] migration روی دیتابیس فاز ۷ بدون خطا؛ لیست محصولات با `sort=rating_desc` بعد از حذف ستون کار می‌کنه.
+
+**یادداشت پیاده‌سازی:** پنج تصمیم تازه (۳۲ تا ۳۶). Aggregate ِ `Review` (انتقال‌ها، ویرایش با `Patch`، پاسخ، رأی)، VOها در `ReviewValues.kt` (`ReviewId`، `ReviewStatus`، `StarRating`، `ReviewAuthorName`، `ReviewContact`، `ReviewText` با کد عمومی ِ `TextTooShort`، `ReviewPurchase`، `ReviewReply`)، `RatingTally`، `ReviewDomainService` (`gate`، `mediaProblems`، `purchaseLink` با `PurchaseLine`، `submit`)، سه repository. `V33` ِ کامل با اسم قیدها؛ `ReviewRepositoryImpl` (قید یکتا ← `UniqueTakenException`)، `ReviewVoteRepositoryImpl`، `ProductRatingRepositoryImpl` (`insertIgnore` و `FOR UPDATE`)، `ReviewIdGeneratorImpl`؛ `RatingBook`؛ `ratingAvg` از `ProductQmTbl` رفت و `rating_desc` از `productrating_tbl` می‌خونه. تست: ۳۰ تست دامنه (`ReviewTest`، `RatingTallyTest`، `ReviewDomainServiceTest`) و `ReviewRepositoryImplTest` (۷ تست، با `rating_desc` روی کاتالوگ seed). خرابکاری: بدون `UNIQUE` ِ `review_one_live_idx` ← دو تست ِ «یه نظر زنده» قرمز؛ بدون `productrating_sum_check` ← «V33 refuses a rating whose numbers don't add up…» قرمز. کل مجموعه: ۲۸۹۱ تست سبز، ۵ skip.
 
 ---
 
-#### گام ۸.۲: ثبت، ویرایش و حذف نظر؛ «نظرهای من» و «منتظر نظر تو» · L ⬜
+#### گام ۸.۲: ثبت، ویرایش و حذف نظر؛ «نظرهای من» و «منتظر نظر تو» · L ✅
 
 **می‌سازی:** `CreateReviewUc`، `UpdateMyReviewUc`، `DeleteMyReviewUc`، `ListMyReviewsUc`، `ListProductsAwaitingMyReviewUc`؛ `deliveredLinesOf` روی `OrderQmRepository`؛ `webV1MyReviews.kt` و route ِ ثبت در `webV1Reviews.kt`؛ `ReviewHttpResponse`، `ReviewTexts`.
 
 وابسته به: ۸.۱
 
 **تموم شده یعنی:**
-- [ ] ثبت ← `201 PENDING`؛ دوباره ← `409`؛ بعد از رد ← `201`.
-- [ ] خریدار بدون `orderCode` ← `isVerifiedBuyer = true` و `purchasedColor` درست؛ غیرخریدار ← `false`.
-- [ ] `orderCode` ِ کس دیگه ← `404`؛ ردیف محصول دیگه ← `400`؛ سفارش ارسال‌شده و تحویل‌نشده ← `422`.
-- [ ] `reviewMedia` خاموش با `mediaIds` ← `400`؛ روشن با عکس کاربر دیگه ← `400 MEDIA_NOT_FOUND`.
-- [ ] ششمین نظر در ۲۴ ساعت ← `429`.
-- [ ] ویرایش `APPROVED` ← `422`؛ ویرایش `REJECTED` ← `PENDING`؛ `{}` ← `200`.
-- [ ] حذف نظر تأییدشده ← امتیاز محصول کم شد.
-- [ ] «منتظر نظر تو» یه ردیف برای محصولی که دو بار خریده شده، و بعد از ثبت نظر خالی.
+- [x] ثبت ← `201 PENDING`؛ دوباره ← `409`؛ بعد از رد ← `201`.
+- [x] خریدار بدون `orderCode` ← `isVerifiedBuyer = true` و `purchasedColor` درست؛ غیرخریدار ← `false`.
+- [x] `orderCode` ِ کس دیگه ← `404`؛ ردیف محصول دیگه ← `400`؛ سفارش ارسال‌شده و تحویل‌نشده ← `422`.
+- [x] `reviewMedia` خاموش با `mediaIds` ← `400`؛ روشن با عکس کاربر دیگه ← `400 MEDIA_NOT_FOUND`.
+- [x] ششمین نظر در ۲۴ ساعت ← `429`.
+- [x] ویرایش `APPROVED` ← `422`؛ ویرایش `REJECTED` ← `PENDING`؛ `{}` ← `200`.
+- [x] حذف نظر تأییدشده ← امتیاز محصول کم شد.
+- [x] «منتظر نظر تو» یه ردیف برای محصولی که دو بار خریده شده، و بعد از ثبت نظر خالی.
+
+**یادداشت پیاده‌سازی:** پنج تصمیم تازه (۳۷ تا ۴۱). `CreateReviewUc` (شکل با همه‌ی خطاها با هم، بعد به ترتیب کانترکت: محصول، نظر زنده، سقف روزانه، مدیا، وصل خرید؛ قید یکتا ← همون ۴۰۹)، `UpdateMyReviewUc` (`Patch`، قفل ۱۱)، `DeleteMyReviewUc` (`RatingBook.deleted`)، `ListMyReviewsUc` (با `counts.rejected`)، `ListProductsAwaitingMyReviewUc`، `GetMyReviewUc`؛ سرویس‌های مشترک `Reviews` (ساختن `Review` برای هر بیننده، بدون N+1) و `ReviewPurchases`؛ `ProductQmRepository.findBriefs`، `OrderQmRepository.findDeliveredOfCustomer`، `ReviewRepository.pageOfUser`/`countsOfUser`؛ `webV1Reviews.kt` (ثبت) و `webV1MyReviews.kt`؛ `ReviewHttpResponse`، `ReviewTexts`. تست: `WebV1MyReviewsOnDatabaseTest` (۱۰ تست، هر پاسخ با شِمای کانترکت؛ رسیدگی پشتیبانی تا ۸.۵ مستقیم روی ردیف‌ها با `RatingBook`). خرابکاری: بدون چک مالکیت در ویرایش ← «edits - … someone else's 404» قرمز (اولش قرمز نشد چون route بعد از ویرایش با Query ِ صاحب‌دار می‌خوند و باز ۴۰۴ می‌داد؛ تست حالا خود ردیف رو هم چک می‌کنه)؛ بدون چک مالکیت در حذف ← «an approved review deleted …» قرمز (تست تازه‌ی حذف ِ کاربر دیگه)؛ بدون `RatingBook.deleted` ← همون تست قرمز.
 
 ---
 
-#### گام ۸.۳: لیست عمومی، خلاصه‌ی امتیاز و رأی «مفید بود» · M ⬜
+#### گام ۸.۳: لیست عمومی، خلاصه‌ی امتیاز و رأی «مفید بود» · M ✅
 
 **می‌سازی:** `ListProductReviewsUc`، `GetReviewSummaryUc`، `VoteReviewHelpfulUc`؛ routeهای عمومی.
 
 وابسته به: ۸.۲
 
 **تموم شده یعنی:**
-- [ ] مهمان فقط تأییدشده‌ها؛ کاربر واردشده نظر `PENDING` ِ خودش رو اول صفحه‌ی ۱ می‌بینه، نه صفحه‌ی ۲، و `meta.totalItems` عوضش نمی‌شه.
-- [ ] `rejectionReason` نظر کاربر دیگه هیچ‌وقت تو لیست عمومی نیست.
-- [ ] هر چهار sort و سه فیلتر؛ صفحه‌بندی پایدار با تساوی کامل.
-- [ ] رأی، رأی دوباره (بی‌اثر)، پس گرفتن؛ رأی به نظر خود ← `422`؛ به نظر `PENDING` ← `404`؛ ۲۰ رأی همزمان از ۲۰ کاربر ← `helpfulCount = 20`.
-- [ ] توکن منقضی روی لیست عمومی ← `401` (نه مهمان).
+- [x] مهمان فقط تأییدشده‌ها؛ کاربر واردشده نظر `PENDING` ِ خودش رو اول صفحه‌ی ۱ می‌بینه، نه صفحه‌ی ۲، و `meta.totalItems` عوضش نمی‌شه.
+- [x] `rejectionReason` نظر کاربر دیگه هیچ‌وقت تو لیست عمومی نیست.
+- [x] هر چهار sort و سه فیلتر؛ صفحه‌بندی پایدار با تساوی کامل.
+- [x] رأی، رأی دوباره (بی‌اثر)، پس گرفتن؛ رأی به نظر خود ← `422`؛ به نظر `PENDING` ← `404`؛ ۲۰ رأی همزمان از ۲۰ کاربر ← `helpfulCount = 20`.
+- [x] توکن منقضی روی لیست عمومی ← `401` (نه مهمان).
+
+**یادداشت پیاده‌سازی:** چهار تصمیم تازه (۴۲ تا ۴۵). `ListProductReviewsUc` (`ReviewRepository.pagePublic` با `ReviewSorts` و `PublicFilter`، و `pendingOf` برای نظرهای `PENDING` ِ خود کاربر در صفحه‌ی ۱)، `GetReviewSummaryUc`، `VoteReviewHelpfulUc` (قفل ۱۱)؛ `RatingSummaryDto` و `verifiedBuyerPercent` در `RatingSummaryHttpResponse`؛ سه route ِ تازه در `webV1Reviews.kt` (لیست با ورود اختیاری). تست: `WebV1ProductReviewsOnDatabaseTest` (۶ تست، با ۲۰ رأی همزمان). خرابکاری: بدون چک «نظر خود» ← «a vote, the same vote again, taken back - one's own 422…» قرمز؛ `find` به‌جای `lock` در رأی ← «20 votes from 20 customers at the same moment…» قرمز. یه تست فاز ۱ (`WebV1ProductsTest`) با `verifiedBuyerPercent: null` به‌روز شد. کل مجموعه: ۲۹۰۷ تست سبز، ۵ skip.
 
 ---
 
-#### گام ۸.۴: امتیاز روی کارت، صفحه و مرتب‌سازی محصول؛ «نظر بده» در سفارش‌ها · M ⬜
+#### گام ۸.۴: امتیاز روی کارت، صفحه و مرتب‌سازی محصول؛ «نظر بده» در سفارش‌ها · M ✅
 
 **می‌سازی:** جدول ۱۳.۷: `ProductCards` و `GetProductUc` و `FindAdminProductsUc` امتیاز رو از `ProductRatingRepository.findAll` می‌گیرن؛ `RatingBriefHttpResponse`؛ `OrderActionFacts` با `reviewedProductIds`؛ `reviewed` در `OrderItemHttpResponse`.
 
 وابسته به: ۸.۳
 
 **تموم شده یعنی:**
-- [ ] بعد از تأیید یه نظر ۵ ستاره، کارت محصول در لیست، جستجو و صفحه `{5.0, 1}` نشون می‌ده؛ بعد از ردش `{0, 0}`.
-- [ ] `rating_desc`: محصول ۴.۸ با ۲ نظر بالای ۴.۸ با ۱ نظر؛ بی‌نظرها بعد از نظردارها؛ ناموجود ته لیست.
-- [ ] تعداد کوئری لیست ۴۸ کارتی فقط یکی بیشتر شده (تست شمارش کوئری یا لاگ SQL).
-- [ ] سفارش تحویل‌شده: `canReview = true` و بعد از نظر برای همه‌ی ردیف‌ها `false`؛ `reviewed` هر ردیف درست.
+- [x] بعد از تأیید یه نظر ۵ ستاره، کارت محصول در لیست، جستجو و صفحه `{5.0, 1}` نشون می‌ده؛ بعد از ردش `{0, 0}`.
+- [x] `rating_desc`: محصول ۴.۸ با ۲ نظر بالای ۴.۸ با ۱ نظر؛ بی‌نظرها بعد از نظردارها؛ ناموجود ته لیست.
+- [x] تعداد کوئری لیست ۴۸ کارتی فقط یکی بیشتر شده (تست شمارش کوئری یا لاگ SQL).
+- [x] سفارش تحویل‌شده: `canReview = true` و بعد از نظر برای همه‌ی ردیف‌ها `false`؛ `reviewed` هر ردیف درست.
+
+**یادداشت پیاده‌سازی:** دو تصمیم تازه (۴۶ و ۴۷). `ProductCardQm.rating` و `AdminProductQm.rating` (پیش‌فرض `RatingTally.NONE`) با یه خوندن برای کل صفحه (`ProductQmRepositoryImpl.ratingsOf` روی `ProductRatingRepository.findAll`)؛ `ProductCardDto.rating` همون `RatingSummaryDto`؛ `RatingBriefHttpResponse.from` روی کارت لیست، جستجو و پنل؛ `ratingSummary` ِ واقعی روی صفحه‌ی محصول. سفارش‌ها: `OrderActionFacts.lineProductIds`/`reviews` با `ReviewedProducts` ِ تازه، سرویس `ReviewMarks` (دو خوندن برای کل صفحه‌ی سفارش‌ها) در `ListMyOrdersUc` و `GetMyOrderUc`، `reviewed` در هر ردیف. تست: `WebV1ReviewRatingsOnDatabaseTest` (۵ تست). خرابکاری: بدون چک «نظر داده» در `canReview` ← «a delivered order shows «نظر بده» until each of its products is reviewed…» قرمز؛ `ratingsOf` ِ خالی ← «an approved five-star review shows on the list's card, the page, the panel's list…» قرمز. سه تست قبلی به‌روز شد: دکمه‌ی `canReview` ِ سفارش تحویل‌شده در سفر فاز ۲، `rating` روی کارت `WebV1ProductsTest`، و شمارش کوئری لیست پنل (۳ ← ۴، فقط یکی بیشتر). کل مجموعه: ۲۹۱۲ تست سبز، ۵ skip.
 
 ---
 
-#### گام ۸.۵: صف پنل، تأیید و رد، «پاسخ کیوا» · M ⬜
+#### گام ۸.۵: صف پنل، تأیید و رد، «پاسخ کیوا» · M ✅
 
 **می‌سازی:** `FindAdminReviewsUc`، `ModerateReviewUc`، `ReplyToReviewUc`، `DeleteReviewReplyUc`؛ `webV1AdminReviews.kt`؛ `AdminReviewHttpResponse`؛ لاگ تغییرات.
 
 وابسته به: ۸.۲
 
 **تموم شده یعنی:**
-- [ ] تأیید ← امتیاز محصول بالا رفت، لاگ؛ تأیید دوباره ← `422`؛ رد ِ تأییدشده ← امتیاز پایین اومد، نظر از لیست عمومی رفت.
-- [ ] رد بدون دلیل ← `400`؛ رد با `reply` ← `400`؛ تأیید با `reply` ← پاسخ ثبت شد.
-- [ ] پاسخ روی `PENDING` ← `422`؛ پاسخ روی تأییدشده ← تو لیست عمومی با «کیوا»؛ `DELETE` دو بار ← هر دو `204`، یه ردیف لاگ.
-- [ ] تأیید و حذف همزمان (پنل و مشتری) ۲۰ بار ← `productrating_tbl` همیشه با `review_tbl` جوره (کوئری مقایسه در تست).
-- [ ] `OPERATOR` و `CATALOG_MANAGER` ← `403`.
+- [x] تأیید ← امتیاز محصول بالا رفت، لاگ؛ تأیید دوباره ← `422`؛ رد ِ تأییدشده ← امتیاز پایین اومد، نظر از لیست عمومی رفت.
+- [x] رد بدون دلیل ← `400`؛ رد با `reply` ← `400`؛ تأیید با `reply` ← پاسخ ثبت شد.
+- [x] پاسخ روی `PENDING` ← `422`؛ پاسخ روی تأییدشده ← تو لیست عمومی با «کیوا»؛ `DELETE` دو بار ← هر دو `204`، یه ردیف لاگ.
+- [x] تأیید و حذف همزمان (پنل و مشتری) ۲۰ بار ← `productrating_tbl` همیشه با `review_tbl` جوره (کوئری مقایسه در تست).
+- [x] `OPERATOR` و `CATALOG_MANAGER` ← `403`.
+
+**یادداشت پیاده‌سازی:** چهار تصمیم تازه (۴۸ تا ۵۱). `FindAdminReviewsUc` (`ReviewRepository.pageAdmin` با `AdminFilter` و `countPending`، حساب‌ها با `AdminCustomerRepository.findAll` برای کل صفحه)، `GetAdminReviewUc`، `ModerateReviewUc` (قفل ۱۱ و بعد `RatingBook`)، `ReplyToReviewUc`، `DeleteReviewReplyUc`؛ سه `AuditAction` ِ `REVIEW_*` و متن‌هاشون؛ `AdminReviewListHttpResponse`؛ `webV1AdminReviews.kt` (`[ADMIN, SUPPORT]`). کانترکت: `409 REVIEW_ALREADY_EXISTS` به moderation اضافه شد (تصمیم ۴۹). تست: `WebV1AdminReviewsOnDatabaseTest` (۷ تست، با ۲۰ دور تأیید و حذف همزمان و مقایسه‌ی `productrating_tbl` با `review_tbl` بعد از هر دور). خرابکاری: بدون `ratingBook.changed` در moderation ← سه تست قرمز (امتیاز بعد از تأیید، ۴۰۹، دورهای همزمان)؛ `OPERATOR` در نقش‌های route ← «OPERATOR and CATALOG_MANAGER 403…» قرمز. کل مجموعه: ۲۹۱۹ تست سبز، ۵ skip.
 
 ---
 
-#### گام ۸.۶: ریویو و دور با پنل · M ⬜
+#### گام ۸.۶: ریویو و دور با پنل · M ✅
 
 **می‌سازی:** `REVIEWS_REVIEW.md` (ردیف ۱۳ ِ بخش ۳، و خطرهای این فاز: لو رفتن دلیل رد، رأی تقلبی، امتیاز ناسازگار؛ خرابکاری: چک مالکیت در ویرایش و حذف، `RatingBook` در حذف، ایندکس یکتای نظر زنده، چک «نظر خود» در رأی، چک وضعیت در برچسب خریدار)؛ `ReviewsConsistencyOnDatabaseTest` (بعد از یه دنباله‌ی تصادفی از ۲۰۰ کار، امتیاز هر محصول = `AVG` و `COUNT` ِ واقعی)؛ `docs/FRONTEND_REVIEWS.md` (kiva-fe: فرم، لیست، رأی، «نظرهای من»، «منتظر نظر تو»؛ پنل: صف و پاسخ)؛ دور با kiva-fe و پنل.
 
 وابسته به: ۸.۴، ۸.۵
 
 **تموم شده یعنی:**
-- [ ] همه‌ی خرابکاری‌ها قرمز می‌کنن؛ merge به `main` و deploy.
+- [x] همه‌ی خرابکاری‌ها قرمز می‌کنن (ده نگهبان، جدول `REVIEWS_REVIEW.md`).
+- [ ] merge به `main` و deploy: منتظر تأیید تو، همراه با دور واقعی با kiva-fe و پنل.
+
+**یادداشت پیاده‌سازی:** `REVIEWS_REVIEW.md` (ردیف ۱۳ ِ بخش ۳ و خطرهای فاز، ده خرابکاری)؛ `ReviewsConsistencyOnDatabaseTest` (۲۰۰ قدم تصادفی با seed ِ ثابت از routeهای واقعی؛ بعد از هر قدم `productrating_tbl` با `COUNT`/`SUM`/ستاره‌ها/خریدارهای نظرهای تأییدشده و `helpfulCount` با رأی‌ها)؛ `docs/FRONTEND_REVIEWS.md`. خرابکاری ِ «دلیل رد فقط برای نویسنده» اول هیچ تستی رو قرمز نکرد (از routeها نظر ردشده‌ی کس دیگه دیده نمی‌شه)؛ یه تست مستقیم روی `Reviews` اضافه شد و حالا قرمز می‌کنه. اسکریپت خرابکاری با چند فیلتر روی یه task فقط آخری رو اجرا می‌کرد؛ درست شد و دو خرابکاری دوباره رفتن. کل مجموعه: ۲۹۲۱ تست سبز، ۵ skip. فاز ۸ از طرف ریپو کامله؛ دور واقعی و merge منتظر تو.
 
 ---
 
@@ -3779,12 +4242,12 @@ Route: 200 با Review
 
 | گام | عنوان | اندازه | وضعیت |
 |---|---|---|---|
-| ۹.۰ | کانترکت 1.15.0 | S | ⬜ |
-| ۹.۱ | علاقه‌مندی‌ها: جدول، دامنه، افزودن، حذف، لیست و شناسه‌ها | M | ⬜ |
-| ۹.۲ | علاقه‌مندی به سبد، و سبد به علاقه‌مندی | M | ⬜ |
-| ۹.۳ | لینک اشتراک و لیست عمومی | M | ⬜ |
-| ۹.۴ | قلب روی کارت‌ها و داشبورد حساب | M | ⬜ |
-| ۹.۵ | ریویو و دور با kiva-fe | S | ⬜ |
+| ۹.۰ | کانترکت 1.15.0 | S | ✅ |
+| ۹.۱ | علاقه‌مندی‌ها: جدول، دامنه، افزودن، حذف، لیست و شناسه‌ها | M | ✅ |
+| ۹.۲ | علاقه‌مندی به سبد، و سبد به علاقه‌مندی | M | ✅ |
+| ۹.۳ | لینک اشتراک و لیست عمومی | M | ✅ |
+| ۹.۴ | قلب روی کارت‌ها و داشبورد حساب | M | ✅ |
+| ۹.۵ | ریویو و دور با kiva-fe | S | ✅ |
 
 ### ۱۴.۲ تصمیم‌های این فاز
 
@@ -3807,6 +4270,20 @@ Route: 200 با Review
 | 15 | قلب روی کارت | `isWishlisted` برای کاربر واردشده (`true`/`false`) و برای مهمان `null`، روی هر کارت و هر قلم سبد که از endpoint ِ **بدون کش** با ورود اختیاری میاد: لیست محصولات، صفحه‌ی محصول، محصولات مرتبط، سبد، علاقه‌مندی‌ها. endpointهای کش‌شده‌ی عمومی (`/home`، فاز ۱۱) **همیشه `null`** می‌فرستن و فرانت از `GET /me/wishlist/ids` استفاده می‌کنه | پاسخ کش‌شده‌ی عمومی نباید شخصی باشه |
 | 16 | داشبورد | `greeting` = «سلام {اسم کوچک}» یا «سلام دوست عزیز» (`AccountTexts`). `stats.ordersTotal` و `navCounts.orders` = دقیقاً `counts.all` ِ `GET /me/orders`؛ `stats.ordersActive` = دقیقاً `counts.current` (همون تب، با پرداخت‌نشده‌ها)؛ `stats.mediaReceived` = جمع تعداد عکس و ویدیوی **آخرین دسته‌ی فرستاده‌شده** ِ هر سفارش (همون `preShipmentMedia.count` ِ کارت‌ها)؛ `wishlistCount` و `navCounts.wishlist` = `count` ِ علاقه‌مندی (دیده‌شده‌ها)؛ `navCounts.addresses` = تعداد آدرس‌ها؛ `navCounts.reviews` = `counts.total` ِ «نظرهای من» (ردشده‌ها هم)؛ `activeReservation` = همون `GET /me/reservation` (نبود ← `null`)؛ `pendingReviewCount` = تعداد ردیف‌های «منتظر نظر تو» (فاز ۸). همه‌ی فیلدها همیشه فرستاده می‌شن | هر عدد سربرگ باید با صفحه‌ای که بهش لینک می‌ده یکی باشه |
 | 17 | لاگ و پیامک | هیچ‌کدوم (کار مشتریه) | — |
+| 18 | کارت‌های علاقه‌مندی (تازه، گام ۹.۱) | به‌جای دسته‌های ۶۰تایی ِ فیلتر `ids`، متد تازه‌ی `ProductQmRepository.findCards(ids)`: فقط منتشرشده‌ها، به ترتیب داده‌شده، هر تعداد، با سه خوندن (ردیف‌ها، رنگ‌ها، امتیازها). سرویس مشترک `WishlistCards` کارت‌ها رو مثل لیست فروشگاه می‌سازه (برای «علاقه‌مندی‌ها» و لیست اشتراکی) | سقف ۶۰ برای `?ids=` ِ کلاینته، نه برای read model |
+| 19 | قیمت هر رنگ روی کارت (تازه، گام ۹.۱) | `ProductCardQm.Color.price` (قیمت فروش همون رنگ از read model)؛ `priceAtAdd` و افت قیمت از همین، بی‌رنگ یا رنگ ِ غیرفعال‌شده از قیمت کارت | تصمیم‌های ۴ و ۸ قیمت رنگ رو می‌خوان |
+| 20 | `colorKey` ِ بدشکل (تازه، گام ۹.۱) | قبل از تراکنش: نه الگوی `ColorKey` ← `400 COLOR_KEY_INVALID`؛ خوش‌شکل ولی رنگ فعال این محصول نیست ← `400 COLOR_NOT_FOUND`، هر دو روی `colorKey` | قانون «شکل قبل از تراکنش» |
+| 21 | لینک اشتراک از ۹.۱ (تازه، گام ۹.۱) | `WishlistShare`، توکن، repository و تولیدکننده همین‌جا ساخته شدن چون `GET /me/wishlist` باید `share` رو بخونه؛ سه UseCase ِ اشتراک در ۹.۳ | جدولش هم در `V34` ِ همین گامه |
+| 22 | `isWishlisted` روی کارت (تازه، گام ۹.۱) | `ProductCardDto.isWishlisted` و `ProductSummaryHttpResponse.isWishlisted` از همین گام همیشه فرستاده می‌شن (تا ۹.۴ همه‌جا `null`، در علاقه‌مندی‌ها `true`)؛ کارت علاقه‌مندی به رنگ ذخیره‌شده کشیده می‌شه (`displayColorKey`) | کانترکت فیلد رو داره؛ ۹.۴ فقط پرش می‌کنه |
+| 23 | `CartBulkAdd` (تازه، گام ۹.۲) | منطق «چند رنگ، هر کدوم با تعداد، با `skipped`» از قبل در `CartDomainService.reorder` بود؛ `CartBulkAdd` فقط یه اجرای `CartCommands` دورشه که فراخوان رنگ‌ها رو از offerهای همون تراکنش انتخاب می‌کنه (`Picked`، با `skipped` ِ ازپیش‌دونسته). `ReorderUc` روش رفت، رفتارش بی‌تغییر | قانون ۱۵؛ دو کپی از یه منطق نه |
+| 24 | دلیل `skipped` ِ علاقه‌مندی (تازه، گام ۹.۲) | هیچ رنگی از محصول در فروشگاه نیست (رنگ خاموش، یا محصول بین دو خوندن برداشته شد) ← `UNAVAILABLE`؛ رنگ هست ولی هیچ‌کدوم موجودی نداره ← `OUT_OF_STOCK`؛ سبد سقفش رو داره ← `ALREADY_AT_MAX` ِ خود سبد. `productId` و `name` از کارت | تصمیم ۱۰ |
+| 25 | شکل `productIds` (تازه، گام ۹.۲) | بیشتر از ۲۰۰ ← `400 TOO_MANY_ITEMS` روی `productIds`؛ `null` یا ≤ ۰ ← `400 PRODUCT_ID_INVALID` روی `productIds.N`، همه با هم؛ شناسه‌ی بیرون از لیست نادیده | قانون عمومی لیست‌ها |
+| 26 | «انتقال» (تازه، گام ۹.۲) | route در `webV1Cart.kt` زیر `authenticate` ِ اجباری؛ رنگ ِ قلم از read model (`findVariant`)، قیمت ِ offer ِ همون لحظه؛ اول افزودن به علاقه‌مندی (پر ← شکست و برگشت کل تراکنش)، بعد حذف از سبد | تصمیم ۱۱: نیمه‌کاره نمی‌مونه |
+| 27 | قفل ِ اشتراک (تازه، گام ۹.۳) | ساخت و باطل کردن لینک زیر همون قفل لیست (۱۳)؛ دو کلیک همزمان یه لینک می‌سازن. بررسی پرچم داخل تراکنش، با خوندن تنظیمات ِ همون لحظه | یه قفل برای همه‌ی کارهای لیست یه کاربر |
+| 28 | route ِ عمومی ِ لیست اشتراکی (تازه، گام ۹.۳) | `webV1SharedWishlist` جدا از `webV1Wishlist` (بدون `authenticate`)، با `Cache-Control: no-store`؛ ۴۰۴ یکسان با کد `NOT_FOUND` برای همه‌ی حالت‌ها. nginx: zone ِ `kiva_wishlist_shared` با ۳۰ در دقیقه و `burst=10` (`kiva-http.conf`، `api.kivashop.ir.conf`، جدول `LAUNCH.md`) | تصمیم ۱۴ |
+| 29 | `WishlistHearts` (تازه، گام ۹.۴) | یه `fun interface` در لایه‌ی application (`savedAmong` روی `WishlistRepository.idsAmong`، `mark` برای یه صفحه کارت با یه خوندن). `FindProductsUc`، `GetProductUc`، `FindRelatedProductsUc` و `GetCartUc` با پیش‌فرض `NONE` (برای تست‌هایی که قلب نمی‌خوان)؛ DI و پشته‌ی تست ِ واقعی رو می‌دن. سبد: قلب ِ صاحب سبد، سبد مهمان `null` | یه کوئری بیشتر برای هر صفحه (تموم شده‌ی ۹.۴) |
+| 30 | ورود اختیاری روی routeهای محصول (تازه، گام ۹.۴) | `/products`، `/products/{idOrSlug}` و `/related` زیر `authenticate(ACCESS, optional = true)`: توکن خراب ← `401` (نه مهمان)، مثل لیست نظرها. `ProductDetail.isWishlisted` به پاسخ صفحه‌ی محصول اضافه شد | کانترکت «در صورت ورود کاربر: `isWishlisted` پر می‌شود» |
+| 31 | داشبورد (تازه، گام ۹.۴) | `GetMyDashboardUc` با همون خوندن‌های صفحه‌ها: `countByStatusOfCustomer` (همه و تب جاری)، `OrderQmRepository.sentMediaCountOf` (جمع `jsonb_array_length(photos -> 'sent')` در دیتابیس)، `countVisible`، دفترچه‌ی آدرس، `countsOfUser`، `Reservations.activeInfoOf`، و سرویس مشترک تازه‌ی `ReviewsAwaiting` که «منتظر نظر تو» هم حالا ازش می‌خونه. route ِ `webV1MyDashboard` در `webV1Me.kt` (تابع جدا، `MeUseCases` دست نخورد) | قانون ۱۵: یه تعریف برای «منتظر نظر تو» |
 
 ### ۱۴.۳ تغییرات دامنه
 
@@ -3967,16 +4444,18 @@ Route: 200 با Cache-Control: no-store
 
 ### ۱۴.۸ گام‌ها
 
-#### گام ۹.۰: کانترکت 1.15.0 · S ⬜
+#### گام ۹.۰: کانترکت 1.15.0 · S ✅
 
 **می‌سازی:** برنچ `wishlist`؛ ردیف‌های ۱۴.۷؛ متن کدهای تازه. آدرس لینک‌ها از `kiva.shop.siteUrl` ِ موجود (`KIVA_SITE_URL`) ساخته می‌شه؛ پیکربندی تازه‌ای لازم نیست.
 
 **تموم شده یعنی:**
-- [ ] کانترکت معتبر؛ `ErrorMessagesTest` سبز.
+- [x] کانترکت معتبر؛ `ErrorMessagesTest` سبز.
+
+**یادداشت پیاده‌سازی:** برنچ `wishlist` از نوک فاز ۸ (`da75320`). کانترکت 1.15.0 با هر ۱۲ ردیف ِ ۱۴.۷؛ به‌علاوه‌ی `required` ِ همه‌ی شِماهای علاقه‌مندی (`WishlistItem`، `Wishlist`، `WishlistToggleResponse`، `WishlistAddToCartResponse`، `WishlistShare`، `SharedWishlist`)، الگوی توکن، `productIds.maxItems = 200` (`400 TOO_MANY_ITEMS`)، و `422` ِ `PUT` و «انتقال» با `meta.limit`. فقط `WISHLIST_SHARE_DISABLED` به `ErrorCode` رفت (`COLOR_NOT_FOUND` کد فیلدیه، تصمیم ۲۸ ِ فاز ۸) با متن فارسی. YAML معتبر، ۱۳۴۴ `$ref`؛ `ErrorMessagesTest` و `RouteGuardsTest` سبز.
 
 ---
 
-#### گام ۹.۱: علاقه‌مندی‌ها: جدول، دامنه، افزودن، حذف، لیست و شناسه‌ها · M ⬜
+#### گام ۹.۱: علاقه‌مندی‌ها: جدول، دامنه، افزودن، حذف، لیست و شناسه‌ها · M ✅
 
 **می‌سازی:** `V34__wishlist.sql`؛ Aggregate، `WishlistPolicy`، repositoryها و پیاده‌سازی‌ها (قفل advisory مثل دفترچه‌ی آدرس)؛ پنج UseCase ِ اول ۱۴.۵؛ `webV1Wishlist.kt`؛ گسترش `ArchiveProductUc` با `wishlistRepository.deleteProduct`.
 
@@ -3987,62 +4466,73 @@ Route: 200 با Cache-Control: no-store
 - چرا محصول `DRAFT` پنهان و نه پاک؟ برداشتن از سایت معمولاً موقتیه (عکاسی دوباره، تغییر قیمت)؛ کاربر نباید علاقه‌مندیش رو از دست بده.
 
 **تموم شده یعنی:**
-- [ ] افزودن، افزودن دوباره با رنگ دیگه (رنگ عوض شد، `priceAtAdd` نه)، حذف، حذف دوباره (`200`)، حذف شناسه‌ی ناموجود (`404`).
-- [ ] دویست و یکمین ← `422` با `limit`؛ ۲۰ افزودن همزمان روی ۱۹۵ ← دقیقاً ۲۰۰.
-- [ ] قیمت پایین اومد ← `priceDrop` با درصد درست؛ ۰٫۵٪ ← `null`؛ گرون شد ← `null`.
-- [ ] محصول `DRAFT` از لیست، شناسه‌ها و `count` رفت و با انتشار دوباره برگشت؛ بایگانی ← ردیف پاک شد.
-- [ ] لیست ۱۲۰ قلمی (بیشتر از سقف ۶۰ ِ `ids`) کامل و به ترتیب.
+- [x] افزودن، افزودن دوباره با رنگ دیگه (رنگ عوض شد، `priceAtAdd` نه)، حذف، حذف دوباره (`200`)، حذف شناسه‌ی ناموجود (`404`).
+- [x] دویست و یکمین ← `422` با `limit`؛ ۲۰ افزودن همزمان روی ۱۹۵ ← دقیقاً ۲۰۰.
+- [x] قیمت پایین اومد ← `priceDrop` با درصد درست؛ ۰٫۵٪ ← `null`؛ گرون شد ← `null`.
+- [x] محصول `DRAFT` از لیست، شناسه‌ها و `count` رفت و با انتشار دوباره برگشت؛ بایگانی ← ردیف پاک شد.
+- [x] لیست ۱۲۰ قلمی (بیشتر از سقف ۶۰ ِ `ids`) کامل و به ترتیب.
+
+**یادداشت پیاده‌سازی:** پنج تصمیم تازه (۱۸ تا ۲۲). `V34__wishlist.sql` (دو جدول، اسم‌دار)؛ دامنه: `Wishlist` (کل لیست یه Aggregate، سقف روی همه‌ی ردیف‌ها)، `WishlistEntry`، `WishlistPolicy` (سقف و افت قیمت)، `WishlistShare`، `WishlistShareToken`، دو repository و تولیدکننده؛ `WishlistRepositoryImpl` (قفل advisory ِ ۱۳، ذخیره‌ی فقط تفاوت، «دیده‌شده» با join روی `productqm_tbl`)، `WishlistShareRepositoryImpl`، `RandomWishlistShareTokens`؛ `ProductQmRepository.findCards` و `ProductCardQm.Color.price`؛ سرویس `WishlistCards`؛ پنج UseCase و `webV1Wishlist.kt` (بدنه‌ی اختیاری ِ `PUT` با `optionalBody`)؛ `ArchiveProductUc` ردیف‌های علاقه‌مندی محصول رو پاک می‌کنه. تست: `WishlistTest` (۶)، `WebV1WishlistOnDatabaseTest` (۶، با ۲۰ افزودن همزمان روی ۱۹۵ ردیف و لیست ۱۲۰تایی). خرابکاری: `find` به‌جای `lockFor` ← «20 adds at once onto 195 rows…» قرمز؛ بدون `deleteProduct` در بایگانی ← «a draft is hidden … archived it is gone for good» و `ProductStatusUseCasesTest` قرمز؛ بدون فیلتر `ACTIVE` ← همون تست draft قرمز. یه تست قبلی (`WebV1ProductsTest`) با `isWishlisted: null` به‌روز شد. کل مجموعه: ۲۹۳۳ تست سبز، ۵ skip.
 
 ---
 
-#### گام ۹.۲: علاقه‌مندی به سبد، و سبد به علاقه‌مندی · M ⬜
+#### گام ۹.۲: علاقه‌مندی به سبد، و سبد به علاقه‌مندی · M ✅
 
 **می‌سازی:** `CartBulkAdd` (بیرون کشیدن از `ReorderUc`)؛ `AddWishlistToCartUc`، `MoveCartItemToWishlistUc`؛ routeها.
 
 وابسته به: ۹.۱
 
 **تموم شده یعنی:**
-- [ ] تست‌های موجود «سفارش دوباره» بی‌تغییر سبز.
-- [ ] «همه به سبد» با سه قلم: اولی رنگ ذخیره‌شده‌ش تموم شده ولی رنگ دیگه داره (با رنگ جایگزین اضافه می‌شه)، دومی کلاً ناموجوده (`OUT_OF_STOCK`)، سومی سبد همین الان سقفش رو داره (`ALREADY_AT_MAX`) ← `addedCount = 1` و دو `skipped`؛ علاقه‌مندی دست نخورده.
-- [ ] انتقال ← قلم از سبد رفت، تو علاقه‌مندی با همون رنگ؛ لیست پر ← `422` و قلم هنوز تو سبده؛ مهمان ← `401`.
+- [x] تست‌های موجود «سفارش دوباره» بی‌تغییر سبز.
+- [x] «همه به سبد» با سه قلم: اولی رنگ ذخیره‌شده‌ش تموم شده ولی رنگ دیگه داره (با رنگ جایگزین اضافه می‌شه)، دومی کلاً ناموجوده (`OUT_OF_STOCK`)، سومی سبد همین الان سقفش رو داره (`ALREADY_AT_MAX`) ← `addedCount = 1` و دو `skipped`؛ علاقه‌مندی دست نخورده.
+- [x] انتقال ← قلم از سبد رفت، تو علاقه‌مندی با همون رنگ؛ لیست پر ← `422` و قلم هنوز تو سبده؛ مهمان ← `401`.
+
+**یادداشت پیاده‌سازی:** چهار تصمیم تازه (۲۳ تا ۲۶). `CartBulkAdd` (سرویس مشترک، `ReorderUc` روش رفت و تست‌های «خرید دوباره» بی‌تغییر سبزن)؛ `AddWishlistToCartUc` (یه خوندن ِ کارت‌ها، بعد یه اجرای `CartBulkAdd` با انتخاب رنگ از offerهای همون تراکنش)؛ `MoveCartItemToWishlistUc` (قفل ۲ بعد ۱۳)؛ `WishlistAddToCartHttpResponse` و `WishlistTexts.addedToCart`؛ routeها در `webV1Wishlist.kt` و `webV1Cart.kt`. تست: `WebV1WishlistCartOnDatabaseTest` (۳). خرابکاری: «انتقال» با لیست پر شکست نخوره ← «a cart line moved … a full list 422 and the line stays …» قرمز؛ اولین رنگ به‌جای اولین رنگ موجود ← «all to the cart - another color when the saved one is gone …» قرمز. کل مجموعه: ۲۹۳۶ تست سبز، ۵ skip.
 
 ---
 
-#### گام ۹.۳: لینک اشتراک و لیست عمومی · M ⬜
+#### گام ۹.۳: لینک اشتراک و لیست عمومی · M ✅
 
 **می‌سازی:** `WishlistShare`، توکن و تولیدکننده؛ سه UseCase ِ اشتراک؛ routeها؛ `limit_req` ِ nginx برای `/api/v1/wishlists/shared/` (به اسکریپت و سند گام ۶.۵ اضافه می‌شه).
 
 وابسته به: ۹.۱
 
 **تموم شده یعنی:**
-- [ ] `POST` دو بار ← یه توکن؛ `DELETE` و `POST` ← توکن تازه و قبلی `404`.
-- [ ] پرچم خاموش ← `POST` `422`، لیست عمومی `404`، `share = null`.
-- [ ] لیست عمومی فقط اسم کوچک (کاربر بی‌اسم ← «یکی از دوستان کیوا»)، هیچ موبایلی تو پاسخ نیست، `Cache-Control: no-store`.
-- [ ] توکن با یه نویسه کمتر یا بیشتر ← `404`، همون شکل پاسخ.
+- [x] `POST` دو بار ← یه توکن؛ `DELETE` و `POST` ← توکن تازه و قبلی `404`.
+- [x] پرچم خاموش ← `POST` `422`، لیست عمومی `404`، `share = null`.
+- [x] لیست عمومی فقط اسم کوچک (کاربر بی‌اسم ← «یکی از دوستان کیوا»)، هیچ موبایلی تو پاسخ نیست، `Cache-Control: no-store`.
+- [x] توکن با یه نویسه کمتر یا بیشتر ← `404`، همون شکل پاسخ.
+
+**یادداشت پیاده‌سازی:** دو تصمیم تازه (۲۷ و ۲۸). `ShareMyWishlistUc` (قفل ۱۳، لینک زنده یا توکن تازه با `RandomWishlistShareTokens`)، `RevokeWishlistShareUc`، `GetSharedWishlistUc` (فقط اسم کوچک، کارت‌های منتشرشده با `WishlistCards`، حداکثر ۲۰۰)؛ `SharedWishlistHttpResponse`؛ routeهای `POST`/`DELETE /me/wishlist/share` و `webV1SharedWishlist`؛ محدودیت nginx. تست: `WebV1WishlistShareOnDatabaseTest` (۴). خرابکاری: بدون چک پرچم در لیست عمومی ← «the flag off - sharing 422, the public list 404 …» قرمز؛ بدون `no-store` ← «the public list - the first name only …» قرمز؛ بدون برگردوندن لینک زنده ← «asked twice - one token …» قرمز. کل مجموعه: ۲۹۴۰ تست سبز، ۵ skip.
 
 ---
 
-#### گام ۹.۴: قلب روی کارت‌ها و داشبورد حساب · M ⬜
+#### گام ۹.۴: قلب روی کارت‌ها و داشبورد حساب · M ✅
 
 **می‌سازی:** `viewer: UserId?` در Queryهای لیست محصولات، صفحه‌ی محصول، مرتبط و سبد؛ `ProductCards` یه `wishlisted: Set<ProductId>?` می‌گیره (`null` = مهمان)؛ `GetMyDashboardUc` و `AccountDashboardHttpResponse`.
 
 وابسته به: ۹.۱ و فاز ۸
 
 **تموم شده یعنی:**
-- [ ] مهمان ← `isWishlisted = null` همه‌جا؛ کاربر ← `true` برای محصول ذخیره‌شده و `false` برای بقیه، در لیست، صفحه، مرتبط و سبد.
-- [ ] تعداد کوئری لیست محصولات برای کاربر واردشده فقط یکی بیشتر.
-- [ ] داشبورد: هر عدد با `GET /me/orders` (`counts`)، `/me/addresses`، `/me/wishlist` (`count`)، `/me/reviews` (`counts.total`)، `/me/reservation` و `pending-products` مقایسه می‌شه.
+- [x] مهمان ← `isWishlisted = null` همه‌جا؛ کاربر ← `true` برای محصول ذخیره‌شده و `false` برای بقیه، در لیست، صفحه، مرتبط و سبد.
+- [x] تعداد کوئری لیست محصولات برای کاربر واردشده فقط یکی بیشتر.
+- [x] داشبورد: هر عدد با `GET /me/orders` (`counts`)، `/me/addresses`، `/me/wishlist` (`count`)، `/me/reviews` (`counts.total`)، `/me/reservation` و `pending-products` مقایسه می‌شه.
+
+**یادداشت پیاده‌سازی:** سه تصمیم تازه (۲۹ تا ۳۱). `WishlistHearts`؛ `viewer` در Queryهای لیست، صفحه و مرتبط؛ قلب روی ردیف‌های سبد (`CartItemDto.isWishlisted`)؛ `isWishlisted` در `ProductDetailHttpResponse`؛ ورود اختیاری روی routeهای محصول (سه تست route ِ محصول حالا `configureAuthentication` رو نصب می‌کنن)؛ `GetMyDashboardUc`، `ReviewsAwaiting`، `OrderQmRepository.sentMediaCountOf`، `AccountDashboardHttpResponse` و `AccountTexts.greeting`. تست: `WebV1WishlistHeartsOnDatabaseTest` (۳: قلب همه‌جا برای مهمان و کاربر، یه statement برای ۲۴ کارت، داشبورد در برابر هر صفحه). خرابکاری: بدون قلب در `GetCartUc` ← «a guest sees no heart anywhere …» قرمز؛ بدون `mark` در لیست ← همون تست قرمز؛ `ordersActive` = همه‌ی سفارش‌ها ← «the dashboard - every number the same as the page it links to …» قرمز. کل مجموعه یه قرمزی پیدا کرد: سبد صفحه‌ی پرداخت (`GetCheckoutContextUc`) قلب نداشت و دیگه با `GET /cart` یکی نبود؛ قلب به `withHearts` ِ مشترک در `CartView` رفت و هر دو ازش می‌خونن. کل مجموعه: ۲۹۴۳ تست سبز، ۵ skip.
 
 ---
 
-#### گام ۹.۵: ریویو و دور با kiva-fe · S ⬜
+#### گام ۹.۵: ریویو و دور با kiva-fe · S ✅
 
 **می‌سازی:** `WISHLIST_REVIEW.md` (ردیف ۱۴ ِ بخش ۳؛ خرابکاری: قفل ۱۳ در سقف، برگشت کامل تراکنش «انتقال»، فیلتر منتشرشده در لیست عمومی، پرچم `wishlistShare`، `no-store`)؛ `docs/FRONTEND_WISHLIST.md` (قلب مهمان در حافظه‌ی مرورگر و `PUT` ِ تک‌تک بعد از ورود، `ids` فقط با ورود، داشبورد)؛ دور با kiva-fe.
 
 وابسته به: ۹.۲، ۹.۳، ۹.۴
 
 **تموم شده یعنی:**
-- [ ] همه‌ی خرابکاری‌ها قرمز می‌کنن؛ merge به `main` و deploy.
+- [x] همه‌ی خرابکاری‌ها قرمز می‌کنن (دوازده نگهبان، جدول `WISHLIST_REVIEW.md`).
+- [ ] merge به `main` و deploy: منتظر تأیید تو، همراه با دور واقعی با kiva-fe (و قطعه‌ی تازه‌ی nginx).
+
+**یادداشت پیاده‌سازی:** `WISHLIST_REVIEW.md` (ردیف ۱۴ ِ بخش ۳ و خطرهای فاز، دوازده خرابکاری که همه دوباره رفتن و قرمز کردن)؛ `docs/FRONTEND_WISHLIST.md` (قلب مهمان در حافظه‌ی مرورگر و `PUT` ِ تک‌تک بعد از ورود، `ids` فقط با ورود، `401` ِ توکن منقضی روی لیست و صفحه، «همه به سبد»، «انتقال» و «برگردون»، لینک اشتراک، سربرگ حساب). کل مجموعه با `--rerun-tasks`: ۲۹۴۳ تست سبز، ۵ skip. فاز ۹ از طرف ریپو کامله؛ دور واقعی و merge منتظر تو.
 
 ---
 
@@ -4059,11 +4549,11 @@ Route: 200 با Cache-Control: no-store
 
 | گام | عنوان | اندازه | وضعیت |
 |---|---|---|---|
-| ۱۰.۰ | کانترکت 1.16.0 | S | ⬜ |
-| ۱۰.۱ | اشتراک: جدول، دامنه، ثبت، لیست، لغو و نشانه‌ها در صفحه‌ی محصول | M | ⬜ |
-| ۱۰.۲ | job ِ «موجود شد» و پیامکش | M | ⬜ |
-| ۱۰.۳ | صف پنل و «سؤال داری؟» | M | ⬜ |
-| ۱۰.۴ | ریویو | S | ⬜ |
+| ۱۰.۰ | کانترکت 1.16.0 | S | ✅ |
+| ۱۰.۱ | اشتراک: جدول، دامنه، ثبت، لیست، لغو و نشانه‌ها در صفحه‌ی محصول | M | ✅ |
+| ۱۰.۲ | job ِ «موجود شد» و پیامکش | M | ✅ |
+| ۱۰.۳ | صف پنل و «سؤال داری؟» | M | ✅ |
+| ۱۰.۴ | ریویو | S | ✅ |
 
 ### ۱۵.۲ تصمیم‌های این فاز
 
@@ -4088,6 +4578,15 @@ Route: 200 با Cache-Control: no-store
 | 17 | `AdminVariant.stockAlertSubscribers` | تعداد اشتراک‌های `ACTIVE` ِ همون رنگ (بدون «هر رنگی») | — |
 | 18 | «سؤال داری؟» | عمومی. محصول منتشرشده (وگرنه `404`). `color` اختیاری؛ اگه هست باید رنگ فعال محصول باشه (وگرنه `400 COLOR_NOT_FOUND`)؛ نیومد ← رنگ پیش‌فرض. `prefilledText` از `ProductTexts.inquiryText(name, colorName, sku)`. `channels` = از `settings.social` فقط `RUBIKA`، `TELEGRAM`، `BALE` به ترتیب تنظیمات (اینستاگرام متن آماده نمی‌گیره). `url` = آدرس کانال + `?text=` (یا `&text=` اگه آدرس `?` داره) + متن کدشده با UTF-8 (فاصله `%20`). `responseHours` از `supportHours` (`ContentTexts`). کش نمی‌شه | کانترکت؛ اینکه پیام‌رسان متن رو پیش‌پر کنه دست ما نیست، پس فرانت `prefilledText` رو برای کپی هم نشون می‌ده |
 | 19 | لاگ تغییرات | نداره (endpoint ِ پنل فقط خوندنه) | — |
+| 20 | شکل ثبت (تازه، گام ۱۰.۱) | بدنه اختیاریه (`{}` یا هیچ ← «هر رنگی»)؛ `variantId` ≤ ۰ ← `400 VARIANT_NOT_FOUND` روی `variantId` قبل از تراکنش؛ `channel` جز `SMS` ← `400 CHANNEL_INVALID`؛ `phone` ِ کلاینت قدیمی نادیده (`ignoreUnknownKeys`) | قانون «شکل قبل از تراکنش» |
+| 21 | ساختن ِ `StockAlert` (تازه، گام ۱۰.۱) | سرویس مشترک `StockAlerts` (قانون ۱۵): محصول از `findBriefs` (هر وضعیتی)، رنگ از `ProductQmRepository.findVariants` ِ تازه (چند رنگ با یه خوندن) و پالت، موبایل ماسک‌شده‌ی حساب همون لحظه (`IranianMobileNumber.masked`)؛ ثبت جواب رو با همین می‌سازه | بدون N+1 |
+| 22 | نشانه‌های صفحه‌ی محصول (تازه، گام ۱۰.۱) | `StockAlertFlags` (مثل `WishlistHearts`، پیش‌فرض `NONE`)؛ صفحه‌ی فروشگاه همیشه پرش می‌کنه (مهمان `{false, null}` و `false`)؛ فقط جایی که کسی نپرسیده (پنل) `null`. شمارش رقابتی ِ «یه اشتراک فعال» با ترجمه‌ی `stockalert_one_active_idx` به `409` | تصمیم‌های ۴ و ۱۵ |
+| 23 | `canSend` (تازه، گام ۱۰.۲) | `SmsSender.canSend(SmsKind)` با پیش‌فرض `true` در خود پورت (فقط `FarazSmsSender` جوابش رو از الگوی تنظیم‌شده می‌ده)؛ `SmsKind` فعلاً فقط `BACK_IN_STOCK` | سه فرستنده فقط یکی‌شون معنی «الگو نیست» رو داره |
+| 24 | موبایل و متن پیامک (تازه، گام ۱۰.۲) | موبایل حساب داخل همون تراکنش ِ `NOTIFIED` خونده می‌شه و پیامک بعد از commit می‌ره؛ کاربر حذف‌شده ← فقط WARN (اشتراک `NOTIFIED` می‌مونه). `NotifyStockAlertUc.shortName` اسم بیشتر از ۳۰ نویسه رو با «…» می‌بُره | قانون «پیامک بعد از commit» و تصمیم ۱۰ |
+| 25 | شمارنده‌ی پنل (تازه، گام ۱۰.۲) | `StockAlertCounts` (مثل `StockAlertFlags`) در `GetAdminProductUc`؛ `AdminVariant.stockAlertSubscribers` = اشتراک‌های `ACTIVE` ِ همون رنگ با یه خوندن | تصمیم ۱۷ |
+| 26 | موجودی در صف پنل (تازه، گام ۱۰.۳) | `availableQuantity` = `onHand − reserved` ِ رنگ‌های **فعال** (رنگ غیرفعال ← ۰)، بدون نگاه به وضعیت محصول؛ همین عدد پایه‌ی فیلتر `inStock` و `stockStatus` (`StockPolicy` با آستانه‌ی تنظیمات). گروه‌بندی و موجودی در یه SQL (زیرکوئری، نه `WITH`، چون Exposed فقط جواب دستوری رو می‌خونه که با `SELECT` شروع بشه) با یه شمارش جدا؛ tiebreaker ِ `productId` و `variantId` | صفحه‌بندی با فیلتر درست بمونه؛ «موجود دقیق» ِ کانترکت |
+| 27 | رنگ «سؤال داری؟» (تازه، گام ۱۰.۳) | رنگی که محصول الان نداره ← `400 COLOR_NOT_FOUND` (برخلاف صفحه‌ی محصول که به پیش‌فرض برمی‌گرده)؛ کلید بدشکل هم `400` روی `color`؛ شناسه‌ی بدشکل مسیر ← `404`. کد متن، کد خود محصوله (`KV-1001`)، نه کد رنگ | متن نباید رنگی رو بگه که فروشگاه نمی‌فروشه؛ کانترکت |
+| 28 | `responseHours` (تازه، گام ۱۰.۳) | از اولین سطر ساعت پشتیبانی که ساعت داره: «پاسخگویی ۹ تا ۲۱» (دقیقه فقط وقتی هست: «۲۱:۳۰»)؛ نبود ← `null`. route ِ «سؤال داری؟» تابع جدای `webV1ProductInquiry` در همون `webV1Products.kt`، بیرون از بلوک ورود اختیاری (عمومی، هیچ توکنی خونده نمی‌شه) | `ContentTexts`؛ تغییر امضای `webV1Products` پنج جا رو عوض می‌کرد |
 
 ### ۱۵.۳ تغییرات دامنه
 
@@ -4240,31 +4739,35 @@ url (تلگرام با آدرس https://t.me/kiva_shop) = https://t.me/kiva_shop
 
 ### ۱۵.۹ گام‌ها
 
-#### گام ۱۰.۰: کانترکت 1.16.0 · S ⬜
+#### گام ۱۰.۰: کانترکت 1.16.0 · S ✅
 
 **می‌سازی:** برنچ `stock-alerts`؛ ردیف‌های ۱۵.۸؛ متن کدهای تازه.
 
 **تموم شده یعنی:**
-- [ ] کانترکت معتبر؛ `ErrorMessagesTest` و `RouteGuardsTest` سبز.
+- [x] کانترکت معتبر؛ `ErrorMessagesTest` و `RouteGuardsTest` سبز.
+
+**یادداشت پیاده‌سازی:** برنچ `stock-alerts` از نوک فاز ۹ (`5ea9b5d`). کانترکت 1.16.0 با هر ۱۱ ردیف ِ ۱۵.۸: ثبت فقط با ورود (`phone` از درخواست حذف شد، `401` و `429`)، قانون «موجوده» برای «هر رنگی» با `meta.inStockColorKeys`، `422 STOCK_ALERT_LIMIT_REACHED`؛ «اشتراک‌های من» و لغو؛ صف پنل و دو endpoint ِ موجودی و رسید مرجوعی با «کار زمان‌بندی‌شده تا ۵ دقیقه، نه بین ۲۲ تا ۸»؛ `stockAlert` و `stockAlertSubscribed`؛ `stockAlertSubscribers` ِ فقط همون رنگ؛ قانون ساخت `url` ِ «سؤال داری؟» و `required` ِ `ProductInquiry` و `StockAlert`؛ ردیف پیامک بخش ۵؛ دو کد تازه در `ErrorCode` با متن فارسی (و متن کد فیلدی `CHANNEL_INVALID`). YAML معتبر؛ `ErrorMessagesTest` و `RouteGuardsTest` سبز.
 
 ---
 
-#### گام ۱۰.۱: اشتراک: جدول، دامنه، ثبت، لیست، لغو و نشانه‌ها در صفحه‌ی محصول · M ⬜
+#### گام ۱۰.۱: اشتراک: جدول، دامنه، ثبت، لیست، لغو و نشانه‌ها در صفحه‌ی محصول · M ✅
 
 **می‌سازی:** `V35__stock_alerts.sql`؛ Aggregate، سیاست، سرویس دامنه و repository (با ترجمه‌ی قید یکتا)؛ سه UseCase ِ اول؛ `webV1StockAlerts.kt`؛ `stockAlert` و `stockAlertSubscribed` در `GetProductUc` (با `viewer` ِ فاز ۹).
 
 وابسته به: ۱۰.۰
 
 **تموم شده یعنی:**
-- [ ] مهمان ← `401`؛ رنگ ناموجود ← `201` با `phoneMasked` ِ حساب؛ دوباره ← `409`؛ رنگ موجود ← `422`؛ «هر رنگی» وقتی یه رنگ موجوده ← `422` با کلید اون رنگ.
-- [ ] رنگ محصول دیگه ← `400`؛ محصول `DRAFT` ← `404`.
-- [ ] سی و یکمین ← `422 STOCK_ALERT_LIMIT_REACHED`؛ یازدهمین ثبت در یه ساعت ← `429`.
-- [ ] لغو ← `CANCELLED` و از «اشتراک‌های من» رفت؛ لغو دوباره ← `204`؛ اشتراک کس دیگه ← `404`.
-- [ ] صفحه‌ی محصول: `stockAlert.subscribed` و `stockAlertSubscribed` هر رنگ درست، برای مهمان `false`.
+- [x] مهمان ← `401`؛ رنگ ناموجود ← `201` با `phoneMasked` ِ حساب؛ دوباره ← `409`؛ رنگ موجود ← `422`؛ «هر رنگی» وقتی یه رنگ موجوده ← `422` با کلید اون رنگ.
+- [x] رنگ محصول دیگه ← `400`؛ محصول `DRAFT` ← `404`.
+- [x] سی و یکمین ← `422 STOCK_ALERT_LIMIT_REACHED`؛ یازدهمین ثبت در یه ساعت ← `429`.
+- [x] لغو ← `CANCELLED` و از «اشتراک‌های من» رفت؛ لغو دوباره ← `204`؛ اشتراک کس دیگه ← `404`.
+- [x] صفحه‌ی محصول: `stockAlert.subscribed` و `stockAlertSubscribed` هر رنگ درست، برای مهمان `false`.
+
+**یادداشت پیاده‌سازی:** سه تصمیم تازه (۲۰ تا ۲۲). `V35__stock_alerts.sql` (قیدهای اسم‌دار و ایندکس یکتای «یه فعال»)؛ دامنه: `StockAlert`، `StockAlertId`/`StockAlertStatus`، `StockAlertPolicy` (سقف‌ها، ۹۰ روز، ساعت سکوت)، `StockAlertDomainService` (به ترتیب کانترکت، با `Retry-After`)، repository و تولیدکننده‌ی شناسه؛ `StockAlertRepositoryImpl` (و کوئری `findDue` ِ ۱۵.۳ برای ۱۰.۲)؛ `StockAlerts`، `StockAlertFlags`، `ProductQmRepository.findVariants`؛ سه UseCase و `webV1StockAlerts.kt`؛ `stockAlert` و `stockAlertSubscribed` در صفحه‌ی محصول. تست: `StockAlertTest` (۴)، `WebV1StockAlertsOnDatabaseTest` (۵). خرابکاری: ورود اختیاری ← «a sold-out color - 201 …» قرمز؛ بدون سقف ۳۰ و بدون سقف ساعتی ← «the 31st active one …» قرمز؛ بدون چک «موجوده» ← تست اول قرمز؛ بدون چک مالک در لغو ← ««اشتراک‌های من» … someone else's 404» قرمز. دو تست قبلی به‌روز شد (`WebV1ProductsTest` با `stockAlertSubscribed`، `GetProductUcTest` با `false` ِ مهمان). کل مجموعه: ۲۹۵۲ تست، یکی قرمز که درست شد.
 
 ---
 
-#### گام ۱۰.۲: job ِ «موجود شد» و پیامکش · M ⬜
+#### گام ۱۰.۲: job ِ «موجود شد» و پیامکش · M ✅
 
 **می‌سازی:** `FindDueStockAlertsUc`، `NotifyStockAlertUc`، `DeleteOldStockAlertsUc`؛ `EngagementJobs`؛ `SmsSender.sendBackInStock` و `canSend` (مسیر ۹ مرحله‌ای بخش ۲۴)؛ `AdminVariant.stockAlertSubscribers` واقعی.
 
@@ -4275,36 +4778,43 @@ url (تلگرام با آدرس https://t.me/kiva_shop) = https://t.me/kiva_shop
 - چرا قفل ردیف و چک دوباره؟ بین پیدا شدن و فرستادن ممکنه کاربر لغو کرده باشه یا آخرین عدد فروخته شده باشه.
 
 **تموم شده یعنی:**
-- [ ] (`PurchaseJobsOnDatabaseTest` ِ مشابه با `MutableClock`) تنظیم موجودی +۲ ← اجرای job ← اشتراک `NOTIFIED`، پیامک ضبط‌شده با `link` ِ درست؛ اجرای دوم ← پیامک دوم نه.
-- [ ] سفارش پرداخت‌نشده‌ای که آخرین عدد رو نگه داشته منقضی می‌شه ← job پیامک می‌ده (بدون هیچ تنظیم موجودی).
-- [ ] رسیدن مرجوعی با `restock` ← پیامک.
-- [ ] «هر رنگی»: یکی از سه رنگ موجود شد ← `notifiedVariantId` همون رنگ.
-- [ ] ساعت ۲۳ تهران ← هیچ پیامکی؛ ساعت ۸:۰۵ ← می‌ره.
-- [ ] الگو تنظیم نشده (`FarazSmsSender` بدون الگو) ← job اجرا نمی‌شه، اشتراک `ACTIVE` می‌مونه، WARN.
-- [ ] ۲۵۰ منتظر ← اجرای اول ۲۰۰ تا (قدیمی‌ترها)، دومی ۵۰ تا.
-- [ ] `NOTIFIED` ِ ۹۱ روزه با job ِ شبانه پاک شد؛ `ACTIVE` ِ ۱۰۰ روزه نه.
+- [x] (`PurchaseJobsOnDatabaseTest` ِ مشابه با `MutableClock`) تنظیم موجودی +۲ ← اجرای job ← اشتراک `NOTIFIED`، پیامک ضبط‌شده با `link` ِ درست؛ اجرای دوم ← پیامک دوم نه.
+- [x] سفارش پرداخت‌نشده‌ای که آخرین عدد رو نگه داشته منقضی می‌شه ← job پیامک می‌ده (بدون هیچ تنظیم موجودی).
+- [x] رسیدن مرجوعی با `restock` ← پیامک.
+- [x] «هر رنگی»: یکی از سه رنگ موجود شد ← `notifiedVariantId` همون رنگ.
+- [x] ساعت ۲۳ تهران ← هیچ پیامکی؛ ساعت ۸:۰۵ ← می‌ره.
+- [x] الگو تنظیم نشده (`FarazSmsSender` بدون الگو) ← job اجرا نمی‌شه، اشتراک `ACTIVE` می‌مونه، WARN.
+- [x] ۲۵۰ منتظر ← اجرای اول ۲۰۰ تا (قدیمی‌ترها)، دومی ۵۰ تا.
+- [x] `NOTIFIED` ِ ۹۱ روزه با job ِ شبانه پاک شد؛ `ACTIVE` ِ ۱۰۰ روزه نه.
+
+**یادداشت پیاده‌سازی:** سه تصمیم تازه (۲۳ تا ۲۵). `FindDueStockAlertsUc` (کوئری `findDue` ِ ۱۵.۳)، `NotifyStockAlertUc` (قفل ردیف، چک دوباره، `NOTIFIED` با رنگ برگشته، commit، بعد پیامک)، `DeleteOldStockAlertsUc`؛ `EngagementJobs` (`notify-back-in-stock` هر ۵ دقیقه، بدون الگو اجرا نمی‌شه و هر ساعت یه WARN، ساعت سکوت ۲۲ تا ۸ تهران؛ `delete-old-stock-alerts` روزانه ۴:۴۵) در `JobScheduler`؛ مسیر کامل پیامک (`SmsSender.sendBackInStock` و `canSend`، `FarazSmsConfig.backInStockPattern` با WARN، `LogSmsSender`، `AppConfig`، `application.conf`، `kiva.env.example`، README، جدول `LAUNCH.md`، `RecordingSmsSender`)؛ `stockAlertSubscribers` ِ واقعی. تست: `EngagementJobsOnDatabaseTest` (۸: تنظیم موجودی، «هر رنگی»، انقضای سفارش پرداخت‌نشده بدون هیچ تنظیمی، ساعت سکوت، بدون الگو، ۲۵۰ منتظر، پاک‌سازی شبانه، زمان‌بندی‌ها)، `FarazSmsSenderTest` (یه تست تازه). خرابکاری: بدون ذخیره‌ی `NOTIFIED` ← شش تست قرمز (پیامک دوباره)؛ بدون چک الگو، بدون ساعت سکوت، سقف ۱۰۰۰ به‌جای ۲۰۰ ← هر کدوم تست خودش قرمز. «رسیدن مرجوعی با `restock`» جدا تست نشد: job به وضعیت موجودی نگاه می‌کنه نه به راه برگشتنش، و انقضا و تنظیم دستی دو راه متفاوت همین رو نشون می‌دن. کل مجموعه: ۲۹۶۱ تست سبز، ۵ skip.
 
 ---
 
-#### گام ۱۰.۳: صف پنل و «سؤال داری؟» · M ⬜
+#### گام ۱۰.۳: صف پنل و «سؤال داری؟» · M ✅
 
 **می‌سازی:** `FindAdminStockAlertGroupsUc`، `GetProductInquiryUc`؛ `webV1AdminStockAlerts.kt` و route ِ «سؤال داری؟»؛ `ProductTexts.inquiryText`.
 
 وابسته به: ۱۰.۱
 
 **تموم شده یعنی:**
-- [ ] صف: سه گروه با ترتیب درست؛ «هر رنگی» با `variantId`، `color` و `sku` ِ `null` و `availableQuantity` = جمع؛ `inStock=false` فقط ناموجودها؛ هیچ موبایلی تو پاسخ نیست (تست روی متن خام JSON).
-- [ ] `OPERATOR` ← `403`.
-- [ ] «سؤال داری؟» بدون `color` ← رنگ پیش‌فرض؛ با رنگ غلط ← `400`؛ اینستاگرام تو `channels` نیست؛ `url` ِ کدشده درست (تست با decode)؛ آدرسی که `?` داره ← `&text=`.
+- [x] صف: سه گروه با ترتیب درست؛ «هر رنگی» با `variantId`، `color` و `sku` ِ `null` و `availableQuantity` = جمع؛ `inStock=false` فقط ناموجودها؛ هیچ موبایلی تو پاسخ نیست (تست روی متن خام JSON).
+- [x] `OPERATOR` ← `403`.
+- [x] «سؤال داری؟» بدون `color` ← رنگ پیش‌فرض؛ با رنگ غلط ← `400`؛ اینستاگرام تو `channels` نیست؛ `url` ِ کدشده درست (تست با decode)؛ آدرسی که `?` داره ← `&text=`.
+
+**یادداشت پیاده‌سازی:** سه تصمیم تازه (۲۶ تا ۲۸). `StockAlertRepository.waitingGroups` (گروه‌بندی، موجودی رنگ‌های فعال و فیلتر `inStock` در یه SQL، با شمارش جدا) و `WaitingGroup`؛ `FindAdminStockAlertGroupsUc` (`PRODUCT_ID_INVALID` و `BOOLEAN_INVALID` با هم، بعد چهار خوندن برای کل صفحه: گروه‌ها، `findBriefs`، `findVariants`، پالت و آستانه)؛ `webV1AdminStockAlerts.kt` (`[ADMIN, CATALOG_MANAGER]`، بدون لاگ تغییرات)؛ `GetProductInquiryUc` و `webV1ProductInquiry`؛ `ProductInquiryHttpResponse` و `MessengerLinkHttpResponse` (`url` با `?text=` یا `&text=` و `%20`)، `ProductTexts.inquiryText`، `ContentTexts.responseHours`. تست: `WebV1AdminStockAlertsOnDatabaseTest` (۵: ترتیب و شکل صف بدون هیچ موبایلی، فیلترها و خطاها، نقش‌ها، «سؤال داری؟» با رنگ پیش‌فرض و decode، رنگ پرسیده/غلط و `&text=` و ۴۰۴). خرابکاری: فیلتر `inStock=true` بی‌اثر ← «inStock=false only the sold-out groups …» قرمز؛ همیشه `?text=` ← «… a link with a query gets &text= …» قرمز. کل مجموعه با `--rerun-tasks`: ۲۹۶۶ تست، ۵ skip؛ یه شکست ِ بی‌ربط (`WebV1ShipmentOnDatabaseTest` › «… 50 times - never a deadlock»، timeout ِ یه دقیقه‌ای زیر بار کل مجموعه) که تنها دوباره سبز شد.
 
 ---
 
-#### گام ۱۰.۴: ریویو · S ⬜
+#### گام ۱۰.۴: ریویو · S ✅
 
 **می‌سازی:** `STOCK_ALERTS_REVIEW.md` (ردیف ۱۲ ِ بخش ۳؛ خرابکاری: ورود لازم، سقف ۳۰ و ساعتی، چک دوباره‌ی job زیر قفل، `canSend`، ساعت سکوت، نبود موبایل در صف پنل)؛ `docs/FRONTEND_STOCK_ALERTS.md` (دکمه برای مهمان ← صفحه‌ی ورود، «سؤال داری؟» با کپی متن)؛ README (الگوی پیامک)؛ دور با kiva-fe و پنل؛ merge.
 
 **تموم شده یعنی:**
-- [ ] همه‌ی خرابکاری‌ها قرمز می‌کنن؛ الگو در فراز تأیید و در `kiva.env`؛ merge به `main` و deploy.
+- [x] همه‌ی خرابکاری‌ها قرمز می‌کنن (دوازده نگهبان، جدول `STOCK_ALERTS_REVIEW.md`).
+- [ ] الگو در فراز تأیید و در `kiva.env`؛ merge به `main` و deploy: منتظر تو، همراه با دور واقعی با kiva-fe و پنل.
+
+**یادداشت پیاده‌سازی:** `STOCK_ALERTS_REVIEW.md` (ردیف ۱۲ ِ بخش ۳ و خطرهای فاز؛ هشت خرابکاری ِ این گام با یه اسکریپت دوباره رفتن و همه قرمز کردن، به‌علاوه‌ی چهار تای گام‌های ۱۰.۲ و ۱۰.۳)؛ تست تازه‌ی `EngagementJobsOnDatabaseTest` › «found due, then called off or sold again before its turn …» (چک دوباره‌ی زیر قفل تا الان تستی نداشت)؛ `docs/FRONTEND_STOCK_ALERTS.md` (دکمه برای مهمان ← ورود و برگشت، جدول خطاهای ثبت، «اشتراک‌های من»، «سؤال داری؟» با کپی متن، صف پنل). README از گام ۱۰.۲ الگو رو داره. کل مجموعه با `--rerun-tasks`: ۲۹۶۷ تست سبز، ۵ skip. فاز ۱۰ از طرف ریپو کامله؛ الگوی فراز، دور واقعی و merge منتظر تو.
 
 ---
 
@@ -4321,14 +4831,14 @@ url (تلگرام با آدرس https://t.me/kiva_shop) = https://t.me/kiva_shop
 
 | گام | عنوان | اندازه | وضعیت |
 |---|---|---|---|
-| ۱۱.۰ | کانترکت 1.17.0 | S | ⬜ |
-| ۱۱.۱ | کمپین: جدول، دامنه و CRUD ِ پنل | M | ⬜ |
-| ۱۱.۲ | کمپین در فروشگاه: `/campaigns/active`، فیلتر `campaign`، شمارنده‌ی صفحه‌ی محصول | M | ⬜ |
-| ۱۱.۳ | بنرها | M | ⬜ |
-| ۱۱.۴ | پیام‌های رضایت | M | ⬜ |
-| ۱۱.۵ | آمار سایت و خلاصه‌ی رضایت | S | ⬜ |
-| ۱۱.۶ | `GET /home` | M | ⬜ |
-| ۱۱.۷ | ریویو و دور با پنل و kiva-fe | S | ⬜ |
+| ۱۱.۰ | کانترکت 1.17.0 | S | ✅ |
+| ۱۱.۱ | کمپین: جدول، دامنه و CRUD ِ پنل | M | ✅ |
+| ۱۱.۲ | کمپین در فروشگاه: `/campaigns/active`، فیلتر `campaign`، شمارنده‌ی صفحه‌ی محصول | M | ✅ |
+| ۱۱.۳ | بنرها | M | ✅ |
+| ۱۱.۴ | پیام‌های رضایت | M | ✅ |
+| ۱۱.۵ | آمار سایت و خلاصه‌ی رضایت | S | ✅ |
+| ۱۱.۶ | `GET /home` | M | ✅ |
+| ۱۱.۷ | ریویو و دور با پنل و kiva-fe | S | ✅ |
 
 ### ۱۶.۲ تصمیم‌های این فاز
 
@@ -4353,6 +4863,15 @@ url (تلگرام با آدرس https://t.me/kiva_shop) = https://t.me/kiva_shop
 | 17 | کش | `/home`: `respondResultCacheable` (۵ دقیقه، کانترکت) و `isWishlisted` همیشه `null` (فاز ۹، تصمیم ۱۵). `/banners`، `/campaigns/active`، `/testimonials`، `/site/stats`: **کش نمی‌شن** (کانترکت نگفته، و `serverTime` ِ کمپین باید تازه باشه) | پاسخ عمومی کش‌شده شخصی نمی‌شه؛ شمارنده‌ی معکوس با ساعت ۵ دقیقه کهنه غلط نشون می‌ده (صفحه‌ی خانه شمارنده رو با `serverTime` ِ `/campaigns/active` همگام کنه) |
 | 18 | حذف | کمپین، بنر و پیام رضایت واقعاً پاک می‌شن (`204`). مدیای بنر و اسکرین‌شات می‌مونه (قانون ۵.۲) | — |
 | 19 | لاگ تغییرات | `CAMPAIGN_*`، `BANNER_*`، `TESTIMONIAL_*` با `CREATED`/`UPDATED`/`DELETED` (بخش ۵.۱) | — |
+| 20 | کد «پایان قبل از شروع» (تازه، گام ۱۱.۰) | به‌جای کد تازه‌ی `ENDS_BEFORE_START`، همون `DATE_RANGE_INVALID` روی `endsAt` که کد تخفیف و نوار اطلاعیه از قبل دارن (کمپین و بنر). `receivedAt` ِ پیام رضایت بعد از الان ← `400 DATE_IN_FUTURE` (کد فیلدی تازه، فقط با متن فارسی) | دو کد برای یه قانون نمی‌مونه؛ پنل از قبل `DATE_RANGE_INVALID` رو می‌شناسه |
+| 21 | قفل کمپین‌ها (تازه، گام ۱۱.۱) | هر نوشتن کمپین (ساخت، ویرایش، حذف) اول قفل advisory ِ `campaigns` رو می‌گیره (قفل ۱۴ ِ بخش ۴.۱۱، به هیچ قفل دیگه‌ای کاری نداره)، بعد چک slug و هم‌پوشانی؛ قید یکتای slug و `EXCLUDE` دیوار آخرن و در رقابت به همون `409`ها ترجمه می‌شن (`CAMPAIGN_OVERLAP` ِ دیوار آخر `meta.campaignId` نداره: تراکنش ِ ردشده دیگه نمی‌تونه بخونه) | `meta.campaignId` همیشه درست باشه؛ رقابت با قفل از اول پیش نمیاد |
+| 22 | ستون `productIds` (تازه، گام ۱۱.۱) | `BIGINT[]` با `cardinality ≤ 200` (مثل لیست‌های `discountcode_tbl`)، نه `JSONB` | یه شکل برای یه نوع داده در پروژه |
+| 23 | محصول‌های چند کمپین (تازه، گام ۱۱.۱) | `CampaignShowcases` (قانون ۱۵) همه‌ی کاندیدها رو با **یه** خوندن `campaignShowcase` می‌گیره (`productIds` ِ همه‌ی کمپین‌ها، یا همه وقتی یکی خالیه) و برای هر کمپین در حافظه فیلتر می‌کنه؛ لیست پنل، فرم، `/campaigns/active` و خانه همین رو صدا می‌زنن. محصول ِ `DRAFT` در `productIds` مجازه (بعد از انتشار نشون داده می‌شه)؛ فقط ناموجود و بایگانی ← `400` | بدون N+1 |
+| 24 | مدل `sitecontent` (تازه، گام ۱۱.۱) | چون `SiteContentDocument` سخت‌گیرانه خونده می‌شه، کلید `home` ِ `V36` همون گام به مدل (و `SiteContentQm.home`) اضافه می‌شه، نه در ۱۱.۶. متن‌های خانه از `index.html` ِ پروتوتایپ (سه مرحله‌ی «چطور کار می‌کنیم»؛ «رزرو {holdDays} روزه» و «{returnWindowDays} روز ضمانت بازگشت» با جای‌گذاری تنظیمات) | کلید ناشناخته `/config` رو می‌شکست |
+| 25 | `LiveCampaign` (تازه، گام ۱۱.۲) | مثل `WishlistHearts` یه `fun interface` با `NONE`: `scope(filter, now)` فیلتر `campaign` رو به `campaignProductIds` (و `onSale`) تبدیل می‌کنه و `showing(productId, discounted, now)` نشونه‌ی صفحه‌ی محصول رو می‌ده. لیست **و** شمارنده‌های فیلتر (`facets`) هر دو با فیلتر محدودشده حساب می‌شن. کمپینی که الان نیست ← `campaignProductIds` ِ خالی ← لیست خالی. چیپ `campaign` (و عنوان لیست) فقط وقتی کمپین فعاله؛ `onSale` ِ ضمنی چیپ نمی‌گیره | شمارنده‌ها با لیست یکی بمونن |
+| 26 | فرم بنر (تازه، گام ۱۱.۳) | جایگاه ناشناخته ← `400 BANNER_PLACEMENT_INVALID`، رنگ‌بندی ← `400 BANNER_THEME_INVALID`، شبکه‌ی `overlayChannel` ← `400 SOCIAL_CHANNEL_INVALID`؛ `CTA_INCOMPLETE` روی همون نیمه‌ای که نیومده؛ `tagIcon` بی `tagLabel` نادیده (`tag = null`)؛ همه‌ی `overlay*` خالی ← `overlay = null`. `OpenWindow` ِ تازه در `common` (بازه‌ی باز) و اطلاعیه‌های فاز ۵ هم ازش استفاده می‌کنن. یه UseCase برای هر فایل، مثل بقیه‌ی پروژه | کانترکت فقط `enum` داشت؛ یه قانون بازه در یه جا |
+| 27 | پیام رضایت (تازه، گام ۱۱.۴) | ساعت پیام فقط ساعت واقعی (`00:00` تا `23:59`، ارقام فارسی هم) ← وگرنه `400 MESSAGE_TIME_INVALID`؛ متن ساده: خط تازه نگه داشته، نویسه‌ی کنترلی دیگه ← `400 TEXT_INVALID`؛ رنگ باید رنگی از همون محصول باشه، فعال یا نه (`findAdminDetail`). **لاگ تغییرات:** `entityLabel` = «#شناسه» (اسم مشتری نه)، `customerName` فقط اسمش (`hidden`)، `message` فقط «عوض شد» (`longText`). `summary` ِ `GET /testimonials` همین گام (پاسخش از فاز ۴ آماده بود)؛ گام ۱۱.۵ فقط `/site/stats`. «عوض کردن کلید رنگ» از API ممکن نیست (کلید رنگ تغییرناپذیره، فاز ۱)، پس `ON UPDATE CASCADE` فقط دیوار SQL ـه و تست API نداره | داده‌ی شخصی کمتر در لاگ؛ قانون موجود رنگ |
+| 28 | خانه (تازه، گام ۱۱.۶) | `CategoryMenu` (قانون ۱۵) لیست دسته‌ها رو برای `GET /categories` و خانه یکی می‌کنه. `showcaseProduct` = انتخاب محتوا اگه منتشرشده‌ست، وگرنه اولین «تازه‌ترین» (همون خوندنِ `newArrivals`)؛ متن‌ها با `ContentTexts.fill` (مثل `/config`). توکن ورود اصلاً خونده نمی‌شه (نه ورود اختیاری): پاسخ برای همه یکیه | یه منبع برای هر لیست؛ پاسخ کش‌شده شخصی نمی‌شه |
 
 ### ۱۶.۳ تغییرات دامنه
 
@@ -4537,103 +5056,120 @@ Route: respondResultCacheable؛ همه‌ی کارت‌ها با isWishlisted = 
 | 8 | `SatisfactionSummary`، `SiteStats` | «دستی، از `AdminSettings.siteStats`» | تصمیم ۱۴ |
 | 9 | `HomePage`، `GET /home` | `hero.showcaseProduct` `nullable` و قانون انتخابش؛ سقف هر بخش؛ «`HOME_HERO` جزو خانه نیست»؛ «`isWishlisted` همیشه `null`»؛ `ETag` و `304` | تصمیم‌های ۱۵ تا ۱۷ |
 | 10 | `DELETE /admin/campaigns/{campaignId}` | «تموم شدن کمپین هم قیمتی رو برنمی‌گردونه» | تصمیم ۱ |
-| 11 | `ErrorCode` | `CAMPAIGN_OVERLAP`، `ENDS_BEFORE_START`، `IMAGE_REQUIRED`، `CTA_INCOMPLETE` | — |
+| 11 | `ErrorCode` | `CAMPAIGN_OVERLAP`، `IMAGE_REQUIRED`، `CTA_INCOMPLETE` (`ENDS_BEFORE_START` نه: تصمیم ۲۰) | — |
 
 ### ۱۶.۸ گام‌ها
 
-#### گام ۱۱.۰: کانترکت 1.17.0 · S ⬜
+#### گام ۱۱.۰: کانترکت 1.17.0 · S ✅
 
 **می‌سازی:** برنچ `marketing`؛ ردیف‌های ۱۶.۷؛ متن کدهای تازه.
 
 **تموم شده یعنی:**
-- [ ] کانترکت معتبر؛ `ErrorMessagesTest` و `RouteGuardsTest` سبز (دوازده route ِ پنل `[ADMIN, CONTENT_EDITOR]`).
+- [x] کانترکت معتبر؛ `ErrorMessagesTest` و `RouteGuardsTest` سبز (دوازده route ِ پنل `[ADMIN, CONTENT_EDITOR]`).
+
+**یادداشت پیاده‌سازی:** برنچ `marketing` از نوک فاز ۱۰ (`f20b2b4`). یه تصمیم تازه (۲۰). کانترکت 1.17.0 با هر ۱۱ ردیف ِ ۱۶.۷: قانون‌های فرم کمپین و `409` ِ `DUPLICATE_SLUG` و `CAMPAIGN_OVERLAP` (با `meta.campaignId`)، «`PUT` جایگزینی کامل»، تعریف «فعال» و قانون و ترتیب `products`، `seeAllUrl = /products?campaign={slug}`، «بدون کش» برای `/banners`، `/campaigns/active`، `/testimonials` و `/site/stats`؛ پارامتر `campaign` ِ `GET /products`؛ `ProductDetail.campaign` و «`CAMPAIGN` استفاده نمی‌شه»؛ فرم بنر (`imageMediaId` اجباری، `ctaLabel`/`ctaUrl` با هم، `cta` و `text` ِ `nullable`، تعریف «دیده‌شده»، ترتیب و سقف ۱۰)؛ فرم و ترتیب پیام رضایت؛ «دستی» برای `SatisfactionSummary` و `SiteStats`؛ `HomePage` با `showcaseProduct` ِ `nullable`، سقف هر بخش، «`HOME_HERO` جزو خانه نیست»، «`isWishlisted` همیشه `null`»، `ETag` و `304`؛ «تموم شدن کمپین قیمتی رو برنمی‌گردونه»؛ `required` ِ `Campaign`، `Banner`، `Testimonial`، `TestimonialListResponse` و `HomePage`. سه کد تازه در `ErrorCode` و متن فارسی‌شون، به‌علاوه‌ی متن کد فیلدی `DATE_IN_FUTURE`. YAML معتبر؛ `ErrorMessagesTest` و `RouteGuardsTest` سبز.
 
 ---
 
-#### گام ۱۱.۱: کمپین: جدول، دامنه و CRUD ِ پنل · M ⬜
+#### گام ۱۱.۱: کمپین: جدول، دامنه و CRUD ِ پنل · M ✅
 
 **می‌سازی:** `V36__marketing.sql` (بخش کمپین)؛ `Campaign`، `CampaignDomainService`، repository (با ترجمه‌ی قیدهای یکتا و `EXCLUDE`)؛ چهار UseCase ِ پنل؛ `webV1AdminMarketing.kt` (کمپین)؛ `campaignShowcase` در `ProductQmRepository`.
 
 وابسته به: ۱۱.۰
 
 **تموم شده یعنی:**
-- [ ] ساخت، ویرایش، حذف، لاگ؛ `slug` ِ تکراری ← `409`؛ `endsAt` قبل از `startsAt` ← `400`.
-- [ ] دو کمپین فعال هم‌پوشان ← `409 CAMPAIGN_OVERLAP`؛ یکیش `isActive = false` ← مجاز؛ دو ساخت همزمان هم‌پوشان ← یکی `201`، یکی `409` (قید `EXCLUDE`).
-- [ ] `productIds` با محصول بایگانی‌شده ← `400` با مسیر فیلد.
-- [ ] `PUT` بدون `subtitle` ← `subtitle = null`.
+- [x] ساخت، ویرایش، حذف، لاگ؛ `slug` ِ تکراری ← `409`؛ `endsAt` قبل از `startsAt` ← `400`.
+- [x] دو کمپین فعال هم‌پوشان ← `409 CAMPAIGN_OVERLAP`؛ یکیش `isActive = false` ← مجاز؛ دو ساخت همزمان هم‌پوشان ← یکی `201`، یکی `409` (قید `EXCLUDE`).
+- [x] `productIds` با محصول بایگانی‌شده ← `400` با مسیر فیلد.
+- [x] `PUT` بدون `subtitle` ← `subtitle = null`.
+
+**یادداشت پیاده‌سازی:** چهار تصمیم تازه (۲۱ تا ۲۴). `V36__marketing.sql` کامل (کمپین با قید یکتای slug و `EXCLUDE`، بنر، پیام رضایت، بخش `home` ِ `sitecontent`)؛ دامنه: `Campaign`، `CampaignDraft` (همه‌ی خطاهای فرم با هم، `DATE_RANGE_INVALID` روی `endsAt`)، `CampaignId`/`CampaignWindow`، `CampaignShowcasePolicy`، `CampaignDomainService` (slug، بعد هم‌پوشانی با `meta.campaignId`)، `CampaignRepository` با `lockAll`؛ `CampaignRepositoryImpl` (ترجمه‌ی هر دو قید)؛ `ProductQmRepository.campaignShowcase`؛ `CampaignProducts`، `CampaignShowcases`، پنج UseCase (لیست، یکی، ساخت، ویرایش، حذف)؛ `webV1AdminMarketing.kt` (کمپین)؛ ۹ `AuditAction` ِ فاز با جمله‌هاشون؛ `SiteContentDocument.home`. تست: `CampaignTest` (۶)، `WebV1AdminCampaignsOnDatabaseTest` (۵: ساخت/ویرایش/حذف با لاگ و محصول‌ها به ترتیب تخفیف، فرم و ۴۰۰/۴۰۹، هم‌پوشانی، دو ساخت همزمان ۱۰ بار، نقش‌ها). خرابکاری: بدون `EXCLUDE` و بدون قفل ← «two overlapping campaigns made at once …» قرمز؛ بدون چک هم‌پوشانی ← «two active campaigns sharing a moment …» و `CampaignTest` قرمز؛ بدون چک و کلید slug ← «the form - …» قرمز؛ بایگانی‌شده پذیرفته ← همون تست قرمز. کل مجموعه با `--rerun-tasks`: ۲۹۷۸ تست سبز، ۵ skip.
 
 ---
 
-#### گام ۱۱.۲: کمپین در فروشگاه · M ⬜
+#### گام ۱۱.۲: کمپین در فروشگاه · M ✅
 
 **می‌سازی:** `GetActiveCampaignUc`؛ فیلتر `campaign` در `ProductFilters` و `FindProductsUc`؛ `ProductDetail.campaign` در `GetProductUc`.
 
 وابسته به: ۱۱.۱
 
 **تموم شده یعنی:**
-- [ ] قبل از `startsAt` و بعد از `endsAt` ← `204`؛ وسطش ← کمپین با محصول‌های تخفیف‌دار و موجود به ترتیب درصد.
-- [ ] `productIds` ِ خالی ← همه‌ی تخفیف‌دارها؛ با سه شناسه که یکیش تخفیف نداره ← دو تا.
-- [ ] `GET /products?campaign=paeez-1405` همون مجموعه با ناموجودها ته لیست؛ `slug` ِ کمپین تموم‌شده ← لیست خالی.
-- [ ] صفحه‌ی محصول تخفیف‌دار ِ کمپین ← `campaign` پر؛ بعد از `endsAt` ← `null`؛ **قیمت‌ها قبل و بعد از کمپین یکی‌ان** (تست صریح).
+- [x] قبل از `startsAt` و بعد از `endsAt` ← `204`؛ وسطش ← کمپین با محصول‌های تخفیف‌دار و موجود به ترتیب درصد.
+- [x] `productIds` ِ خالی ← همه‌ی تخفیف‌دارها؛ با سه شناسه که یکیش تخفیف نداره ← دو تا.
+- [x] `GET /products?campaign=paeez-1405` همون مجموعه با ناموجودها ته لیست؛ `slug` ِ کمپین تموم‌شده ← لیست خالی.
+- [x] صفحه‌ی محصول تخفیف‌دار ِ کمپین ← `campaign` پر؛ بعد از `endsAt` ← `null`؛ **قیمت‌ها قبل و بعد از کمپین یکی‌ان** (تست صریح).
+
+**یادداشت پیاده‌سازی:** یه تصمیم تازه (۲۵). `GetActiveCampaignUc` و `webV1Home.kt` (فعلاً `/campaigns/active`، بدون کش، `204`)؛ `LiveCampaign`؛ `ProductFilterQuery.campaign` ← `ProductFilter.campaign` و `campaignProductIds` (شکل غلط ← `400 SLUG_INVALID` روی `campaign`)؛ `FindProductsUc` (عنوان و چیپ کمپین)، `GetProductFacetsUc`، `GetProductUc` (`ProductDetail.campaign`). تست: `WebV1CampaignsInShopOnDatabaseTest` (۴). خرابکاری: بدون `onSale` ِ ضمنی و بدون «کمپین غیرفعال ← هیچ» ← «GET products with the campaign …» قرمز؛ بدون پایان بازه در `findLiveAt` ← سه تست قرمز؛ بدون شرط تخفیف برای شمارنده ← «a discounted product of the campaign …» قرمز؛ بدون «موجود» در `campaignShowcase` ← «204 before it starts …» و تست پنل قرمز. اسکریپت خرابکاری یه باگ داشت (چند `--tests` روی یه task فقط آخری رو اجرا می‌کرد)؛ درست شد و همه دوباره رفتن. کل مجموعه با `--rerun-tasks`: ۲۹۸۲ تست سبز، ۵ skip.
 
 ---
 
-#### گام ۱۱.۳: بنرها · M ⬜
+#### گام ۱۱.۳: بنرها · M ✅
 
 **می‌سازی:** `V36` (بخش بنر)؛ `Banner`، repository؛ پنج UseCase؛ routeها.
 
 وابسته به: ۱۱.۰
 
 **تموم شده یعنی:**
-- [ ] بدون عکس ← `400 IMAGE_REQUIRED`؛ عکس `PRODUCT` ← `400 MEDIA_PURPOSE_MISMATCH`؛ فقط `ctaLabel` ← `400 CTA_INCOMPLETE`؛ `ctaUrl = javascript:…` ← `400`.
-- [ ] بنر زمان‌بندی‌شده برای فردا تو `GET /banners` نیست، تو پنل هست؛ ترتیب `sortOrder`.
-- [ ] `placement` نیومده ← `400`.
+- [x] بدون عکس ← `400 IMAGE_REQUIRED`؛ عکس `PRODUCT` ← `400 MEDIA_PURPOSE_MISMATCH`؛ فقط `ctaLabel` ← `400 CTA_INCOMPLETE`؛ `ctaUrl = javascript:…` ← `400`.
+- [x] بنر زمان‌بندی‌شده برای فردا تو `GET /banners` نیست، تو پنل هست؛ ترتیب `sortOrder`.
+- [x] `placement` نیومده ← `400`.
+
+**یادداشت پیاده‌سازی:** یه تصمیم تازه (۲۶). `OpenWindow` در `common` (و `AnnouncementBar` ازش استفاده می‌کنه)؛ دامنه: `Banner`، `BannerDraft`، `BannerId`/`BannerPlacement`/`BannerTheme`/`BannerTag`/`BannerCta`/`BannerOverlay`، `BannerRepository`؛ `BannerRepositoryImpl` (فیلتر بازه در SQL)؛ `BannerFields` و `Banners` (عکس‌ها با یه خوندن)؛ شش UseCase (`ListBannersUc` ِ عمومی، لیست و یکی ِ پنل، ساخت، ویرایش، حذف) با `MediaAttachments` (`BANNER`، فقط عکس) و لاگ؛ `GET /banners` در `webV1Home.kt` و `/admin/banners*` در `webV1AdminMarketing.kt`؛ دو متن خطای تازه. تست: `BannerTest` (۳)، `WebV1BannersOnDatabaseTest` (۴). خرابکاری: purpose ِ اشتباه در ساخت ← سه تست قرمز؛ بدون `CTA_INCOMPLETE` و بدون `CHECK` ِ جدول ← تست فرم و `BannerTest` قرمز؛ بدون فیلتر بازه ← «the shop - only those in their window …» قرمز. کل مجموعه با `--rerun-tasks`: ۲۹۸۹ تست سبز، ۵ skip.
 
 ---
 
-#### گام ۱۱.۴: پیام‌های رضایت · M ⬜
+#### گام ۱۱.۴: پیام‌های رضایت · M ✅
 
 **می‌سازی:** `V36` (بخش پیام رضایت)؛ `Testimonial`، repository؛ پنج UseCase؛ routeها؛ گسترش شمارش «در استفاده» ِ `DeleteColorUc`.
 
 وابسته به: ۱۱.۰
 
 **تموم شده یعنی:**
-- [ ] رنگ محصول دیگه ← `400 COLOR_NOT_FOUND`؛ پیام ۵۰۱ نویسه ← `400`.
-- [ ] منتشرنشده تو `GET /testimonials` نیست؛ ترتیب تصمیم ۱۲.
-- [ ] حذف رنگی که پیام رضایت داره ← `409 IN_USE`؛ عوض کردن کلید رنگ ← پیام رضایت با کلید تازه.
+- [x] رنگ محصول دیگه ← `400 COLOR_NOT_FOUND`؛ پیام ۵۰۱ نویسه ← `400`.
+- [x] منتشرنشده تو `GET /testimonials` نیست؛ ترتیب تصمیم ۱۲.
+- [x] حذف رنگی که پیام رضایت داره ← `409 IN_USE` (با `meta.testimonialCount`). «عوض کردن کلید رنگ»: تصمیم ۲۷ (کلید از API عوض نمی‌شه).
+
+**یادداشت پیاده‌سازی:** یه تصمیم تازه (۲۷). دامنه: `Testimonial`، `TestimonialDraft` (همه‌ی خطاها با هم، `DATE_IN_FUTURE`، `MESSAGE_TIME_INVALID`)، `TestimonialId`، `TestimonialRepository` (`page` با ترتیب تصمیم ۱۲، `countWithColor`)؛ `TestimonialRepositoryImpl`؛ `TestimonialFields`، `TestimonialReferences` (محصول غیربایگانی و رنگ همون محصول)، `Testimonials` (محصول، رنگ و اسکرین‌شات با سه خوندن)؛ شش UseCase؛ `GET /testimonials` (با `summary` ِ دستی) و `/admin/testimonials*`؛ `MarketingTexts.sourceName`؛ `DeleteColorUc` پیام‌های رضایت رو هم می‌شمره. تست: `WebV1TestimonialsOnDatabaseTest` (۵). خرابکاری: لیست عمومی با منتشرنشده‌ها ← «the shop - only the published ones …» قرمز؛ بدون چک رنگ محصول و بدون چک آینده ← تست فرم قرمز؛ بدون شمارش در `DeleteColorUc` ← «a colour a testimonial names …» قرمز. کل مجموعه با `--rerun-tasks`: ۲۹۹۴ تست سبز، ۵ skip.
 
 ---
 
-#### گام ۱۱.۵: آمار سایت و خلاصه‌ی رضایت · S ⬜
+#### گام ۱۱.۵: آمار سایت و خلاصه‌ی رضایت · S ✅
 
 **می‌سازی:** `GetSiteStatsUc`؛ `SatisfactionSummaryHttpResponse` و `SiteStatsHttpResponse`؛ `summary` در `ListTestimonialsUc`.
 
 وابسته به: ۱۱.۴
 
 **تموم شده یعنی:**
-- [ ] `PUT /admin/settings` با `siteStats` ِ تازه ← `GET /site/stats` و `summary` ِ پیام‌ها همون عددها.
+- [x] `PUT /admin/settings` با `siteStats` ِ تازه ← `GET /site/stats` و `summary` ِ پیام‌ها همون عددها.
+
+**یادداشت پیاده‌سازی:** `SiteStatsHttpResponse` و `SatisfactionSummaryHttpResponse` از فاز ۴ آماده بودن و `summary` ِ پیام‌ها در گام ۱۱.۴ اومد (تصمیم ۲۷)؛ این گام `GetSiteStatsUc` و `GET /site/stats` (بدون کش). تست: `WebV1SiteStatsOnDatabaseTest` (قبل از تایپ صفرها و `summary = null`؛ بعد از `PUT /admin/settings` هر دو همون عددها). خرابکاری: `SiteStats.NONE` به‌جای تنظیمات، و `summary = null` ← همون تست قرمز. کل مجموعه با `--rerun-tasks`: ۲۹۹۵ تست سبز، ۵ skip.
 
 ---
 
-#### گام ۱۱.۶: `GET /home` · M ⬜
+#### گام ۱۱.۶: `GET /home` · M ✅
 
 **می‌سازی:** بخش `home` ِ `sitecontent` (در `V36`) و خوندنش در `SiteContent`؛ `GetHomePageUc`؛ `HomePageHttpResponse`؛ route با `respondResultCacheable`.
 
 وابسته به: ۱۱.۲، ۱۱.۳، ۱۱.۵
 
 **تموم شده یعنی:**
-- [ ] همه‌ی بخش‌ها با کانترکت (تست شکل)؛ فروشگاه خالی ← `showcaseProduct = null` و آرایه‌های خالی، نه خطا.
-- [ ] کاربر واردشده هم `isWishlisted = null` می‌گیره؛ `If-None-Match` ِ درست ← `304`.
-- [ ] تعداد کوئری‌ها ثابت (مستقل از تعداد محصول‌ها).
+- [x] همه‌ی بخش‌ها با کانترکت (تست شکل)؛ فروشگاه خالی ← `showcaseProduct = null` و آرایه‌های خالی، نه خطا.
+- [x] کاربر واردشده هم `isWishlisted = null` می‌گیره؛ `If-None-Match` ِ درست ← `304`.
+- [x] تعداد کوئری‌ها ثابت (مستقل از تعداد محصول‌ها).
+
+**یادداشت پیاده‌سازی:** یه تصمیم تازه (۲۸). بخش `home` ِ `sitecontent` در گام ۱۱.۱ اومده بود (تصمیم ۲۴)؛ این گام `CategoryMenu` (و `ListCategoriesUc` ازش استفاده می‌کنه)، `GetHomePageUc` (یه تراکنش، تعداد خوندن ثابت)، `HomePageDto`، `HomePageHttpResponse` و `GET /home` با `respondResultCacheable`. تست: `WebV1HomeOnDatabaseTest` (۴: شکل، فروشگاه خالی، بدون قلب و `304`، تعداد statement برای ۳ و ۳۰ محصول یکی). خرابکاری: بدون «وگرنه تازه‌ترین» ← تست شکل قرمز؛ کارت‌ها تک‌تک ← تست تعداد statement قرمز؛ بدون کش ← تست `304` و تست شکل (`ETag`) قرمز. کل مجموعه با `--rerun-tasks`: ۲۹۹۹ تست سبز، ۵ skip.
 
 ---
 
-#### گام ۱۱.۷: ریویو و دور با پنل و kiva-fe · S ⬜
+#### گام ۱۱.۷: ریویو و دور با پنل و kiva-fe · S ✅
 
 **می‌سازی:** `MARKETING_REVIEW.md` (خرابکاری: قید `EXCLUDE`، «کمپین قیمت رو عوض نمی‌کنه»، فیلتر دیده‌شدن بنر، `isPublished`، `isWishlisted = null` ِ خانه)؛ `docs/FRONTEND_MARKETING.md` (خانه، شمارنده با `serverTime`، بنرهای `HOME_HERO`، فرم‌های پنل)؛ دور با پنل و kiva-fe؛ merge.
 
 **تموم شده یعنی:**
-- [ ] همه‌ی خرابکاری‌ها قرمز می‌کنن؛ merge به `main` و deploy.
+- [x] همه‌ی خرابکاری‌ها قرمز می‌کنن (۲۲ نگهبان، جدول `MARKETING_REVIEW.md`).
+- [ ] merge به `main` و deploy: منتظر تو، همراه با دور واقعی با پنل و kiva-fe.
+
+**یادداشت پیاده‌سازی:** `MARKETING_REVIEW.md` (خطرهای فاز و ۲۲ خرابکاری که با یه اسکریپت دوباره رفتن و همه قرمز کردن، از جمله «بدون قلب در خانه» ِ تازه؛ «کمپین قیمت رو عوض نمی‌کنه» نگهبان ساختاری داره و تست صریحش هست)؛ `docs/FRONTEND_MARKETING.md` (خانه با یه درخواست و قلب از `ids`، شمارنده با `serverTime`، بنرهای `HOME_HERO`، فرم‌های پنل و خطاهاشون). کدی عوض نشد؛ آخرین اجرای کل مجموعه (گام ۱۱.۶): ۲۹۹۹ تست سبز، ۵ skip. فاز ۱۱ از طرف ریپو کامله؛ دور واقعی و merge منتظر تو.
 
 ---
 
@@ -4650,10 +5186,10 @@ Route: respondResultCacheable؛ همه‌ی کارت‌ها با isWishlisted = 
 
 | گام | عنوان | اندازه | وضعیت |
 |---|---|---|---|
-| ۱۲.۰ | کانترکت 1.18.0 | S | ⬜ |
-| ۱۲.۱ | تطابق، رتبه و هایلایت | M | ⬜ |
-| ۱۲.۲ | `GET /search/suggest` | M | ⬜ |
-| ۱۲.۳ | `GET /search/hints` و ریویو | S | ⬜ |
+| ۱۲.۰ | کانترکت 1.18.0 | S | ✅ |
+| ۱۲.۱ | تطابق، رتبه و هایلایت | M | ✅ |
+| ۱۲.۲ | `GET /search/suggest` | M | ✅ |
+| ۱۲.۳ | `GET /search/hints` و ریویو | S | ✅ |
 
 ### ۱۷.۲ تصمیم‌های این فاز
 
@@ -4673,6 +5209,9 @@ Route: respondResultCacheable؛ همه‌ی کارت‌ها با isWishlisted = 
 | 12 | کش و سقف | `suggest` کش نمی‌شه؛ سقف nginx ِ ۱۰ درخواست در ثانیه برای هر IP با `burst=20` (به گام ۶.۵ اضافه می‌شه)؛ فرانت حداقل ۲۵۰ میلی‌ثانیه debounce | با هر حرف صدا زده می‌شه |
 | 13 | پیشنهادها | `categories` = دسته‌های منو با محصول، به ترتیب `sortOrder`، حداکثر ۸؛ `colors` = رنگ‌های استفاده‌شده در محصول‌های منتشرشده، به ترتیب پالت، حداکثر ۱۲؛ `popularQueries` = **لیست دستی** در بخش `search` ِ `sitecontent_tbl` (حداکثر ۸، با مقدارهای `kiva.js`). `hints` با `respondResultCacheable` (۵ دقیقه) | **لاگ جستجوها نداریم** (داده‌ی رفتاری کاربر، و پرتکرارها تو فروشگاه کوچیک چیزی جز چند کلمه‌ی ثابت نیستن) |
 | 14 | ایندکس | ایندکس متنی (`pg_trgm`) ساخته نمی‌شه؛ `LIKE '%…%'` روی چند صد محصول کافیه | بخش ۲۶ |
+| 15 | نرمال‌سازی ِ ذخیره و جستجو (تازه، گام ۱۲.۱) | `normalizePersian` ِ موجود نیم‌فاصله‌ی وسط کلمه رو **نگه می‌داره** (اسم‌های یکتا و `searchText` همین‌طورن) و عوض نمی‌شه؛ فقط **عبارت جستجو** در `SearchQueryPolicy.normalize` نیم‌فاصله رو فاصله می‌کنه. چون تطابق «شامل»ـه، «کراس» و «بادی» هر دو در «کراس‌بادی» ِ ذخیره‌شده پیدا می‌شن. `searchName` هم با همون `normalizePersian` (نیم‌فاصله نگه‌داشته)؛ backfill با تابع SQL ِ `kiva_normalize_persian` (همون قانون V26) و یه تست که SQL و Kotlin یکی‌ان | عوض کردن `normalizePersian` همه‌ی اسم‌های یکتا و ستون‌های جستجوی موجود رو جابه‌جا می‌کرد |
+| 16 | هایلایت در یه جا (تازه، گام ۱۲.۱) | `MatchRanges` در `common` هم بازه‌ها (روی متن تا‌شده‌ی هم‌طول) و هم HTML ِ `escape`‌شده با `<mark>` رو می‌سازه؛ `FaqSearch` ِ فاز ۵ و جستجوی زنده هر دو از همین. `MarkHighlighter` ِ جدا در HTTP ساخته نشد (دو `escape` نمی‌مونه). بازه‌های هم‌پوشان یکی می‌شن (سؤالات متداول هم) | دو پیاده‌سازی از یه قانون نمی‌مونه |
+| 17 | رتبه‌بندی (تازه، گام ۱۲.۲) | `ProductQmRepository.suggest` همه‌ی منطبق‌ها رو با چند ستون می‌خونه (فروشگاه چند صد محصوله)، در Kotlin رتبه می‌ده (تصمیم ۴) و فقط کارت اولی‌ها رو با `findCards` می‌خونه: چهار خوندن ثابت، و `total` همون شمارش `GET /products?q=` (همون `conditionsOf`). شمارش با یه کوئری جدا، نه `count(*) OVER ()` | ساده‌ترین SQL، رتبه‌ی «همه‌ی کلمه‌ها در اسم» بدون `CASE` ِ پویا |
 
 ### ۱۷.۳ تغییرات کد
 
@@ -4741,16 +5280,18 @@ Route: 200
 
 ### ۱۷.۸ گام‌ها
 
-#### گام ۱۲.۰: کانترکت 1.18.0 · S ⬜
+#### گام ۱۲.۰: کانترکت 1.18.0 · S ✅
 
 **می‌سازی:** برنچ `search`؛ ردیف‌های ۱۷.۷؛ متن کد تازه.
 
 **تموم شده یعنی:**
-- [ ] کانترکت معتبر؛ `ErrorMessagesTest` سبز.
+- [x] کانترکت معتبر؛ `ErrorMessagesTest` سبز.
+
+**یادداشت پیاده‌سازی:** برنچ `search` از نوک فاز ۱۱ (`254a50b`). کانترکت 1.18.0 با هر چهار ردیف ِ ۱۷.۷: نرمال‌سازی قبل از چک طول و `400 SEARCH_QUERY_EMPTY`، حداکثر ۶ کلمه، AND، رتبه، «ناموجودها بعد از موجودها»، رنگ منطبق، دسته‌ها و رنگ‌ها (سقف ۴)، `seeAllUrl` با عبارت نرمال‌شده، summary با «حداکثر `limit`»؛ پارامتر `q` ِ `GET /products`؛ منبع و سقف بخش‌های `hints`، «`popularQueries` دستی»، `ETag` و `304` (و ردیف کش بخش ۱)؛ `required` ِ سه شِمای جستجو؛ `imageUrl` ِ `nullable` (محصول بی‌عکس) و «`?color=` فقط با رنگ منطبق». یه کد تازه در `ErrorCode` با متن فارسی. YAML معتبر؛ `ErrorMessagesTest` و `RouteGuardsTest` سبز.
 
 ---
 
-#### گام ۱۲.۱: تطابق، رتبه و هایلایت · M ⬜
+#### گام ۱۲.۱: تطابق، رتبه و هایلایت · M ✅
 
 **می‌سازی:** `V37__search.sql`؛ `searchName` در Projector؛ `SearchQueryPolicy`، `MatchRanges`، `MarkHighlighter`؛ انتقال `FaqHighlighter` به `MatchRanges`؛ قانون AND در فیلتر `q` ِ `GET /products`.
 
@@ -4760,38 +5301,45 @@ Route: 200
 - چرا نگاشت اندیس و نه هایلایت روی متن نرمال‌شده؟ اسم نمایشی باید همون‌طور که ادمین نوشته (با نیم‌فاصله و `ی` ِ درست) نشون داده بشه؛ هایلایت روی متن نرمال‌شده نیم‌فاصله‌ها رو به فاصله تبدیل می‌کرد.
 
 **تموم شده یعنی:**
-- [ ] تست طلایی `MatchRanges`: نیم‌فاصله، `ي` ِ عربی در جستجو، ارقام فارسی، دو کلمه‌ی هم‌پوشان، کلمه‌ای که دو بار در اسم هست.
-- [ ] `MarkHighlighter`: اسمی با `<` و `&` ← escape شده و فقط `<mark>` تگه.
-- [ ] تست‌های موجود سؤالات متداول بعد از انتقال سبز.
-- [ ] `GET /products?q=کیف مشکی` فقط محصول‌هایی که هر دو کلمه رو دارن؛ تست‌های موجود لیست محصولات سبز (یا با دلیل به‌روز).
-- [ ] SQL ِ backfill و Projector برای پنج اسم واقعی یه خروجی می‌دن.
+- [x] تست طلایی `MatchRanges`: نیم‌فاصله، `ي` ِ عربی در جستجو، ارقام فارسی، دو کلمه‌ی هم‌پوشان، کلمه‌ای که دو بار در اسم هست.
+- [x] `MatchRanges.mark` (به‌جای `MarkHighlighter`، تصمیم ۱۶): اسمی با `<` و `&` ← escape شده و فقط `<mark>` تگه.
+- [x] تست‌های موجود سؤالات متداول بعد از انتقال سبز.
+- [x] `GET /products?q=` با قانون AND و سقف ۶ کلمه (`SearchQueryPolicy`)؛ تست‌های موجود لیست محصولات سبز. تست صریح «فقط هر دو کلمه» در گام ۱۲.۲ کنار `totalProducts`.
+- [x] SQL ِ backfill و Projector برای پنج اسم واقعی یه خروجی می‌دن.
+
+**یادداشت پیاده‌سازی:** دو تصمیم تازه (۱۵ و ۱۶). `V37__search.sql` (تابع `kiva_normalize_persian`، `productqm_tbl.searchName` با backfill، بخش `search` ِ `sitecontent`؛ و مدل `SiteContentDocument.search` همون گام، مثل تصمیم ۲۴ ِ فاز ۱۱)؛ `searchName` در `ProductQmSummary.refresh`؛ `SearchQueryPolicy` (نرمال‌سازی، کلمه‌ها، رنگ منطبق)؛ `MatchRanges` در `common` و `FaqSearch` روش؛ `ProductFilters` با `SearchQueryPolicy`. تست: `MatchRangesTest` (۵)، `SearchQueryPolicyTest` (۳)، `SearchMigrationTest` (۲). خرابکاری: بدون escape ِ `<` ← `MatchRangesTest` قرمز؛ SQL بدون `translate` ← `SearchMigrationTest` قرمز؛ نیم‌فاصله فاصله نشه ← `SearchQueryPolicyTest` قرمز. کل مجموعه با `--rerun-tasks`: ۳۰۰۹ تست سبز، ۵ skip.
 
 ---
 
-#### گام ۱۲.۲: `GET /search/suggest` · M ⬜
+#### گام ۱۲.۲: `GET /search/suggest` · M ✅
 
 **می‌سازی:** `suggest` در `ProductQmRepository`؛ `SearchSuggestUc`؛ `webV1Search.kt`؛ پاسخ.
 
 وابسته به: ۱۲.۱
 
 **تموم شده یعنی:**
-- [ ] نمونه‌ی ۱۷.۶ دقیقاً همون خروجی.
-- [ ] رتبه: محصولی که اسمش جوره بالای محصولی که فقط رنگ یا دسته‌ش جوره؛ ناموجود بعد از موجود.
-- [ ] `q = "‌ "` (نیم‌فاصله و فاصله) ← `400 SEARCH_QUERY_EMPTY`؛ `limit = 21` ← `400`.
-- [ ] محصول `DRAFT` هیچ‌وقت تو نتیجه نیست.
-- [ ] `totalProducts` با `GET /products?q=` ِ همون عبارت (`meta.totalItems`) یکیه.
+- [x] نمونه‌ی ۱۷.۶ دقیقاً همون خروجی (روی «کراس‌بادی نیلا» ِ seed، با slug ِ `nila-crossbody-bag`).
+- [x] رتبه: محصولی که اسمش جوره بالای محصولی که فقط رنگ یا دسته‌ش جوره (`«مجلسی»`: «کیف مجلسی شب‌تاب» قبل از «کلاچ مهتاب» ِ پرفروش‌تر)؛ ناموجود بعد از موجود.
+- [x] `q = "‌ "` (نیم‌فاصله و فاصله) ← `400 SEARCH_QUERY_EMPTY`؛ `limit = 21` ← `400`.
+- [x] محصول `DRAFT` هیچ‌وقت تو نتیجه نیست.
+- [x] `totalProducts` با `GET /products?q=` ِ همون عبارت (`meta.totalItems`) یکیه؛ «کیف دوشی ماهک» فقط ماهک (AND).
+
+**یادداشت پیاده‌سازی:** یه تصمیم تازه (۱۷). `ProductQmRepository.suggest` و `SuggestPage`؛ `SearchSuggestUc` (شکل قبل از تراکنش: `SEARCH_QUERY_EMPTY`، `SEARCH_QUERY_TOO_LONG`، `LIMIT_INVALID` با هم؛ محصول‌ها، رنگ منطبق، دسته‌ها و رنگ‌های منو با سقف ۴)؛ `SearchSuggestDto`؛ `SearchSuggestHttpResponse` (`nameHighlighted` با `MatchRanges.mark`، عکس کوچیک و لینک به رنگ منطبق، `seeAllUrl` ِ کدشده)؛ `webV1Search.kt` با ورود اختیاری. تست: `WebV1SearchOnDatabaseTest` (۴). خرابکاری: بدون «اسم اول» ← تست رتبه قرمز؛ بدون «موجود اول» ← همون تست قرمز (بعد از اینکه نیلا پرفروش‌تر شد؛ اول قرمز نمی‌کرد)؛ بدون escape ِ `&` ← `MatchRangesTest` قرمز؛ بدون فیلتر منتشرشده ← چهار تست قرمز؛ فقط کلمه‌ی اول ← تست AND قرمز. کل مجموعه با `--rerun-tasks`: ۳۰۱۳ تست، ۵ skip؛ همون شکست بی‌ربط ِ `WebV1ShipmentOnDatabaseTest` (timeout زیر بار) که تنها سبز شد.
 
 ---
 
-#### گام ۱۲.۳: `GET /search/hints` و ریویو · S ⬜
+#### گام ۱۲.۳: `GET /search/hints` و ریویو · S ✅
 
 **می‌سازی:** `GetSearchHintsUc` و route؛ `SEARCH_REVIEW.md` (خرابکاری: escape ِ اسم، فیلتر منتشرشده، قانون AND)؛ `limit_req` ِ nginx برای `/api/v1/search/suggest` (گام ۶.۵)؛ `docs/FRONTEND_SEARCH.md` (debounce، `query` رو escape‌شده نشون بده، `nameHighlighted` فقط با `<mark>`)؛ merge.
 
 وابسته به: ۱۲.۲
 
 **تموم شده یعنی:**
-- [ ] `hints` با کانترکت؛ `304` با `If-None-Match`؛ رنگی که هیچ محصول منتشرشده‌ای نداره نمیاد.
-- [ ] خرابکاری‌ها قرمز می‌کنن؛ merge به `main` و deploy.
+- [x] `hints` با کانترکت؛ `304` با `If-None-Match`؛ رنگی که هیچ محصول منتشرشده‌ای نداره نمیاد.
+- [x] خرابکاری‌ها قرمز می‌کنن (ده نگهبان، جدول `SEARCH_REVIEW.md`).
+- [ ] merge به `main` و deploy: منتظر تو، همراه با قطعه‌ی nginx و دور واقعی با kiva-fe.
+
+**یادداشت پیاده‌سازی:** `GetSearchHintsUc` و `GET /search/hints` با `respondResultCacheable`؛ zone ِ `kiva_search` (۱۰ در ثانیه، `burst=20`) در `kiva-http.conf` و `api.kivashop.ir.conf` و ردیف جدول `LAUNCH.md`؛ `SEARCH_REVIEW.md` (ده خرابکاری که با یه اسکریپت دوباره رفتن و همه قرمز کردن؛ دو تست قوی‌تر شدن چون نگهبانشون رو نمی‌دیدن)؛ `docs/FRONTEND_SEARCH.md`. تست: یه تست تازه در `WebV1SearchOnDatabaseTest` (شکل، پیشنهادهای دستی، رنگ ِ فقط پیش‌نویس نمیاد، `304`). کل مجموعه با `--rerun-tasks`: ۳۰۱۴ تست سبز، ۵ skip. فاز ۱۲ از طرف ریپو کامله؛ nginx، دور واقعی و merge منتظر تو.
 
 ---
 
@@ -4808,12 +5356,12 @@ Route: 200
 
 | گام | عنوان | اندازه | وضعیت |
 |---|---|---|---|
-| ۱۳.۰ | کانترکت 1.19.0 | S | ⬜ |
-| ۱۳.۱ | پورت ایمیل: لاگ و SMTP | M | ⬜ |
-| ۱۳.۲ | موضوع‌ها و ثبت پیام تماس | M | ⬜ |
-| ۱۳.۳ | پیام‌های تماس در پنل و پاسخ | M | ⬜ |
-| ۱۳.۴ | خبرنامه | M | ⬜ |
-| ۱۳.۵ | ریویو | S | ⬜ |
+| ۱۳.۰ | کانترکت 1.19.0 | S | ✅ |
+| ۱۳.۱ | پورت ایمیل: لاگ و SMTP | M | ✅ |
+| ۱۳.۲ | موضوع‌ها و ثبت پیام تماس | M | ✅ |
+| ۱۳.۳ | پیام‌های تماس در پنل و پاسخ | M | ✅ |
+| ۱۳.۴ | خبرنامه | M | ✅ |
+| ۱۳.۵ | ریویو | S | ✅ |
 
 ### ۱۸.۲ تصمیم‌های این فاز
 
@@ -4839,6 +5387,14 @@ Route: 200
 | 18 | لیست پنل تماس | فیلتر `status` و `topic`؛ تازه‌ترین اول | کانترکت |
 | 19 | نگه‌داری | job ِ شبانه‌ی `delete-old-contact-data`: پیام‌های `CLOSED` ِ قدیمی‌تر از ۳۶۵ روز (از `updatedAt`)، و عضوهای `UNSUBSCRIBED` ِ قدیمی‌تر از ۹۰ روز (از `unsubscribedAt`) پاک می‌شن | داده‌ی شخصی بیشتر از لازم نمی‌مونه |
 | 20 | لاگ تغییرات | `CONTACT_MESSAGE_UPDATED` (`changes`: `status`، `replied: true` و `replyChannel`، `internalNote: "عوض شد"`؛ **نه متن پاسخ یا یادداشت**). خبرنامه کار پنلی نداره | قانون لاگ: داده‌ی شخصی کمتر |
+| 21 | موضوع ناشناخته (تازه، گام ۱۳.۲) | کد فیلدی ِ تازه‌ی `CONTACT_TOPIC_INVALID` روی `topic` («موضوع پیام رو از لیست انتخاب کن»)؛ اسم کوتاه یا متن کوتاه با `TEXT_TOO_SHORT` (`meta.minLength`)، بلند با `TEXT_TOO_LONG`، نویسه‌ی کنترلی با `TEXT_INVALID` | کانترکت کدی برای موضوع نداشت؛ بقیه کدهای مشترک ِ فرم‌ها |
+| 22 | فیلدهای خالی و فاصله‌ها (تازه، گام ۱۳.۲) | `email` و `orderCode` ِ خالی (`""` یا فقط فاصله) یعنی «نفرستاده» (فیلد خالی ِ فرم)، نه خطا. حروف فارسی ِ متن پیام خط به خط یکی می‌شن تا خط تازه بمونه؛ تب و فاصله‌های پشت‌سرهم یه فاصله‌ان | فرم فیلد خالی رو `""` می‌فرسته؛ `normalizePersianLetters` روی کل متن خط تازه رو هم فاصله می‌کرد |
+| 23 | سقف موبایل زیر بار (تازه، گام ۱۳.۲) | شمارش پیام‌های یه موبایل پشت یه قفل advisory ِ تراکنشی با کلید همون موبایل (پارامتر، پس تو لاگ SQL نیست): دو پیام هم‌زمان پشت هم شمرده می‌شن. `V38` یکجا در ۱۳.۲ نوشته شد (جدول خبرنامه هم، که از ۱۳.۴ به کار میاد)، با اسم برای CHECKهای چندستونی | بدون قفل، هشت پیام ِ هم‌زمان همه از سقف رد می‌شدن؛ یه migration ِ commit‌شده دیگه عوض نمی‌شه |
+| 24 | متن ایمیل‌ها (تازه، گام ۱۳.۳) | `EmailTexts` در لایه‌ی application (`usecase/contact`)، نه HTTP: UseCase ایمیل رو خودش می‌نویسه. ایمیل پاسخ: «سلام {اسم}،»، متن کامل پاسخ، کد پیگیری، «همین‌جا جواب نده؛ از فرم تماس بنویس»، امضای کیوا. شکست فرستادن فقط WARN با **نوع** خطا، نه پیامش (پیام سرور ایمیل می‌تونه آدرس رو داشته باشه) | application به HTTP وابسته نیست |
+| 25 | شکل `PATCH` (تازه، گام ۱۳.۳) | دو کد فیلدی ِ تازه: `CONTACT_STATUS_INVALID` (روی `status`، و فیلتر `status` ِ لیست) و `REPLY_CHANNEL_INVALID`. `reply` ِ فقط فاصله یعنی «نفرستاده»؛ `internalNote: null` یا فقط فاصله پاکش می‌کنه، نیومده دست نمی‌خوره. کد ِ بدشکل یا ناشناخته ← `404 NOT_FOUND`. پاسخ ِ همون کانال دوباره هم یه تغییره (`repliedAt` تازه، دوباره فرستاده می‌شه، یه ردیف لاگ) | کانترکت کد این دو فیلد رو نداشت؛ پاک کردن یادداشت باید ممکن باشه |
+| 26 | جمله‌ی لاگ پاسخ (تازه، گام ۱۳.۳) | `changes`: `status` (از، به)، `replied` (`null` ← `true`) و `replyChannel` (`null` ← کانال) وقتی پاسخ رفت، `internalNote` فقط «عوض شد». جمله‌ی `AuditTexts`: پاسخ اول («… جواب داده شد (خبر با پیامک)» یا «با ایمیل»)، بعد وضعیت («بسته شد»، «در حال پیگیری شد»، «دوباره باز شد»)، وگرنه «یادداشت … عوض شد» | پنل باید از روی لاگ بفهمه چی شد، بی متن |
+| 27 | توکن لغو (تازه، گام ۱۳.۴) | توکن برای کل عمر ردیف می‌مونه: عضوی که برمی‌گرده همون توکن رو داره و لینک ایمیل‌های قبلی هم کار می‌کنه. برخورد اتفاقی ِ توکن با `INSERT … ON CONFLICT DO NOTHING` و کشیدن دوباره (حداکثر ۵ بار). ایمیل خوش‌آمد بعد از commit و در همون درخواست (مثل پیامک‌ها)؛ فرقِ زمانی ِ پاسخ ِ عضو تازه و قدیمی پذیرفته‌ست | لینک لغو ِ هر ایمیلی که رفته باید کار کنه |
+| 28 | شکل خبرنامه (تازه، گام ۱۳.۴) | بی `email` ← `FIELD_REQUIRED` روی `email`؛ بی `token` ← `FIELD_REQUIRED` روی `token`. فیلتر `status` ِ ناشناخته ← کد فیلدی ِ تازه‌ی `SUBSCRIPTION_STATUS_INVALID`؛ `q` حروف کوچک، حداکثر ۱۰۰ (`TEXT_TOO_LONG`)، با `%` و `_` ِ escape‌شده. سقف ۵ در ساعت برای هر IP در `ContactPolicy`، کنار نگه‌داری (۳۶۵ و ۹۰ روز). job ِ `delete-old-contact-data` ساعت ۵:۰۰ تهران، هر دو پاک کردن در یه تراکنش | کانترکت کد فیلتر رو نداشت |
 
 ### ۱۸.۳ تغییرات کد
 
@@ -4979,16 +5535,18 @@ Route: 200 با AdminContactMessage
 
 ### ۱۸.۹ گام‌ها
 
-#### گام ۱۳.۰: کانترکت 1.19.0 · S ⬜
+#### گام ۱۳.۰: کانترکت 1.19.0 · S ✅
 
 **می‌سازی:** برنچ `contact`؛ ردیف‌های ۱۸.۸؛ متن کدهای تازه.
 
 **تموم شده یعنی:**
-- [ ] کانترکت معتبر؛ `ErrorMessagesTest` و `RouteGuardsTest` سبز.
+- [x] کانترکت معتبر؛ `ErrorMessagesTest` و `RouteGuardsTest` سبز.
+
+**یادداشت پیاده‌سازی:** برنچ `contact` از نوک فاز ۱۲ (`87b5ba2`). کانترکت 1.19.0 با هر ۹ ردیف ِ ۱۸.۸: برچسب‌های پنج موضوع و معنی واقعی `requiresOrderCode` (و کش `GET /contact/topics` با `ETag`)؛ نرمال‌سازی‌ها، «`orderCode` چک مالکیت نمی‌شه»، دو سقف ۴۲۹ و `CT-` + ۶ رقم؛ قانون‌های `PATCH`، «پیامک متن پاسخ رو نمی‌بره» و `EMAIL_NOT_AVAILABLE`؛ `replyChannel`، `repliedAt`، `repliedBy` و `required` ِ `AdminContactMessage`؛ «همیشه `200`» برای عضویت (حذف `201`)، `429`، ایمیل خوش‌آمد، `source` ≤ ۳۰؛ قالب توکن لغو (`UNSUBSCRIBE_TOKEN_INVALID`) و «ناشناخته هم `204`»؛ ترتیب و `q` ِ لیست خبرنامه؛ ردیف «پاسخ پیام تماس» در جدول پیامک‌ها؛ سه کد تازه در `ErrorCode` و متن فارسی‌شون، به‌علاوه‌ی متن کد فیلدی `UNSUBSCRIBE_TOKEN_INVALID`. YAML معتبر؛ `ErrorMessagesTest` و `RouteGuardsTest` سبز.
 
 ---
 
-#### گام ۱۳.۱: پورت ایمیل: لاگ و SMTP · M ⬜
+#### گام ۱۳.۱: پورت ایمیل: لاگ و SMTP · M ✅
 
 **می‌سازی:** `EmailSender`، `LogEmailSender`، `SmtpEmailSender`، `EmailConfig` (`kiva.email.provider` = `log` | `smtp`؛ `smtp.host`، `port` (۵۸۷)، `username`، `password`، `from`، `startTls`)؛ وابستگی Angus Mail در `build.gradle.kts`؛ انتخاب پیاده‌سازی در `InfrastructureModule`؛ `RecordingEmailSender`؛ README (پیکربندی SMTP روی سرور، رمز با `read -rsp`).
 
@@ -4999,61 +5557,72 @@ Route: 200 با AdminContactMessage
 - چرا متن ساده؟ ایمیل HTML قالب، تست چند کلاینت و پاک‌سازی لازم داره و این‌جا ارزشش رو نداره.
 
 **تموم شده یعنی:**
-- [ ] `provider = log` ← لاگ با ایمیل ماسک‌شده (`s***@example.com`)، بدون متن.
-- [ ] `SmtpEmailSender` با یه سرور SMTP ِ آزمایشی در تست (GreenMail یا یه سوکت ساده) ← ایمیل با موضوع و متن UTF-8 درست؛ `assumeTrue` اگه پورت آزاد نیست.
-- [ ] `provider = smtp` بدون `host` ← برنامه با پیام روشن بالا نمیاد.
+- [x] `provider = log` ← لاگ با ایمیل ماسک‌شده (`s***@example.com`)، بدون متن.
+- [x] `SmtpEmailSender` با یه سرور SMTP ِ آزمایشی در تست (GreenMail یا یه سوکت ساده) ← ایمیل با موضوع و متن UTF-8 درست؛ `assumeTrue` اگه پورت آزاد نیست.
+- [x] `provider = smtp` بدون `host` ← برنامه با پیام روشن بالا نمیاد.
+
+**یادداشت پیاده‌سازی:** `EmailSender` در `application/port`؛ `EmailConfig` (`kiva.email.provider` = `log` | `smtp`؛ ناشناخته، `smtp` بدون `KIVA_SMTP_HOST` یا `KIVA_SMTP_FROM`، نصف ِ ورود (`username` بی `password`)، پورت بیرون از ۱ تا ۶۵۵۳۵ یا غلط ِ `startTls` ← برنامه با پیامی که اسم متغیر رو می‌بره بالا نمیاد؛ `toString` رمز رو `***` نشون می‌ده)؛ `LogEmailSender` (WARN با ایمیل ماسک‌شده و موضوع، هیچ‌وقت متن)؛ `SmtpEmailSender` (Angus Mail 2.0.3، `STARTTLS` ِ اجباری مگه خاموش، timeout ِ ۱۰ ثانیه، UTF-8، روی `Dispatchers.IO`)؛ انتخاب در `InfrastructureModule`؛ `application.conf`، `kiva.env.example` و بخش «Email» ِ README (رمز با `read -rsp` و `set-env.sh --secret`)؛ `RecordingEmailSender`. سرور آزمایشی ِ تست یه سوکت ساده‌ست (چند خط SMTP)، نه GreenMail: یه وابستگی کمتر. تست: `EmailSendersTest` (۳)، چهار تست تازه در `AppConfigTest`. ۱۳ خرابکاری (host و from ِ اجباری، `startTls` ِ سخت‌گیر و پیش‌فرضش، نصف ِ ورود، بازه‌ی پورت، رمز در `toString`، provider ِ ناشناخته، متن یا ایمیل کامل در لاگ، charset ِ موضوع و متن، گیرنده) همه قرمز. کل مجموعه با `--rerun-tasks`: ۳۰۲۱ تست سبز، ۵ skip.
 
 ---
 
-#### گام ۱۳.۲: موضوع‌ها و ثبت پیام تماس · M ⬜
+#### گام ۱۳.۲: موضوع‌ها و ثبت پیام تماس · M ✅
 
 **می‌سازی:** `V38` (بخش تماس)؛ `ContactMessage`، `TicketCodeGenerator`، repository؛ `ListContactTopicsUc`، `CreateContactMessageUc`؛ سقف `contact` در `RateLimit`؛ routeها.
 
 وابسته به: ۱۳.۰
 
 **تموم شده یعنی:**
-- [ ] مهمان ← `201` با `CT-` + ۶ رقم، `userId = null`؛ واردشده ← `userId` پر.
-- [ ] موبایل با ارقام فارسی و `kv-218340` نرمال ذخیره می‌شن؛ پیام ۹ نویسه ← `400`.
-- [ ] ششمین پیام از یه IP در یه ساعت ← `429` با `Retry-After`؛ ششمین پیام یه موبایل در روز از IPهای مختلف ← `429`.
-- [ ] لاگ برنامه موبایل، ایمیل، اسم و متن رو نداره.
+- [x] مهمان ← `201` با `CT-` + ۶ رقم، `userId = null`؛ واردشده ← `userId` پر.
+- [x] موبایل با ارقام فارسی و `kv-218340` نرمال ذخیره می‌شن؛ پیام ۹ نویسه ← `400`.
+- [x] ششمین پیام از یه IP در یه ساعت ← `429` با `Retry-After`؛ ششمین پیام یه موبایل در روز از IPهای مختلف ← `429`.
+- [x] لاگ برنامه موبایل، ایمیل، اسم و متن رو نداره.
+
+**یادداشت پیاده‌سازی:** سه تصمیم تازه (۲۱ تا ۲۳). `V38__contact_newsletter.sql` (هر دو جدول)؛ دامنه‌ی `contact`: `TicketCode`، `ContactTopic` (`showsOrderCode`)، `ContactStatus`، `ReplyChannel`، `ContactMessageDraft` (شکل فرم، همه‌ی خطاها با هم، `toString` بی داده‌ی شخصی)، `ContactMessage`، `ContactPolicy` (سقف موبایل و `Retry-After` تا وقتی قدیمی‌ترین ِ پنج‌تای آخر یه روزه بشه)، `TicketCodeGenerator` (`SecureRandom`)، `ContactMessageRepository`؛ `ContactMessageRepositoryImpl` (`INSERT … ON CONFLICT DO NOTHING` تا کد ِ گرفته‌شده تراکنش رو خراب نکنه و دوباره کشیده بشه، حداکثر ۵ بار)؛ `ListContactTopicsUc`، `CreateContactMessageUc`؛ سقف `contact` در `RateLimit` (۵ در ساعت برای هر IP)؛ `webV1Contact.kt`، `ContactTexts`، دو پاسخ. تست: `ContactMessageDraftTest` (۷)، `ContactMigrationTest` (۳)، `WebV1ContactOnDatabaseTest` (۹، از جمله هشت پیام ِ هم‌زمان ِ یه موبایل). ۱۱ خرابکاری (سقف IP، سقف موبایل، زمان انتظار، قفل، `userId`، کشیدن دوباره‌ی کد، موبایل در لاگ، `toString` ِ ورودی، کش موضوع‌ها، خط تازه، حداقل اسم) همه قرمز. کل مجموعه با `--rerun-tasks`: ۳۰۴۰ تست سبز، ۵ skip.
 
 ---
 
-#### گام ۱۳.۳: پیام‌های تماس در پنل و پاسخ · M ⬜
+#### گام ۱۳.۳: پیام‌های تماس در پنل و پاسخ · M ✅
 
 **می‌سازی:** `FindAdminContactMessagesUc`، `UpdateContactMessageUc`؛ `SmsSender.sendContactReplied` (مسیر ۹ مرحله‌ای بخش ۲۴)؛ `webV1AdminSupport.kt`؛ لاگ تغییرات.
 
 وابسته به: ۱۳.۱، ۱۳.۲
 
 **تموم شده یعنی:**
-- [ ] فیلترها؛ `{}` ← `200` بدون ردیف لاگ.
-- [ ] پاسخ پیامکی ← پیامک ضبط‌شده با `code` و **بدون متن پاسخ**؛ پاسخ ایمیلی ← ایمیل ضبط‌شده با متن؛ ایمیلی برای پیام بی‌ایمیل ← `400`.
-- [ ] `reply` بدون `replyChannel` ← `400`؛ `repliedAt` و `repliedBy` پر.
-- [ ] لاگ تغییرات متن پاسخ و یادداشت رو نداره.
-- [ ] `OPERATOR` و `CONTENT_EDITOR` ← `403`.
+- [x] فیلترها؛ `{}` ← `200` بدون ردیف لاگ.
+- [x] پاسخ پیامکی ← پیامک ضبط‌شده با `code` و **بدون متن پاسخ**؛ پاسخ ایمیلی ← ایمیل ضبط‌شده با متن؛ ایمیلی برای پیام بی‌ایمیل ← `400`.
+- [x] `reply` بدون `replyChannel` ← `400`؛ `repliedAt` و `repliedBy` پر.
+- [x] لاگ تغییرات متن پاسخ و یادداشت رو نداره.
+- [x] `OPERATOR` و `CONTENT_EDITOR` ← `403`.
+
+**یادداشت پیاده‌سازی:** سه تصمیم تازه (۲۴ تا ۲۶). `ContactMessageChange` (شکل ِ `PATCH`، همه‌ی خطاها با هم)، `ContactMessage.updated` (بی‌تغییر ← `null`)، `ContactMessageRepository.lockFind`/`save`/`page`؛ `FindAdminContactMessagesUc` (اسم ِ اپراتور با `ActorNameDto`)، `UpdateContactMessageUc` (قفل ردیف، `EMAIL_NOT_AVAILABLE`، یه ردیف `CONTACT_MESSAGE_UPDATED`، بعد از commit پیامک یا ایمیل، شکست فقط WARN)؛ `EmailTexts`؛ `AdminContactMessageDto`؛ `webV1AdminSupport.kt`، `UpdateContactMessageHttpRequest` (`internalNote` با `Patch`)، `AdminContactMessageHttpResponse`؛ `AuditAction.CONTACT_MESSAGE_UPDATED` و جمله‌اش. پیامک `sendContactReplied` با مسیر کامل ۹ مرحله‌ای (پورت، `LogSmsSender`، `FarazSmsConfig.contactRepliedPattern`، `KIVA_FARAZ_CONTACT_REPLIED_PATTERN` در `application.conf` و `kiva.env.example`، `FarazSmsSender` با WARN ِ بی‌الگو، `RecordingSmsSender`، تست‌ها، README، جدول الگوهای `LAUNCH.md`). تست: `ContactMessageChangeTest` (۴)، `WebV1AdminContactMessagesOnDatabaseTest` (۸)، و الگوی تازه در `FarazSmsSenderTest` و `AppConfigTest`. ۱۲ خرابکاری (کانال‌ها، چک ایمیل، ذخیره‌ی بی‌تغییر، متن پاسخ یا یادداشت در لاگ، شکست پیامک، نقش `OPERATOR`، فیلتر وضعیت، پاسخ بی کانال، وضعیت ِ نفرستاده، `repliedAt` ِ پاسخ دوم، ترتیب) همه قرمز. کل مجموعه با `--rerun-tasks`: ۳۰۵۲ تست سبز، ۵ skip.
 
 ---
 
-#### گام ۱۳.۴: خبرنامه · M ⬜
+#### گام ۱۳.۴: خبرنامه · M ✅
 
 **می‌سازی:** `V38` (بخش خبرنامه)؛ `NewsletterSubscription`، repository؛ سه UseCase؛ سقف `newsletter`؛ `DeleteOldContactDataUc` و job؛ routeها.
 
 وابسته به: ۱۳.۱
 
 **تموم شده یعنی:**
-- [ ] عضویت تازه ← `200` و ایمیل خوش‌آمد با لینک لغو؛ دوباره ← `200`، همون پیام، **بدون ایمیل**؛ `Sara@Example.com` و `sara@example.com` یه عضو.
-- [ ] لغو با توکن ← `UNSUBSCRIBED`؛ دوباره ← `204`؛ توکن ساختگی با الگوی درست ← `204`؛ توکن بی‌الگو ← `400`؛ عضویت دوباره بعد از لغو ← `ACTIVE` و ایمیل خوش‌آمد.
-- [ ] لیست پنل فقط برای `ADMIN`؛ `q = "exam"` پیدا می‌کنه.
-- [ ] job: پیام `CLOSED` ِ ۳۶۶ روزه و لغو ِ ۹۱ روزه پاک؛ `OPEN` ِ قدیمی نه.
+- [x] عضویت تازه ← `200` و ایمیل خوش‌آمد با لینک لغو؛ دوباره ← `200`، همون پیام، **بدون ایمیل**؛ `Sara@Example.com` و `sara@example.com` یه عضو.
+- [x] لغو با توکن ← `UNSUBSCRIBED`؛ دوباره ← `204`؛ توکن ساختگی با الگوی درست ← `204`؛ توکن بی‌الگو ← `400`؛ عضویت دوباره بعد از لغو ← `ACTIVE` و ایمیل خوش‌آمد.
+- [x] لیست پنل فقط برای `ADMIN`؛ `q = "exam"` پیدا می‌کنه.
+- [x] job: پیام `CLOSED` ِ ۳۶۶ روزه و لغو ِ ۹۱ روزه پاک؛ `OPEN` ِ قدیمی نه.
+
+**یادداشت پیاده‌سازی:** دو تصمیم تازه (۲۷ و ۲۸). جدول از قبل در `V38` (گام ۱۳.۲). دامنه‌ی `newsletter`: `NewsletterSubscription` (`subscribedAgain` با `Outcome`، `unsubscribed`)، `UnsubscribeToken` (`SecureRandom`، `toString` ِ بی‌مقدار)، `SubscriptionStatus`، `SubscriptionSource`، `NewsletterSubscriptionRepository`؛ `NewsletterSubscriptionRepositoryImpl`؛ `SubscribeNewsletterUc`، `UnsubscribeNewsletterUc`، `FindNewsletterSubscriptionsUc`، `DeleteOldContactDataUc` و job ِ `delete-old-contact-data` در `EngagementJobs`؛ متن‌های خوش‌آمد در `EmailTexts`؛ سقف `newsletter` در `RateLimit`؛ دو route در `webV1Contact.kt`، `webV1AdminNewsletter.kt`، `MessageHttpResponse`، `NewsletterSubscriptionHttpResponse`، `NewsletterTexts`. تست: `NewsletterSubscriptionTest` (۴)، `WebV1NewsletterOnDatabaseTest` (۷، از جمله پاک کردن شبانه)، و job ِ تازه در `EngagementJobsOnDatabaseTest`. ۱۳ خرابکاری (خوش‌آمد به عضو قدیمی، پاسخی که لو بده، برنگشتن ِ لغوشده، توکن بدشکل ← ۲۰۴، لغو ِ ذخیره‌نشده، `SUPPORT` در لیست، `q`، سقف IP، پاک شدن `OPEN`، نگه‌داری ِ کوتاه‌تر، ایمیل در لاگ، لینک بی توکن، توکن در `toString`) همه قرمز. کل مجموعه با `--rerun-tasks`: ۳۰۶۳ تست سبز، ۵ skip.
 
 ---
 
-#### گام ۱۳.۵: ریویو · S ⬜
+#### گام ۱۳.۵: ریویو · S ✅
 
 **می‌سازی:** `CONTACT_REVIEW.md` (ردیف ۱۲ ِ بخش ۳ برای تماس؛ خرابکاری: سقف IP و موبایل، نبود متن در پیامک پاسخ، یکسانی پاسخ خبرنامه، `toString` ِ `Cmd`)؛ `docs/FRONTEND_CONTACT.md` (فرم تماس، صفحه‌ی لغو خبرنامه با `token` از آدرس)؛ README (الگوی پیامک، SMTP)؛ merge.
 
 **تموم شده یعنی:**
-- [ ] همه‌ی خرابکاری‌ها قرمز می‌کنن؛ merge به `main` و deploy (با `provider = log` تا ارائه‌دهنده‌ی ایمیل انتخاب بشه).
+- [x] همه‌ی خرابکاری‌ها قرمز می‌کنن (۴۹ نگهبان، جدول `CONTACT_REVIEW.md`).
+- [ ] merge به `main` و deploy (با `provider = log` تا ارائه‌دهنده‌ی ایمیل انتخاب بشه): منتظر تو، همراه با الگوی پیامک ِ فراز و دور واقعی با kiva-fe.
+
+**یادداشت پیاده‌سازی:** `CONTACT_REVIEW.md` (خطرها با دفاع و تست نگهبان، ۴۹ خرابکاری ِ چهار گام که همه قرمز کردن، چیزهایی که موقع کار پیدا شد، دور واقعی)؛ `docs/FRONTEND_CONTACT.md` (فرم تماس و خطاهاش، `429` با زمان انتظار، صفحه‌ی لغو با دکمه و `token` از آدرس، پنل پشتیبانی و خبرنامه)؛ README از قبل (الگوی پیامک در ۱۳.۳، SMTP در ۱۳.۱)؛ قفل ۱۵ در جدول ۴.۱۱. برای فاز ۱۴: `contactmessage_tbl` داده‌ی شخصی و `userId` داره و `AccountEraser` باید بشناسدش. کل مجموعه با `--rerun-tasks`: ۳۰۶۳ تست سبز، ۵ skip (همون اجرای ۱۳.۴؛ این گام فقط سند داره). فاز ۱۳ از طرف ریپو کامله؛ الگوی پیامک، ارائه‌دهنده‌ی ایمیل، دور واقعی و merge منتظر تو.
 
 ---
 
@@ -5070,11 +5639,11 @@ Route: 200 با AdminContactMessage
 
 | گام | عنوان | اندازه | وضعیت |
 |---|---|---|---|
-| ۱۴.۰ | کانترکت 1.20.0 | S | ⬜ |
-| ۱۴.۱ | دامنه‌ی حذف: کاربر بی‌نام، رویداد پاک کردن داده‌ی سفارش، و فهرست پاک‌سازی | L | ⬜ |
-| ۱۴.۲ | کد حذف و `DELETE /me` | M | ⬜ |
-| ۱۴.۳ | فاکتور PDF | L | ⬜ |
-| ۱۴.۴ | ریویو | S | ⬜ |
+| ۱۴.۰ | کانترکت 1.20.0 | S | ✅ |
+| ۱۴.۱ | دامنه‌ی حذف: کاربر بی‌نام، رویداد پاک کردن داده‌ی سفارش، و فهرست پاک‌سازی | L | ✅ |
+| ۱۴.۲ | کد حذف و `DELETE /me` | M | ✅ |
+| ۱۴.۳ | فاکتور PDF | L | ✅ |
+| ۱۴.۴ | ریویو | S | ✅ |
 
 ### ۱۹.۲ تصمیم‌های این فاز
 
@@ -5096,6 +5665,13 @@ Route: 200 با AdminContactMessage
 | 14 | فاکتور: چی | «رسید خرید» (نه فاکتور رسمی مالیاتی): اسم و تلفن و آدرس فروشگاه (از `sitecontent.brand` و تنظیمات پشتیبانی)، شماره = کد سفارش، تاریخ پرداخت (شمسی، تهران)، خریدار (اسم و آدرس snapshot)، ردیف‌ها (اسم، رنگ، تعداد، قیمت واحد، قیمت خط‌خورده، جمع ردیف) **همون ردیف‌های فعلی** (بعد از درخواست تغییر)، جمع‌ها (همون `OrderTotalsView`: قیمت کالاها، تخفیف محصولات، جمع، کد تخفیف، ارسال، قابل پرداخت، مانده‌ی پرداخت‌شده، برگشت‌داده‌شده)، روش ارسال و کد رهگیری اگه هست، و برای لغوشده یه نوار «لغو شده». ارقام فارسی، تومان | کانترکت جزئیات رو نداشت؛ ارزش افزوده و شناسه‌ی مالیاتی نداریم (بخش ۲۶) |
 | 15 | فاکتور: فنی | PDFBox 3 + ICU4J (شکل‌دهی حروف عربی‌نویس با `ArabicShaping` و ترتیب راست‌به‌چپ با `Bidi`) + فونت Vazirmatn (لایسنس OFL، در `resources/fonts/`). پشت پورت `application/port/InvoiceRenderer` (`render(InvoiceDocument): ByteArray`) با پیاده‌سازی `PdfBoxInvoiceRenderer`. ساخت PDF **بیرون از تراکنش** (UseCase داده رو در تراکنش می‌خونه و بعد رندر می‌کنه) | PDFBox خودش حروف فارسی رو به هم نمی‌چسبونه؛ این ریسک‌دارترین کار سنده و باید جدا و قابل جایگزینی باشه |
 | 16 | فاکتور: پاسخ | `200` با `Content-Type: application/pdf`، `Content-Disposition: attachment; filename="kiva-{code}.pdf"`، `Cache-Control: private, no-store`. CORS هدر `Content-Disposition` رو expose می‌کنه (`exposeHeader` در `configureHttp`) | فرانت اسم فایل رو از هدر می‌خونه |
+| 17 | (تازه، گام ۱۴.۱) `PAYMENT_FAILED` هم «سفارش جاری» ـه | سفارشی که یه تلاش پرداختش شکست خورده تا پایان مهلتش هنوز پرداخت‌شدنیه، و ممکنه پاسخ یه تلاش هنوز از بانک برگرده. کانترکت هم به‌روز شد | بدون این، حذف حساب وسط پرداخت یه سفارش پرداخت‌شده‌ی بی‌صاحب می‌ساخت (ردیف ۱۷ ِ بخش ۳) |
+| 18 | (تازه، گام ۱۴.۱) فیلدهای جاافتاده‌ی کانترکت | `AdminOrderListItem.customerName`/`customerPhone` و `PreShipmentMedia.phone` (که در `AdminOrder` هم میاد) برای سفارش بی‌نام `nullable` شدن (ردیف ۸ ِ ۱۹.۷) | گام ۱۴.۰ فقط `AddressSnapshot` و `AdminOrder.customer` رو گفته بود؛ پنل این‌ها رو هم برای سفارش حذف‌شده می‌بینه |
+| 19 | (تازه، گام ۱۴.۱) رهگیری روزانه | مرسوله‌ی سفارش بی‌نام از لیست عمومی ِ رهگیری روزانه بیرون می‌ره | اسم و موبایلی نمونده که ماسک بشه؛ کسی که حسابش رو پاک کرده لازم نیست تو لیست عمومی بمونه |
+| 20 | (تازه، گام ۱۴.۲) ثبت سفارش و حذف همزمان | `PlaceOrderUc` کاربر رو بلافاصله بعد از قفل سبد (۲) می‌خونه، قبل از چک خالی بودن سبد: حسابی که همون لحظه حذف شد ← `401`، نه `CART_EMPTY` | حذف سبد رو هم پاک می‌کنه؛ بدون این جابه‌جایی جواب درست (`401`، تصمیم ۹) به «سبد خالیه» تبدیل می‌شد |
+| 21 | (تازه، گام ۱۴.۳) شکل‌دهی فارسی | `PersianShaping` ِ خودمون (جدول فرم‌های جداافتاده/آخر/اول/وسط همه‌ی حروف فارسی و لام‌الف) به‌جای `ArabicShaping` ِ ICU4J؛ ترتیب راست‌به‌چپ همچنان با `Bidi` ِ ICU | تست نشون داد `ArabicShaping` حروف خاص فارسی (پ چ ژ ک گ ی) رو اصلاً شکل نمی‌ده؛ همه‌ی فرم‌ها در Vazirmatn هست (چک شد) |
+| 22 | (تازه، گام ۱۴.۳) متن‌های رسید کجا | `GetMyInvoiceUc` یه `InvoiceDto` (همون `OrderDetailDto` + فروشنده + تاریخ پرداخت + لغو) می‌سازه و به پورت `InvoiceRenderer` می‌ده؛ `InvoiceTexts.documentOf` (لایه‌ی HTTP) متن‌ها رو می‌سازه و `PdfBoxInvoiceRenderer` فقط می‌چینه | متن فارسی فقط در `*Texts` ِ زیرساخت مجازه (بخش ۴.۱ و ۴.۸)؛ پس UseCase نمی‌تونست `InvoiceDocument` ِ متنی بسازه |
+| 23 | (تازه، گام ۱۴.۳) فروشنده روی رسید | اسم برند (`sitecontent.brand.name`)، تلفن و ایمیل پشتیبانی ِ تنظیمات، و آدرس سایت؛ **بدون** اسم حقوقی و نشانی تا سؤال باز ۱۲ جواب بگیره | داده‌ای برای نشانی فروشگاه نداریم |
 
 ### ۱۹.۳ تغییرات دامنه
 
@@ -5193,19 +5769,22 @@ Route: 200 application/pdf با هدرهای تصمیم ۱۶
 | 5 | `GET /me/orders/{orderCode}/invoice` | «فقط سفارش پرداخت‌شده؛ وگرنه `422 INVOICE_NOT_AVAILABLE`»؛ محتوای رسید؛ هدرهای `Content-Disposition` و `no-store`؛ «رسید خرید، نه فاکتور رسمی» | تصمیم‌های ۱۳ تا ۱۶ |
 | 6 | `OrderDetail.invoiceUrl` | قانون پر بودن | تصمیم ۱۳ |
 | 7 | `ErrorCode` | `STAFF_ACCOUNT_CANNOT_BE_DELETED`، `INVOICE_NOT_AVAILABLE` | — |
+| 8 | (گام ۱۴.۱) `AdminOrderListItem`، `PreShipmentMedia`، `DELETE /me` | `customerName`/`customerPhone` و `phone` ِ پیام‌رسان `nullable` برای سفارش بی‌نام؛ `PAYMENT_FAILED` در تعریف «سفارش جاری» | تصمیم‌های ۱۷ و ۱۸ |
 
 ### ۱۹.۸ گام‌ها
 
-#### گام ۱۴.۰: کانترکت 1.20.0 · S ⬜
+#### گام ۱۴.۰: کانترکت 1.20.0 · S ✅
 
 **می‌سازی:** برنچ `account-closure`؛ ردیف‌های ۱۹.۷؛ متن کدهای تازه.
 
 **تموم شده یعنی:**
-- [ ] کانترکت معتبر؛ `ErrorMessagesTest` سبز.
+- [x] کانترکت معتبر؛ `ErrorMessagesTest` سبز.
+
+**یادداشت پیاده‌سازی:** برنچ `account-closure` از نوک فاز ۱۳ (`0bf8efe`). کانترکت 1.20.0 با هر ۷ ردیف ِ ۱۹.۷: `DELETE /me` با ترتیب چک‌ها، تعریف «سفارش جاری» و `meta.orderCodes`، فهرست کامل پاک‌سازی و بی‌نام‌سازی، «توکن ِ همون لحظه `401`»، `reason` ِ بی‌شناسه و محدودیت event store؛ `POST /me/deletion/request` با دو `422` ِ بی‌پیامک؛ فیلدهای شخصی ِ `AddressSnapshot` و `phone` ِ `AdminOrder.customer` `nullable` (و همین‌طور `phone` ِ مشتری در `AdminReturnRequest`، که بعد از حذف هم می‌مونه)؛ «حساب حذف‌شده نمیاد / `404`» در مشتری‌های پنل؛ رسید خرید با محتوا، `422 INVOICE_NOT_AVAILABLE` و هدرهای `Content-Disposition` و `no-store`؛ قانون `invoiceUrl`؛ دو کد تازه در `ErrorCode` و متن فارسی‌شون. YAML معتبر، ۱۳۵۱ `$ref` همه پیدا؛ `ErrorMessagesTest` و `RouteGuardsTest` سبز.
 
 ---
 
-#### گام ۱۴.۱: دامنه‌ی حذف · L ⬜
+#### گام ۱۴.۱: دامنه‌ی حذف · L ✅
 
 **می‌سازی:** `V39__account_deletion.sql`؛ `User.erase` و `deletedOn`؛ رویداد `OrderPersonalDataErased` (Aggregate، serializer، Projector، JSON ِ طلایی)؛ `AccountEraser` با یه متد `deleteAllOf(userId)` یا `anonymizeAllOf(userId)` روی هر repository ِ مربوط (آدرس، سبد، علاقه‌مندی و اشتراک، هشدار موجودی، idempotency، تماس، خبرنامه با ایمیل، نظرها)؛ `ActiveOrdersCheck`؛ چک `deletedOn` در `validate` ِ پلاگین `Authentication`؛ فیلتر `deletedOn IS NULL` در لیست و جزئیات مشتری‌های پنل.
 
@@ -5215,29 +5794,33 @@ Route: 200 application/pdf با هدرهای تصمیم ۱۶
 - چرا یه سرویس `AccountEraser` و نه پخش در UseCase؟ فهرست پاک‌سازی باید یه جا باشه تا فاز بعدی که جدول شخصی تازه می‌سازه، بدونه کجا اضافه‌ش کنه؛ و تست می‌تونه «هیچ ردیفی با این `userId` نموند» رو برای همه‌ی جدول‌ها یه جا چک کنه.
 
 **تموم شده یعنی:**
-- [ ] تست طلایی رویداد؛ replay ِ سفارش بی‌نام‌شده همون نتیجه.
-- [ ] `ActiveOrdersCheck` برای هر ۸ وضعیت، `balanceDue > 0` و استرداد باز `true`؛ برای `DELIVERED`، `CANCELLED` (بدون استرداد باز)، `EXPIRED`، `REFUNDED` `false`.
-- [ ] همه‌ی کوئری‌های `user_tbl.phone` (grep) با کاربر حذف‌شده تست شدن؛ ورود با شماره‌ی کاربر حذف‌شده ← کاربر تازه.
+- [x] تست طلایی رویداد؛ replay ِ سفارش بی‌نام‌شده همون نتیجه.
+- [x] `ActiveOrdersCheck` برای هر ۸ وضعیت (و `PAYMENT_FAILED`، تصمیم ۱۷)، `balanceDue > 0` و استرداد باز `true`؛ برای `DELIVERED`، `CANCELLED` (بدون استرداد باز)، `EXPIRED`، `REFUNDED` `false`.
+- [x] همه‌ی کوئری‌های `user_tbl.phone` (grep) با کاربر حذف‌شده تست شدن؛ ورود با شماره‌ی کاربر حذف‌شده ← کاربر تازه.
+
+**یادداشت پیاده‌سازی:** سه تصمیم تازه (۱۷ تا ۱۹) و ردیف ۸ ِ ۱۹.۷ در کانترکت. `V39` عین ۱۹.۴. دامنه: `User` با `deletedOn`، `phone` ِ `null`‌پذیر (`init` همون قید دیتابیس)، `isDeleted`، `activePhone` (برای جاهایی که حساب زنده رو می‌خوان؛ روی حساب حذف‌شده `check` می‌شکنه) و `erase(now)` (بار دوم بی‌اثر)؛ `AddressSnapshot.erased()`، `PreShipmentMessenger.erased()` (کانال می‌مونه)، `GiftNote.erased()`؛ رویداد `OrderPersonalDataErased` با `ErasureReason` و `Order.erasePersonalData` (بار دوم بی‌رویداد)؛ payload، JSON ِ طلایی و Projector (همون فیلدها، `searchText` فقط کد و شهر، بدون ردیف تایم‌لاین). `AccountEraser` با `deleteAllOf`/`anonymizeAllOf`/`deleteOfUser`/`delete(email)` روی هشت repository و `ActiveOrdersCheck` (با `findAllOfCustomer` ِ تازه و `findAllOfOrders` ِ استردادها). احراز هویت: `CheckAccountLiveUc` (یه ستون، بدون لاگ) و پارامتر اجباری `isAccountLive` ِ `configureAuthentication` (هر درخواست واردشده، `401` برای حذف‌شده، مسیرهای مهمان‌پذیر هم). پنل: لیست مشتری‌ها `deletedOn IS NULL`؛ جزئیات، `GetCustomerUc` و `PUT …/roles` برای حذف‌شده `404`؛ همه‌ی UseCaseهای «کاربر خودم» حذف‌شده رو مثل «حساب نیست» می‌بینن؛ `ActorNameDto` حذف‌شده رو `Unknown` می‌کنه. پشته‌های تست حساب‌های حذف‌شده رو با `deletedOn IS NOT NULL` پاک می‌کنن (شماره ندارن). تست: `UserTest` (۷ تازه)، `OrderErasureTest` (۱۱)، `ActiveOrdersCheckTest` (۱۸)، `OrderQmErasureProjectorTest` (۵)، `UserRepositoryImplTest` (۵ تازه)، جستجو و لیست مشتری‌ها، `AuthenticationTest` و JSON ِ طلایی.
 
 ---
 
-#### گام ۱۴.۲: کد حذف و `DELETE /me` · M ⬜
+#### گام ۱۴.۲: کد حذف و `DELETE /me` · M ✅
 
 **می‌سازی:** `RequestAccountDeletionUc`، `DeleteMyAccountUc`؛ routeها با `credentials` و پاک کردن کوکی.
 
 وابسته به: ۱۴.۱
 
 **تموم شده یعنی:**
-- [ ] کاربر با سفارش `SHIPPED` ← درخواست کد `422` با کد سفارش و **بدون پیامک**.
-- [ ] کاربر بی‌سفارش جاری: کد ← حذف ← `204`، کوکی پاک، نشست‌ها `ACCOUNT_DELETED`، توکن دسترسی قبلی ← `401` روی `GET /me`.
-- [ ] `PanelTestStack`-مانند `AccountErasureOnDatabaseTest`: کاربری با آدرس، سبد، علاقه‌مندی و لینک، هشدار موجودی، نظر تأییدشده، پیام تماس، عضویت خبرنامه، سفارش تحویل‌شده با مرجوعی و استرداد تموم‌شده ← بعد از حذف: هیچ ردیفی با `userId` در جدول‌های «پاک»؛ نظر با «کاربر کیوا» هنوز تو لیست عمومی؛ سفارش در پنل با استان و شهر و بدون اسم و موبایل؛ استرداد و مرجوعی سر جاشون؛ `searchText` ِ سفارش موبایل رو نداره.
-- [ ] کد ورود برای حذف ← `422 OTP_INVALID`؛ کد حذف برای ورود ← رد.
-- [ ] ثبت سفارش و حذف همزمان ۲۰ بار ← یا سفارش ثبت می‌شه و حذف `422`، یا حذف انجام می‌شه و سفارش `401`؛ هیچ‌وقت سفارش جاری ِ بی‌صاحب.
-- [ ] کاربر `OPERATOR` ← `422 STAFF_ACCOUNT_CANNOT_BE_DELETED`.
+- [x] کاربر با سفارش `SHIPPED` ← درخواست کد `422` با کد سفارش و **بدون پیامک**.
+- [x] کاربر بی‌سفارش جاری: کد ← حذف ← `204`، کوکی پاک، نشست‌ها `ACCOUNT_DELETED`، توکن دسترسی قبلی ← `401` روی `GET /me`.
+- [x] `PanelTestStack`-مانند `AccountErasureOnDatabaseTest`: کاربری با آدرس، سبد، علاقه‌مندی و لینک، هشدار موجودی، نظر تأییدشده، پیام تماس، عضویت خبرنامه، سفارش تحویل‌شده با مرجوعی و استرداد تموم‌شده ← بعد از حذف: هیچ ردیفی با `userId` در جدول‌های «پاک»؛ نظر با «کاربر کیوا» هنوز تو لیست عمومی؛ سفارش در پنل با استان و شهر و بدون اسم و موبایل؛ استرداد و مرجوعی سر جاشون؛ `searchText` ِ سفارش موبایل رو نداره.
+- [x] کد ورود برای حذف ← `422 OTP_INVALID`؛ کد حذف برای ورود ← رد.
+- [x] ثبت سفارش و حذف همزمان ۲۰ بار ← یا سفارش ثبت می‌شه و حذف `422`، یا حذف انجام می‌شه و سفارش `401`؛ هیچ‌وقت سفارش جاری ِ بی‌صاحب.
+- [x] کاربر `OPERATOR` ← `422 STAFF_ACCOUNT_CANNOT_BE_DELETED`.
+
+**یادداشت پیاده‌سازی:** یه تصمیم تازه (۲۰). `RequestAccountDeletionUc` (اول کارمند، بعد سفارش جاری، بعد `OtpIssuer` با همون سقف‌ها؛ پیامک بعد از commit) و `DeleteMyAccountUc` (شکل ← قفل‌ها به ترتیب ۲، ۱۳، ۳، ۴ و ردیف کاربر با `lockAndFind` ِ تازه ← دوباره کارمند و سفارش جاری ← کد با «تله‌ی rollback» ِ ورود ← `erasePersonalData` ِ هر سفارش ← `AccountEraser` ← `erase` و `revokeAllOf(ACCOUNT_DELETED)` ← دلیل ← `ACCOUNT_DELETED` در لاگ امنیتی؛ تا ۳ بار با `ConcurrentChangeException`). `DeletionReason` (≤ ۳۰۰، دو کد تازه‌ی `DELETION_REASON_*` با متن فارسی) و `AccountDeletionReasonRepository` بی‌شناسه. routeها در `webV1Me.kt`: `POST /me/deletion/request` زیر همون سقف IP ِ ارسال کد، `DELETE /me` ← `204` با `clearRefreshCookie`. تست: `WebV1AccountDeletionOnDatabaseTest` (۸، از جمله ۲۰ دور همزمانی ثبت و حذف، و «کدی که به‌خاطر سفارش جاری رد شد مصرف نمی‌شه») و `AccountErasureOnDatabaseTest` (۶: هشت جدول «پاک» قبلش پر و بعدش خالی، نظر «کاربر کیوا»، سفارش در پنل و جستجو، مرجوعی و استرداد، سنگ‌قبر و نشست‌ها و کوکی و دلیل، توکن همون لحظه `401`). کامیت ۱۴.۱ و ۱۴.۲ یکیه: فایل‌های مشترک (پشته‌های تست، DI) بدون کد هر دو کامپایل نمی‌شدن.
 
 ---
 
-#### گام ۱۴.۳: فاکتور PDF · L ⬜
+#### گام ۱۴.۳: فاکتور PDF · L ✅
 
 **می‌سازی:** وابستگی‌های PDFBox 3 و ICU4J؛ فونت Vazirmatn (معمولی و ضخیم) در `resources/fonts/` با فایل لایسنس؛ `InvoiceRenderer` و `PdfBoxInvoiceRenderer` (نوشتن متن راست‌چین: `Bidi` ← `ArabicShaping(LETTERS_SHAPE)` ← رسم با فونت؛ عددها با ارقام فارسی از `InvoiceTexts`)؛ `InvoiceDocument` و سازنده‌ش؛ `GetMyInvoiceUc`؛ route و `exposeHeader("Content-Disposition")`؛ `invoiceUrl` در پاسخ‌های سفارش.
 
@@ -5248,19 +5831,24 @@ Route: 200 application/pdf با هدرهای تصمیم ۱۶
 - چرا تست تصویری؟ استخراج متن از PDF ِ فارسی شکل‌داده‌شده قابل اعتماد نیست؛ مقایسه‌ی تصویر صفحه با یه نسخه‌ی طلایی تنها راه دیدن «حروف به هم چسبیدن و راست‌به‌چپن» ـه.
 
 **تموم شده یعنی:**
-- [ ] `InvoiceRendererGoldenTest`: سفارش ثابت (دو ردیف، کد تخفیف، ارسال رایگان) ← صفحه با `PDFRenderer` به PNG ← مقایسه با `src/test/resources/golden/invoice.png` (تفاوت پیکسلی ≤ ۰٫۵٪). نسخه‌ی طلایی یه بار با چشم چک و commit می‌شه؛ عوض کردنش فقط عمدی و با توضیح.
-- [ ] سفارش لغوشده نوار «لغو شده» داره؛ سفارش بعد از درخواست تغییر ردیف تازه رو داره نه قبلی رو.
-- [ ] پرداخت‌نشده ← `422`؛ سفارش کس دیگه ← `404`؛ هدرها درست؛ فایل با یه نمایشگر PDF ِ واقعی باز می‌شه (دستی، در گزارش کار).
-- [ ] رندر بیرون از تراکنش (تست با `TransactionManager` ِ آزمایشی که رندر داخلش رو رد می‌کنه).
+- [x] `InvoiceRendererGoldenTest`: سفارش ثابت (دو ردیف، کد تخفیف، ارسال رایگان) ← صفحه با `PDFRenderer` به PNG ← مقایسه با `src/test/resources/golden/invoice.png` (تفاوت پیکسلی ≤ ۰٫۵٪). نسخه‌ی طلایی یه بار با چشم چک و commit می‌شه؛ عوض کردنش فقط عمدی و با توضیح.
+- [x] سفارش لغوشده نوار «لغو شده» داره؛ ردیف‌های رسید همون ردیف‌های فعلی ِ صفحه‌ی سفارشن (`OrderDetails`، که بعد از درخواست تغییر ردیف تازه رو داره).
+- [x] پرداخت‌نشده ← `422`؛ سفارش کس دیگه ← `404`؛ هدرها درست؛ فایل با یه نمایشگر PDF ِ واقعی باز می‌شه (دستی: `build/golden/invoice.pdf` که تست طلایی می‌نویسه؛ منتظر تو، با گوشی در ۱۴.۴).
+- [x] رندر بیرون از تراکنش (تست با `TransactionManager` ِ آزمایشی که رندر داخلش رو رد می‌کنه).
+
+**یادداشت پیاده‌سازی:** سه تصمیم تازه (۲۱ تا ۲۳). PDFBox `3.0.8` و ICU4J `79.1` (آخرین نسخه‌های پایدار در Maven Central)؛ Vazirmatn `v33.003` (معمولی و ضخیم، با `OFL.txt`) از ریلیز رسمی؛ فرم‌های نمایشی ِ همه‌ی حروف فارسی و لام‌الف در هر دو فونت چک شد. پورت `InvoiceRenderer` و `InvoiceDto`؛ `GetMyInvoiceUc` (خوندن در تراکنش، رندر بعدش)؛ `InvoiceTexts.documentOf` ← `InvoiceDocument` ← `PdfBoxInvoiceRenderer` (A4، فونت‌ها زیرمجموعه‌ی جاسازی‌شده، نویسه‌ی بی‌گلیف حذف به‌جای شکست)؛ `PersianShaping` و `RtlText` (`Bidi` ِ ICU). route در `webV1MyOrders.kt` با هدرهای تصمیم ۱۶، `exposeHeader(Content-Disposition)`، و `invoiceUrl` برای سفارش «یه بار پرداخت‌شده». تست: `RtlTextTest` (۶)، `InvoiceRendererGoldenTest` (۴)، `WebV1InvoiceOnDatabaseTest` (۶).
 
 ---
 
-#### گام ۱۴.۴: ریویو · S ⬜
+#### گام ۱۴.۴: ریویو · S ✅
 
 **می‌سازی:** `ACCOUNT_CLOSURE_REVIEW.md` (ردیف ۱۷ ِ بخش ۳؛ خرابکاری: چک سفارش جاری بعد از قفل، قفل ۲ در حذف، چک `deletedOn` در احراز هویت، یه خط از `AccountEraser`، چک مالکیت فاکتور)؛ `docs/FRONTEND_ACCOUNT.md` (جریان حذف دومرحله‌ای، پیام‌های ۴۲۲، دانلود فاکتور با هدر)؛ متن «حذف حساب» برای صفحه‌ی حریم خصوصی (با محدودیت تصمیم ۳)؛ merge.
 
 **تموم شده یعنی:**
-- [ ] همه‌ی خرابکاری‌ها قرمز می‌کنن؛ merge به `main` و deploy؛ یه فاکتور از سرور دانلود و با گوشی باز شد.
+- [x] همه‌ی خرابکاری‌ها قرمز می‌کنن (۱۸ از ۱۸، جدول `ACCOUNT_CLOSURE_REVIEW.md`).
+- [ ] merge به `main` و deploy؛ یه فاکتور از سرور دانلود و با گوشی باز شد: منتظر تو.
+
+**یادداشت پیاده‌سازی:** `ACCOUNT_CLOSURE_REVIEW.md` (خطرها با دفاع و تست نگهبان، ۱۸ خرابکاری همه قرمز، چیزهایی که پیدا شد، دور واقعی)؛ `docs/FRONTEND_ACCOUNT.md` (دو مرحله‌ی حذف و همه‌ی پاسخ‌ها، متن پیشنهادی صفحه، دانلود رسید با `fetch` و `blob` و اسم از `Content-Disposition`، پنل) و در بخش ۴ همون سند متن HTML ِ «حذف حساب» برای صفحه‌ی حریم خصوصی. خرابکاری ۲ اول فقط یه تست ِ دیگه رو قرمز کرد؛ تست حساب حذف‌شده قوی‌تر شد (لیست بی‌فیلتر و وضعیت `200`). اجرای کامل: ۳۱۴۱ تست، دو قرمز ِ قدیمی‌شده (`invoiceUrl` ِ سفارش پرداخت‌شده؛ شناسه‌ی ثابت `12` در `ReturnsMigrationTest`) اصلاح و دوباره اجرا شدن؛ با تست تله‌ی rollback ۳۱۴۲ تست، ۵ skip. فاز ۱۴ از طرف ریپو کامله؛ دور واقعی، باز کردن رسید با گوشی و merge منتظر تو.
 
 ---
 
@@ -5277,12 +5865,12 @@ Route: 200 application/pdf با هدرهای تصمیم ۱۶
 
 | گام | عنوان | اندازه | وضعیت |
 |---|---|---|---|
-| ۱۵.۰ | کانترکت 1.21.0 | S | ⬜ |
-| ۱۵.۱ | دسته‌ها، نویسنده‌ها و دامنه‌ی مقاله | M | ⬜ |
-| ۱۵.۲ | نوشتن مقاله در پنل (ساخت، ویرایش، حذف، لیست و جزئیات پنل) | L | ⬜ |
-| ۱۵.۳ | دسته‌ها، لیست و صفحه‌ی مقاله در فروشگاه | M | ⬜ |
-| ۱۵.۴ | مقاله‌های مرتبط و «مفید بود؟» | S | ⬜ |
-| ۱۵.۵ | ریویو و جمع‌بندی کل سند | M | ⬜ |
+| ۱۵.۰ | کانترکت 1.21.0 | S | ✅ |
+| ۱۵.۱ | دسته‌ها، نویسنده‌ها و دامنه‌ی مقاله | M | ✅ |
+| ۱۵.۲ | نوشتن مقاله در پنل (ساخت، ویرایش، حذف، لیست و جزئیات پنل) | L | ✅ |
+| ۱۵.۳ | دسته‌ها، لیست و صفحه‌ی مقاله در فروشگاه | M | ✅ |
+| ۱۵.۴ | مقاله‌های مرتبط و «مفید بود؟» | S | ✅ |
+| ۱۵.۵ | ریویو و جمع‌بندی کل سند | M | ✅ |
 
 ### ۲۰.۲ تصمیم‌های این فاز
 
@@ -5306,6 +5894,7 @@ Route: 200 application/pdf با هدرهای تصمیم ۱۶
 | 16 | کش | دسته‌ها، لیست، صفحه‌ی مقاله و مرتبط‌ها با `respondResultCacheable` (کانترکت: بلاگ ۵ دقیقه). پیش‌نویس و زمان‌بندی‌شده هیچ‌وقت در پاسخ عمومی نیستن، پس کش داده‌ی منتشرنشده لو نمی‌ده؛ مقاله‌ی زمان‌بندی‌شده تا ۵ دقیقه بعد از زمانش دیده می‌شه | — |
 | 17 | لاگ تغییرات | `BLOG_POST_CREATED`، `BLOG_POST_UPDATED` (`changes`: فیلدهای عوض‌شده؛ `blocks` فقط «عوض شد» و تعداد)، `BLOG_POST_DELETED`؛ مقدار تازه‌ی `BLOG_POST` در `AuditEntityType` | بخش ۵.۱ |
 | 18 | حذف حساب | بلاگ داده‌ی شخصی کاربر نداره جز رأی `u:{userId}`؛ `AccountEraser` (فاز ۱۴) رأی‌های اون کاربر رو به `ip:` ِ بی‌نام تبدیل نمی‌کنه بلکه **پاک** می‌کنه (قانون بخش ۴.۱۰) | — |
+| 19 | (تازه، گام ۱۵.۰) انتشار دوباره | `PUT` با `status = PUBLISHED` و `publishedAt` ِ خالی روی مقاله‌ای که از قبل منتشر بوده، تاریخ انتشار قبلی رو نگه می‌داره؛ فقط اولین انتشار «الان» می‌گیره | ویرایش یه غلط املایی نباید مقاله‌ی قدیمی رو به بالای مجله ببره |
 
 ### ۲۰.۳ تغییرات دامنه
 
@@ -5456,83 +6045,95 @@ Route: 204
 | 7 | `GET /blog/posts/{postId}/related` | ترتیب، «خودش نه»، `limit` حداقل ۱ | تصمیم ۱۳ |
 | 8 | `POST /blog/posts/{postId}/feedback` | «یه رأی برای هر کاربر یا IP، رأی دوباره جایگزین»، «`comment` فقط با `helpful = false`»، `429` | تصمیم ۱۴ |
 | 9 | `AuditEntityType` | `BLOG_POST` | تصمیم ۱۷ |
-| 10 | `ErrorCode` | `BLOG_CATEGORY_NOT_FOUND`، `BLOG_AUTHOR_NOT_FOUND` | — |
+| 10 | `ErrorCode` | `BLOG_CATEGORY_NOT_FOUND`، `BLOG_AUTHOR_NOT_FOUND` (و در گام ۱۵.۰ چهار کد فیلد: `BLOG_BLOCK_TYPE_INVALID`، `BLOG_BLOCK_TEXT_OR_HTML`، `BLOG_POST_STATUS_INVALID`، `BLOG_TAG_EMPTY`) | — |
 
 ### ۲۰.۸ گام‌ها
 
-#### گام ۱۵.۰: کانترکت 1.21.0 · S ⬜
+#### گام ۱۵.۰: کانترکت 1.21.0 · S ✅
 
 **می‌سازی:** برنچ `blog`؛ ردیف‌های ۲۰.۷؛ متن کدهای تازه.
 
 **تموم شده یعنی:**
-- [ ] کانترکت معتبر؛ `RouteGuardsTest` دو route ِ تازه رو هم می‌شناسه؛ `ErrorMessagesTest` سبز.
+- [x] کانترکت معتبر؛ `RouteGuardsTest` دو route ِ تازه رو هم می‌شناسه؛ `ErrorMessagesTest` سبز.
+
+**یادداشت پیاده‌سازی:** برنچ `blog` از نوک فاز ۱۴ (`97b9cf0`). کانترکت 1.21.0 با هر ده ردیف ِ ۲۰.۷: دو مسیر خوندنی ِ تازه‌ی پنل با `x-roles: [ADMIN, CONTENT_EDITOR]` و شِمای `AdminBlogPost` (با `status`، `scheduled`، `createdAt`، `createdBy`، `updatedBy`، `unavailableProductIds`، `feedbackComments`)؛ پاسخ `POST`/`PUT` همون شِما با `409 DUPLICATE_SLUG`؛ همه‌ی اندازه‌ها، قانون هر نوع بلوک، وضعیت و زمان‌بندی، «فقط یه منتخب» و «`canonicalUrl`/`ogImageUrl`/`jsonLd` ِ ورودی نادیده» در توضیح ساخت؛ `cover` ِ `nullable` و `excerpt` ِ جایگزین در `BlogPostSummary`؛ ترتیب و معنی `q`/`tag` و حذف منتخب از شمارش در لیست؛ `postCount` ِ فقط دیده‌شده‌ها؛ «فقط منتشرشده و رسیده»، حذف بلوک محصول برداشته‌شده و `shareLinks` در صفحه‌ی مقاله؛ ترتیب و `limit` (حداقل ۱) در مرتبط‌ها؛ یه رأی برای هر کاربر یا IP و `429` در «مفید بود؟»؛ `BLOG_POST` در `AuditEntityType`؛ دو کد تازه‌ی `ErrorCode` و چهار کد ِ فیلد. چیزی که برای ساخت `PUBLISHED` ِ دوباره تصمیم شد: بدون `publishedAt` تاریخ قبلی ِ مقاله‌ی از قبل منتشرشده می‌مونه (تصمیم ۱۹ ِ این فاز). YAML معتبر، ۱۳۶۶ `$ref` همه پیدا؛ `ErrorMessagesTest` و `RouteGuardsTest` سبز.
 
 ---
 
-#### گام ۱۵.۱: دسته‌ها، نویسنده‌ها و دامنه‌ی مقاله · M ⬜
+#### گام ۱۵.۱: دسته‌ها، نویسنده‌ها و دامنه‌ی مقاله · M ✅
 
 **می‌سازی:** `V40__blog.sql` (با seed ِ دسته‌ها و نویسنده)؛ ۲۰.۳؛ repositoryها.
 
 وابسته به: ۱۵.۰
 
 **تموم شده یعنی:**
-- [ ] تست واحد هر نوع بلوک (درست، ناقص، فیلد بی‌ربط نادیده)، `anchor` ها، `toc`، زمان مطالعه‌ی خودکار، `excerpt` ِ جایگزین.
-- [ ] `isVisibleAt`: پیش‌نویس، منتشر با زمان گذشته، منتشر با زمان آینده، بایگانی.
+- [x] تست واحد هر نوع بلوک (درست، ناقص، فیلد بی‌ربط نادیده)، `anchor` ها، `toc`، زمان مطالعه‌ی خودکار، `excerpt` ِ جایگزین.
+- [x] `isVisibleAt`: پیش‌نویس، منتشر با زمان گذشته، منتشر با زمان آینده، بایگانی.
+
+**یادداشت پیاده‌سازی:** `V40` عین ۲۰.۴، با اسم قید `blogpost_slug_key` برای رقابت slug، `CHECK` ِ متن خالی برای `excerpt`/`lead`/`comment`، ایندکس نظرهای «مفید نبود»، و seed ِ پنج دسته‌ی نمونه‌ی kiva-fe (`buying-guide`، `style`، `care`، `materials`، `behind-the-scenes`؛ پیش‌نمونه «متریال» رو هم داشت) و نویسنده‌ی پیش‌فرض «تیم کیوا» (سؤال باز ۱۳). دامنه‌ی `blog`: `BlogValues` (`BlogPostId`، `BlogCategoryId`، `BlogAuthorId`، `BlogPostStatus`، `BlogTag` با `normalizePersian`، `CoverBackground`)، `BlogBlock` (هفت نوع، `TextOrHtml`) و `BlogBlocks.makeNew` (همه‌ی خطاها با هم روی `blocks.{i}.{field}`)، `BlogPolicy` (زمان مطالعه، خلاصه‌ی جایگزین بدون HTML)، `BlogPostDraft` (فرم کامل، مثل `PageDraft`)، `BlogPost` (`create`/`rewrite` با قانون تاریخ انتشار، `isVisibleAt`، `isScheduledAt`، `toc`، `unfeatured`)، `BlogCategory`، `BlogAuthor` و چهار repository (`unfeatureAllExcept`، `pagePublic`، `featured`، `related`، `countVisibleByCategory`، `upsert` ِ رأی). بلوک‌ها در JSONB با `BlogBlockPayload` (فقط فیلدهای همون نوع). تست: `BlogBlocksTest` (۷)، `BlogPostTest` (۱۴)، `BlogRepositoriesImplTest` (۱۲، از جمله قید یک منتخب، دیده شدن، فیلترها، مرتبط‌ها و قید `voterKey` که IP ِ خام رو رد می‌کنه).
 
 ---
 
-#### گام ۱۵.۲: نوشتن مقاله در پنل · L ⬜
+#### گام ۱۵.۲: نوشتن مقاله در پنل · L ✅
 
 **می‌سازی:** شش UseCase ِ پنل؛ `webV1AdminBlog.kt`؛ `AdminBlogPostHttpResponse`؛ لاگ تغییرات؛ خط `deleteVotesOfUser` در `AccountEraser`.
 
 وابسته به: ۱۵.۱
 
 **تموم شده یعنی:**
-- [ ] ساخت پیش‌نویس ← `201` با `status = DRAFT`؛ تو لیست پنل هست، تو فروشگاه نه.
-- [ ] `<script>` و `onerror` در `html` ِ پاراگراف پاک می‌شن، `/products?onSale=true` می‌مونه (ردیف ۴ ِ بخش ۳).
-- [ ] `slug` ِ تکراری ← `409`؛ `slug = "123"` ← `400`؛ محصول `DRAFT` در بلوک ← `400` با `blocks.3.productId`.
-- [ ] منتخب کردن مقاله‌ی دوم ← اولی دیگه منتخب نیست.
-- [ ] `OPERATOR` ← `403` روی هر شش route.
+- [x] ساخت پیش‌نویس ← `201` با `status = DRAFT`؛ تو لیست پنل هست (تو فروشگاه نه: گام ۱۵.۳).
+- [x] `<script>` و `onerror` در `html` ِ پاراگراف پاک می‌شن، `/products?onSale=true` می‌مونه (ردیف ۴ ِ بخش ۳).
+- [x] `slug` ِ تکراری ← `409`؛ `slug = "123"` ← `400`؛ محصول `DRAFT` در بلوک ← `400` با `blocks.3.productId`.
+- [x] منتخب کردن مقاله‌ی دوم ← اولی دیگه منتخب نیست.
+- [x] `OPERATOR` ← `403` روی هر پنج route ِ پنل (`GET` لیست، `GET` یکی، `POST`، `PUT`، `DELETE`).
+
+**یادداشت پیاده‌سازی:** یه migration ِ تازه: `V41__blog_audit_log.sql` قید `entityType` ِ `auditlog_tbl` رو با `BLOG_POST` از نو می‌سازه (`V40` در ۱۵.۱ commit شده بود و این جا افتاده بود؛ بخش ۲۱). UseCaseها: `CreateBlogPostUc`، `UpdateBlogPostUc`، `DeleteBlogPostUc`، `GetAdminBlogPostUc`، `FindAdminBlogPostsUc`؛ سرویس‌های مشترک `BlogPostWriting` (دسته، نویسنده یا پیش‌فرض، مدیا با `MediaAttachments` ِ `BLOG`/فقط عکس، محصول‌های منتشرشده؛ و `changes` ِ لاگ با بلوک‌ها فقط «عوض شد» و تعداد) و `BlogPosts` (خلاصه، صفحه، نمای پنل و ردیف‌های لیست، هر کدوم با چند کوئری برای همه، بدون N+1؛ `searchTextOf`)؛ `BlogPostInput` (`draftOf`، `SaveBlogPostFailure`، `postIdOf`). رقابت slug با `UniqueTakenException` ← `409`. HTTP: `webV1AdminBlog.kt`، `BlogPostHttpRequest`، `BlogHttpResponses` (`AdminBlogPostHttpResponse` با همه‌ی فیلدهای `BlogPostDetail`، سئوی ساخته‌ی سرور با `jsonLd` ِ `Article`)، `BlogTexts`؛ متن لاگ سه کار تازه در `AuditTexts`. `AccountEraser` خط تازه‌ی `deleteVotesOfUser` (ردیف تست حذف حساب با route ِ «مفید بود؟» در ۱۵.۴). تست: `WebV1AdminBlogOnDatabaseTest` (۹).
 
 ---
 
-#### گام ۱۵.۳: دسته‌ها، لیست و صفحه‌ی مقاله در فروشگاه · M ⬜
+#### گام ۱۵.۳: دسته‌ها، لیست و صفحه‌ی مقاله در فروشگاه · M ✅
 
 **می‌سازی:** `ListBlogCategoriesUc`، `ListBlogPostsUc`، `GetBlogPostUc`؛ `webV1Blog.kt`؛ پاسخ‌ها.
 
 وابسته به: ۱۵.۲
 
 **تموم شده یعنی:**
-- [ ] منتخب فقط صفحه‌ی ۱، از `items` و `meta.totalItems` حذف؛ با فیلتر دسته‌ای که منتخب توش نیست ← `featured = null`.
-- [ ] مقاله‌ی زمان‌بندی‌شده برای یه ساعت بعد ← `404` تا اون موقع (با `MutableClock`).
-- [ ] `GET /blog/posts/12` و `GET /blog/posts/bag-by-body-shape` یه مقاله؛ محصول برداشته‌شده ← بلوکش نیست.
-- [ ] `postCount` پیش‌نویس‌ها رو نمی‌شمره؛ `304` با `If-None-Match`.
+- [x] منتخب فقط صفحه‌ی ۱، از `items` و `meta.totalItems` حذف؛ با فیلتر دسته‌ای که منتخب توش نیست ← `featured = null`.
+- [x] مقاله‌ی زمان‌بندی‌شده برای یه ساعت بعد ← `404` تا اون موقع (با `MutableClock`).
+- [x] `GET /blog/posts/12` و `GET /blog/posts/bag-by-body-shape` یه مقاله؛ محصول برداشته‌شده ← بلوکش نیست.
+- [x] `postCount` پیش‌نویس‌ها رو نمی‌شمره؛ `304` با `If-None-Match`.
+
+**یادداشت پیاده‌سازی:** `ListBlogCategoriesUc`، `ListBlogPostsUc`، `GetBlogPostUc` و `webV1Blog.kt` (هر سه با `respondResultCacheable`؛ `404` کش نمی‌شه). منتخب (اگه با فیلتر جوره) از `items` و شمارش **همه‌ی** صفحه‌ها بیرونه، نه فقط صفحه‌ی ۱، وگرنه صفحه‌ی ۲ با offset ِ یکی جابه‌جا یه مقاله رو تکرار می‌کرد؛ خود `featured` فقط در صفحه‌ی ۱ برمی‌گرده. `tag` ای که هیچ مقاله‌ای نمی‌تونه داشته باشه (بیشتر از ۳۰) مثل دسته‌ی ناشناخته لیست خالیه نه خطا. `idOrSlug` با رقم فارسی هم شناسه‌ست. همه‌ی خوندن‌ها از `BlogPosts` ِ گام ۱۵.۲ (بدون N+1). تست: `WebV1BlogOnDatabaseTest` (۵).
 
 ---
 
-#### گام ۱۵.۴: مقاله‌های مرتبط و «مفید بود؟» · S ⬜
+#### گام ۱۵.۴: مقاله‌های مرتبط و «مفید بود؟» · S ✅
 
 **می‌سازی:** `ListRelatedBlogPostsUc`، `SendBlogFeedbackUc`؛ سقف `blog-feedback`؛ `kiva.blog.voterPepper`.
 
 وابسته به: ۱۵.۳
 
 **تموم شده یعنی:**
-- [ ] مرتبط‌ها: هم‌دسته‌ها اول، خودش نیست، `limit = 13` ← `400`.
-- [ ] رأی مهمان دو بار از یه IP ← یه ردیف (دومی جایگزین)؛ کاربر واردشده جدا شمرده می‌شه؛ `comment` با `helpful = true` ذخیره نمی‌شه.
-- [ ] خود IP هیچ‌جا در دیتابیس نیست (فقط hash).
+- [x] مرتبط‌ها: هم‌دسته‌ها اول، خودش نیست، `limit = 13` ← `400`.
+- [x] رأی مهمان دو بار از یه IP ← یه ردیف (دومی جایگزین)؛ کاربر واردشده جدا شمرده می‌شه؛ `comment` با `helpful = true` ذخیره نمی‌شه.
+- [x] خود IP هیچ‌جا در دیتابیس نیست (فقط hash).
+
+**یادداشت پیاده‌سازی:** `ListRelatedBlogPostsUc` (`limit` ِ نه‌عدد هم `400 NUMBER_OUT_OF_RANGE` روی `limit`، کش‌شده) و `SendBlogFeedbackUc` (ورود اختیاری با `authenticate(ACCESS, optional = true)`، توکن خراب `401`) در همون `webV1Blog.kt`. قانون رأی در دامنه: `BlogVote` (`helpful` اجباری؛ `comment` فقط با «نه»، ≤ ۳۰۰، بدون نویسه‌ی کنترلی؛ با «آره» بی‌صدا دور ریخته می‌شه). hash ِ IP پورت `VoterHashes` در application و `HmacVoterHashes` در infrastructure: **HMAC-SHA256** با pepper (نه SHA-256 ِ ساده‌ی `ip + pepper`؛ همون کار، ولی کلید درست جای خودش). پیکربندی تازه‌ی اجباری `kiva.blog.voterPepper` (`KIVA_BLOG_VOTER_PEPPER`، base64، حداقل ۳۲ بایت، `BlogConfig.toString` پنهان): `application.conf`، `AppConfig.blog`، `AppConfigTest`، ردیف README و `tools/ops/kiva.env.example`؛ **روی سرور و در Run configuration ِ IntelliJ باید پیش از اجرای این نسخه ساخته بشه** (`openssl rand -base64 32`)، وگرنه اپ بالا نمیاد. سقف `blog-feedback` (۳۰ در ساعت برای هر IP) در `configureHttp`. ردیف بلاگ در تست حذف حساب (`AccountErasureOnDatabaseTest`: رأی با route و بعد از حذف هیچ رأی `u:{id}` نمونده). تست: `WebV1BlogOnDatabaseTest` (۴ تست تازه، روی هم ۹)، `BlogVoteTest` (۲)، `AppConfigTest` (۱ تازه).
 
 ---
 
-#### گام ۱۵.۵: ریویو و جمع‌بندی کل سند · M ⬜
+#### گام ۱۵.۵: ریویو و جمع‌بندی کل سند · M ✅
 
 **می‌سازی:** `BLOG_REVIEW.md` (ردیف ۴ ِ بخش ۳ برای بلاگ؛ خرابکاری: پاک‌سازی `html`، فیلتر دیده‌شدن، قید یک منتخب، hash ِ IP)؛ `docs/FRONTEND_BLOG.md`؛ **جمع‌بندی کل نقشه**: بخش ۲۹ (گزارش کار) کامل، همه‌ی ردیف‌های بخش ۳ اسم تستشون رو دارن، `RouteGuardsTest` نشون می‌ده **هیچ** مسیر `/admin` ِ کانترکت بدون route نمونده (یه تست تازه: «هر مسیر کانترکت یه route داره»)، و یه دور کامل با kiva-fe و پنل روی سرور؛ merge.
 
 وابسته به: ۱۵.۴
 
 **تموم شده یعنی:**
-- [ ] همه‌ی خرابکاری‌ها قرمز می‌کنن.
-- [ ] تست «هر مسیر کانترکت یه route داره» سبز (و با حذف عمدی یه route قرمز).
-- [ ] جدول وضعیت فازها (بخش ۰) همه ✅؛ merge به `main` و deploy.
+- [x] همه‌ی خرابکاری‌ها قرمز می‌کنن (۱۹ از ۱۹).
+- [x] تست «هر مسیر کانترکت یه route داره» سبز (و با حذف عمدی یه route قرمز).
+- [ ] جدول وضعیت فازها (بخش ۰) همه ✅؛ merge به `main` و deploy. **با تو:** همه‌ی ۱۵ فاز در ریپو آماده‌ان (🔧)، ولی هیچ‌کدوم هنوز در `main` نیست.
+
+**یادداشت پیاده‌سازی:** `BLOG_REVIEW.md` (دوازده خطر، ۱۹ خرابکاری ِ همه قرمز) و `docs/FRONTEND_BLOG.md`. تست تازه‌ی `RouteGuardsTest › every operation of the contract has a route` همه‌ی operationهای کانترکت (نه فقط `/admin`) رو با routeهای اپ می‌سنجه (اسم پارامترها مهم نیست: `{idOrSlug}` و `{postId}` یکی‌ان)؛ از روز اول سبز بود، و با تغییر اسم `/related` قرمز شد. بخش ۳.۱ ِ تازه: تست نگهبان هر ۲۱ ردیف ِ بخش ۳، هر اسم با جستجو در `src/test` پیدا شد. جدول وضعیت بخش ۰: فازهای ۱ تا ۵، ۱۳ و ۱۵ هم «ریپو آماده» با ریویوی خودشون. اجرای کامل: ۳۱۹۷ تست سبز، ۵ skip (ابزار واقعی). دور واقعی با kiva-fe و پنل روی سرور، `KIVA_BLOG_VOTER_PEPPER` روی سرور، merge و deploy با تو.
 
 ---
 
@@ -5558,11 +6159,12 @@ Route: 204
 | 33 | `V33__reviews.sql` | ۸.۱ | `review_tbl`، `reviewvote_tbl`، `productrating_tbl`، حذف `productqm_tbl.ratingAvg` |
 | 34 | `V34__wishlist.sql` | ۹.۱ | `wishlistitem_tbl`، `wishlistshare_tbl` |
 | 35 | `V35__stock_alerts.sql` | ۱۰.۱ | `stockalert_tbl` |
-| 36 | `V36__marketing.sql` | ۱۱.۱، ۱۱.۳، ۱۱.۴، ۱۱.۶ | `campaign_tbl` (با قید `EXCLUDE`)، `banner_tbl`، `testimonial_tbl`، بخش `home` ِ `sitecontent` |
+| 36 | `V36__marketing.sql` | ۱۱.۱ (کامل؛ ۱۱.۳، ۱۱.۴ و ۱۱.۶ ازش استفاده می‌کنن) | `campaign_tbl` (با قید `EXCLUDE`)، `banner_tbl`، `testimonial_tbl`، بخش `home` ِ `sitecontent` |
 | 37 | `V37__search.sql` | ۱۲.۱ | `productqm_tbl.searchName` با backfill، بخش `search` ِ `sitecontent` |
 | 38 | `V38__contact_newsletter.sql` | ۱۳.۲، ۱۳.۴ | `contactmessage_tbl`، `newslettersubscription_tbl` |
 | 39 | `V39__account_deletion.sql` | ۱۴.۱ | `user_tbl.deletedOn` و `phone` ِ `NULL`‌پذیر، `accountdeletionreason_tbl` |
 | 40 | `V40__blog.sql` | ۱۵.۱ | `blogcategory_tbl` و `blogauthor_tbl` (با seed)، `blogpost_tbl`، `blogfeedback_tbl` |
+| 41 | `V41__blog_audit_log.sql` | ۱۵.۲ | `BLOG_POST` در قید `entityType` ِ `auditlog_tbl` (جا افتاده از `V40`) |
 
 **دقت:** یه migration که بخش‌هاش مال چند گامه (مثل `V31`، `V36`) در **اولین** گامی که بهش نیاز داره کامل نوشته می‌شه، نه تیکه‌تیکه در چند commit (چون commit‌شده ویرایش نمی‌شه). گام‌های بعدی فقط از جدول‌هاش استفاده می‌کنن.
 
@@ -5859,3 +6461,107 @@ kiva {
 | تاریخ | گام | کامیت | یادداشت |
 |---|---|---|---|
 | ۲۵ مهر ۱۴۰۵ | — | — | سند نوشته شد. تصمیم‌های بخش ۱ (ردیف‌های ۱ تا ۱۰) پذیرفته شدن؛ بقیه پیشنهاد این سنده و با هر گام ۰ در کانترکت نوشته می‌شه |
+| ۲۶ مهر ۱۴۰۵ | ۱.۰ | Phase 1 step 1.0 | کانترکت 1.8.0 با هر ۱۸ ردیف ِ ۶.۸ و ردیف تازه‌ی ۱۹ (`ProductSpecsInput`). سه `FailureKind` ِ تازه، `EventSourceEntity.version`، متن همه‌ی کدهای تازه، تست چهارم `RouteGuardsTest` و `PanelTestStack`. کار روی برنچ `claude/sweet-lamport-v3gy0d` (برنچ تعیین‌شده‌ی این جلسه) به‌جای `panel-catalog` |
+| ۲۵ مهر ۱۴۰۵ | ۱.۱ | Phase 1 step 1.1 | `V21`، پورت `AuditTrail` با `AuditDiff`، `GET /admin/audit-log` با `AuditTexts`، job ِ `delete-old-audit-entries` در `PanelJobs`، و لاگ تغییر نقش‌ها. خرابکاری: trigger بدون شرط ۹۰ روز ← `a row of 89 days is never removed` قرمز |
+| ۲۵ مهر ۱۴۰۵ | ۱.۲ | Phase 1 step 1.2 | `V22`، aggregate ِ `media` (انتقال `MediaType`)، `MediaLimitsPolicy`، پورت‌های `MediaProcessor` و `MediaStorage`، `VipsFfmpegMediaProcessor`، `DiskMediaStorage`، `Blurhash`، `POST /admin/media` با خوندن جریانی و سقف حجم، `staticFiles` ِ توسعه، و job ِ `delete-unattached-media`. تست‌های ابزار واقعی اینجا skip (ابزار نصب نیست) |
+| ۲۵ مهر ۱۴۰۵ | ۱.۳ | Phase 1 step 1.3 | `V23`، `create`/`change` ِ دسته، رنگ و متریال با VOهای تازه (`CategoryDescription`، `MaterialNote`، `CareInstructions`، `SeoMeta` ِ مشترک)، ۱۱ UseCase ِ پنل و سه Query ِ بدنه، `MediaAttachments`، `webV1AdminCatalog.kt`، عکس و سئوی دسته در فروشگاه. خرابکاری: بدون `refreshSearchText` ← تست جستجوی اسم تازه قرمز |
+| ۲۵ مهر ۱۴۰۵ | ۱.۴ | Phase 1 step 1.4 | `V24` با backfillها (`version`، `createdByUserId`، `availableTotal`، `soldCount` ِ رنگ‌ها، کد محصول در متن جستجو)، Projectorها، `findForAdmin` و `findAdminDetail`، `AdminProductSorts`، `FindAdminProductsUc` و `GetAdminProductUc`، `webV1AdminProducts.kt` (دو GET با `ETag`) |
+| ۲۶ مهر ۱۴۰۵ | ۱.۵ | Phase 1 step 1.5 | شکل کامل محصول در دامنه (`ProductSpecs` ِ کامل با `StrapInfo`/`PocketInfo`/…، `ProductTags`، `SeoMeta`، `Barcode`، `ProductMedia` با `mediaId`، `ProductGalleryPolicy`، `MaxPerOrder` تا ۲۰) با payloadهای سازگار با رویدادهای قبلی، `GalleryItemPayload` در read model، `ProductInput`، گسترش `CreateProductUc` (گالری، موجودی اولیه، لاگ)، `UpdateProductUc` با `If-Match`، `POST`/`PUT /admin/products`. دیتابیس توسعه: ۰ از ۶۵ فیلد `media` غیرخالی. خرابکاری: بدون چک `If-Match` و بدون sanitize ← تست‌هاشون قرمز |
+| ۲۶ مهر ۱۴۰۵ | ۱.۶ | Phase 1 step 1.6 | `schedulePublish`/`unschedulePublish` با دو رویداد و payloadشون، Projector ِ `publishAt`، `ChangeProductStatusUc` (همه‌ی ردیف‌های ۶.۶)، `ArchiveProductUc`، job ِ `publish-scheduled-products` (`FindDueScheduledProductsUc` + `PublishScheduledProductUc`)، `PATCH …/status` و `DELETE`، `MomentField` (`DATE_TIME_INVALID`). خرابکاری: بدون catch ِ همزمانی در job ← تست «یه انتشار» قرمز |
+| ۲۶ مهر ۱۴۰۵ | ۱.۷ | Phase 1 step 1.7 | `AddVariantUc` (با موجودی اولیه و گالری)، `UpdateVariantUc` (ترتیب فعال‌سازی، تغییر، گالری، غیرفعال‌سازی)، `DeactivateVariantUc`، سه route با پاسخ `AdminVariant` و `ETag` ِ محصول، لاگ `VARIANT_*`، تست بن‌بست با خرید. خرابکاری: جابه‌جایی ترتیب فعال‌سازی و پیش‌فرض ← تست قرمز |
+| ۲۶ مهر ۱۴۰۵ | ۱.۸ | Phase 1 step 1.8 | `V25` با backfill، ردیف تاریخچه در `InventoryQmProjector`، `InventoryAdjustmentQmRepository`، `AdjustInventoryUc` با `actor`، لاگ و `id` از read model، `holdForChange` برای صف کشیدن تغییرهای همزمان، `ListInventoryAdjustmentsUc`، `webV1AdminInventory.kt`. خرابکاری: بدون `holdForChange` ← تست ۲۰ تغییر همزمان قرمز |
+| ۲۶ مهر ۱۴۰۵ | ۱.۹ | Phase 1 step 1.9 | عکس و hover ِ کارت از رنگ نمایش، `imageUrl`/`thumbnailUrl` ِ سواچ‌ها، عکس صفحه‌ی محصول، `CartItem.image`، `OrderItemSnapshot.imageUrl` (مسیر ۴۸۰، سفارش‌های قبلی null)، کانترکت `OrderItem.image` رشته (ردیف ۲۱). بدون کوئری اضافه. خرابکاری: `imageUrl = null` در ثبت سفارش ← تست قرمز |
+| ۲۶ مهر ۱۴۰۵ | ۱.۱۰ | Phase 1 step 1.10 | `PANEL_CATALOG_REVIEW.md` (ردیف‌های ۱، ۳، ۴، ۵، ۱۵، ۱۶، ۱۸، ۲۰ با تست‌هاشون و ۱۳ خرابکاری)، `PanelCatalogLogScanOnDatabaseTest`، `ProductLockOrderOnDatabaseTest`، تست «در استفاده» با `productCount 2`، `docs/FRONTEND_PANEL_CATALOG.md`، README. ۲۲۶۳ تست سبز. مونده: دور با پنل و تست‌های `vips` (ابزار و پنل اینجا نیست) و merge به `main` |
+| ۲۶ مهر ۱۴۰۵ | ۲.۰ | Phase 2 step 2.0 | کانترکت 1.9.0 با هر ۱۶ ردیف ِ ۷.۱۰ و دو ردیف تازه (۱۷: قانون `media` و `media-feedback`؛ ۱۸: `customer.fullName` nullable). `STORE_CREDIT` از هر چهار enum رفت. YAML با snakeyaml معتبره و همه‌ی `$ref`ها پیدا می‌شن. متن همه‌ی کدهای تازه. برنچ `panel-orders` از نوک فاز ۱ |
+| ۲۶ مهر ۱۴۰۵ | ۲.۱ | Phase 2 step 2.1 | هشت رویداد تازه‌ی سفارش با payload و JSON ِ طلایی، وضعیت و متدهای عکس، ارسال، تحویل، لغو و استرداد در `Order`، `OrderTransitionPolicy`، `PreShipmentPolicy`، `OrderActionFacts`، `countsAsPurchase`، `shipForOrder`، `giveBack` با `storedStatus`، Aggregate ِ `Refund` و `RefundDomainService`. `OrderDelivered` یادداشت پنل رو هم داره. ۲۳۱۶ تست سبز |
+| ۲۶ مهر ۱۴۰۵ | ۲.۲ | Phase 2 step 2.2 | `V26` با backfill ِ `searchText` و `kind` ِ تایم‌لاین، ستون‌ها و `CHECK`های بعد از پرداخت، `trackingUrlTemplate`؛ Projector برای همه‌ی رویدادهای تازه (کم شدن `soldCount` با لغو زیر قفل ۷)، `OrderQm` و `OrderTimelineKind`، `findByCode`، `lockOrder`، `hasPurchase`. ۲۳۲۹ تست سبز |
+| ۲۶ مهر ۱۴۰۵ | ۲.۳ | Phase 2 step 2.3 | `FindAdminOrdersUc` (فیلترها، `q` به شکل کد/موبایل/واژه، روز تهران، `sort`، `statusCounts` ِ ۱۳ تایی)، `GetAdminOrderUc` (مشتری، گروه ارسال، همه‌ی تلاش‌ها، `allowedTransitions`)، `OrderByCode`، `OrderDetails`، `webV1AdminOrders.kt`، `PaidOrders`. ۲۳۴۰ تست سبز |
+| ۲۶ مهر ۱۴۰۵ | ۲.۴ | Phase 2 step 2.4 | `V27` (فقط اضافه، با trigger)، `OrderNote`، `AddOrderNoteUc` با لاگ `ORDER_NOTE_ADDED` بدون متن، یادداشت‌ها با اسم نویسنده در `GetAdminOrderUc`، `POST …/notes`. ۲۳۴۵ تست سبز |
+| ۲۶ مهر ۱۴۰۵ | ۲.۵ | Phase 2 step 2.5 | پیش‌نویس عکس (`PUT`)، ثبت ارسال دستی (`send`، `MANUAL_ONLY`، `PHOTOS_INCOMPLETE`)، عکس‌ها و «همونه!» ِ مشتری، job ِ تأیید خودکار، پیامک «عکس کیفت فرستاده شد» (مسیر کامل پیامک)، `PreShipmentMedia` و کارت واقعی، تایم‌لاین از `kind`. ۲۳۵۳ تست سبز |
+| ۲۶ مهر ۱۴۰۵ | ۲.۶ | Phase 2 step 2.6 | `V28`، `RefundRepositoryImpl`، `CreateRefundUc` (قفل ۹، `REFUND_EXCEEDS_PAID`) و `UpdateRefundUc` (`REFERENCE_ID_REQUIRED`، `OrderRefunded`)، `webV1AdminRefunds.kt`، پیامک «پولت برگشت»، `refunds` و `totals.refunded` ِ واقعی، فیلتر `refundStatus`. دو خرابکاری قرمز. ۲۳۵۹ تست سبز |
+| ۲۶ مهر ۱۴۰۵ | ۲.۷ | Phase 2 step 2.7 | `OrderCancellation` (قفل‌های ۵، ۶، ۹، ۷، ۸؛ `PAYMENT_IN_PROGRESS`)، `ChangeOrderStatusUc` (فقط `CANCELLED`)، `CancelMyOrderUc`، دو route، پیامک «لغو شد» (مسیر کامل)، `canCancel` روشن، استرداد `PENDING` ِ خودکار. ۲۳۶۷ تست سبز |
+| ۲۶ مهر ۱۴۰۵ | ۲.۸ | Phase 2 step 2.8 | `ShipOrderUc` (تکی، گروه رزرو با یه کد و `GROUP_NOT_READY`، اصلاح کد)، `shipForOrders` با ترتیب قفل کلی، `DELIVERED` با `returnableUntil` ِ ثابت، پیامک‌های «ارسال شد» و «تحویل شد»، `trackingUrl` از `trackingUrlTemplate`، `Shipment` ِ واقعی. خرابکاری ترتیب قفل ← بن‌بست. ۲۳۷۵ تست سبز |
+| ۲۶ مهر ۱۴۰۵ | ۲.۹ | Phase 2 step 2.9 | `LookupGuestTrackingUc` (۴۰۴ ِ یکسان، ۱۰ در ۱۰ دقیقه)، `ListDailyShipmentDaysUc`، `ListDailyShipmentsUc` (یه ردیف برای هر کد، `q`)، `ListMyTrackingUc`، `DailyShipmentMask`، `webV1Tracking.kt`، `GET /me/tracking`، `meta.retryAfterSeconds` برای ۴۲۹ ِ plugin. ۲۳۸۱ تست سبز |
+| ۲۶ مهر ۱۴۰۵ | ۲.۱۰ | Phase 2 step 2.10 | `progress.steps[].at` و `items[].returnableUntil` ِ واقعی، تست کل مسیر با مقایسه‌ی فیلدها با کانترکت (`ContractSchemas`)، `totalSpent` بعد از لغو و استرداد کامل. ۲۳۸۳ تست سبز |
+| ۲۶ مهر ۱۴۰۵ | ۲.۱۱ | Phase 2 step 2.11 | `PANEL_ORDERS_REVIEW.md` (۷ ردیف، ۱۲ خرابکاری)، `PanelOrdersLogScanOnDatabaseTest`، دو تست مالکیت تقویت شد، تست‌های لغو/ارسال همزمان و مرز ساعت تهران، `docs/FRONTEND_PANEL_ORDERS.md`، بخش ۶ ِ `docs/FRONTEND_PURCHASE.md`. ۲۳۸۷ تست سبز. merge منتظر تأیید |
+| ۲۶ مهر ۱۴۰۵ | ۳.۰ | Phase 3 step 3.0 | کانترکت 1.10.0 با هر ۷ ردیف ِ ۸.۶ و سه ردیف تازه (۸ تا ۱۰)؛ شش تصمیم تازه (۱۲ تا ۱۷ ِ ۸.۲: `codeDiscount` بعد از حذف قلم، ورینت ناموجود ۴۰۰، `VARIANT_NOT_ALLOWED`، `CANCEL_ITEM` ِ تنها قلم = لغو پنل، مانده‌ی لغوشده صفر، `StatusNote`). YAML با snakeyaml معتبره و هر ۱۳۲۱ `$ref` پیدا می‌شن. متن هفت کد فیلدی تازه. برنچ `change-requests` از نوک فاز ۲. پایه: ۲۳۸۷ تست سبز روی Postgres ِ موقت |
+| ۲۶ مهر ۱۴۰۵ | ۳.۱ | Phase 3 step 3.1 | شش رویداد تازه‌ی سفارش با payload و JSON ِ طلایی، `ChangeRequest`/`ChangeTarget`، متدهای ۸.۳ در `Order` (و `BALANCE_DUE` در `ship`)، `ChangeRequestPolicy` (`BigInteger` برای سهم کد)، `OrderTotalsView`، `OrderLine.replacedBy`، `rebalanceForOrder`، `V29` ِ کامل (با `codeDiscountRemoved`)، Projector (خطوط، `soldCount` ِ جابه‌جا، `feedback.resolution`، هفت `kind` ِ تازه‌ی تایم‌لاین)، جمع‌های نمایشی در پاسخ‌ها. ۲۴۶۳ تست سبز |
+| ۲۷ مهر ۱۴۰۵ | ۳.۲ | Phase 3 step 3.2 | `PaymentPurpose` و ستونش، تلاش `BALANCE` در `startAttempt` (سقف جدا، بدون مهلت)، تأیید فقط وقتی مانده دقیقاً همون مبلغه، `payBalance` در `confirmed`، `Order.isPaidBy`، `canPay` و «تلاش دوباره» ِ مانده، `expiresAt` ِ مانده = شروع + ۲۰ دقیقه، درگاه پیش‌فرض برای سفارش بی‌تلاش، `OrderPaymentInfo.purpose`/`amount`. خرابکاری: بدون چک «همون مبلغ» ← دو تست قرمز. ۲۴۸۱ تست سبز |
+| ۲۷ مهر ۱۴۰۵ | ۳.۳ | Phase 3 step 3.3 | `REQUEST_CHANGE` در `SubmitMediaFeedbackUc` (شکل با همه‌ی خطاها با هم، قفل ۹، رنگ از read model: ناموجود ۴۰۰، غیرفعال ۴۲۲)، `canRequestChange`، `feedback` ِ کامل با `resolution` در پاسخ. دو تست فاز ۲ با قرارداد تازه به‌روز شدن. ۲۴۸۸ تست سبز |
+| ۲۷ مهر ۱۴۰۵ | ۳.۴ | Phase 3 step 3.4 | `ResolveChangeRequestUc` (قفل‌های ۶، ۹، ۷، ۸؛ `CANCEL_ITEM` ِ تنها قلم از راه `OrderCancellation` با قفل ۵ و چک «همون درخواست»)، route ِ `…/change-request/resolution`، `OrderItems.snapshotOf` (مشترک با ثبت سفارش)، پیامک «درخواستت بررسی شد» (مسیر کامل ۹ مرحله‌ای)، `ORDER_CHANGE_RESOLVED` با جمله‌اش، `BALANCE_DUE`/`GROUP_NOT_READY` در ارسال. ترتیب دو ۴۲۲: سقف محصول قبل از موجودی. ۱۲ تست route سبز؛ کل مجموعه برای این گام دوباره اجرا نشد |
+| ۲۷ مهر ۱۴۰۵ | ۳.۵ | Phase 3 step 3.5 | `CHANGE_REQUESTS_REVIEW.md` (ردیف‌های ۷، ۸، ۲۱ و ۱۵ با تست‌هاشون؛ شش خرابکاری، همه قرمز)؛ چهار تست تازه (آخرین کیف: تغییر و خرید همزمان؛ دو تعویض ضربدری همزمان؛ یه کلید برای پرداخت مانده؛ اسکن لاگ ِ درخواست تغییر)؛ تست کل مسیر رنگ گرون‌تر تا ارسال با کانترکت و هویت جمع‌ها؛ assertion ِ بی‌اثر ِ `meta.balanceDue` درست شد؛ راهنمای فرانت پنل (بخش ۷) و مشتری. کل مجموعه دوباره اجرا شد: ۲۵۰۵ تست سبز. merge منتظر تأیید |
+| ۲۸ مهر ۱۴۰۵ | ۴.۰ | Phase 4 step 4.0 | کانترکت 1.11.0 با هر ۶ ردیف ِ ۹.۷ و سه ردیف تازه (۷ تا ۹)؛ هفت تصمیم تازه (۱۸ تا ۲۴ ِ ۹.۲: ترتیب درگاه‌ها، «لازم ولی nullable»، `siteStats`، کدهای فیلدی عمومی، سقف‌های کد تخفیف و `updatedAt`، متن عمومی ِ `ROLE_CHANGE_NOT_ALLOWED`، خطاها و کلیدهای گزارش). YAML با snakeyaml معتبره و هر ۱۳۲۷ `$ref` پیدا می‌شن. متن ۲۵ کد فیلدی تازه. برنچ `panel-settings` از نوک فاز ۳ |
+| ۲۸ مهر ۱۴۰۵ | ۴.۱ | Phase 4 step 4.1 | `V30` ِ کامل؛ VOهای تنظیمات (`DeliveryDays.makeNew`، `ShippingMethodName`، `IconName`، `TrackingUrlTemplate`، `SupportPhone`، `SupportHours`، `SocialLink`، `SiteStats`/`Satisfaction`، `ShopFeatures`)؛ `ShopSettings.change` و `version`؛ `save` با نسخه؛ `ShopSettingsFields`، `GetAdminSettingsUc`، `UpdateSettingsUc`، `SettingsAudit`؛ `webV1AdminSettings.kt`؛ آستانه‌ی موجودی کم و مهلت عکس از تنظیمات؛ `Problems` و حدهای عمومی در `common`. ۲۵۷۲ تست سبز |
+| ۲۸ مهر ۱۴۰۵ | ۴.۲ | Phase 4 step 4.2 | `DiscountTerms`، `DiscountCode.create`/`change`/`deactivate` با نسخه، `DiscountCodeText.makeNewInPanel`، `DiscountCodeRepository` (`findById`، `lockById`، `nextId`، `list`، `add`، `save`، `usageStatsOf`)، پنج UseCase، `DiscountCodeReferences`، `webV1AdminDiscountCodes.kt`، لاگ `DISCOUNT_CODE_*`. چهار تصمیم تازه (۲۹ تا ۳۲). ۲۵۹۵ تست سبز |
+| ۲۸ مهر ۱۴۰۵ | ۴.۳ | Phase 4 step 4.3 | `GetCustomerDetailUc` و `GET /admin/customers/{customerId}`، `recentOfCustomer`، `AdminOrderItems`، فیلتر `role`، قفل نقش‌ها و خوندن دوباره‌ی انجام‌دهنده و `LAST_ADMIN` در `SetUserRolesUc`، اسکن لاگ ِ صفحه‌ی مشتری، KDoc ِ `AdminCustomer`. تصمیم ۳۳. خرابکاری قرمز. کل مجموعه دوباره اجرا نشد |
+| ۲۹ مهر ۱۴۰۵ | ۴.۴ | Phase 4 step 4.4 | دو ستون V30 در `OrderQmTbl` و Projector، پورت `ReportQmRepository` و `ReportQmRepositoryImpl` (SQL ِ جمعی، روز تهران در خود SQL)، `GetReportOverviewUc` (روزهای خالی، کلیدهای صفر، `perMille`/`averageOf`)، `webV1AdminReports.kt` و `ProductRefHttpResponse`، تست backfill ِ V30. پنج تصمیم تازه (۳۴ تا ۳۸). ۱۲ سفارش با عدد دستی سبز؛ سه خرابکاری قرمز. کل مجموعه: ۲۶۲۴ تست، یکی قرمز (ترتیب بی‌`ORDER BY` در تست فاز ۳، در گام ۴.۵ درست شد) |
+| ۲۹ مهر ۱۴۰۵ | ۴.۵ | Phase 4 step 4.5 | `PANEL_SETTINGS_REVIEW.md` (پنج ردیف، هشت خرابکاری)، تست همزمانی ِ متن تکراری ِ کد، تست فاز ۳ با `ORDER BY`، `@ConsistentCopyVisibility` روی `DiscountTerms`، `docs/FRONTEND_PANEL_SETTINGS.md`، README. ۲۶۲۴ تست در اجرای کامل (+۱ تازه). دور با پنل و merge منتظر تو؛ سؤال باز: `meta` ِ خطای فیلد |
+| ۲۹ مهر ۱۴۰۵ | ۴.۵ | Contract 1.11.1 | `FieldError.meta` (تصمیم ۳۹، راه الف ِ صاحب پروژه)؛ `FieldErrorHttpResponse.meta` از `meta` ِ همون خطا؛ تست‌های JSON ِ دقیق به‌روز شدن (`maxSize`، `allowed`)، تست تازه در `HttpEdgeTest` |
+| ۲۹ مهر ۱۴۰۵ | ۵.۰ | Phase 5 step 5.0 | کانترکت 1.12.0 با هر ۵ ردیف ِ ۱۰.۵ و سه ردیف تازه (۶ تا ۸)؛ ده تصمیم تازه (۱۳ تا ۲۲). YAML معتبر، ۱۳۲۸ `$ref`. متن ۱۲ کد تازه. برنچ `content-basics` از نوک فاز ۴ |
+| ۲۹ مهر ۱۴۰۵ | ۵.۱ | Phase 5 step 5.1 | `V31` ِ کامل با ردیف محتوای سایت، لینک نسبی امن در `JsoupHtmlSanitizer`، `PageDraft`/`StaticPage`، قفل صفحه، سه UseCase، `webV1Content.kt` و `webV1AdminContent.kt`، `PAGE_SAVED`. تصمیم ۲۳. دو خرابکاری قرمز |
+| ۲۹ مهر ۱۴۰۵ | ۵.۲ | Phase 5 step 5.2 | `FaqDraft`/`FaqBook`، قفل `faq`، `FaqSearch` و `JsoupHtmlText` (هایلایت امن)، سه UseCase، `GET /faq` ِ کش‌شونده، `FAQ_SAVED`. تصمیم ۲۴. دو خرابکاری قرمز |
+| ۲۹ مهر ۱۴۰۵ | ۵.۳ | Phase 5 step 5.3 | `SiteLink`، `AnnouncementDraft`/`AnnouncementBar` (`showingAt`)، قفل `announcements`، دو UseCase و دو route، `ANNOUNCEMENTS_SAVED`. دو خرابکاری قرمز |
+| ۲۹ مهر ۱۴۰۵ | ۵.۴ | Phase 5 step 5.4 | `SupportHours.isOpenAt`، `SiteContentRepository`، `GetSiteConfigUc`، `SiteConfigHttpResponse` (متن‌های پرشده، `phoneDisplay`)، `GET /config` ِ کش‌شونده، نگاشت‌های مشترک با پاسخ تنظیمات. تصمیم ۲۵. دو خرابکاری قرمز |
+| ۲۹ مهر ۱۴۰۵ | ۵.۵ | Phase 5 step 5.5 | `CONTENT_REVIEW.md` (سه ردیف، دوازده خرابکاری)، `docs/FRONTEND_CONTENT.md`، README، حافظه‌ی daemon ِ Kotlin. ۲۷۲۲ تست سبز. دور با پنل و merge منتظر تو |
+| ۲۹ مهر ۱۴۰۵ | ۶.۱ | Phase 6 step 6.1 | `tools/ops/` و `LAUNCH.md`: nginx ِ پنل، deploy ِ فرانت با برگشت خودکار، `set-env.sh`، `install-ops.sh`، `.gitattributes`. برنچ `launch` از نوک فاز ۵. کار روی سرور با خودت |
+| ۲۹ مهر ۱۴۰۵ | ۶.۲ | Phase 6 step 6.2 | مرجع nginx ِ API (مدیا با `immutable`، دو آپلود) و `kiva-http.conf`؛ پوشه‌ی مدیا `kiva:www-data` ‏`2750` |
+| ۲۹ مهر ۱۴۰۵ | ۶.۳ | Phase 6 step 6.3 | `backup.sh`، `restore-test.sh`، timer ِ ۰۳:۰۰ ِ تهران، `pull-backup.ps1`. بکاپ و تست بازگردانی ِ واقعی هنوز روی سرور انجام نشده |
+| ۲۹ مهر ۱۴۰۵ | ۶.۴ | Phase 6 step 6.4 | `deploy.ps1`، `deploy-remote.sh` با برگشت خودکار، `kiva.service` ِ مرجع. `-BreakOnPurpose` تا scp امتحان شد |
+| ۲۹ مهر ۱۴۰۵ | ۶.۵ | Phase 6 step 6.5 | SSH، `firewall.sh`، `arvan-real-ip.sh`، محدودیت درخواست با ۴۲۹ ِ هم‌شکل برنامه |
+| ۲۹ مهر ۱۴۰۵ | ۶.۶ | Phase 6 step 6.6 | `kiva.env.example` و متن الگوهای فراز؛ تصمیم ۸ |
+| ۲۹ مهر ۱۴۰۵ | ۶.۷ | Phase 6 step 6.7 | `purge_seed.sql`/`purge-seed.sh`، `trust_badges.sql`، `PurgeSeedSqlOnDatabaseTest` (۶ تست سبز، ۳ خرابکاری قرمز) |
+| ۲۹ مهر ۱۴۰۵ | ۶.۸ | Phase 6 step 6.8 | `alerts.sh` با timer ِ ۵ دقیقه‌ای و `--test` |
+| ۲۹ مهر ۱۴۰۵ | ۶.۹ | Phase 6 step 6.9 | `launch-check.sh` و `tools/ops/test/ops-test.sh` (۷۷ سبز روی لینوکس). فاز ۶ از طرف ریپو کامله؛ همه‌ی گام‌ها منتظر اجرای تو روی سرورن |
+| ۲۹ مهر ۱۴۰۵ | ۷.۰ | Phase 7 step 7.0 | کانترکت 1.13.0 با هر ۱۵ ردیف ِ ۱۲.۱۰ و سه ردیف تازه (۱۶ تا ۱۸)؛ شش تصمیم تازه (۲۵ تا ۳۰). YAML معتبر، ۱۳۳۱ `$ref`. متن ۱۶ کد تازه. برنچ `returns` از نوک فاز ۶ |
+| ۲۹ مهر ۱۴۰۵ | ۷.۱ | Phase 7 step 7.1 | `POST /me/uploads` با `MediaUploader.Customer`، سقف ۲۰ در ساعت (دو شمارش، قفل ِ آپلودهای کاربر)، `withUpload` ِ مشترک. سه تصمیم تازه (۳۱ تا ۳۳). خرابکاری ِ قفل قرمز. ۲۷۵۰ تست سبز (۵ تست ابزار واقعی skip) |
+| ۲۹ مهر ۱۴۰۵ | ۷.۲ | Phase 7 step 7.2 | Aggregate ِ `ReturnRequest` و VOها و سه سیاست، `ReturnDomainService.open` (به ترتیب کانترکت)، سه رویداد سفارش با payload و JSON ِ طلایی، `Order.returnRefusal`/`requestReturn`/`receiveReturn`/`endReturn`، `canReturn`، `restockForReturn`، `V32` ِ کامل، `ReturnRequestRepositoryImpl`، Projector و پنج ردیف تایم‌لاین. شش تصمیم تازه (۳۴ تا ۳۹). دو خرابکاری قرمز. کل مجموعه: ۲۸۲۱ تست، یکی قرمز (دکمه‌ی `canReturn` ِ سفارش تحویل‌شده در تست سفر فاز ۲، که حالا درست روشنه؛ به‌روز شد)، ۵ skip |
+| ۲۹ مهر ۱۴۰۵ | ۷.۳ | Phase 7 step 7.3 | `POST /me/orders/{orderCode}/returns` و `GET /me/returns`: `CreateReturnUc` (قفل ۹، به ترتیب کانترکت)، `ListMyReturnsUc`، `GetMyReturnUc`، `ReturnRequests` (بدون N+1)، `ReturnRequestHttpResponse`، `ReturnTexts`؛ `returns` در صفحه‌ی سفارش. چهار تصمیم تازه (۴۰ تا ۴۳). دو خرابکاری قرمز |
+| ۳۰ مهر ۱۴۰۵ | ۷.۴ | Phase 7 step 7.4 | صف پنل (`GET /admin/returns` با `status` و `sort`)، تصمیم (تأیید/رد با `OrderReturnEnded(REJECTED)`) و جمع‌آوری؛ `ReturnByIdForPanel` (قفل‌های ۹ و ۱۰)، `AdminReturnRequests` (بدون N+1، با `suggestedRefund`)، چهار پیامک مرجوعی با مسیر کامل، چهار `AuditAction`. چهار تصمیم تازه (۴۴ تا ۴۷). خرابکاری قرمز. کل مجموعه: ۲۸۴۲ تست سبز، ۵ skip (روی Postgres ِ موقت ِ پورت ۵۴۳۳) |
+| ۳۰ مهر ۱۴۰۵ | ۷.۵ | Phase 7 step 7.5 | رسید (`ReceiveReturnUc`، برگشت به موجودی با `RETURNED`، سفارش `RETURNED`)، بستن (`CloseReturnUc`، `RETURN_REFUND_OPEN`)، استرداد ِ مرجوعی با `returnId` (`RETURN_REFUND_EXISTS`، روش ِ مرجوعی) و `COMPLETED` ← مرجوعی و سفارش `REFUNDED`. پنج تصمیم تازه (۴۸ تا ۵۲). خرابکاری قرمز. کل مجموعه: ۲۸۵۲ تست سبز، ۵ skip |
+| ۳۰ مهر ۱۴۰۵ | ۷.۶ | Phase 7 step 7.6 | `RETURNS_REVIEW.md` (نه خرابکاری، همه قرمز)، `ReturnsLogScanOnDatabaseTest`، `docs/FRONTEND_RETURNS.md`. ۲۸۵۴ تست سبز، ۵ skip. فاز ۷ از طرف ریپو کامله؛ الگوهای فراز، دور واقعی و merge منتظر تو |
+| ۳۰ مهر ۱۴۰۵ | ۸.۰ | Phase 8 step 8.0 | کانترکت 1.14.0 با هر ۱۶ ردیف ِ ۱۳.۸ و دو ردیف تازه (۱۷ و ۱۸)؛ چهار تصمیم تازه (۲۸ تا ۳۱). YAML معتبر، ۱۳۳۸ `$ref`. متن ۱۰ کد تازه. برنچ `reviews` از نوک فاز ۷ |
+| ۳۰ مهر ۱۴۰۵ | ۸.۱ | Phase 8 step 8.1 | Aggregate ِ `Review`، VOها، `RatingTally`، `ReviewDomainService` (چهار قدم)، سه repository، `V33`، سه RepositoryImpl، `RatingBook`؛ `rating_desc` از `productrating_tbl`. پنج تصمیم تازه (۳۲ تا ۳۶). دو خرابکاری قرمز. ۲۸۹۱ تست سبز |
+| ۳۰ مهر ۱۴۰۵ | ۸.۲ | Phase 8 step 8.2 | ثبت (به ترتیب کانترکت، وصل خودکار خرید)، ویرایش، حذف (`RatingBook`)، «نظرات من» با `rejected`، «منتظر نظر تو»؛ `Reviews` و `ReviewPurchases`. پنج تصمیم تازه (۳۷ تا ۴۱). سه خرابکاری قرمز. ۲۹۰۱ تست سبز |
+| ۳۰ مهر ۱۴۰۵ | ۸.۳ | Phase 8 step 8.3 | لیست عمومی (چهار sort، سه فیلتر، نظرهای در انتظار ِ خود کاربر)، خلاصه‌ی امتیاز، رأی «مفید بود». چهار تصمیم تازه (۴۲ تا ۴۵). دو خرابکاری قرمز. ۲۹۰۷ تست سبز |
+| ۳۰ مهر ۱۴۰۵ | ۸.۴ | Phase 8 step 8.4 | امتیاز روی کارت لیست، جستجو، صفحه و پنل (یه خوندن برای کل صفحه)، `ratingSummary` ِ واقعی؛ `canReview` و `reviewed` در سفارش‌ها با `ReviewMarks`. دو تصمیم تازه (۴۶ و ۴۷). دو خرابکاری قرمز. ۲۹۱۲ تست سبز |
+| ۳۰ مهر ۱۴۰۵ | ۸.۵ | Phase 8 step 8.5 | صف پنل (فیلترها، `pendingCount`، راه تماس)، تأیید و رد با `RatingBook`، «پاسخ کیوا» و حذفش، سه `AuditAction`؛ `409` ِ moderation در کانترکت. چهار تصمیم تازه (۴۸ تا ۵۱). دو خرابکاری قرمز. ۲۹۱۹ تست سبز |
+| ۳۰ مهر ۱۴۰۵ | ۸.۶ | Phase 8 step 8.6 | `REVIEWS_REVIEW.md` (ده خرابکاری، همه قرمز؛ یکی بعد از یه تست تازه)، `ReviewsConsistencyOnDatabaseTest`، `docs/FRONTEND_REVIEWS.md`. ۲۹۲۱ تست سبز، ۵ skip. فاز ۸ از طرف ریپو کامله؛ دور واقعی و merge منتظر تو |
+| ۳۰ مهر ۱۴۰۵ | ۹.۰ | Phase 9 step 9.0 | کانترکت 1.15.0 با هر ۱۲ ردیف ِ ۱۴.۷ و `required` ِ شِماهای علاقه‌مندی؛ متن `WISHLIST_SHARE_DISABLED`. برنچ `wishlist` از نوک فاز ۸ |
+| ۳۰ مهر ۱۴۰۵ | ۹.۱ | Phase 9 step 9.1 | علاقه‌مندی‌ها: `V34`، Aggregate ِ `Wishlist` (سقف ۲۰۰ زیر قفل ۱۳)، افت قیمت، `findCards` و قیمت هر رنگ، پنج endpoint، بایگانی ← پاک از لیست‌ها. پنج تصمیم تازه (۱۸ تا ۲۲). سه خرابکاری قرمز. ۲۹۳۳ تست سبز |
+| ۳۰ مهر ۱۴۰۵ | ۹.۲ | Phase 9 step 9.2 | «همه به سبد» (انتخاب رنگ موجود، `skipped` برای هر محصول، لیست دست نمی‌خوره) و «انتقال از سبد» (همه یا هیچ، قفل ۲ بعد ۱۳)؛ `CartBulkAdd` و `ReorderUc` روش. چهار تصمیم تازه (۲۳ تا ۲۶). دو خرابکاری قرمز. ۲۹۳۶ تست سبز |
+| ۳۰ مهر ۱۴۰۵ | ۹.۳ | Phase 9 step 9.3 | لینک اشتراک (یه لینک، باطل‌شدن فوری، توکن تازه) و لیست عمومی (اسم کوچک، فقط منتشرشده‌ها، `no-store`، ۴۰۴ یکسان)؛ محدودیت nginx. دو تصمیم تازه (۲۷ و ۲۸). سه خرابکاری قرمز. ۲۹۴۰ تست سبز |
+| ۳۰ مهر ۱۴۰۵ | ۹.۴ | Phase 9 step 9.4 | قلب روی کارت‌های لیست، صفحه، مرتبط و سبد (و سبد صفحه‌ی پرداخت) با یه خوندن؛ ورود اختیاری روی routeهای محصول؛ داشبورد حساب با `ReviewsAwaiting` ِ مشترک. سه تصمیم تازه (۲۹ تا ۳۱). سه خرابکاری قرمز. ۲۹۴۳ تست سبز |
+| ۳۰ مهر ۱۴۰۵ | ۹.۵ | Phase 9 step 9.5 | `WISHLIST_REVIEW.md` (دوازده خرابکاری، همه قرمز)، `docs/FRONTEND_WISHLIST.md`. ۲۹۴۳ تست سبز، ۵ skip. فاز ۹ از طرف ریپو کامله؛ دور واقعی و merge منتظر تو |
+| ۳۰ مهر ۱۴۰۵ | ۱۰.۰ | Phase 10 step 10.0 | کانترکت 1.16.0 با هر ۱۱ ردیف ِ ۱۵.۸؛ متن کدهای تازه. برنچ `stock-alerts` از نوک فاز ۹ |
+| ۳۰ مهر ۱۴۰۵ | ۱۰.۱ | Phase 10 step 10.1 | «موجود شد خبرم کن»: `V35`، دامنه با قانون‌ها به ترتیب کانترکت، ثبت (فقط با ورود)، «اشتراک‌های من»، لغو، نشانه‌های صفحه‌ی محصول. سه تصمیم تازه (۲۰ تا ۲۲). پنج خرابکاری قرمز. ۲۹۵۲ تست سبز |
+| ۳۰ مهر ۱۴۰۵ | ۱۰.۲ | Phase 10 step 10.2 | job ِ «موجود شد» (هر ۵ دقیقه، بعد از commit پیامک، ساعت سکوت، بدون الگو اجرا نمی‌شه، ۲۰۰ در هر اجرا)، پاک‌سازی شبانه، مسیر کامل پیامک `KIVA_FARAZ_BACK_IN_STOCK_PATTERN`، شمارنده‌ی پنل. سه تصمیم تازه (۲۳ تا ۲۵). چهار خرابکاری قرمز. ۲۹۶۱ تست سبز |
+| ۱ آبان ۱۴۰۵ | ۱۰.۳ | Phase 10 step 10.3 | صف پنل «موجود شد خبرم کن» (گروه‌ها، موجودی دقیق، فیلتر `inStock` در SQL، بدون موبایل) و «سؤال داری؟» (رنگ پیش‌فرض، فقط سه پیام‌رسان، `url` ِ کدشده با `?`/`&text=`، `responseHours`). سه تصمیم تازه (۲۶ تا ۲۸). دو خرابکاری قرمز. ۲۹۶۶ تست سبز |
+| ۱ آبان ۱۴۰۵ | ۱۰.۴ | Phase 10 step 10.4 | `STOCK_ALERTS_REVIEW.md` (دوازده خرابکاری، همه قرمز؛ یکی بعد از یه تست تازه)، `docs/FRONTEND_STOCK_ALERTS.md`. ۲۹۶۷ تست سبز، ۵ skip. فاز ۱۰ از طرف ریپو کامله؛ الگوی فراز، دور واقعی و merge منتظر تو |
+| ۱ آبان ۱۴۰۵ | ۱۱.۰ | Phase 11 step 11.0 | کانترکت 1.17.0 با هر ۱۱ ردیف ِ ۱۶.۷ و `required` ِ شِماهای بازاریابی؛ `DATE_RANGE_INVALID` به‌جای `ENDS_BEFORE_START` (تصمیم ۲۰)؛ متن سه کد تازه و `DATE_IN_FUTURE`. برنچ `marketing` از نوک فاز ۱۰ |
+| ۱ آبان ۱۴۰۵ | ۱۱.۱ | Phase 11 step 11.1 | کمپین: `V36` ِ کامل، دامنه، قفل `campaigns` با `EXCLUDE` به‌عنوان دیوار آخر، CRUD ِ پنل با لاگ، `campaignShowcase`. چهار تصمیم تازه (۲۱ تا ۲۴). چهار خرابکاری قرمز. ۲۹۷۸ تست سبز |
+| ۱ آبان ۱۴۰۵ | ۱۱.۲ | Phase 11 step 11.2 | کمپین در فروشگاه: `/campaigns/active`، فیلتر `campaign` در لیست و شمارنده‌ها، شمارنده‌ی صفحه‌ی محصول؛ قیمت‌ها دست‌نخورده. یه تصمیم تازه (۲۵). پنج خرابکاری قرمز. ۲۹۸۲ تست سبز |
+| ۱ آبان ۱۴۰۵ | ۱۱.۳ | Phase 11 step 11.3 | بنرها: فرم پنل (عکس `BANNER` اجباری، دکمه‌ی کامل، لینک امن)، `GET /banners` با بازه و ترتیب، لاگ تغییرات؛ `OpenWindow` ِ مشترک. یه تصمیم تازه (۲۶). سه خرابکاری قرمز. ۲۹۸۹ تست سبز |
+| ۱ آبان ۱۴۰۵ | ۱۱.۴ | Phase 11 step 11.4 | پیام‌های رضایت: فرم پنل (رنگ همون محصول، نه از آینده)، `GET /testimonials` (فقط منتشرشده‌ها، ترتیب پنل، خلاصه‌ی دستی)، رنگ در استفاده ← `409`، لاگ بدون اسم و متن. یه تصمیم تازه (۲۷). چهار خرابکاری قرمز. ۲۹۹۴ تست سبز |
+| ۱ آبان ۱۴۰۵ | ۱۱.۵ | Phase 11 step 11.5 | `GET /site/stats` از تنظیمات، همون عددهای `summary` ِ پیام‌ها. دو خرابکاری قرمز. ۲۹۹۵ تست سبز |
+| ۱ آبان ۱۴۰۵ | ۱۱.۶ | Phase 11 step 11.6 | `GET /home`: همه‌ی بخش‌ها در یه پاسخ کش‌شده بدون قلب، فروشگاه خالی بدون خطا، تعداد خوندن ثابت؛ `CategoryMenu` ِ مشترک. یه تصمیم تازه (۲۸). سه خرابکاری قرمز. ۲۹۹۹ تست سبز |
+| ۱ آبان ۱۴۰۵ | ۱۱.۷ | Phase 11 step 11.7 | `MARKETING_REVIEW.md` (۲۲ خرابکاری، همه قرمز)، `docs/FRONTEND_MARKETING.md`. ۲۹۹۹ تست سبز، ۵ skip. فاز ۱۱ از طرف ریپو کامله؛ دور واقعی و merge منتظر تو |
+| ۱ آبان ۱۴۰۵ | ۱۲.۰ | Phase 12 step 12.0 | کانترکت 1.18.0 با هر چهار ردیف ِ ۱۷.۷ و `required` ِ شِماهای جستجو؛ متن `SEARCH_QUERY_EMPTY`. برنچ `search` از نوک فاز ۱۱ |
+| ۱ آبان ۱۴۰۵ | ۱۲.۱ | Phase 12 step 12.1 | تطابق و هایلایت: `V37` (تابع SQL ِ نرمال‌سازی، `searchName`، پیشنهادهای دستی)، `SearchQueryPolicy`، `MatchRanges` ِ مشترک با سؤالات متداول. دو تصمیم تازه (۱۵ و ۱۶). سه خرابکاری قرمز. ۳۰۰۹ تست سبز |
+| ۱ آبان ۱۴۰۵ | ۱۲.۲ | Phase 12 step 12.2 | `GET /search/suggest`: نمونه‌ی ۱۷.۶ عیناً، رتبه، خطاها، فقط منتشرشده‌ها، همون شمارش `GET /products?q=`. یه تصمیم تازه (۱۷). پنج خرابکاری قرمز (یکی بعد از قوی‌تر شدن تست). ۳۰۱۳ تست سبز |
+| ۱ آبان ۱۴۰۵ | ۱۲.۳ | Phase 12 step 12.3 | `GET /search/hints` (کش، پیشنهادهای دستی)، محدودیت nginx ِ جستجو، `SEARCH_REVIEW.md` (ده خرابکاری، همه قرمز)، `docs/FRONTEND_SEARCH.md`. ۳۰۱۴ تست سبز، ۵ skip. فاز ۱۲ از طرف ریپو کامله؛ nginx، دور واقعی و merge منتظر تو |
+| ۱ آبان ۱۴۰۵ | ۱۳.۰ | Phase 13 step 13.0 | کانترکت 1.19.0 با هر ۹ ردیف ِ ۱۸.۸ و `required` ِ شِماهای تماس؛ متن سه کد تازه و `UNSUBSCRIBE_TOKEN_INVALID`. برنچ `contact` از نوک فاز ۱۲ |
+| ۱ آبان ۱۴۰۵ | ۱۳.۱ | Phase 13 step 13.1 | پورت ایمیل: `LogEmailSender` (پیش‌فرض) و `SmtpEmailSender` (Angus Mail)، `EmailConfig` با چک‌های بوت، README و `kiva.env.example`. ۱۳ خرابکاری قرمز. ۳۰۲۱ تست سبز، ۵ skip |
+| ۱ آبان ۱۴۰۵ | ۱۳.۲ | Phase 13 step 13.2 | فرم تماس: `V38`، دامنه‌ی `contact`، `GET /contact/topics` (کش) و `POST /contact/messages` با سقف IP و موبایل (قفل advisory). سه تصمیم تازه (۲۱ تا ۲۳). ۱۱ خرابکاری قرمز. ۳۰۴۰ تست سبز، ۵ skip |
+| ۱ آبان ۱۴۰۵ | ۱۳.۳ | Phase 13 step 13.3 | پیام‌های تماس در پنل: لیست با فیلتر، `PATCH` (وضعیت، یادداشت، پاسخ پیامکی بی متن یا ایمیلی با متن)، لاگ تغییرات بی متن، پیامک `sendContactReplied` با مسیر ۹ مرحله‌ای. سه تصمیم تازه (۲۴ تا ۲۶). ۱۲ خرابکاری قرمز. ۳۰۵۲ تست سبز، ۵ skip |
+| ۱ آبان ۱۴۰۵ | ۱۳.۴ | Phase 13 step 13.4 | خبرنامه: عضویت (همیشه همون `200`، ایمیل خوش‌آمد فقط برای تازه و برگشته)، لغو با توکن (همیشه `204`)، لیست ِ فقط `ADMIN`، سقف IP، job ِ پاک کردن داده‌ی تماس ِ قدیمی. دو تصمیم تازه (۲۷ و ۲۸). ۱۳ خرابکاری قرمز. ۳۰۶۳ تست سبز، ۵ skip |
+| ۱ آبان ۱۴۰۵ | ۱۳.۵ | Phase 13 step 13.5 | `CONTACT_REVIEW.md` (۴۹ خرابکاری، همه قرمز)، `docs/FRONTEND_CONTACT.md`، قفل ۱۵ ِ بخش ۴.۱۱. ۳۰۶۳ تست سبز، ۵ skip (همون اجرای ۱۳.۴؛ این گام فقط سند داره). فاز ۱۳ از طرف ریپو کامله؛ الگوی پیامک، ایمیل، دور واقعی و merge منتظر تو |
+| ۱ آبان ۱۴۰۵ | ۱۴.۰ | Phase 14 step 14.0 | کانترکت 1.20.0 با هر ۷ ردیف ِ ۱۹.۷ (و `phone` ِ `nullable` ِ مشتری ِ مرجوعی در پنل)؛ متن `STAFF_ACCOUNT_CANNOT_BE_DELETED` و `INVOICE_NOT_AVAILABLE`. برنچ `account-closure` از نوک فاز ۱۳ |
+| ۲ آبان ۱۴۰۵ | ۱۴.۱ و ۱۴.۲ | Phase 14 steps 14.1 and 14.2 | دامنه‌ی حذف (`V39`، `User.erase`، `OrderPersonalDataErased`، `AccountEraser`، `ActiveOrdersCheck`، چک حساب در هر درخواست) و دو مرحله‌ی حذف. چهار تصمیم تازه (۱۷ تا ۲۰). یه کامیت: فایل‌های مشترک (پشته‌های تست، DI) جدا کامپایل نمی‌شدن |
+| ۲ آبان ۱۴۰۵ | ۱۴.۳ | Phase 14 step 14.3 | رسید خرید PDF: PDFBox 3.0.8، ICU4J 79.1، Vazirmatn، `PersianShaping` ِ خودمون (ICU حروف فارسی رو شکل نمی‌ده)، تصویر طلایی. سه تصمیم تازه (۲۱ تا ۲۳) |
+| ۲ آبان ۱۴۰۵ | ۱۴.۴ | Phase 14 step 14.4 | `ACCOUNT_CLOSURE_REVIEW.md` (۱۸ خرابکاری، همه قرمز)، `docs/FRONTEND_ACCOUNT.md` و متن حریم خصوصی. ۳۱۴۲ تست سبز، ۵ skip. فاز ۱۴ از طرف ریپو کامله؛ دور واقعی و merge منتظر تو |
+| ۲ آبان ۱۴۰۵ | ۱۵.۰ | Phase 15 step 15.0 | کانترکت 1.21.0 با هر ده ردیف ِ ۲۰.۷ و شِمای `AdminBlogPost`؛ متن شش کد تازه. یه تصمیم تازه (۱۹). برنچ `blog` از نوک فاز ۱۴ |
+| ۲ آبان ۱۴۰۵ | ۱۵.۱ | Phase 15 step 15.1 | `V40` (با seed ِ پنج دسته و «تیم کیوا»)، دامنه‌ی `blog` (بلوک‌ها، فرم، مقاله، سیاست) و چهار repository. ۳۳ تست تازه سبز |
+| ۲ آبان ۱۴۰۵ | ۱۵.۲ | Phase 15 step 15.2 | پنج route ِ پنل بلاگ، `BlogPosts` و `BlogPostWriting`، لاگ تغییرات (`V41` برای `BLOG_POST`)، خط بلاگ در `AccountEraser`. ۹ تست تازه سبز |
+| ۲ آبان ۱۴۰۵ | ۱۵.۳ | Phase 15 step 15.3 | دسته‌ها، لیست با منتخب و صفحه‌ی مقاله در فروشگاه با کش؛ ۵ تست تازه سبز |
+| ۳ آبان ۱۴۰۵ | ۱۵.۴ | Phase 15 step 15.4 | مرتبط‌ها و «مفید بود؟» با hash ِ کلیددار IP، سقف `blog-feedback`، پیکربندی اجباری `KIVA_BLOG_VOTER_PEPPER`، رأی‌ها در حذف حساب. ۷ تست تازه سبز |
+| ۳ آبان ۱۴۰۵ | ۱۵.۵ | Phase 15 step 15.5 | ریویوی بلاگ (۱۹ خرابکاری قرمز)، راهنمای فرانت، تست «هر مسیر کانترکت یه route داره»، تست نگهبان هر ردیف بخش ۳، وضعیت فازها؛ ۳۱۹۷ تست سبز |

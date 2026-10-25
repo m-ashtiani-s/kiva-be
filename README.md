@@ -45,6 +45,7 @@ openssl rand -base64 32
 | Variable | What |
 | --- | --- |
 | `KIVA_OTP_PEPPER` | Required. The key of the login codes' HMAC: base64 of at least 32 random bytes. |
+| `KIVA_BLOG_VOTER_PEPPER` | Required. The key a guest's address is hashed with before a blog vote («مفید بود؟») is kept: base64 of at least 32 random bytes, its own secret. |
 | `KIVA_JWT_SECRET` | Required. The key access tokens are signed with: base64 of at least 32 random bytes, not the pepper. |
 | `KIVA_SMS_PROVIDER` | `log` (the default) writes login codes to the log instead of sending them: development only. `faraz` sends them through Faraz SMS (below). |
 | `KIVA_TRUSTED_PROXY_HOPS` | `1` only behind the shop's own nginx; `0` (the default) everywhere else. |
@@ -53,6 +54,20 @@ openssl rand -base64 32
 
 With the `log` provider, the code of `POST /api/v1/auth/otp/send` (and the two codes of a phone change) is in the log,
 on a `WARN` line from `LogSmsSender`. Tests use their own fixed secrets and need none of these.
+
+### Email
+
+`KIVA_EMAIL_PROVIDER=log` (the default) sends nothing: a `WARN` line names the masked recipient and the subject, never the
+text. The shop works without an email provider; a reply to a contact message by email and the newsletter's welcome mail are
+then only in the log. With `smtp`:
+
+| Variable | What |
+| --- | --- |
+| `KIVA_SMTP_HOST` | Required with `smtp`: the server's host. The app doesn't start without it. |
+| `KIVA_SMTP_PORT` | Default `587`. |
+| `KIVA_SMTP_USERNAME`, `KIVA_SMTP_PASSWORD` | Optional together: the login. The password is a secret: set it on the server with `sudo tools/ops/set-env.sh --secret KIVA_SMTP_PASSWORD` (typed, not shown), never in git; it is in no log and no `toString`. |
+| `KIVA_SMTP_FROM` | Required with `smtp`: the sender, a bare address such as `noreply@kivashop.ir`. |
+| `KIVA_SMTP_STARTTLS` | Default `true` (STARTTLS required); `false` only for a local test server. |
 
 ### SMS through Faraz SMS
 
@@ -67,6 +82,18 @@ whose pattern isn't set is not sent, and a `WARN` says so.
 | `KIVA_FARAZ_LINE_NUMBER` | The line patterns are sent from (the panel's «خطوط»). Default `90008361`, the panel's shared service line. |
 | `KIVA_FARAZ_PHONE_CHANGED_PATTERN` | Optional: «your account moved to the number ending in …», to the old phone after a phone change. Its variable is `ending`. |
 | `KIVA_FARAZ_ORDER_PAID_PATTERN` | Optional: «پرداخت موفق». Its variable is `order` (the order's code, `KV-218340`); the link to follow it goes in the pattern's own text, `https://kiva.ir/track?order=%order%`. |
+| `KIVA_FARAZ_PHOTOS_SENT_PATTERN` | Optional: «عکس کیفت فرستاده شد», after the operator records the photos as sent. Its variable is `order`; the link to the order's page goes in the pattern's own text. |
+| `KIVA_FARAZ_REFUND_COMPLETED_PATTERN` | Optional: «پولت برگشت», when a refund is recorded as completed. Its variable is `order`. |
+| `KIVA_FARAZ_ORDER_CANCELLED_PATTERN` | Optional: «لغو شد», when an order is cancelled (always by the customer; by staff with `notifyCustomer`). Its variable is `order`. |
+| `KIVA_FARAZ_ORDER_SHIPPED_PATTERN` | Optional: «ارسال شد», when an order (or a whole reservation group, once) leaves with the courier; not for a corrected tracking code. Its variables are `order`, `carrier` (the carrier's name) and `tracking` (the tracking code). |
+| `KIVA_FARAZ_ORDER_DELIVERED_PATTERN` | Optional: «تحویل شد», when staff record an order as delivered with `notifyCustomer`. Its variable is `order`. |
+| `KIVA_FARAZ_CHANGE_RESOLVED_PATTERN` | Optional: «درخواستت بررسی شد», when staff resolve a change request with `notifyCustomer`; the details are on the order's page, never in the SMS. Its variable is `order`. |
+| `KIVA_FARAZ_RETURN_APPROVED_PATTERN` | Optional: «مرجوعی تأیید شد», when staff approve a return. Its variable is `code` (the return's, `RT-1012`). Suggested text: «مرجوعی %code% تأیید شد؛ نحوه‌ی ارسال تو صفحه‌ی مرجوعی.» |
+| `KIVA_FARAZ_RETURN_REJECTED_PATTERN` | Optional: «مرجوعی رد شد», when staff turn a return down; the reason is on the return's page, never in the SMS. Its variable is `code`. Suggested text: «وضعیت مرجوعی %code% عوض شد؛ جزئیات تو حسابت.» |
+| `KIVA_FARAZ_RETURN_PICKUP_PATTERN` | Optional: «جمع‌آوری مرجوعی», when staff schedule the pickup with `notifyCustomer`. Its variables are `code` and `carrier` (its name). Suggested text: «بسته‌ی مرجوعی %code% رو %carrier% ازت تحویل می‌گیره؛ زمانش تو حسابت.» |
+| `KIVA_FARAZ_RETURN_CLOSED_PATTERN` | Optional: «مرجوعی بسته شد», when staff close a return with `notifyCustomer`; the reason is on its page. Its variable is `code`. Suggested text: «مرجوعی %code% بسته شد؛ جزئیات تو حسابت.» |
+| `KIVA_FARAZ_BACK_IN_STOCK_PATTERN` | Optional: «موجود شد», sent by the job `notify-back-in-stock` (every 5 minutes, not 22:00 to 08:00 Tehran) to customers waiting for a bag that is back. Its variables are `product` (at most 30 characters) and `link` (its page in that color). Without it the job tells nobody and the subscriptions wait (a warning each hour). Suggested text: «%product% موجود شد! %link%». |
+| `KIVA_FARAZ_CONTACT_REPLIED_PATTERN` | Optional: «پشتیبانی رسیدگی کرد», when support replies to a contact message by SMS. Only that a reply is coming, never its text: the operator calls or writes in a messenger. Its variable is `code` (the message's, `CT-482113`). Suggested text: «پشتیبانی کیوا به پیامت (%code%) رسیدگی کرد؛ به زودی باهات تماس می‌گیریم یا تو پیام‌رسان پیام می‌دیم.» |
 | `KIVA_FARAZ_BASE_URL` | The web service's address, default `https://api.iranpayamak.com`. |
 
 A code that can't be sent makes `POST /auth/otp/send` answer 500, and the log says why (the provider's own words, with
@@ -103,10 +130,54 @@ has discount codes. It is off by default and must stay off on a server.
 | `KIVA_PAYMENT_RESULT_URL` | The frontend's page that shows how the payment went (default `http://localhost:3100/checkout/result`); `?paymentId=…` is added. On the server `https://kiva.ir/checkout/result`. |
 | `KIVA_JOBS_ENABLED` | `true` (the default). Expiring unpaid orders (every minute), confirming payments left half-done (every 2 minutes), letting go of 4-day reservations (every minute), and cleaning up guests' carts (daily, 04:00 Tehran) and Idempotency-Keys (hourly). Keep it on, on the server too: without the jobs an unpaid order holds its stock for good. Tests turn it off and run the jobs themselves. |
 
-The shop's own rules (shipping costs, free shipping, the payment window, the gateways on offer, reservations) are in
-the database (`shopsettings_tbl`), not in the config. Locally, a shorter payment window shows an order expiring in a
-few minutes: `UPDATE shopsettings_tbl SET "paymentPendingMinutes" = 5` (5 to 60; the default is 15), and back to 15
-afterwards.
+### Uploads (the panel's photos and videos)
+
+`POST /admin/media` processes every file on the spot with two outside tools: **libvips** for photos (webp in five
+widths, EXIF rotation, every metadata removed, a blurhash) and **ffmpeg** for videos (the same H.264, clean mp4, a cover
+frame). On the server: `sudo apt install libvips-tools ffmpeg`. On a Windows machine: the official zips of
+[libvips](https://github.com/libvips/build-win64-mxe/releases) (`vips-dev-w64-web-…zip`) and
+[ffmpeg](https://www.gyan.dev/ffmpeg/builds/) (a "release essentials" build), unpacked anywhere, and their full paths
+below. Without them an upload is a 500 with `media processing failed` in the log; everything else works, and the tests
+that need the real tools (`VipsFfmpegMediaProcessorTest`) skip themselves with a message saying so.
+
+| Variable | Meaning |
+|---|---|
+| `KIVA_MEDIA_ROOT` | Where processed files live (default `build/media`). On the server `/var/lib/kiva/media`, owned by the app's user. |
+| `KIVA_MEDIA_PUBLIC_URL` | The public address of that folder, without a `/` at the end (default `http://localhost:8080/media`). Only relative paths are stored, so it can change later. On the server `https://api.kivashop.ir/media`. |
+| `KIVA_MEDIA_SERVE_LOCALLY` | `true` (the default) makes the app serve `/media` itself: development only. `false` on the server, where nginx serves the folder (`Cache-Control: public, max-age=31536000, immutable`: a stored file never changes). |
+| `KIVA_VIPS_BIN`, `KIVA_FFMPEG_BIN` | The tools, by name on the `PATH` (`vips`, `ffmpeg`, the defaults) or by full path (`C:\tools\vips\bin\vips.exe`). `vipsheader` and `ffprobe` are looked for next to them. |
+
+An upload nothing uses (a color, a category, …) within 48 hours is removed with its files every night at 04:30 Tehran;
+one in use never is.
+
+### The panel's catalog
+
+Categories, colors, materials, products, their colors and stock are written through `/admin/*` (ADMIN and
+CATALOG_MANAGER; uploads also OPERATOR and CONTENT_EDITOR). Every write is one row of the change log
+(`GET /admin/audit-log`, kept 90 days). A product's page carries its version in `ETag`; a `PUT` with that `If-Match`
+is refused with 412 if someone saved in between. With `KIVA_JOBS_ENABLED` on, drafts scheduled for publication are
+published every minute. [docs/FRONTEND_PANEL_CATALOG.md](docs/FRONTEND_PANEL_CATALOG.md) is the whole behaviour for the
+panel; [PANEL_CATALOG_REVIEW.md](PANEL_CATALOG_REVIEW.md) the risks and the tests that guard them.
+
+A local round with the panel: run kiva-backoffice-fe on `http://localhost:3200` (an origin allowed by default) with
+`NEXT_PUBLIC_API_URL` pointing here, and log in with a phone that has CATALOG_MANAGER or ADMIN (the first ADMIN through
+`KIVA_BOOTSTRAP_ADMIN_PHONE`, the others with `PUT /admin/customers/{id}/roles`).
+
+The shop's own rules (shipping costs, free shipping, the payment window, the gateways on offer, reservations, the
+low-stock threshold) are in the database (`shopsettings_tbl`), not in the config, and an ADMIN changes them from the
+panel (`PUT /admin/settings`), as well as discount codes, staff roles, and reads a customer's page and the dashboard
+(`GET /admin/reports/overview`). [docs/FRONTEND_PANEL_SETTINGS.md](docs/FRONTEND_PANEL_SETTINGS.md) is the whole
+behaviour for the panel; [PANEL_SETTINGS_REVIEW.md](PANEL_SETTINGS_REVIEW.md) the risks and the tests that guard them.
+Locally, a shorter payment window shows an order expiring in a few minutes: set it to 5 in the panel (5 to 60; the
+default is 15), and back to 15 afterwards.
+
+The site's content: `GET /config` gives the frontend every number and text that used to be fixed in `kiva.js`
+(shipping, free shipping, messengers, support, the announcement bar, footer links), made from the settings and from
+one row of `sitecontent_tbl` (brand, perks, footer links, trust badges; changed with SQL until the panel has a form for
+it). Static pages (`/pages/{slug}`; terms, privacy, returns and about must be written before launch), the FAQ (`/faq`,
+with search) and the announcement bar are written in the panel by ADMIN or CONTENT_EDITOR.
+[docs/FRONTEND_CONTENT.md](docs/FRONTEND_CONTENT.md) is the whole behaviour; [CONTENT_REVIEW.md](CONTENT_REVIEW.md) the
+risks and the tests that guard them.
 
 A local purchase end to end: start with `KIVA_SEED_ENABLED=true`, run kiva-fe on `http://localhost:3100`, log in with
 the code from the `LogSmsSender` line, place an order, and press «پرداخت موفق» on the pretend bank's page; it sends
@@ -128,3 +199,10 @@ products) built only from the common pieces. Use it as the template for new feat
 Schema changes are SQL files in `src/main/resources/db/migration`, named `V1__create_product.sql`,
 `V2__...`. Flyway applies the pending ones on startup. Never edit a migration that has already run;
 add a new one instead.
+
+## The server
+
+Everything done on the server (the panel's domain, media, nightly backups, one-command deploys with rollback, SSH and
+firewall, secrets, the seed purge, SMS alerts, the launch checklist) is in [LAUNCH.md](LAUNCH.md), step by step. Its
+scripts are in `tools/ops/` and are tested on Linux with `wsl bash tools/ops/test/ops-test.sh`. A secret is only ever
+typed on the server, with `/opt/kiva-ops/set-env.sh --secret NAME`.

@@ -35,6 +35,14 @@ class PaymentGatewayOption private constructor(
 
     override fun toString(): String = "PaymentGatewayOption(code=$code, isActive=$isActive, isDefault=$isDefault)"
 
+    /** Every value the shop can change is the same as [other]'s (the identity compares only [code]). */
+    fun sameValuesAs(other: PaymentGatewayOption): Boolean =
+        code == other.code && isActive == other.isActive && isDefault == other.isDefault && sortOrder == other.sortOrder
+
+    /** Only ShopSettings.change switches a gateway or moves it; its name and look stay. */
+    internal fun changed(isActive: Boolean, isDefault: Boolean, sortOrder: Int): PaymentGatewayOption =
+        PaymentGatewayOption(code, name, brandColor, initial, logoUrl, isActive, isDefault, sortOrder)
+
     companion object {
         fun constructFromPersisted(
             code: PaymentGatewayCode,

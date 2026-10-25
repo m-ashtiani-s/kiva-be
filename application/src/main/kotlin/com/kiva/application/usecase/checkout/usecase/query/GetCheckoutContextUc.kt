@@ -1,5 +1,7 @@
 package com.kiva.application.usecase.checkout.usecase.query
 
+import com.kiva.application.usecase.cart.withHearts
+import com.kiva.application.usecase.wishlist.WishlistHearts
 import com.kiva.application.dto.CheckoutContextDto
 import com.kiva.application.port.PaymentGateways
 import com.kiva.application.repository.OfferQmRepository
@@ -51,6 +53,7 @@ class GetCheckoutContextUc(
     private val reservations: Reservations,
     private val discounts: Discounts,
     private val clock: Clock,
+    private val wishlistHearts: WishlistHearts = WishlistHearts.NONE,
 ) : QueryUseCase<GetCheckoutContextUc.Qry, CheckoutContextDto, GetCheckoutContextUc.Failure> {
 
     private val logger = getLogger()
@@ -65,7 +68,7 @@ class GetCheckoutContextUc(
     override suspend fun execute(query: Qry): Result<CheckoutContextDto, Failure> {
         logger.info("GetCheckoutContextUc.execute userId=${query.userId.value} cartId=${query.cartId} addressId=${query.addressId}")
         return transactionManager.inTransaction {
-            val user = userRepository.findById(query.userId) ?: return@inTransaction Result.failure(Failure.AccountGone)
+            val user = userRepository.findById(query.userId)?.takeUnless { it.isDeleted } ?: return@inTransaction Result.failure(Failure.AccountGone)
             val cart = cartRepository.find(CartPublicId.constructFromPersisted(query.cartId))
                 ?: error("The cart ${query.cartId} of user ${query.userId.value} was opened a moment ago, yet it isn't there")
             check(cart.owner == CartOwner.User(query.userId)) { "Cart ${query.cartId} is not the cart of user ${query.userId.value}" }
@@ -87,11 +90,11 @@ class GetCheckoutContextUc(
             val discount = discounts.appliedTo(cart, offers.mapValues { it.value.offer }, now)
             Result.success(
                 CheckoutContextDto(
-                    cart = cartDtoOf(cart, offers, settings, now, standing, discount),
+                    cart = withHearts(cartDtoOf(cart, offers, settings, now, standing, discount), cart, wishlistHearts),
                     addresses = geoRepository.addressDtosOf(addresses),
                     selectedAddressId = selected?.id?.value,
                     selectedMessenger = user.defaultMessenger,
-                    messengerPhone = (user.defaultMessengerPhone ?: user.phone).value,
+                    messengerPhone = (user.defaultMessengerPhone ?: user.activePhone).value,
                     paymentGateways = paymentGateways.checkoutOptions(settings),
                 ),
             )

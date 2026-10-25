@@ -68,6 +68,9 @@ data class CartItemDto(
     val lineTotals: LineTotals,
     val stock: StockInfo,
     val addedAt: Instant,
+    val image: UploadedMediaDto? = null,
+    /** The customer saved this product (phase 9); null for a guest's cart. */
+    val isWishlisted: Boolean? = null,
 )
 
 /** The «رزرو ۴ روزه» switch. [shipAfterDate] is today plus [holdDays], in Tehran. */

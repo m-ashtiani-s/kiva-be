@@ -1,13 +1,12 @@
 package com.kiva.infrastructure.persistence.exposed.tbl
 
-import com.kiva.infrastructure.persistence.event.serializer.payload.product.ProductMediaPayload
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.v1.core.dao.id.LongIdTable
 import org.jetbrains.exposed.v1.json.jsonb
 
 /**
  * One row per color of a product: its price, gallery and stock. Written only by the projectors. Created by
- * V5__product_read_model.sql (Exposed never creates tables); keep both in step.
+ * V5__product_read_model.sql and the migrations after it (Exposed never creates tables); keep them in step.
  *
  * [price] and [compareAtPrice] are what the color costs: its own price tag when [hasOwnPrice], otherwise a copy of the
  * product's. [onHand] and [reserved] come from the stock events.
@@ -23,9 +22,14 @@ object ProductVariantQmTbl : LongIdTable(name = "productvariantqm_tbl", columnNa
     val isDefault = bool("isDefault")
     val isActive = bool("isActive")
     val sortOrder = integer("sortOrder")
-    val media = jsonb<List<ProductMediaPayload>>("media", Json)
+    /** The gallery in order, each item with its file's sizes (GalleryItemPayload). */
+    val media = jsonb<List<GalleryItemPayload>>("media", Json)
     val onHand = integer("onHand").default(0)
     val reserved = integer("reserved").default(0)
+    // V24 (step 1.4)
+    val barcode = varchar("barcode", 32).nullable()
+    /** How many of this color were sold (paid orders), as productqm_tbl's soldCount is for the product. */
+    val soldCount = integer("soldCount").default(0)
 
     /** The unique key on [sku] as V5 named it; the database names it when it refuses a save. */
     const val SKU_KEY = "productvariantqm_tbl_sku_key"

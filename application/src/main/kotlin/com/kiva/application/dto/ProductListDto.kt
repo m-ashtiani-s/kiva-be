@@ -31,7 +31,11 @@ data class ProductListDto(
         val bagTypes: List<BagType> = emptyList(),
         val materials: List<MaterialRef> = emptyList(),
         val occasions: List<Occasion> = emptyList(),
+        /** The running campaign `?campaign=` named (its slug and title), or null: none asked, or none running. */
+        val campaign: CampaignRef? = null,
     )
+
+    data class CampaignRef(val slug: String, val title: String)
 
     data class Swatch(val key: String, val name: String, val hex: String)
 

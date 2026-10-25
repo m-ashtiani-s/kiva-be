@@ -1,10 +1,14 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
+import com.kiva.infrastructure.auth.JwtAccessTokens
+import com.kiva.infrastructure.httpserver.auth.configureAuthentication
+import com.kiva.application.dto.GalleryItemDto
 import com.kiva.application.dto.PriceDto
 import com.kiva.application.dto.ProductCardDto
 import com.kiva.application.dto.ProductDetailDto
 import com.kiva.application.dto.ProductFacetsDto
 import com.kiva.application.dto.ProductListDto
+import com.kiva.application.dto.UploadedMediaDto
 import com.kiva.application.repository.PriceRange
 import com.kiva.application.usecase.product.ProductFilterQuery
 import com.kiva.application.usecase.product.usecase.query.FindProductsUc
@@ -17,17 +21,17 @@ import com.kiva.common.pagination.Pageable
 import com.kiva.common.railway.FieldFailure
 import com.kiva.common.railway.Result
 import com.kiva.domain.aggregate.material.model.valueobject.MaterialFamily
+import com.kiva.domain.aggregate.media.model.valueobject.MediaType
 import com.kiva.domain.aggregate.product.model.valueobject.BadgeCode
 import com.kiva.domain.aggregate.product.model.valueobject.BagType
 import com.kiva.domain.aggregate.product.model.valueobject.ClosureType
 import com.kiva.domain.aggregate.product.model.valueobject.Dimensions
-import com.kiva.domain.aggregate.product.model.valueobject.MediaType
 import com.kiva.domain.aggregate.product.model.valueobject.MediaView
 import com.kiva.domain.aggregate.product.model.valueobject.Occasion
-import com.kiva.domain.aggregate.product.model.valueobject.ProductMedia
 import com.kiva.domain.aggregate.product.model.valueobject.ProductSpecs
 import com.kiva.domain.aggregate.product.model.valueobject.StockInfo
 import com.kiva.domain.aggregate.product.model.valueobject.StockStatus
+import com.kiva.domain.aggregate.product.model.valueobject.StrapInfo
 import com.kiva.infrastructure.httpserver.API_V1
 import com.kiva.infrastructure.httpserver.configureHttp
 import io.ktor.client.request.get
@@ -69,7 +73,8 @@ class WebV1ProductsTest {
         environment { config = MapApplicationConfig() }
         application {
             configureHttp()
-            routing { route(API_V1) { webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, siteUrl = "https://kiva.ir") } }
+            configureAuthentication(JwtAccessTokens(ByteArray(32) { 7 })) { true }
+            routing { route(API_V1) { webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, siteUrl = "https://kiva.ir", mediaUrls = testMediaUrls) } }
         }
         block()
     }
@@ -199,7 +204,7 @@ class WebV1ProductsTest {
         val problem = response.json().jsonObject
         assertEquals("VALIDATION_ERROR", problem["code"]!!.jsonPrimitive.content)
         assertEquals(
-            json("""[{"field":"maxPrice","code":"PRICE_RANGE_INVALID","message":"حداقل قیمت نمی‌تونه از حداکثر قیمت بیشتر باشه"}]"""),
+            json("""[{"field":"maxPrice","code":"PRICE_RANGE_INVALID","message":"حداقل قیمت نمی‌تونه از حداکثر قیمت بیشتر باشه","meta":null}]"""),
             problem["errors"],
         )
     }
@@ -217,16 +222,18 @@ class WebV1ProductsTest {
                  "category":{"id":3,"slug":"cross","name":"کراس‌بادی"},"bagType":"CROSSBODY",
                  "price":{"price":1450000,"compareAtPrice":1750000,"discountPercent":17,"discountAmount":300000,"currency":"IRT"},
                  "colors":[
-                   {"variantId":201,"color":{"key":"black","name":"مشکی","hex":"#2B2930","isLight":false,"sortOrder":1,"productCount":null},"stockStatus":"IN_STOCK"},
-                   {"variantId":202,"color":{"key":"lilac","name":"یاسی","hex":"#C8B6E2","isLight":true,"sortOrder":4,"productCount":null},"stockStatus":"LOW_STOCK"}],
-                 "colorsCount":2,"defaultColorKey":"black","displayColorKey":"black","image":null,
+                   {"variantId":201,"color":{"key":"black","name":"مشکی","hex":"#2B2930","isLight":false,"sortOrder":1,"productCount":null},"stockStatus":"IN_STOCK",
+                    "imageUrl":null,"thumbnailUrl":null},
+                   {"variantId":202,"color":{"key":"lilac","name":"یاسی","hex":"#C8B6E2","isLight":true,"sortOrder":4,"productCount":null},"stockStatus":"LOW_STOCK",
+                    "imageUrl":null,"thumbnailUrl":null}],
+                 "colorsCount":2,"defaultColorKey":"black","displayColorKey":"black","image":null,"hoverImage":null,
                  "badges":[
                    {"code":"NEW","label":"جدید","tone":"DEFAULT","icon":null},
                    {"code":"SALE","label":"۱۷٪ تخفیف","tone":"SALE","icon":null},
                    {"code":"HAS_VIDEO","label":"ویدیو دارد","tone":"GLASS","icon":"play"},
                    {"code":"LOW_STOCK","label":"فقط ۳ عدد","tone":"DANGER","icon":null}],
                  "stock":{"status":"LOW_STOCK","availableQuantity":3,"maxOrderQuantity":3,"label":"فقط ۳ عدد در انبار باقی مونده"},
-                 "isNew":true,"hasVideo":true,"soldCount":0,"freeShippingEligible":false}
+                 "isNew":true,"hasVideo":true,"soldCount":0,"freeShippingEligible":false,"rating":{"average":0.0,"count":0},"isWishlisted":null}
                 """,
             ),
             item,
@@ -259,7 +266,14 @@ class WebV1ProductsTest {
 
     // ============ one product's page ============
 
-    private val photo = ProductMedia.constructFromPersisted(MediaType.IMAGE, "https://cdn.kiva.ir/p/2/black/front.webp", MediaView.FRONT, "نمای جلو")
+    private val photo = GalleryItemDto(
+        UploadedMediaDto(
+            "med_0000000000000000000201", MediaType.IMAGE, "image/webp", "p/2/black/1600.webp", "p/2/black/320.webp",
+            listOf(UploadedMediaDto.Variant(320, "p/2/black/320.webp"), UploadedMediaDto.Variant(1600, "p/2/black/1600.webp")), null, 1600, 1200, null,
+            "نمای جلو", null,
+        ),
+        MediaView.FRONT,
+    )
 
     private fun page() = ProductDetailDto(
         card = card(StockInfo(StockStatus.LOW_STOCK, shownQuantity = 3, maxOrderQuantity = 3), badges = listOf(BadgeCode.SALE, BadgeCode.LOW_STOCK)),
@@ -270,8 +284,11 @@ class WebV1ProductsTest {
         material = ProductDetailDto.MaterialRef(5, "faux-leather-soft", "چرم مصنوعی سافت", MaterialFamily.FAUX_LEATHER),
         materialDescription = null,
         specs = ProductSpecs.constructFromPersisted(
-            Dimensions.constructFromPersisted(22.0, 16.0, 8.5), 420, ClosureType.MAGNETIC_FLAP, "بند بلند قابل تنظیم", null,
-            setOf(Occasion.TRAVEL, Occasion.DAILY),
+            dimensions = Dimensions.constructFromPersisted(22.0, 16.0, 8.5),
+            weightGrams = 420,
+            closure = ClosureType.MAGNETIC_FLAP,
+            straps = listOf(StrapInfo.legacy("بند بلند قابل تنظیم")),
+            occasions = setOf(Occasion.TRAVEL, Occasion.DAILY),
         ),
         variants = listOf(
             ProductDetailDto.Variant(
@@ -340,9 +357,12 @@ class WebV1ProductsTest {
                 {"id":201,"sku":"KV-1002-BLACK","color":{"key":"black","name":"مشکی","hex":"#2B2930","isLight":false,"sortOrder":1,"productCount":null},
                  "isDefault":true,"price":{"price":1450000,"compareAtPrice":1750000,"discountPercent":17,"discountAmount":300000,"currency":"IRT"},
                  "stock":{"status":"IN_STOCK","availableQuantity":null,"maxOrderQuantity":5,"label":"موجود در انبار"},
-                 "media":[{"type":"IMAGE","url":"https://cdn.kiva.ir/p/2/black/front.webp","alt":"نمای جلو","view":"FRONT","viewLabel":"نمای جلو",
-                           "sortOrder":0,"isPrimary":true}],
-                 "hasVideo":false}
+                 "media":[{"id":"med_0000000000000000000201","type":"IMAGE","url":"https://api.kivashop.test/media/p/2/black/1600.webp",
+                           "thumbnailUrl":"https://api.kivashop.test/media/p/2/black/320.webp",
+                           "srcSet":[{"width":320,"url":"https://api.kivashop.test/media/p/2/black/320.webp"},{"width":1600,"url":"https://api.kivashop.test/media/p/2/black/1600.webp"}],
+                           "posterUrl":null,"width":1600,"height":1200,"durationSec":null,"mimeType":"image/webp","alt":"نمای جلو","blurhash":null,
+                           "view":"FRONT","viewLabel":"نمای جلو","sortOrder":0,"isPrimary":true,"isUnedited":true}],
+                 "hasVideo":false,"stockAlertSubscribed":null}
                 """,
             ),
             body["variants"]!!.jsonArray[0],
@@ -351,8 +371,11 @@ class WebV1ProductsTest {
             json(
                 """
                 {"dimensions":{"lengthCm":22.0,"heightCm":16.0,"widthCm":8.5},"weightGrams":420,
-                 "closure":{"type":"MAGNETIC_FLAP","label":"درب مگنتی"},"straps":[{"label":"بند بلند قابل تنظیم"}],"pockets":null,
-                 "occasions":[{"code":"DAILY","label":"روزمره"},{"code":"TRAVEL","label":"سفر"}]}
+                 "closure":{"type":"MAGNETIC_FLAP","label":"درب مگنتی"},
+                 "straps":[{"type":null,"label":"بند بلند قابل تنظیم","lengthCm":null,"minLengthCm":null,"maxLengthCm":null,"adjustable":false,"detachable":false,"material":null}],
+                 "pockets":null,"laptopMaxInch":null,"capacityLiters":null,"waterproof":false,
+                 "occasions":[{"code":"DAILY","label":"روزمره"},{"code":"TRAVEL","label":"سفر"}],
+                 "fits":[],"lining":null,"hardware":null,"stitching":null,"handmade":false,"madeIn":null,"careInstructions":[],"warranty":null}
                 """,
             ),
             body["specs"],
@@ -365,7 +388,7 @@ class WebV1ProductsTest {
         )
         assertEquals("https://kiva.ir/product/nila-crossbody-bag", body["shareUrl"]!!.jsonPrimitive.content)
         assertEquals(
-            json("""{"average":0.0,"count":0,"distribution":[${(5 downTo 1).joinToString(",") { """{"stars":$it,"count":0,"percent":0.0}""" }}]}"""),
+            json("""{"average":0.0,"count":0,"distribution":[${(5 downTo 1).joinToString(",") { """{"stars":$it,"count":0,"percent":0.0}""" }}],"verifiedBuyerPercent":null}"""),
             body["ratingSummary"],
         )
         assertEquals(json("""{"id":5,"slug":"faux-leather-soft","name":"چرم مصنوعی سافت","family":"FAUX_LEATHER"}"""), body["material"])

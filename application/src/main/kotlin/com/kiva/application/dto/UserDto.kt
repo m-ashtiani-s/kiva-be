@@ -25,9 +25,10 @@ data class UserDto(
     val createdOn: Instant,
 ) {
     companion object {
+        /** [user] is a live account: a deleted one is never shown (its token is refused, roadmap phase 14). */
         fun from(user: User) = UserDto(
             id = user.id.value,
-            phone = user.phone.value,
+            phone = user.activePhone.value,
             firstName = user.firstName?.value,
             lastName = user.lastName?.value,
             email = user.email?.value,

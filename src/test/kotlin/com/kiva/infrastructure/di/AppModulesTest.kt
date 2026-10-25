@@ -12,6 +12,7 @@ import com.kiva.infrastructure.auth.sms.FarazSmsConfig
 import com.kiva.infrastructure.auth.sms.FarazSmsSender
 import com.kiva.infrastructure.config.AppConfig
 import com.kiva.infrastructure.config.AuthConfig
+import com.kiva.infrastructure.config.BlogConfig
 import com.kiva.infrastructure.config.DatasourceConfig
 import com.kiva.infrastructure.config.SmsConfig
 import com.kiva.infrastructure.config.SmsProvider
@@ -26,6 +27,7 @@ class AppModulesTest {
     private val config = AppConfig(
         DatasourceConfig("jdbc:postgresql://localhost:5432/kiva_test", "unused", "unused", 1),
         auth = AuthConfig(otpPepper = ByteArray(32) { 7 }, jwtSecret = ByteArray(32) { 8 }, maxSmsPerHour = 300),
+        blog = BlogConfig(voterPepper = ByteArray(32) { 9 }),
     )
 
     /** Everything is created at start, so a missing binding fails here instead of when the server boots. */

@@ -94,7 +94,7 @@ class Discounts(
     }
 
     private fun checkFound(code: DiscountCode?, userId: UserId?, lines: List<DiscountLine>, now: Instant): Result<CodeDiscount, DiscountDomainService.Failure> {
-        val shopper = userId?.let { DiscountShopper.Customer(it, hasPaidOrder = orderQmRepository.purchasesOf(listOf(it)).containsKey(it)) }
+        val shopper = userId?.let { DiscountShopper.Customer(it, hasPaidOrder = orderQmRepository.hasPurchase(it)) }
             ?: DiscountShopper.Guest
         val usage = code?.let { discountRedemptionRepository.usageOf(it.id, userId) } ?: DiscountUsage(0, 0)
         return discountDomainService.check(code, shopper, usage, lines, now)

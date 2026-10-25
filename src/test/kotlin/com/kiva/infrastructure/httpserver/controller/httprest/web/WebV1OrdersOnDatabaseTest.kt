@@ -1,13 +1,20 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
 import com.kiva.application.dto.PlacedOrder
+import com.kiva.application.port.PanelActor
 import com.kiva.application.port.RequestHash
 import com.kiva.application.usecase.address.AddressFields
 import com.kiva.application.usecase.address.usecase.command.AddAddressUc
 import com.kiva.application.usecase.cart.CartCaller
 import com.kiva.application.usecase.cart.usecase.command.AddCartItemUc
+import com.kiva.application.usecase.cart.usecase.command.OpenCartUc
+import com.kiva.application.usecase.cart.usecase.query.GetCartUc
 import com.kiva.application.usecase.checkout.usecase.command.PlaceOrderUc
 import com.kiva.application.usecase.checkout.usecase.command.StartPaymentUc
+import com.kiva.application.usecase.media.MediaAttachments
+import com.kiva.application.usecase.product.ProductInput
+import com.kiva.application.usecase.product.usecase.command.UpdateVariantUc
+import com.kiva.common.railway.FailureKind
 import com.kiva.common.railway.Result
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.cart.entity.Cart
@@ -21,10 +28,16 @@ import com.kiva.domain.aggregate.payment.model.valueobject.PaymentStatus
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
 import com.kiva.domain.aggregate.user.model.valueobject.MessengerChannel
 import com.kiva.infrastructure.MutableClock
+import com.kiva.infrastructure.common.html.JsoupHtmlSanitizer
 import com.kiva.infrastructure.httpserver.API_V1
 import com.kiva.infrastructure.httpserver.IDEMPOTENCY_KEY_HEADER
 import com.kiva.infrastructure.httpserver.controller.httprest.web.AuthTestStack.Companion.phone
 import com.kiva.infrastructure.payment.FakePaymentGateway
+import com.kiva.infrastructure.persistence.exposed.AuditTrailImpl
+import com.kiva.infrastructure.persistence.exposed.MediaRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.ProductQmRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.ProductRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.SampleMedia
 import com.kiva.infrastructure.persistence.exposed.StoredCatalog
 import com.kiva.infrastructure.persistence.exposed.tbl.AddressTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.OrderQmTbl
@@ -434,6 +447,64 @@ class WebV1OrdersOnDatabaseTest {
     }
 
     @Test
+    fun `no deadlock - a color's price changed in the panel while it is being bought, at once, 20 times`() {
+        restock(nilaOlive, 100)
+        val nila = transaction(purchase.db) { ProductQmRepositoryImpl().findVariant(VariantId.constructFromPersisted(nilaOlive))!!.productId }
+        // The panel's color form, built as the app builds it; the change log row goes to a staff id of its own.
+        val updateVariant = UpdateVariantUc(
+            purchase.transactions, ProductRepositoryImpl(), ProductInput(JsoupHtmlSanitizer), MediaAttachments(MediaRepositoryImpl()), AuditTrailImpl(), clock,
+        )
+        val staff = PanelActor(UserId.constructFromPersisted(7), null)
+
+        repeat(20) { round ->
+            val buyer = purchase.customer(phone(1200 + round))
+            putInCart(buyer, nilaOlive)
+            val price = if (round % 2 == 0) 1_450_000L else 1_390_000L
+            val form = ProductInput.Variant(colorKey = "olive", priceOverride = price)
+
+            val results = atOnce(2) {
+                if (it == 0) {
+                    purchase.placeOrder.execute(command(buyer))
+                } else {
+                    updateVariant.execute(UpdateVariantUc.Cmd(nila.value.toString(), nilaOlive.toString(), form, staff))
+                }
+            }
+
+            assertTrue(results[1] is Result.Success, "round $round: ${results[1]}")
+            // The order goes through, or (bought at the old price while the new one landed) is refused as a business rule.
+            assertTrue(results[0] is Result.Success || results[0].failureOrNull()?.kind == FailureKind.BUSINESS_RULE, "round $round: ${results[0]}")
+        }
+    }
+
+    @Test
+    fun `a cart line shows its color's photo, a new order keeps the 480 one, an order placed before the photo keeps none`() {
+        restock(nilaOlive, 10)
+        val before = purchase.customer(phone(1300))
+        putInCart(before, nilaOlive)
+        val oldOrder = runBlocking { purchase.placeOrder.execute(command(before)) }.getOrNull()!!.orderCode
+
+        val nila = transaction(purchase.db) { ProductQmRepositoryImpl().findVariant(VariantId.constructFromPersisted(nilaOlive))!!.productId }
+        val photo = SampleMedia.photo(9)
+        others.change(nila) { it.replaceVariantMedia(VariantId.constructFromPersisted(nilaOlive), listOf(photo), others.staff, clock.now) }
+        val after = purchase.customer(phone(1301))
+        putInCart(after, nilaOlive)
+
+        val cart = runBlocking { purchase.openCart.execute(OpenCartUc.Cmd(CartCaller.Customer(after))) }.getOrNull()!!
+        val line = runBlocking { purchase.getCart.execute(GetCartUc.Qry(cart.cartId.value)) }.getOrNull()!!.items.single()
+        val newOrder = runBlocking { purchase.placeOrder.execute(command(after)) }.getOrNull()!!.orderCode
+
+        assertEquals(photo.mediaId.value, line.image?.id)
+        assertEquals("2026/10/med_00000000000000000000P9/480.webp", imageOf(after, newOrder))
+        assertEquals(null, imageOf(before, oldOrder))
+    }
+
+    /** The picture an order's line kept, as stored with the order. */
+    private fun imageOf(userId: UserId, code: OrderCode): String? = transaction(purchase.db) {
+        val orderId = purchase.orderQm.findOfCustomer(userId, code)!!.orderId
+        purchase.orders.get(orderId)!!.lines.single().item.imageUrl
+    }
+
+    @Test
     fun `two tabs - two orders at once from one cart, each with its own key, place one order and the other finds the cart empty`() {
         val userId = purchase.customer(phone(917))
         putInCart(userId, nilaOlive)
@@ -646,7 +717,7 @@ class WebV1OrdersOnDatabaseTest {
         assertEquals(before.lines, after.lines)
         assertEquals(before.address, after.address)
         assertEquals(1_450_000, after.lines.single().priceTag.price.toman)
-        assertEquals("خیابان ولیعصر، کوچه نسترن", after.address.line.value)
+        assertEquals("خیابان ولیعصر، کوچه نسترن", after.address.line?.value)
         val stored = transaction(purchase.db) { purchase.orders.get(after.orderId)!! }
         assertEquals(before.lines, stored.lines)
     }

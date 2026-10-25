@@ -12,6 +12,7 @@ import com.kiva.application.repository.OrderQmRepository
 import com.kiva.application.usecase.address.AddressFields
 import com.kiva.application.usecase.discount.Discounts
 import com.kiva.application.usecase.idempotency.IdempotencyGuard
+import com.kiva.application.usecase.order.OrderItems
 import com.kiva.application.usecase.reservation.Reservations
 import com.kiva.common.event.ConcurrentChangeException
 import com.kiva.common.logging.getLogger
@@ -29,7 +30,6 @@ import com.kiva.common.usecase.CommandUseCase
 import com.kiva.common.valueobject.IranianMobileNumber
 import com.kiva.common.valueobject.Money
 import com.kiva.common.valueobject.Quantity
-import com.kiva.common.valueobject.Slug
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.address.AddressBookDomainService
 import com.kiva.domain.aggregate.address.entity.AddressBook
@@ -38,7 +38,6 @@ import com.kiva.domain.aggregate.address.model.valueobject.AddressId
 import com.kiva.domain.aggregate.address.repository.AddressBookRepository
 import com.kiva.domain.aggregate.cart.entity.CartLine
 import com.kiva.domain.aggregate.cart.repository.CartRepository
-import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
 import com.kiva.domain.aggregate.discount.model.DiscountLine
 import com.kiva.domain.aggregate.geo.repository.GeoRepository
 import com.kiva.domain.aggregate.inventory.InventoryDomainService
@@ -49,14 +48,11 @@ import com.kiva.domain.aggregate.order.model.valueobject.AddressSnapshot
 import com.kiva.domain.aggregate.order.model.valueobject.CustomerNote
 import com.kiva.domain.aggregate.order.model.valueobject.GiftNote
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
-import com.kiva.domain.aggregate.order.model.valueobject.OrderItemSnapshot
 import com.kiva.domain.aggregate.order.model.valueobject.PreShipmentMessenger
 import com.kiva.domain.aggregate.order.repository.OrderRepository
 import com.kiva.domain.aggregate.payment.entity.Payment
 import com.kiva.domain.aggregate.payment.repository.PaymentIdGenerator
 import com.kiva.domain.aggregate.payment.repository.PaymentRepository
-import com.kiva.domain.aggregate.product.model.valueobject.ProductName
-import com.kiva.domain.aggregate.product.model.valueobject.Sku
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
 import com.kiva.domain.aggregate.settings.model.valueobject.PaymentGatewayCode
 import com.kiva.domain.aggregate.settings.model.valueobject.ShippingMethodCode
@@ -278,9 +274,12 @@ class PlaceOrderUc(
         val now = clock.instant()
         val settings = shopSettingsRepository.get()
 
-        val cart = cartRepository.lockForUser(userId)?.takeIf { it.lines.isNotEmpty() } ?: return Result.failure(Failure.CartEmpty)
+        val lockedCart = cartRepository.lockForUser(userId)
+        // Read under the cart's lock, which deleting the account takes first (roadmap phase 14, decision 9): an account
+        // deleted meanwhile is gone (401), not an empty cart.
+        val user = userRepository.findById(userId)?.takeUnless { it.isDeleted } ?: return Result.failure(Failure.AccountGone)
+        val cart = lockedCart?.takeIf { it.lines.isNotEmpty() } ?: return Result.failure(Failure.CartEmpty)
         val destination = destinationOf(input.address, userId, now).unwrapOr { return Result.failure(it) }
-        val user = userRepository.findById(userId) ?: return Result.failure(Failure.AccountGone)
         val messenger = messengerOf(input).unwrapOr { return Result.failure(it) }
 
         val offers = offerQmRepository.findOffers(cart.lines.map { it.variantId })
@@ -330,7 +329,8 @@ class PlaceOrderUc(
 
         destination.bookToSave?.let(addressBookRepository::save)
         if (input.messenger?.saveAsDefault == true && (user.defaultMessenger != messenger.channel || user.defaultMessengerPhone != messenger.phone)) {
-            userRepository.save(user.keepMessenger(messenger.channel, messenger.phone))
+            // A messenger made at this checkout always has its number; only an erased order's has none.
+            userRepository.save(user.keepMessenger(messenger.channel, checkNotNull(messenger.phone)))
         }
         cart.clear(now)
         cartRepository.save(cart)
@@ -339,7 +339,7 @@ class PlaceOrderUc(
             "PlaceOrderUc: order ${order.code.value} of user ${userId.value} placed with ${order.lines.size} lines, payable ${order.totals.payable.toman}, " +
                 "payment ${payment?.publicId?.value ?: "none, paid at once"}",
         )
-        return Result.success(Outcome(PlacedOrder(order.code, payment?.publicId), paidAtOnceTo = if (payment == null) user.phone else null))
+        return Result.success(Outcome(PlacedOrder(order.code, payment?.publicId), paidAtOnceTo = if (payment == null) user.activePhone else null))
     }
 
     /**
@@ -397,14 +397,7 @@ class PlaceOrderUc(
             itemId = line.itemId,
             quantity = Quantity.constructFromPersisted(line.quantity.value),
             offer = qm.offer,
-            item = OrderItemSnapshot(
-                name = ProductName.constructFromPersisted(qm.product.name),
-                slug = Slug.constructFromPersisted(qm.product.slug),
-                sku = Sku.constructFromPersisted(qm.color.sku),
-                color = OrderItemSnapshot.Color(ColorKey.constructFromPersisted(qm.color.key), qm.color.name, qm.color.hex),
-                // No uploaded photos yet, as on the cart's lines.
-                imageUrl = null,
-            ),
+            item = OrderItems.snapshotOf(qm),
         )
     }
 

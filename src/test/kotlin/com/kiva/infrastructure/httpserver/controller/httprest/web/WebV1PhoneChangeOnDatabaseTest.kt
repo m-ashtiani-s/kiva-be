@@ -103,7 +103,7 @@ class WebV1PhoneChangeOnDatabaseTest {
 
     private fun wrong(code: String) = ((code.toInt() + 1) % 100_000).toString().padStart(5, '0')
 
-    private fun phoneOf(userId: Long): String = transaction(db) { UserTbl.selectAll().where { UserTbl.id eq userId }.single()[UserTbl.phone] }
+    private fun phoneOf(userId: Long): String = transaction(db) { UserTbl.selectAll().where { UserTbl.id eq userId }.single()[UserTbl.phone]!! }
 
     private fun sessionsOf(userId: Long) = transaction(db) {
         AuthSessionTbl.selectAll().where { AuthSessionTbl.userId eq userId }.orderBy(AuthSessionTbl.id).toList()

@@ -1,5 +1,6 @@
 package com.kiva.infrastructure.persistence.exposed.projector
 
+import com.kiva.common.valueobject.SeoMeta
 import com.kiva.domain.aggregate.category.model.valueobject.CategoryId
 import com.kiva.domain.aggregate.material.model.valueobject.MaterialId
 import com.kiva.domain.aggregate.product.entity.event.ProductArchived
@@ -7,6 +8,8 @@ import com.kiva.domain.aggregate.product.entity.event.ProductCreated
 import com.kiva.domain.aggregate.product.entity.event.ProductDetailsChanged
 import com.kiva.domain.aggregate.product.entity.event.ProductDomainEvent
 import com.kiva.domain.aggregate.product.entity.event.ProductPriceChanged
+import com.kiva.domain.aggregate.product.entity.event.ProductPublishScheduled
+import com.kiva.domain.aggregate.product.entity.event.ProductPublishUnscheduled
 import com.kiva.domain.aggregate.product.entity.event.ProductPublished
 import com.kiva.domain.aggregate.product.entity.event.ProductUnpublished
 import com.kiva.domain.aggregate.product.entity.event.VariantAdded
@@ -16,21 +19,29 @@ import com.kiva.domain.aggregate.product.entity.event.VariantMediaReplaced
 import com.kiva.domain.aggregate.product.entity.event.VariantReactivated
 import com.kiva.domain.aggregate.product.model.valueobject.PriceTag
 import com.kiva.domain.aggregate.product.model.valueobject.ProductDetails
+import com.kiva.domain.aggregate.product.model.valueobject.ProductMedia
 import com.kiva.domain.aggregate.product.model.valueobject.ProductStatus
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
-import com.kiva.infrastructure.persistence.event.serializer.payload.product.ProductMediaPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.product.ProductSpecsPayload
 import com.kiva.infrastructure.persistence.exposed.tbl.CategoryTbl
+import com.kiva.infrastructure.persistence.exposed.tbl.GalleryItemPayload
 import com.kiva.infrastructure.persistence.exposed.tbl.MaterialTbl
+import com.kiva.infrastructure.persistence.exposed.tbl.MediaTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.ProductQmTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.ProductVariantQmTbl
+import com.kiva.infrastructure.persistence.exposed.toMediaAsset
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.statements.UpdateBuilder
 import org.jetbrains.exposed.v1.core.statements.UpdateStatement
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.select
+import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 import java.time.Instant
 import java.time.ZoneOffset
@@ -61,14 +72,24 @@ object ProductQmProjector {
                 updateProduct(productId) {
                     it[status] = ProductStatus.ACTIVE
                     it[publishedOn] = event.occurredOn.utc()
+                    // Published, by hand or by the job: no schedule any more (and the database allows none on ACTIVE).
+                    it[publishAt] = null
                 }
                 // Only the first time: taken out of the shop and put back, a product is not new again.
                 ProductQmTbl.update({ (ProductQmTbl.productId eq productId) and ProductQmTbl.firstPublishedOn.isNull() }) {
                     it[firstPublishedOn] = event.occurredOn.utc()
                 }
             }
-            is ProductUnpublished -> updateProduct(productId) { it[status] = ProductStatus.DRAFT }
-            is ProductArchived -> updateProduct(productId) { it[status] = ProductStatus.ARCHIVED }
+            is ProductUnpublished -> updateProduct(productId) {
+                it[status] = ProductStatus.DRAFT
+                it[publishAt] = null
+            }
+            is ProductArchived -> updateProduct(productId) {
+                it[status] = ProductStatus.ARCHIVED
+                it[publishAt] = null
+            }
+            is ProductPublishScheduled -> updateProduct(productId) { it[publishAt] = event.publishAt.utc() }
+            is ProductPublishUnscheduled -> updateProduct(productId) { it[publishAt] = null }
             is VariantAdded -> addColor(event)
             is VariantChanged -> {
                 // As in Product.apply: a new default takes it from the old one. First, or the unique index refuses.
@@ -77,6 +98,7 @@ object ProductQmProjector {
                     it.writeColorPrice(event.ownPriceTag, ProductQmSummary.basePriceTag(productId))
                     it[sortOrder] = event.sortOrder
                     it[isDefault] = event.isDefault
+                    it[barcode] = event.barcode?.value
                 }
             }
             is VariantDeactivated -> {
@@ -93,11 +115,14 @@ object ProductQmProjector {
                     it[isDefault] = event.isDefault
                 }
             }
-            is VariantMediaReplaced -> updateColor(productId, event.variantId) {
-                it[media] = event.media.map(::ProductMediaPayload)
+            is VariantMediaReplaced -> {
+                val gallery = galleryOf(event.media)
+                updateColor(productId, event.variantId) { it[media] = gallery }
             }
         }
 
+        // The product's version is its last event's sequence (the panel's ETag); stock changes are other streams.
+        if (event !is ProductCreated) updateProduct(productId) { it[version] = event.sequence.value }
         ProductQmSummary.refresh(productId, updatedOn = event.occurredOn)
     }
 
@@ -116,11 +141,16 @@ object ProductQmProjector {
             it[inStock] = false
             it[hasVideo] = false
             it[searchText] = ""
+            it[searchName] = ""
             it[status] = ProductStatus.DRAFT
             it[createdOn] = event.occurredOn.utc()
             it[updatedOn] = event.occurredOn.utc()
             it[publishedOn] = null
             it[firstPublishedOn] = null
+            it[version] = event.sequence.value
+            it[createdByUserId] = event.occurredByUserId.value
+            it[publishAt] = null
+            it[availableTotal] = 0
         }
     }
 
@@ -147,10 +177,25 @@ object ProductQmProjector {
             it[isDefault] = event.isDefault
             it[isActive] = true
             it[sortOrder] = event.sortOrder
-            it[media] = event.media.map(::ProductMediaPayload)
+            it[media] = galleryOf(event.media)
+            it[barcode] = event.barcode?.value
             // Stock comes from its own events (InventoryQmProjector); a new color has none yet.
             it[onHand] = 0
             it[reserved] = 0
+        }
+    }
+
+    /**
+     * The gallery with each file's sizes copied from its media row. The use case checked every file exists before the
+     * event was raised (MediaAttachments), and a used file is never removed, so a missing one is a bug.
+     */
+    private fun galleryOf(media: List<ProductMedia>): List<GalleryItemPayload> {
+        if (media.isEmpty()) return emptyList()
+        val assets = MediaTbl.selectAll().where { MediaTbl.mediaId inList media.map { it.mediaId.value } }
+            .map { it.toMediaAsset() }
+            .associateBy { it.id }
+        return media.map { item ->
+            GalleryItemPayload(item, assets[item.mediaId] ?: error("Media ${item.mediaId.value} of a product event is not in media_tbl"))
         }
     }
 
@@ -191,6 +236,15 @@ object ProductQmProjector {
         this[ProductQmTbl.highlights] = details.highlights.items
         this[ProductQmTbl.materialDescription] = details.materialDescription?.value
         this[ProductQmTbl.specs] = ProductSpecsPayload(details.specs)
+        this[ProductQmTbl.tags] = details.tags.items
+        this[ProductQmTbl.seo] = seoOf(details.seo)
+    }
+
+    /** The page's own SEO fields, as V24's `seo` JSONB keeps them: only those set (none is `{}`). */
+    private fun seoOf(seo: SeoMeta): JsonObject = buildJsonObject {
+        seo.title?.let { put("title", it) }
+        seo.description?.let { put("description", it) }
+        if (seo.noIndex) put("noIndex", true)
     }
 
     private fun UpdateBuilder<*>.writeBasePrice(priceTag: PriceTag) {

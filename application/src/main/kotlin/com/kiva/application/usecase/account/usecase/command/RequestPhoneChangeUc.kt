@@ -71,10 +71,10 @@ class RequestPhoneChangeUc(
             if (session == null || session.userId != command.userId || !session.isActiveAt(now)) {
                 return@inTransaction Result.failure(Failure.SessionGone)
             }
-            val user = userRepository.findById(command.userId) ?: return@inTransaction Result.failure(Failure.SessionGone)
-            if (newPhone == user.phone) return@inTransaction Result.failure(Failure.InvalidInput(listOf(User.ChangePhoneFailure.SameAsCurrent)))
+            val user = userRepository.findById(command.userId)?.takeUnless { it.isDeleted } ?: return@inTransaction Result.failure(Failure.SessionGone)
+            if (newPhone == user.activePhone) return@inTransaction Result.failure(Failure.InvalidInput(listOf(User.ChangePhoneFailure.SameAsCurrent)))
 
-            val toCurrent = Recipient(user.phone, OtpPurpose.PHONE_CHANGE_CURRENT)
+            val toCurrent = Recipient(user.activePhone, OtpPurpose.PHONE_CHANGE_CURRENT)
             val toNew = Recipient(newPhone, OtpPurpose.PHONE_CHANGE_NEW)
             otpIssuer.lockAndCheck(listOf(toCurrent, toNew), now)?.let { return@inTransaction Result.success(Outcome.Refused(it)) }
 
@@ -89,9 +89,9 @@ class RequestPhoneChangeUc(
                 Result.failure(Failure.LimitReached(outcome.refusal))
             }
             is Outcome.Issued -> {
-                smsSender.sendCode(outcome.user.phone, outcome.currentCode, OtpPurpose.PHONE_CHANGE_CURRENT)
+                smsSender.sendCode(outcome.user.activePhone, outcome.currentCode, OtpPurpose.PHONE_CHANGE_CURRENT)
                 smsSender.sendCode(outcome.newPhone, outcome.newCode, OtpPurpose.PHONE_CHANGE_NEW)
-                Result.success(CodesSent(outcome.user.phone, outcome.newPhone))
+                Result.success(CodesSent(outcome.user.activePhone, outcome.newPhone))
             }
         }
     }

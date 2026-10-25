@@ -9,6 +9,8 @@ import com.kiva.domain.aggregate.inventory.InventoryTestData.staff
 import com.kiva.domain.aggregate.inventory.InventoryTestData.stocked
 import com.kiva.domain.aggregate.inventory.entity.Inventory
 import com.kiva.domain.aggregate.inventory.entity.event.InventoryDomainEvent
+import com.kiva.domain.aggregate.inventory.entity.event.StockAdjusted
+import com.kiva.domain.aggregate.inventory.model.valueobject.AdjustmentReason
 import com.kiva.domain.aggregate.inventory.model.valueobject.AdjustmentReason.DAMAGED
 import com.kiva.domain.aggregate.inventory.model.valueobject.AdjustmentReason.RESTOCK
 import com.kiva.domain.aggregate.inventory.repository.InventoryRepository
@@ -17,8 +19,11 @@ import com.kiva.domain.aggregate.order.entity.OrderLine
 import com.kiva.domain.aggregate.product.model.valueobject.PriceTag
 import com.kiva.domain.aggregate.product.model.valueobject.ProductId
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
+import com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnCode
+import com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnId
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -175,6 +180,156 @@ class InventoryDomainServiceTest {
             val released = service.releaseForOrder(order, listOf(line(1, 20, 201, 2), line(2, 20, 202, 1), line(3, 30, 301, 1)), staff, now)
 
             assertEquals(listOf(201L), released.map { it.variantId.value })
+        }
+
+        @Test
+        fun `shipping takes every line off the shelf, in lock order, and shipping again changes nothing`() {
+            stock(301, 5)
+            stock(202, 5)
+            stock(201, 5)
+            val lines = listOf(line(1, 30, 301, 2), line(2, 20, 202, 1), line(3, 20, 201, 3))
+            service.reserveForOrder(order, lines, staff, now).getOrNull()!!.forEach(inventories::save)
+
+            val shipped = service.shipForOrder(order, lines, staff, now)
+            shipped.forEach(inventories::save)
+
+            assertEquals(listOf(201L, 202L, 301L), shipped.map { it.variantId.value })
+            val after = listOf(201L, 202L, 301L).map { service.getInventory(VariantId.constructFromPersisted(it)).getOrNull()!! }
+            assertEquals(listOf(2, 4, 3), after.map { it.onHand })
+            assertEquals(listOf(0, 0, 0), after.map { it.reserved })
+            assertEquals(emptyList(), service.shipForOrder(order, lines, staff, now), "shipped already")
+        }
+
+        @Test
+        fun `a group's orders ship together - one lock order across them, each color read once and shipped for each order on it`() {
+            stock(201, 5)
+            stock(202, 5)
+            stock(301, 5)
+            val other = InventoryTestData.order(2)
+            val first = listOf(line(1, 30, 301, 1), line(2, 20, 201, 1))
+            val second = listOf(line(1, 20, 201, 2), line(2, 20, 202, 1))
+            service.reserveForOrder(order, first, staff, now).getOrNull()!!.forEach(inventories::save)
+            service.reserveForOrder(other, second, staff, now).getOrNull()!!.forEach(inventories::save)
+
+            val shipped = service.shipForOrders(mapOf(order to first, other to second), staff, now)
+            shipped.forEach(inventories::save)
+
+            assertEquals(listOf(201L, 202L, 301L), shipped.map { it.variantId.value })
+            assertEquals(2, shipped.first().getRecordedEvents().size, "color 201 ships for both orders, read once")
+            val after = listOf(201L, 202L, 301L).map { service.getInventory(VariantId.constructFromPersisted(it)).getOrNull()!! }
+            assertEquals(listOf(2, 4, 4), after.map { it.onHand })
+            assertEquals(listOf(0, 0, 0), after.map { it.reserved })
+        }
+
+        @Test
+        fun `shipping a line that holds nothing for the order is a bug and stops loudly`() {
+            stock(201, 5)
+
+            assertThrows<IllegalStateException> { service.shipForOrder(order, listOf(line(1, 20, 201, 1)), staff, now) }
+            assertThrows<IllegalStateException> { service.shipForOrder(order, listOf(line(1, 30, 301, 1)), staff, now) }
+        }
+
+        private fun available(variant: Long) = service.getInventory(VariantId.constructFromPersisted(variant)).getOrNull()!!.available
+
+        private fun heldFor(variant: Long) = service.getInventory(VariantId.constructFromPersisted(variant)).getOrNull()!!.reservations[order]?.value
+
+        @Test
+        fun `a swapped color - the old one's hold goes back, the new one is held, in lock order`() {
+            stock(301, 5)
+            stock(202, 5)
+            val before = listOf(line(1, 30, 301, 2))
+            service.reserveForOrder(order, before, staff, now).getOrNull()!!.forEach(inventories::save)
+
+            val moved = service.rebalanceForOrder(order, before, listOf(line(1, 20, 202, 2)), staff, now).getOrNull()!!
+            moved.forEach(inventories::save)
+
+            assertEquals(listOf(202L, 301L), moved.map { it.variantId.value })
+            assertEquals(listOf(5, 3), listOf(available(301), available(202)))
+            assertEquals(listOf(null, 2), listOf(heldFor(301), heldFor(202)))
+        }
+
+        @Test
+        fun `swapping line 1 (color A) to color B that line 2 has already - B is held once with both quantities, A goes back`() {
+            stock(201, 5)
+            stock(202, 5)
+            val before = listOf(line(1, 20, 201, 1), line(2, 20, 202, 2))
+            service.reserveForOrder(order, before, staff, now).getOrNull()!!.forEach(inventories::save)
+
+            service.rebalanceForOrder(order, before, listOf(line(1, 20, 202, 1), line(2, 20, 202, 2)), staff, now).getOrNull()!!.forEach(inventories::save)
+
+            assertEquals(listOf(null, 3), listOf(heldFor(201), heldFor(202)))
+            assertEquals(listOf(5, 2), listOf(available(201), available(202)))
+        }
+
+        @Test
+        fun `a line taken out gives its hold back, and a color whose total didn't change isn't touched`() {
+            stock(201, 5)
+            stock(301, 5)
+            val before = listOf(line(1, 30, 301, 1), line(2, 20, 201, 2))
+            service.reserveForOrder(order, before, staff, now).getOrNull()!!.forEach(inventories::save)
+
+            val moved = service.rebalanceForOrder(order, before, listOf(line(2, 20, 201, 2)), staff, now).getOrNull()!!
+
+            assertEquals(listOf(301L), moved.map { it.variantId.value })
+        }
+
+        @Test
+        fun `a new color with too few left is QUANTITY_EXCEEDS_STOCK with what it has, and nothing was saved`() {
+            stock(301, 5)
+            stock(202, 1)
+            val before = listOf(line(1, 30, 301, 2))
+            service.reserveForOrder(order, before, staff, now).getOrNull()!!.forEach(inventories::save)
+
+            val refused = service.rebalanceForOrder(order, before, listOf(line(1, 20, 202, 2)), staff, now)
+
+            assertEquals(Result.failure(InventoryDomainService.RebalanceFailure.OutOfStock(VariantId.constructFromPersisted(202), 1)), refused)
+            assertEquals(mapOf("availableQuantity" to 1), refused.failureOrNull()?.meta)
+            assertEquals(listOf(2, null), listOf(heldFor(301), heldFor(202)), "the old color is still held")
+        }
+
+        @Test
+        fun `a color never stocked is out of stock with nothing left`() {
+            stock(301, 5)
+            val before = listOf(line(1, 30, 301, 1))
+            service.reserveForOrder(order, before, staff, now).getOrNull()!!.forEach(inventories::save)
+
+            val refused = service.rebalanceForOrder(order, before, listOf(line(1, 20, 209, 1)), staff, now)
+
+            assertEquals(Result.failure(InventoryDomainService.RebalanceFailure.OutOfStock(VariantId.constructFromPersisted(209), 0)), refused)
+        }
+    }
+
+    @Nested
+    inner class ForReturns {
+        private val code = ReturnCode.forId(ReturnId.constructFromPersisted(12))
+
+        private fun stock(variant: Long, onHand: Int) {
+            val inventory = Inventory.empty(VariantId.constructFromPersisted(variant))
+            inventory.adjust(delta(onHand), RESTOCK, null, staff, now)
+            inventories.save(inventory)
+        }
+
+        private fun restock(product: Long, variant: Long, quantity: Int) =
+            InventoryDomainService.Restock(ProductId.constructFromPersisted(product), VariantId.constructFromPersisted(variant), quantity)
+
+        @Test
+        fun `what came back goes on the shelf - RETURNED noted with the return's code by the operator, in lock order, one color on two lines once`() {
+            stock(301, 1)
+            stock(201, 1)
+
+            val restocked = service.restockForReturn(code, listOf(restock(30, 301, 1), restock(20, 201, 2), restock(30, 301, 1)), staff, now)
+
+            assertEquals(listOf(201L, 301L), restocked.map { it.variantId.value })
+            val adjusted = restocked.map { it.getRecordedEvents().single() as StockAdjusted }
+            assertEquals(listOf(2, 2), adjusted.map { it.delta.value })
+            assertEquals(setOf(AdjustmentReason.RETURNED), adjusted.map { it.reason }.toSet())
+            assertEquals(setOf("RT-1012"), adjusted.map { it.note?.value }.toSet())
+            assertEquals(setOf(staff), adjusted.map { it.occurredByUserId }.toSet())
+        }
+
+        @Test
+        fun `a color that was sold but has no stock is a bug and stops loudly`() {
+            assertThrows<IllegalStateException> { service.restockForReturn(code, listOf(restock(30, 309, 1)), staff, now) }
         }
     }
 }

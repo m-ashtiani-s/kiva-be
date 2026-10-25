@@ -1,5 +1,8 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
+import com.kiva.infrastructure.persistence.exposed.ProductQmRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.WishlistRepositoryImpl
+import com.kiva.application.usecase.wishlist.usecase.command.MoveCartItemToWishlistUc
 import com.kiva.application.usecase.cart.CartCommands
 import com.kiva.application.usecase.cart.usecase.command.AddCartItemUc
 import com.kiva.application.usecase.cart.usecase.command.ApplyDiscountCodeUc
@@ -120,6 +123,7 @@ class WebV1CartMergeOnDatabaseTest {
             MergeGuestCartUc(c, domain),
             ApplyDiscountCodeUc(c, domain, stack.discounts),
             RemoveDiscountCodeUc(c, domain),
+            MoveCartItemToWishlistUc(c, domain, WishlistRepositoryImpl(), ProductQmRepositoryImpl()),
         )
     }
 
@@ -140,11 +144,11 @@ class WebV1CartMergeOnDatabaseTest {
         environment { config = MapApplicationConfig() }
         application {
             configureHttp(listOf(ORIGIN))
-            configureAuthentication(stack.accessTokens)
+            configureAuthentication(stack.accessTokens, stack.accountCheck)
             routing {
                 route(API_V1) {
-                    webV1Auth(stack.authUseCases, listOf(ORIGIN))
-                    webV1Cart(cartUseCases)
+                    webV1Auth(stack.authUseCases, listOf(ORIGIN), testMediaUrls)
+                    webV1Cart(cartUseCases, testMediaUrls)
                 }
             }
         }

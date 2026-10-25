@@ -1,5 +1,8 @@
 package com.kiva.application.usecase.cart
 
+import com.kiva.domain.aggregate.cart.model.valueobject.CartOwner
+import com.kiva.domain.aggregate.product.model.valueobject.ProductId
+import com.kiva.application.usecase.wishlist.WishlistHearts
 import com.kiva.application.dto.AppliedDiscountDto
 import com.kiva.application.dto.CartDto
 import com.kiva.application.dto.CartItemDto
@@ -73,8 +76,9 @@ internal fun cartDtoOf(
                 purchasable = qm.offer.isPurchasable,
                 priceTag = qm.offer.priceTag,
                 lineTotals = totals,
-                stock = StockPolicy.stockOf(qm.offer.available, qm.offer.maxPerOrder),
+                stock = StockPolicy.stockOf(qm.offer.available, qm.offer.maxPerOrder, settings.lowStockThreshold),
                 addedAt = line.addedOn,
+                image = qm.image,
             )
         },
         totals = quote.totals,
@@ -104,3 +108,13 @@ internal fun cartDtoOf(
 // The read model keeps every color ever made, so a cart line's color is always there; missing is a broken read model.
 private fun offerOf(line: CartLine, offers: Map<VariantId, OfferQm>): OfferQm =
     offers[line.variantId] ?: error("No offer for variant ${line.variantId.value} of cart line ${line.itemId.value}")
+
+/**
+ * [dto] with the hearts of [cart]'s customer on its lines (phase 9, decision 15), one read for the whole cart; a guest's
+ * cart stays as it is (null). For the cart and the checkout alike, so the two keep showing the same cart.
+ */
+internal fun withHearts(dto: CartDto, cart: Cart, hearts: WishlistHearts): CartDto {
+    val owner = (cart.owner as? CartOwner.User)?.userId ?: return dto
+    val saved = hearts.savedAmong(owner, dto.items.map { ProductId.constructFromPersisted(it.productId) }).map { it.value }.toSet()
+    return dto.copy(items = dto.items.map { it.copy(isWishlisted = it.productId in saved) })
+}

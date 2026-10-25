@@ -61,7 +61,7 @@ class CheckPanelAccessUc(
         val outcome = transactionManager.inTransaction<Outcome, Nothing> {
             val session = authSessionRepository.findById(command.sessionId)
             val sessionLive = session != null && session.userId == command.userId && session.isActiveAt(now)
-            val user = if (sessionLive) userRepository.findById(command.userId) else null
+            val user = if (sessionLive) userRepository.findById(command.userId)?.takeUnless { it.isDeleted } else null
             when {
                 session == null || user == null -> Result.success(Outcome.SESSION_GONE)
                 // Roles before the kind of session: a customer who opens the panel is told no (403), not sent to log

@@ -3,6 +3,7 @@ package com.kiva.infrastructure.httpserver.controller.httprest.model.response
 import com.kiva.application.dto.CartIssueDto
 import com.kiva.application.dto.CheckoutContextDto
 import com.kiva.application.port.PaymentGateways
+import com.kiva.infrastructure.media.MediaUrls
 import kotlinx.serialization.Serializable
 
 /**
@@ -35,8 +36,8 @@ data class CheckoutContextHttpResponse(
         /** The page of the shop's terms, which paying accepts («با پرداخت، قوانین کیوا رو می‌پذیری»). */
         const val TERMS_URL = "/pages/terms"
 
-        fun from(context: CheckoutContextDto, issues: List<CartIssueDto>): CheckoutContextHttpResponse {
-            val cart = CartHttpResponse.from(context.cart, issues)
+        fun from(context: CheckoutContextDto, issues: List<CartIssueDto>, urls: MediaUrls): CheckoutContextHttpResponse {
+            val cart = CartHttpResponse.from(context.cart, issues, urls)
             return CheckoutContextHttpResponse(
                 cart = cart,
                 addresses = context.addresses.map(AddressHttpResponse::from),

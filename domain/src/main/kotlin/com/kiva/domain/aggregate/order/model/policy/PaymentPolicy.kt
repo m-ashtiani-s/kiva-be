@@ -2,6 +2,7 @@ package com.kiva.domain.aggregate.order.model.policy
 
 import com.kiva.common.railway.FailureKind
 import com.kiva.common.railway.ResultFailure
+import com.kiva.common.valueobject.Money
 import com.kiva.domain.aggregate.order.model.valueobject.OrderStatus
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentOutcome
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentStatus
@@ -50,6 +51,27 @@ object PaymentPolicy {
      */
     fun canRetry(payment: PaymentStatus, order: OrderStatus, holdUntil: Instant, now: Instant): Boolean =
         payment.outcome != PaymentOutcome.SUCCEEDED && payment != PaymentStatus.VERIFYING && canStartPayment(order, holdUntil, now)
+
+    /** Where a paid order pays what a change left owed (roadmap section 8.5): being prepared again, its photos sent, or another change asked. */
+    val BALANCE_PAYABLE: Set<OrderStatus> = setOf(OrderStatus.PROCESSING, OrderStatus.PHOTO_SENT, OrderStatus.CHANGE_REQUESTED)
+
+    /**
+     * An attempt to pay what a change left owed may start now: something is owed and the order is in [BALANCE_PAYABLE]. It
+     * has no time limit: the stock was held when the order was placed, and the order doesn't ship until it is paid.
+     */
+    fun canPayBalance(status: OrderStatus, balanceDue: Money): Boolean = balanceDue > Money.ZERO && status in BALANCE_PAYABLE
+
+    /** The result page of a balance's attempt offers «تلاش دوباره»: as [canRetry], while the balance may still be paid. */
+    fun canRetryBalance(payment: PaymentStatus, order: OrderStatus, balanceDue: Money): Boolean =
+        payment.outcome != PaymentOutcome.SUCCEEDED && payment != PaymentStatus.VERIFYING && canPayBalance(order, balanceDue)
+
+    /**
+     * Why an order may not have another attempt to pay its balance, or null if it may: it had [MAX_ATTEMPTS_PER_ORDER] of
+     * them (counted apart from the attempts to pay the order itself). Time doesn't lift it either; with no time to pay to
+     * wait for, the wait given is [GATEWAY_WINDOW], after which an attempt still open can no longer settle.
+     */
+    fun refusalToPayBalance(balanceAttempts: Int): Refusal.TooManyAttempts? =
+        if (balanceAttempts < MAX_ATTEMPTS_PER_ORDER) null else Refusal.TooManyAttempts(GATEWAY_WINDOW)
 
     /**
      * Why the customer may not place another order now, or null if they may: [MAX_UNPAID_ORDERS] of their unpaid

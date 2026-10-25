@@ -2,13 +2,19 @@ package com.kiva.infrastructure.httpserver.controller.httprest.web
 
 import com.kiva.application.port.OtpCodes
 import com.kiva.application.port.SmsSender
+import com.kiva.application.usecase.account.AccountEraser
+import com.kiva.application.usecase.account.ActiveOrdersCheck
 import com.kiva.application.usecase.account.usecase.command.ConfirmPhoneChangeUc
+import com.kiva.application.usecase.account.usecase.command.DeleteMyAccountUc
+import com.kiva.application.usecase.account.usecase.command.RequestAccountDeletionUc
 import com.kiva.application.usecase.account.usecase.command.RequestPhoneChangeUc
 import com.kiva.application.usecase.account.usecase.command.UpdateMyProfileUc
+import com.kiva.application.usecase.account.usecase.query.CheckAccountLiveUc
 import com.kiva.application.usecase.account.usecase.query.GetMeUc
 import com.kiva.application.usecase.admin.usecase.command.CheckPanelAccessUc
 import com.kiva.application.usecase.admin.usecase.command.SetUserRolesUc
 import com.kiva.application.usecase.admin.usecase.query.FindCustomersUc
+import com.kiva.application.usecase.admin.usecase.query.GetCustomerDetailUc
 import com.kiva.application.usecase.admin.usecase.query.GetCustomerUc
 import com.kiva.application.usecase.auth.OtpIssuer
 import com.kiva.application.usecase.auth.usecase.command.BootstrapAdminUc
@@ -22,11 +28,13 @@ import com.kiva.application.usecase.cart.usecase.query.GetCartUc
 import com.kiva.application.usecase.discount.Discounts
 import com.kiva.application.usecase.reservation.Reservations
 import com.kiva.common.valueobject.IranianMobileNumber
+import com.kiva.domain.aggregate.contact.model.valueobject.TicketCode
 import com.kiva.domain.aggregate.cart.CartDomainService
 import com.kiva.domain.aggregate.discount.DiscountDomainService
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpPurpose
+import com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnCode
 import com.kiva.domain.aggregate.reservation.ReservationDomainService
 import com.kiva.infrastructure.MutableClock
 import com.kiva.infrastructure.TestDatabase
@@ -36,23 +44,36 @@ import com.kiva.infrastructure.auth.RandomSessionTokens
 import com.kiva.infrastructure.cart.RandomCartIds
 import com.kiva.infrastructure.common.persistence.ExposedTransactionManager
 import com.kiva.infrastructure.httpserver.API_V1
+import com.kiva.infrastructure.httpserver.auth.asAccountCheck
 import com.kiva.infrastructure.httpserver.auth.configureAuthentication
 import com.kiva.infrastructure.httpserver.configureHttp
+import com.kiva.infrastructure.persistence.exposed.AccountDeletionReasonRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.AddressBookRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.AdminCustomerRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.AuditTrailImpl
 import com.kiva.infrastructure.persistence.exposed.AuthSessionRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.BlogFeedbackRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.CartRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.ContactMessageRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.DiscountCodeRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.DiscountRedemptionRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.GeoRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.IdempotencyStoreImpl
+import com.kiva.infrastructure.persistence.exposed.NewsletterSubscriptionRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.OfferQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.OrderQmRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.OrderRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.OtpChallengeRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.RefundRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ReservationGroupIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.ReservationGroupRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.ReviewRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.SecurityEventLogImpl
 import com.kiva.infrastructure.persistence.exposed.ShopSettingsRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.StockAlertRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.UserRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.WishlistRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.WishlistShareRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.tbl.AuthSessionTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.OtpChallengeTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.RefreshTokenTbl
@@ -63,7 +84,9 @@ import io.ktor.server.routing.routing
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
 import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.isNotNull
 import org.jetbrains.exposed.v1.core.like
+import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
@@ -96,12 +119,28 @@ class AuthTestStack(val clock: MutableClock, maxSmsPerHour: Int = 300, val otpCo
     val logout = LogoutUc(transactions, sessions, sessionTokens, events, clock)
     val updateProfile = UpdateMyProfileUc(transactions, users, clock)
     val checkPanelAccess = CheckPanelAccessUc(transactions, sessions, users, events, clock)
+    /** The access token check's question to the database: is the account still there and not deleted? */
+    val accountCheck = CheckAccountLiveUc(transactions, users).asAccountCheck()
     val findCustomers = FindCustomersUc(transactions, AdminCustomerRepositoryImpl(), OrderQmRepositoryImpl())
     val getCustomer = GetCustomerUc(transactions, AdminCustomerRepositoryImpl(), OrderQmRepositoryImpl())
-    val setUserRoles = SetUserRolesUc(transactions, users, sessions, events, clock)
+    val getCustomerDetail = GetCustomerDetailUc(transactions, AdminCustomerRepositoryImpl(), OrderQmRepositoryImpl(), AddressBookRepositoryImpl(), GeoRepositoryImpl())
+    val setUserRoles = SetUserRolesUc(transactions, users, sessions, events, AuditTrailImpl(), clock)
     val bootstrapAdmin = BootstrapAdminUc(transactions, users, sessions, events, clock)
     val requestPhoneChange = RequestPhoneChangeUc(transactions, users, sessions, otpIssuer, sms, clock)
     val confirmPhoneChange = ConfirmPhoneChangeUc(transactions, codes, users, sessions, otpCodes, sessionTokens, accessTokens, sms, events, clock)
+
+    // --- deleting the account (phase 14): what goes with it is in the tables of later phases, wired as the app wires them ---
+    val activeOrdersCheck = ActiveOrdersCheck(OrderQmRepositoryImpl(), RefundRepositoryImpl())
+    val accountEraser = AccountEraser(
+        AddressBookRepositoryImpl(), CartRepositoryImpl(), WishlistRepositoryImpl(), WishlistShareRepositoryImpl(), StockAlertRepositoryImpl(),
+        IdempotencyStoreImpl(), ContactMessageRepositoryImpl(), NewsletterSubscriptionRepositoryImpl(), ReviewRepositoryImpl(), BlogFeedbackRepositoryImpl(),
+    )
+    val requestAccountDeletion = RequestAccountDeletionUc(transactions, users, activeOrdersCheck, otpIssuer, sms, clock)
+    val deleteMyAccount = DeleteMyAccountUc(
+        transactions, CartRepositoryImpl(), WishlistRepositoryImpl(), AddressBookRepositoryImpl(), ReservationGroupRepositoryImpl(), users,
+        OrderQmRepositoryImpl(), activeOrdersCheck, codes, otpCodes, OrderRepositoryImpl(), accountEraser, sessions, AccountDeletionReasonRepositoryImpl(),
+        events, clock,
+    )
 
     private val carts = CartRepositoryImpl()
     val cartDomainService = CartDomainService(RandomCartIds())
@@ -116,18 +155,19 @@ class AuthTestStack(val clock: MutableClock, maxSmsPerHour: Int = 300, val otpCo
     val getCart = GetCartUc(transactions, carts, OfferQmRepositoryImpl(), ShopSettingsRepositoryImpl(), reservations, discounts, clock)
 
     val authUseCases = AuthUseCases(send, verify, getMe, refresh, logout, mergeGuestCart, getCart)
+    val meUseCases = MeUseCases(getMe, updateProfile, requestPhoneChange, confirmPhoneChange, requestAccountDeletion, deleteMyAccount)
 
     fun app(trustedProxyHops: Int = 0, allowedOrigins: List<String> = listOf(ORIGIN), block: suspend ApplicationTestBuilder.() -> Unit) =
         testApplication {
             environment { config = MapApplicationConfig() }
             application {
                 configureHttp(allowedOrigins, trustedProxyHops)
-                configureAuthentication(accessTokens)
+                configureAuthentication(accessTokens, accountCheck)
                 routing {
                     route(API_V1) {
-                        webV1Auth(authUseCases, allowedOrigins)
-                        webV1Me(MeUseCases(getMe, updateProfile, requestPhoneChange, confirmPhoneChange))
-                        webV1AdminCustomers(AdminCustomerUseCases(checkPanelAccess, findCustomers, getCustomer, setUserRoles))
+                        webV1Auth(authUseCases, allowedOrigins, testMediaUrls)
+                        webV1Me(meUseCases)
+                        webV1AdminCustomers(AdminCustomerUseCases(checkPanelAccess, findCustomers, getCustomer, getCustomerDetail, setUserRoles))
                     }
                 }
             }
@@ -140,12 +180,13 @@ class AuthTestStack(val clock: MutableClock, maxSmsPerHour: Int = 300, val otpCo
     // Their carts go with the accounts: cart_tbl's foreign key is ON DELETE CASCADE.
     fun deleteTestUsers() {
         transaction(db) {
-            val userIds = UserTbl.select(UserTbl.id).where { UserTbl.phone like TEST_PHONES }.map { it[UserTbl.id].value }
+            val userIds = UserTbl.select(UserTbl.id).where { (UserTbl.phone like TEST_PHONES) or UserTbl.deletedOn.isNotNull() }.map { it[UserTbl.id].value }
             val sessionIds = AuthSessionTbl.select(AuthSessionTbl.id).where { AuthSessionTbl.userId inList userIds }.map { it[AuthSessionTbl.id].value }
             RefreshTokenTbl.deleteWhere { RefreshTokenTbl.sessionId inList sessionIds }
             AuthSessionTbl.deleteWhere { AuthSessionTbl.userId inList userIds }
             OtpChallengeTbl.deleteWhere { OtpChallengeTbl.phone like TEST_PHONES }
-            UserTbl.deleteWhere { UserTbl.phone like TEST_PHONES }
+            // A deleted account has no phone any more; only tests delete accounts in kiva_test.
+            UserTbl.deleteWhere { (UserTbl.phone like TEST_PHONES) or UserTbl.deletedOn.isNotNull() }
         }
     }
 
@@ -171,6 +212,37 @@ class RecordingSmsSender : SmsSender {
     /** «پرداخت موفق» messages, as (phone, order). */
     val paid: MutableList<Pair<IranianMobileNumber, OrderCode>> = Collections.synchronizedList(mutableListOf())
 
+    /** «عکس کیفت فرستاده شد» messages, as (phone, order). */
+    val photosSent: MutableList<Pair<IranianMobileNumber, OrderCode>> = Collections.synchronizedList(mutableListOf())
+
+    /** «پولت برگشت» messages, as (phone, order). */
+    val refundsCompleted: MutableList<Pair<IranianMobileNumber, OrderCode>> = Collections.synchronizedList(mutableListOf())
+
+    /** «لغو شد» messages, as (phone, order). */
+    val cancelled: MutableList<Pair<IranianMobileNumber, OrderCode>> = Collections.synchronizedList(mutableListOf())
+
+    /** «ارسال شد» messages. */
+    val shipped: MutableList<Shipped> = Collections.synchronizedList(mutableListOf())
+
+    /** «تحویل شد» messages, as (phone, order). */
+    val delivered: MutableList<Pair<IranianMobileNumber, OrderCode>> = Collections.synchronizedList(mutableListOf())
+
+    /** «درخواستت بررسی شد» messages, as (phone, order). */
+    val changeResolved: MutableList<Pair<IranianMobileNumber, OrderCode>> = Collections.synchronizedList(mutableListOf())
+
+    /** A return's messages, as (phone, return code): approved, turned down, closed. */
+    val returnsApproved: MutableList<Pair<IranianMobileNumber, ReturnCode>> = Collections.synchronizedList(mutableListOf())
+    val returnsRejected: MutableList<Pair<IranianMobileNumber, ReturnCode>> = Collections.synchronizedList(mutableListOf())
+    val returnsClosed: MutableList<Pair<IranianMobileNumber, ReturnCode>> = Collections.synchronizedList(mutableListOf())
+
+    /** «جمع‌آوری مرجوعی» messages, as (phone, return code, carrier's name). */
+    val returnPickups: MutableList<Triple<IranianMobileNumber, ReturnCode, String>> = Collections.synchronizedList(mutableListOf())
+
+    /** «پشتیبانی رسیدگی کرد» messages, as (phone, contact message's code). */
+    val contactReplied: MutableList<Pair<IranianMobileNumber, TicketCode>> = Collections.synchronizedList(mutableListOf())
+
+    data class Shipped(val to: IranianMobileNumber, val orderCode: OrderCode, val carrierName: String, val trackingCode: String)
+
     @Volatile
     var down = false
 
@@ -187,5 +259,68 @@ class RecordingSmsSender : SmsSender {
     override suspend fun sendOrderPaid(to: IranianMobileNumber, orderCode: OrderCode) {
         check(!down) { "the SMS provider is down" }
         paid += to to orderCode
+    }
+
+    override suspend fun sendPhotosSent(to: IranianMobileNumber, orderCode: OrderCode) {
+        check(!down) { "the SMS provider is down" }
+        photosSent += to to orderCode
+    }
+
+    override suspend fun sendRefundCompleted(to: IranianMobileNumber, orderCode: OrderCode) {
+        check(!down) { "the SMS provider is down" }
+        refundsCompleted += to to orderCode
+    }
+
+    override suspend fun sendOrderCancelled(to: IranianMobileNumber, orderCode: OrderCode) {
+        check(!down) { "the SMS provider is down" }
+        cancelled += to to orderCode
+    }
+
+    override suspend fun sendOrderShipped(to: IranianMobileNumber, orderCode: OrderCode, carrierName: String, trackingCode: String) {
+        check(!down) { "the SMS provider is down" }
+        shipped += Shipped(to, orderCode, carrierName, trackingCode)
+    }
+
+    override suspend fun sendOrderDelivered(to: IranianMobileNumber, orderCode: OrderCode) {
+        check(!down) { "the SMS provider is down" }
+        delivered += to to orderCode
+    }
+
+    override suspend fun sendChangeResolved(to: IranianMobileNumber, orderCode: OrderCode) {
+        check(!down) { "the SMS provider is down" }
+        changeResolved += to to orderCode
+    }
+
+    override suspend fun sendReturnApproved(to: IranianMobileNumber, returnCode: ReturnCode) {
+        check(!down) { "the SMS provider is down" }
+        returnsApproved += to to returnCode
+    }
+
+    override suspend fun sendReturnRejected(to: IranianMobileNumber, returnCode: ReturnCode) {
+        check(!down) { "the SMS provider is down" }
+        returnsRejected += to to returnCode
+    }
+
+    override suspend fun sendReturnPickup(to: IranianMobileNumber, returnCode: ReturnCode, carrierName: String) {
+        check(!down) { "the SMS provider is down" }
+        returnPickups += Triple(to, returnCode, carrierName)
+    }
+
+    override suspend fun sendReturnClosed(to: IranianMobileNumber, returnCode: ReturnCode) {
+        check(!down) { "the SMS provider is down" }
+        returnsClosed += to to returnCode
+    }
+
+    /** «موجود شد» SMS: to whom, the product's name and the link. */
+    val backInStock = mutableListOf<Triple<IranianMobileNumber, String, String>>()
+
+    override suspend fun sendBackInStock(to: IranianMobileNumber, productName: String, link: String) {
+        check(!down) { "the SMS provider is down" }
+        backInStock += Triple(to, productName, link)
+    }
+
+    override suspend fun sendContactReplied(to: IranianMobileNumber, ticketCode: TicketCode) {
+        check(!down) { "the SMS provider is down" }
+        contactReplied += to to ticketCode
     }
 }

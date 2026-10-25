@@ -11,6 +11,7 @@ import com.kiva.common.transaction.TransactionManager
 import com.kiva.common.usecase.QueryUseCase
 import com.kiva.common.valueobject.Slug
 import com.kiva.domain.aggregate.category.repository.CategoryRepository
+import com.kiva.domain.aggregate.media.repository.MediaRepository
 
 /**
  * One category by its slug, with how many products in the shop it holds, for the category page
@@ -20,6 +21,7 @@ class GetCategoryUc(
     private val transactionManager: TransactionManager,
     private val categoryRepository: CategoryRepository,
     private val productQmRepository: ProductQmRepository,
+    private val mediaRepository: MediaRepository,
 ) : QueryUseCase<GetCategoryUc.Qry, CategoryDto, GetCategoryUc.Failure> {
 
     private val logger = getLogger()
@@ -37,7 +39,7 @@ class GetCategoryUc(
             val category = categoryRepository.findBySlug(slug)
                 ?: return@inTransaction Result.failure(Failure.CategoryNotFound)
             val productCount = productQmRepository.countActiveByCategory()[category.slug] ?: 0
-            Result.success(CategoryDto.from(category, productCount))
+            Result.success(CategoryDto.from(category, productCount, category.imageMediaId?.let(mediaRepository::find)))
         }
     }
 

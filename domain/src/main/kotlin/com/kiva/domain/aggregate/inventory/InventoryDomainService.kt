@@ -5,6 +5,7 @@ import com.kiva.common.railway.FailureKind
 import com.kiva.common.railway.Result
 import com.kiva.common.railway.ResultFailure
 import com.kiva.common.railway.mapOnFailure
+import com.kiva.common.valueobject.Quantity
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.inventory.entity.Inventory
 import com.kiva.domain.aggregate.inventory.model.valueobject.AdjustmentNote
@@ -13,7 +14,9 @@ import com.kiva.domain.aggregate.inventory.model.valueobject.StockDelta
 import com.kiva.domain.aggregate.inventory.repository.InventoryRepository
 import com.kiva.domain.aggregate.order.entity.OrderLine
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
+import com.kiva.domain.aggregate.product.model.valueobject.ProductId
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
+import com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnCode
 import java.time.Instant
 
 /**
@@ -95,6 +98,96 @@ class InventoryDomainService(
         }
     }
 
+    /**
+     * What an order held leaves with the courier: every line's stock ships, **in lock order** like [reserveForOrder]
+     * (sorted by product, then color; saved in that order). A color that shipped for the order already changes nothing,
+     * so shipping twice is harmless. A paid order not shipped yet always holds its stock: a line holding nothing is a bug.
+     */
+    fun shipForOrder(orderCode: OrderCode, lines: List<OrderLine>, by: UserId, now: Instant): List<Inventory> = shipForOrders(mapOf(orderCode to lines), by, now)
+
+    /**
+     * Several orders leave in one parcel (a reservation group): every color of all of them, **in one lock order** across
+     * the orders (by product, then color), each color read once and shipped for each order on it. Two groups sharing
+     * colors in a different order of their own lines never wait on each other the wrong way round.
+     */
+    fun shipForOrders(orders: Map<OrderCode, List<OrderLine>>, by: UserId, now: Instant): List<Inventory> {
+        logger.info("shipForOrders orderCodes=${orders.keys.map { it.value }}")
+        val byVariant = orders.flatMap { (code, lines) -> lines.map { line -> line to code } }
+            .groupBy({ it.first.productId.value to it.first.variantId }, { it.second })
+        return byVariant.keys.sortedWith(compareBy({ it.first }, { it.second.value })).mapNotNull { key ->
+            val variantId = key.second
+            val inventory = inventoryRepository.get(variantId) ?: error("Variant ${variantId.value} ships for an order but has no stock")
+            byVariant.getValue(key).distinct().forEach { code ->
+                inventory.ship(code, by, now).failureOrNull()?.let { error("Order ${code.value} could not ship variant ${variantId.value}: ${it.code}") }
+            }
+            inventory.takeIf { it.getRecordedEvents().isNotEmpty() }
+        }
+    }
+
+    /**
+     * An order's lines changed by a change request ([before] to [after]: a color swapped, a line taken out): what the order
+     * holds of each color follows, all or nothing. For each color whose total quantity in the order changed, what the
+     * order held is given back and the new total is held again, so a color that is now on two lines is held once, with
+     * both quantities (an Inventory holds one quantity per order). In lock order like [reserveForOrder]: the stocks come
+     * back sorted by (product, color) and must be saved in that order.
+     *
+     * A color with too few left for its new total is refused with what it has left after the order's own hold went back
+     * ([RebalanceFailure.OutOfStock]); nothing is to be saved then.
+     */
+    fun rebalanceForOrder(orderCode: OrderCode, before: List<OrderLine>, after: List<OrderLine>, by: UserId, now: Instant): Result<List<Inventory>, RebalanceFailure> {
+        logger.info("rebalanceForOrder orderCode=${orderCode.value} before=${before.map { "${it.variantId.value}x${it.quantity.value}" }} after=${after.map { "${it.variantId.value}x${it.quantity.value}" }}")
+        fun totals(lines: List<OrderLine>) = lines.groupBy({ it.productId.value to it.variantId }, { it.quantity.value }).mapValues { it.value.sum() }
+        val held = totals(before)
+        val wanted = totals(after)
+
+        val changed = (held.keys + wanted.keys).filter { held[it] != wanted[it] }.sortedWith(compareBy({ it.first }, { it.second.value }))
+        val touched = changed.map { key ->
+            val variantId = key.second
+            val inventory = inventoryRepository.get(variantId) ?: Inventory.empty(variantId)
+            inventory.releaseReservation(orderCode, by, now)
+            wanted[key]?.let { quantity ->
+                when (val failure = inventory.reserve(orderCode, Quantity.constructFromPersisted(quantity), by, now).failureOrNull()) {
+                    null -> {}
+                    is Inventory.ReserveFailure.MoreThanAvailable -> return Result.failure(RebalanceFailure.OutOfStock(variantId, failure.availableQuantity))
+                    // Its hold for the order went back just above, and an order changes only before it ships: anything else is a bug.
+                    else -> error("Order ${orderCode.value} could not hold variant ${variantId.value} again: ${failure.code}")
+                }
+            }
+            inventory
+        }
+        return Result.success(touched.filter { it.getRecordedEvents().isNotEmpty() })
+    }
+
+    /** [quantity] of [variantId] (of [productId]) go back on the shelf. */
+    data class Restock(val productId: ProductId, val variantId: VariantId, val quantity: Int) {
+        init {
+            require(quantity > 0) { "Restocking $quantity of variant ${variantId.value}" }
+        }
+    }
+
+    /**
+     * What a return's parcel brought back in good shape goes back on the shelf (roadmap section 12.2, decision 12): each
+     * color's stock grows by its [lines]' quantities, a change by hand of reason RETURNED noted with [returnCode], so the
+     * stock's history shows it like any other. Even for a color switched off or a product archived: its stock is apart
+     * from the product. **In lock order** like [reserveForOrder]: the stocks come back sorted by (product, color) and must be
+     * saved in that order (lock 7, after the return's row, lock 10). A color that was sold always has a stock: one without
+     * is a bug.
+     */
+    fun restockForReturn(returnCode: ReturnCode, lines: List<Restock>, by: UserId, now: Instant): List<Inventory> {
+        logger.info("restockForReturn returnCode=${returnCode.value} lines=${lines.map { "${it.variantId.value}x${it.quantity}" }}")
+        val note = AdjustmentNote.constructFromPersisted(returnCode.value)
+        return lines.groupBy({ it.productId.value to it.variantId }, { it.quantity }).toList()
+            .sortedWith(compareBy({ it.first.first }, { it.first.second.value }))
+            .map { (key, quantities) ->
+                val variantId = key.second
+                val inventory = inventoryRepository.get(variantId) ?: error("Variant ${variantId.value} comes back from return ${returnCode.value} but has no stock")
+                inventory.adjust(StockDelta.constructFromPersisted(quantities.sum()), AdjustmentReason.RETURNED, note, by, now).failureOrNull()?.let {
+                    error("Return ${returnCode.value} could not restock variant ${variantId.value}: ${it.code}")
+                }
+                inventory
+            }
+    }
+
     // ============ failures ============
 
     sealed class AdjustStockFailure(code: String, kind: FailureKind, meta: Map<String, Any>) :
@@ -104,6 +197,12 @@ class InventoryDomainService(
 
         data class MoreThanAvailable(val availableQuantity: Int) :
             AdjustStockFailure("QUANTITY_EXCEEDS_STOCK", FailureKind.BUSINESS_RULE, mapOf("availableQuantity" to availableQuantity))
+    }
+
+    sealed class RebalanceFailure(code: String, kind: FailureKind, meta: Map<String, Any>) : ResultFailure(code, kind, meta = meta) {
+        /** [variantId] has only [availableQuantity] left for the order's new total of it (422). */
+        data class OutOfStock(val variantId: VariantId, val availableQuantity: Int) :
+            RebalanceFailure("QUANTITY_EXCEEDS_STOCK", FailureKind.BUSINESS_RULE, mapOf("availableQuantity" to availableQuantity))
     }
 
     sealed class ReserveForOrderFailure(code: String, kind: FailureKind, meta: Map<String, Any>) : ResultFailure(code, kind, meta = meta) {

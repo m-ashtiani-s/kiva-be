@@ -1,5 +1,7 @@
 package com.kiva.application.usecase.admin
 
+import com.kiva.application.port.AuditTrail
+import com.kiva.application.port.PanelActor
 import com.kiva.application.port.SecurityEventLog
 import com.kiva.application.repository.AdminCustomerRepository
 import com.kiva.application.repository.AdminCustomerRepository.CustomerSearch
@@ -41,6 +43,8 @@ class AdminCustomersUcTest {
         }
 
         override fun findById(id: UserId): User? = null
+
+        override fun findAll(ids: Collection<UserId>): Map<UserId, User> = emptyMap()
     }
 
     // Nobody is found, so the purchases of nobody are asked for.
@@ -82,12 +86,13 @@ class AdminCustomersUcTest {
     }
 
     // Strict mocks: any call to them fails the test, so "refused before anything" is checked too.
-    private val setUserRoles = SetUserRolesUc(transactions, mockk<UserRepository>(), mockk<AuthSessionRepository>(), mockk<SecurityEventLog>(), Clock.systemUTC())
-    private val admin = UserId.constructFromPersisted(1)
+    private val setUserRoles =
+        SetUserRolesUc(transactions, mockk<UserRepository>(), mockk<AuthSessionRepository>(), mockk<SecurityEventLog>(), mockk<AuditTrail>(), Clock.systemUTC())
+    private val admin = PanelActor(UserId.constructFromPersisted(1), ip = null)
 
     @Test
     fun `an unknown role is refused where it is in the list, before any transaction`() = runTest {
-        val failure = setUserRoles.execute(SetUserRolesUc.Cmd("1024", listOf("OPERATOR", "OWNER", "admin"), by = admin)).failureOrNull()
+        val failure = setUserRoles.execute(SetUserRolesUc.Cmd("1024", listOf("OPERATOR", "OWNER", "admin"), actor = admin)).failureOrNull()
 
         assertEquals("VALIDATION_ERROR", failure?.code)
         assertEquals(listOf("roles.1" to "ROLE_INVALID", "roles.2" to "ROLE_INVALID"), failure?.causes?.map { it.field to it.code })
@@ -97,7 +102,7 @@ class AdminCustomersUcTest {
     @Test
     fun `a customer id that isn't one is NOT_FOUND, before any transaction`() = runTest {
         listOf("abc", "0", "-5", "").forEach { id ->
-            assertEquals(Result.failure(SetUserRolesUc.Failure.NotFound), setUserRoles.execute(SetUserRolesUc.Cmd(id, listOf("OPERATOR"), by = admin)), id)
+            assertEquals(Result.failure(SetUserRolesUc.Failure.NotFound), setUserRoles.execute(SetUserRolesUc.Cmd(id, listOf("OPERATOR"), actor = admin)), id)
         }
         assertEquals(0, transactions.transactionsOpened)
     }

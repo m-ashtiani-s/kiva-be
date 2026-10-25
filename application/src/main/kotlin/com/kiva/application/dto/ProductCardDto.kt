@@ -1,5 +1,6 @@
 package com.kiva.application.dto
 
+import com.kiva.domain.aggregate.review.model.valueobject.RatingTally
 import com.kiva.domain.aggregate.product.model.valueobject.BadgeCode
 import com.kiva.domain.aggregate.product.model.valueobject.BagType
 import com.kiva.domain.aggregate.product.model.valueobject.StockInfo
@@ -13,6 +14,8 @@ import com.kiva.domain.aggregate.product.model.valueobject.StockStatus
  * @property stock the whole product's: sold out only when none of its colors can be bought, a number only when few
  *   are left in all.
  * @property colors the active colors in display order, each with its own stock status.
+ * @property defaultColorKey never null in the shop; null only for a product without an active color, which only the
+ *   panel reads.
  */
 data class ProductCardDto(
     val id: Long,
@@ -23,17 +26,24 @@ data class ProductCardDto(
     val bagType: BagType,
     val price: PriceDto,
     val colors: List<ColorOption>,
-    val defaultColorKey: String,
+    val defaultColorKey: String?,
     val stock: StockInfo,
     val badges: List<BadgeCode>,
     val isNew: Boolean,
     val hasVideo: Boolean,
     val soldCount: Int,
     val freeShippingEligible: Boolean,
+    /** Its approved reviews (phase 8): the card shows the average and the count, the page the whole summary. */
+    val rating: RatingSummaryDto = RatingSummaryDto.from(RatingTally.NONE),
+    /** The viewer saved it (phase 9): true or false for a customer, null for a guest and in every cached answer. */
+    val isWishlisted: Boolean? = null,
 ) {
     data class CategoryRef(val id: Long, val slug: String, val name: String)
 
-    /** One color swatch of the card. */
+    /**
+     * One color swatch of the card. [image] and [hoverImage] are its first two photos: the card shows those of the
+     * color it is drawn in (the filtered one, or the default).
+     */
     data class ColorOption(
         val variantId: Long,
         val key: String,
@@ -42,5 +52,7 @@ data class ProductCardDto(
         val isLight: Boolean,
         val sortOrder: Int,
         val stockStatus: StockStatus,
+        val image: UploadedMediaDto? = null,
+        val hoverImage: UploadedMediaDto? = null,
     )
 }

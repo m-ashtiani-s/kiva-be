@@ -82,7 +82,7 @@ class ProductQmRepositoryDetailTest {
             listOf(
                 ProductDetailQm.Variant(
                     product.color("lilac"), ColorKey.constructFromPersisted("lilac"), product.variants[0].sku, priceTag(1_450_000, 1_750_000),
-                    isDefault = true, available = 0, media = listOf(ProductEventSamples.frontPhoto, ProductEventSamples.video),
+                    isDefault = true, available = 0, media = listOf(ProductEventSamples.frontPhoto, ProductEventSamples.video).map(SampleMedia::dtoOf),
                 ),
                 ProductDetailQm.Variant(
                     product.color("black"), ColorKey.constructFromPersisted("black"), product.variants[1].sku, priceTag(1_890_000),

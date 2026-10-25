@@ -56,11 +56,14 @@ class AuthenticationTest {
             .apply(build)
             .sign(Algorithm.HMAC256(key))
 
+    /** The accounts the database would say are deleted (roadmap phase 14, decision 10). */
+    private val deleted = mutableSetOf<UserId>()
+
     private fun withApp(block: suspend ApplicationTestBuilder.() -> Unit) = testApplication {
         environment { config = MapApplicationConfig() }
         application {
             configureHttp()
-            configureAuthentication(tokens)
+            configureAuthentication(tokens) { userId -> userId !in deleted }
             routing {
                 authenticate(ACCESS) {
                     get("/me") { call.respondText("user ${call.accessPrincipal().userId.value}") }
@@ -93,6 +96,17 @@ class AuthenticationTest {
 
             assertEquals(HttpStatusCode.OK, response.status)
             assertEquals("user 1024", response.bodyAsText())
+        }
+
+        @Test
+        fun `a valid token of an account deleted since is 401 UNAUTHORIZED, on a route a guest may call too`() = withApp {
+            val token = token()
+            deleted += user.id
+
+            assertRefusedAs("UNAUTHORIZED", "Bearer $token")
+            val cart = call("/cart", "Bearer $token")
+            assertEquals(HttpStatusCode.Unauthorized, cart.status)
+            assertEquals("UNAUTHORIZED", cart.code())
         }
 
         @Test

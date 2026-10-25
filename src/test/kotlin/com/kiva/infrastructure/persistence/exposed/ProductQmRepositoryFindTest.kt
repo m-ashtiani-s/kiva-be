@@ -255,8 +255,9 @@ class ProductQmRepositoryFindTest {
         assertEquals(priceTag(1_450_000, 1_750_000), card.priceTag)
         assertEquals(
             listOf(
-                ProductCardQm.Color(product.color("lilac"), ColorKey.constructFromPersisted("lilac"), isDefault = true, available = 3),
-                ProductCardQm.Color(product.color("black"), ColorKey.constructFromPersisted("black"), isDefault = false, available = 0),
+                // Each color's own price: lilac its own tag, black the product's (phase 9, a wishlist's price drop).
+                ProductCardQm.Color(product.color("lilac"), ColorKey.constructFromPersisted("lilac"), isDefault = true, available = 3, price = Money.constructFromPersisted(1_450_000)),
+                ProductCardQm.Color(product.color("black"), ColorKey.constructFromPersisted("black"), isDefault = false, available = 0, price = Money.constructFromPersisted(1_750_000)),
             ),
             card.colors,
         )

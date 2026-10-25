@@ -2,6 +2,7 @@ package com.kiva.application.util.factory
 
 import com.kiva.common.valueobject.Slug
 import com.kiva.domain.aggregate.category.entity.Category
+import com.kiva.domain.aggregate.category.model.valueobject.CategoryDescription
 import com.kiva.domain.aggregate.category.model.valueobject.CategoryIcon
 import com.kiva.domain.aggregate.category.model.valueobject.CategoryId
 import com.kiva.domain.aggregate.category.model.valueobject.CategoryName
@@ -22,7 +23,7 @@ object CategoryFactory {
         id = CategoryId.constructFromPersisted(id),
         slug = Slug.constructFromPersisted(slug),
         name = CategoryName.constructFromPersisted(name),
-        description = description,
+        description = description?.let(CategoryDescription::constructFromPersisted),
         icon = CategoryIcon(iconBagType, ColorKey.constructFromPersisted(iconColorKey)),
         sortOrder = sortOrder,
         showInMenu = showInMenu,

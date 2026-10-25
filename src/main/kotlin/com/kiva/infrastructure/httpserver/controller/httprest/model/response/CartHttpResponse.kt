@@ -12,6 +12,7 @@ import com.kiva.domain.aggregate.order.model.valueobject.FreeShippingProgress
 import com.kiva.domain.aggregate.order.model.valueobject.OrderTotals
 import com.kiva.domain.aggregate.order.model.valueobject.ShippingQuote
 import com.kiva.domain.aggregate.settings.model.valueobject.ShippingMethodCode
+import com.kiva.infrastructure.media.MediaUrls
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
@@ -42,7 +43,7 @@ data class CartHttpResponse(
     val updatedAt: String,
 ) {
     companion object {
-        fun from(cart: CartDto, issues: List<CartIssueDto>): CartHttpResponse {
+        fun from(cart: CartDto, issues: List<CartIssueDto>, urls: MediaUrls): CartHttpResponse {
             val methodNames = cart.shippingOptions.associate { it.method.code to it.method.name }
             fun nameOf(method: ShippingMethodCode): String = methodNames[method] ?: method.name
             val chosenName = nameOf(cart.shippingMethod)
@@ -50,7 +51,7 @@ data class CartHttpResponse(
             return CartHttpResponse(
                 id = cart.id,
                 isGuest = cart.isGuest,
-                items = cart.items.map(CartItemHttpResponse::from),
+                items = cart.items.map { CartItemHttpResponse.from(it, urls) },
                 totals = CartTotalsHttpResponse.from(cart.totals),
                 shippingMethod = cart.shippingMethod.name,
                 shippingOptions = cart.shippingOptions.map { ShippingOptionQuoteHttpResponse.from(it, cart.shippingMethod, ::nameOf) },
@@ -68,8 +69,8 @@ data class CartHttpResponse(
 }
 
 /**
- * Contract schema `CartItem`. [image] is `null` until photos are uploaded, as on the product card; [isWishlisted] is
- * `null` until the wishlist exists.
+ * Contract schema `CartItem`. [image] is the color's first photo, `null` while it has none (as on the product card);
+ * [isWishlisted]: true or false on a customer's cart, null on a guest's (phase 9, decision 15).
  */
 @Serializable
 data class CartItemHttpResponse(
@@ -92,7 +93,7 @@ data class CartItemHttpResponse(
     val addedAt: String,
 ) {
     companion object {
-        fun from(item: CartItemDto) = CartItemHttpResponse(
+        fun from(item: CartItemDto, urls: MediaUrls) = CartItemHttpResponse(
             id = item.id,
             productId = item.productId,
             variantId = item.variantId,
@@ -105,7 +106,7 @@ data class CartItemHttpResponse(
                 url = "/product/${item.product.slug}?color=${item.color.key}",
             ),
             color = item.color.let { ColorHttpResponse(it.key, it.name, it.hex, it.isLight, it.sortOrder) },
-            image = null,
+            image = item.image?.let { MediaAssetHttpResponse.from(it, urls) },
             quantity = item.quantity,
             maxQuantity = item.maxQuantity,
             purchasable = item.purchasable,
@@ -115,7 +116,7 @@ data class CartItemHttpResponse(
             lineCompareAtTotal = item.lineTotals.compareAtTotal?.toman,
             lineDiscount = item.lineTotals.discount.toman,
             stock = StockInfoHttpResponse.from(item.stock),
-            isWishlisted = null,
+            isWishlisted = item.isWishlisted,
             addedAt = item.addedAt.toString(),
         )
     }

@@ -21,10 +21,11 @@ import kotlinx.serialization.json.JsonPrimitive
  * ```json
  * { "status": 400, "code": "VALIDATION_ERROR", "message": "چند تا از فیلدها رو باید درست کنی",
  *   "instance": "/api/v1/me/addresses", "traceId": "4bf92f3577b34da6",
- *   "errors": [ { "field": "postalCode", "code": "POSTAL_CODE_INVALID", "message": "..." } ] }
+ *   "errors": [ { "field": "postalCode", "code": "POSTAL_CODE_INVALID", "message": "...", "meta": null } ] }
  * ```
  * - `code` is for the client's logic, `message` is shown to the user as-is.
- * - `errors` only for field problems, `meta` only when the failure carries extra values.
+ * - `errors` only for field problems, `meta` only when the failure carries extra values; a field problem's own values
+ *   (the limits its message names) go in its own `meta`.
  */
 @Serializable
 data class ProblemHttpResponse(
@@ -37,8 +38,9 @@ data class ProblemHttpResponse(
     val meta: JsonObject? = null,
 )
 
+/** Contract schema `FieldError`. [meta] is what [message] was filled from (`min`, `max`, `maxLength`, …), or null. */
 @Serializable
-data class FieldErrorHttpResponse(val field: String, val code: String, val message: String)
+data class FieldErrorHttpResponse(val field: String, val code: String, val message: String, val meta: JsonObject? = null)
 
 /** The one place where a business failure kind becomes an HTTP status. */
 fun FailureKind.toHttpStatus(): HttpStatusCode = when (this) {
@@ -49,6 +51,9 @@ fun FailureKind.toHttpStatus(): HttpStatusCode = when (this) {
     FailureKind.CONFLICT -> HttpStatusCode.Conflict
     FailureKind.BUSINESS_RULE -> HttpStatusCode.UnprocessableEntity
     FailureKind.RATE_LIMITED -> HttpStatusCode.TooManyRequests
+    FailureKind.PRECONDITION_FAILED -> HttpStatusCode.PreconditionFailed
+    FailureKind.PAYLOAD_TOO_LARGE -> HttpStatusCode.PayloadTooLarge
+    FailureKind.UNSUPPORTED_MEDIA_TYPE -> HttpStatusCode.UnsupportedMediaType
 }
 
 /**
@@ -86,7 +91,7 @@ private fun fieldErrorsOf(failure: ResultFailure, parentPath: String?): List<Fie
     val path = listOfNotNull(parentPath, failure.field).joinToString(".").ifEmpty { null }
     if (failure.causes.isNotEmpty()) return failure.causes.flatMap { fieldErrorsOf(it, path) }
     if (path == null) return emptyList()
-    return listOf(FieldErrorHttpResponse(path, failure.code, ErrorMessages.messageFor(failure.code, failure.kind, failure.meta)))
+    return listOf(FieldErrorHttpResponse(path, failure.code, ErrorMessages.messageFor(failure.code, failure.kind, failure.meta), failure.meta.toJsonOrNull()))
 }
 
 /** A problem that doesn't come from a failure (unreadable body, unknown route, crash). */

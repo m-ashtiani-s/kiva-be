@@ -263,8 +263,8 @@ class CommonShowcaseTest {
         assertEquals(
             json(
                 """{"status":400,"code":"VALIDATION_ERROR","message":"چند تا از فیلدها رو باید درست کنی","errors":[
-                     {"field":"name","code":"PRODUCT_NAME_BLANK","message":"این مقدار درست نیست"},
-                     {"field":"price","code":"MONEY_NEGATIVE","message":"مبلغ نمی‌تونه منفی باشه"}],"meta":null}""",
+                     {"field":"name","code":"PRODUCT_NAME_BLANK","message":"این مقدار درست نیست","meta":null},
+                     {"field":"price","code":"MONEY_NEGATIVE","message":"مبلغ نمی‌تونه منفی باشه","meta":null}],"meta":null}""",
             ),
             response.problem(),
         )
@@ -302,8 +302,8 @@ class CommonShowcaseTest {
         assertEquals(HttpStatusCode.BadRequest, response.status)
         assertEquals(
             json(
-                """[{"field":"page","code":"PAGE_INVALID","message":"شماره‌ی صفحه درست نیست"},
-                    {"field":"sort","code":"SORT_NOT_ALLOWED","message":"این نوع مرتب‌سازی پشتیبانی نمی‌شه"}]""",
+                """[{"field":"page","code":"PAGE_INVALID","message":"شماره‌ی صفحه درست نیست","meta":null},
+                    {"field":"sort","code":"SORT_NOT_ALLOWED","message":"این نوع مرتب‌سازی پشتیبانی نمی‌شه","meta":{"allowed":["name","price_asc","price_desc"]}}]""",
             ),
             response.json().jsonObject.getValue("errors"),
         )

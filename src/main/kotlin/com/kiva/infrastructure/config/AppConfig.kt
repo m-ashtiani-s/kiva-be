@@ -2,22 +2,28 @@ package com.kiva.infrastructure.config
 
 import com.kiva.common.valueobject.IranianMobileNumber
 import com.kiva.infrastructure.auth.sms.FarazSmsConfig
+import com.kiva.infrastructure.email.EmailConfig
+import com.kiva.infrastructure.media.MediaConfig
 import com.kiva.infrastructure.payment.PaymentConfig
 import com.kiva.infrastructure.payment.PaymentProvider
 import com.kiva.infrastructure.payment.ZarinpalConfig
 import io.ktor.server.config.ApplicationConfig
+import java.nio.file.Paths
 import java.util.Base64
 
-/** @property auth no default: the app must not start without its secrets. */
+/** @property auth and [blog] no default: the app must not start without its secrets. */
 data class AppConfig(
     val datasource: DatasourceConfig,
     val auth: AuthConfig,
+    val blog: BlogConfig,
     val shop: ShopConfig = ShopConfig.DEFAULT,
     val seed: SeedConfig = SeedConfig(enabled = false),
     val http: HttpConfig = HttpConfig(allowedOrigins = emptyList()),
     val sms: SmsConfig = SmsConfig(SmsProvider.LOG),
     val payment: PaymentConfig = PaymentConfig.DEFAULT,
     val jobs: JobsConfig = JobsConfig(enabled = false),
+    val media: MediaConfig = MediaConfig.DEFAULT,
+    val email: EmailConfig = EmailConfig.LOG,
 ) {
     companion object {
         fun from(config: ApplicationConfig): AppConfig {
@@ -35,6 +41,7 @@ data class AppConfig(
                     maxSmsPerHour = config.property("kiva.auth.maxSmsPerHour").getString().toInt(),
                     bootstrapAdminPhoneRaw = config.propertyOrNull("kiva.auth.bootstrapAdminPhone")?.getString(),
                 ),
+                blog = BlogConfig.of(config.propertyOrNull("kiva.blog.voterPepper")?.getString()),
                 shop = ShopConfig(siteUrl = config.property("kiva.shop.siteUrl").getString()),
                 // Strict: a typo such as "yes" stops the boot instead of quietly meaning false.
                 seed = SeedConfig(enabled = config.property("kiva.seed.enabled").getString().toBooleanStrict()),
@@ -43,6 +50,7 @@ data class AppConfig(
                     trustedProxyHops = config.property("kiva.http.trustedProxyHops").getString().toInt(),
                 ),
                 sms = SmsConfig.from(config),
+                email = EmailConfig.from(config),
                 payment = PaymentConfig(
                     provider = PaymentProvider.of(config.property("kiva.payment.provider").getString()),
                     callbackBaseUrl = config.property("kiva.payment.callbackBaseUrl").getString(),
@@ -55,6 +63,14 @@ data class AppConfig(
                 ),
                 // Strict too: a typo must not quietly stop expiring orders.
                 jobs = JobsConfig(enabled = config.property("kiva.jobs.enabled").getString().toBooleanStrict()),
+                media = MediaConfig(
+                    root = Paths.get(config.property("kiva.media.root").getString().trim()),
+                    publicBaseUrl = config.property("kiva.media.publicBaseUrl").getString().trim(),
+                    // Strict: on the server a typo must not quietly make the app serve files nginx should.
+                    serveLocally = config.property("kiva.media.serveLocally").getString().toBooleanStrict(),
+                    vipsBin = config.property("kiva.media.vipsBin").getString().trim(),
+                    ffmpegBin = config.property("kiva.media.ffmpegBin").getString().trim(),
+                ),
             )
         }
     }
@@ -120,14 +136,44 @@ class AuthConfig(
                 },
             )
 
-        private fun secretOf(base64: String?, name: String): ByteArray {
-            require(!base64.isNullOrBlank()) { "$name is not set. $HOW_TO_MAKE_ONE" }
-            return try {
-                Base64.getDecoder().decode(base64.trim())
-            } catch (e: IllegalArgumentException) {
-                throw IllegalArgumentException("$name is not base64. $HOW_TO_MAKE_ONE", e)
-            }
+    }
+}
+
+private const val HOW_TO_MAKE_A_SECRET = "Make one with `openssl rand -base64 32` and set it as an environment variable."
+
+/** A required secret from its base64 config value; missing or not base64 stops the boot, saying how to make one. */
+private fun secretOf(base64: String?, name: String): ByteArray {
+    require(!base64.isNullOrBlank()) { "$name is not set. $HOW_TO_MAKE_A_SECRET" }
+    return try {
+        Base64.getDecoder().decode(base64.trim())
+    } catch (e: IllegalArgumentException) {
+        throw IllegalArgumentException("$name is not base64. $HOW_TO_MAKE_A_SECRET", e)
+    }
+}
+
+/**
+ * The blog's secret (roadmap phase 15, decision 14).
+ *
+ * @property voterPepper the key a guest's address is hashed with before a vote of «مفید بود؟» is kept
+ *   (`KIVA_BLOG_VOTER_PEPPER`), at least 32 bytes. Outside the database, so a copy of it can't be matched against addresses.
+ */
+class BlogConfig(voterPepper: ByteArray) {
+
+    private val pepper = voterPepper.copyOf()
+
+    val voterPepper: ByteArray get() = pepper.copyOf()
+
+    init {
+        require(pepper.size >= AuthConfig.MIN_SECRET_BYTES) {
+            "kiva.blog.voterPepper (KIVA_BLOG_VOTER_PEPPER) must be at least ${AuthConfig.MIN_SECRET_BYTES} bytes, was ${pepper.size}. $HOW_TO_MAKE_A_SECRET"
         }
+    }
+
+    // Never the secret itself, if this object is ever printed.
+    override fun toString() = "BlogConfig(voterPepper=<hidden>)"
+
+    companion object {
+        fun of(voterPepperBase64: String?): BlogConfig = BlogConfig(secretOf(voterPepperBase64, "kiva.blog.voterPepper (KIVA_BLOG_VOTER_PEPPER)"))
     }
 }
 
@@ -152,6 +198,18 @@ data class SmsConfig(val provider: SmsProvider, val faraz: FarazSmsConfig? = nul
                     codePattern = config.property("kiva.sms.faraz.codePattern").getString().trim(),
                     phoneChangedPattern = optional("phoneChangedPattern"),
                     orderPaidPattern = optional("orderPaidPattern"),
+                    photosSentPattern = optional("photosSentPattern"),
+                    refundCompletedPattern = optional("refundCompletedPattern"),
+                    orderCancelledPattern = optional("orderCancelledPattern"),
+                    orderShippedPattern = optional("orderShippedPattern"),
+                    orderDeliveredPattern = optional("orderDeliveredPattern"),
+                    changeResolvedPattern = optional("changeResolvedPattern"),
+                    returnApprovedPattern = optional("returnApprovedPattern"),
+                    returnRejectedPattern = optional("returnRejectedPattern"),
+                    returnPickupPattern = optional("returnPickupPattern"),
+                    returnClosedPattern = optional("returnClosedPattern"),
+                    backInStockPattern = optional("backInStockPattern"),
+                    contactRepliedPattern = optional("contactRepliedPattern"),
                 ),
             )
         }

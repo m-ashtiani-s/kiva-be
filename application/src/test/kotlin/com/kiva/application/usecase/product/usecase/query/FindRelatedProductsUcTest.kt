@@ -1,5 +1,8 @@
 package com.kiva.application.usecase.product.usecase.query
 
+import com.kiva.application.util.UnusedColorRepository
+import com.kiva.application.util.UnusedCategoryRepository
+import com.kiva.application.util.UnusedProductQmRepository
 import com.kiva.application.repository.ProductCardQm
 import com.kiva.application.repository.ProductDetailQm
 import com.kiva.application.repository.ProductFacetsQm
@@ -40,7 +43,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 /** The read model as far as related products need it: [related] for a product in the shop, null for any other. */
-private class RelatedReadModel(var related: List<ProductCardQm>?) : ProductQmRepository {
+private class RelatedReadModel(var related: List<ProductCardQm>?) : UnusedProductQmRepository() {
     var asked: Pair<ProductId, Int>? = null
 
     override fun findRelated(productId: ProductId, limit: Int): List<ProductCardQm>? {
@@ -48,23 +51,13 @@ private class RelatedReadModel(var related: List<ProductCardQm>?) : ProductQmRep
         return related
     }
 
-    override fun find(filter: ProductFilter, pageable: Pageable): Page<ProductCardQm> = error("not used here")
-
     override fun findDetail(ref: ProductRef): ProductDetailQm? = error("not used here")
-
-    override fun facets(filter: ProductFilter, now: Instant): ProductFacetsQm = error("not used here")
 
     override fun findVariant(variantId: VariantId): VariantQm? = error("not used here")
 
-    override fun isSlugTaken(slug: Slug): Boolean = error("not used here")
-
     override fun findTakenSkus(skus: Collection<Sku>): Set<Sku> = error("not used here")
 
-    override fun countActiveByCategory(): Map<Slug, Int> = error("not used here")
-
     override fun countActiveByMaterial(): Map<Slug, Int> = error("not used here")
-
-    override fun countActiveByColor(): Map<ColorKey, Int> = error("not used here")
 
     override fun refreshSearchText(of: ProductQmRepository.NamedInSearch): Int = error("not used here")
 }
@@ -86,20 +79,18 @@ class FindRelatedProductsUcTest {
         soldCount = 0,
         newUntil = null,
         maxPerOrder = MaxPerOrder.DEFAULT,
-        colors = listOf(ProductCardQm.Color(VariantId.constructFromPersisted(901), ColorKey.constructFromPersisted("black"), isDefault = true, available = 2)),
+        colors = listOf(ProductCardQm.Color(VariantId.constructFromPersisted(901), ColorKey.constructFromPersisted("black"), isDefault = true, available = 2, price = Money.constructFromPersisted(1_450_000))),
     )
     private val readModel = RelatedReadModel(listOf(hasti))
 
-    private val categories = object : CategoryRepository {
+    private val categories = object : UnusedCategoryRepository() {
         private val all = listOf(CategoryFactory.generate(id = 1, slug = "shoulder", name = "کیف دوشی"))
         override fun findAll(): List<Category> = all
-        override fun findBySlug(slug: Slug): Category? = error("not used here")
         override fun findById(id: CategoryId): Category? = error("not used here")
     }
-    private val colors = object : ColorRepository {
+    private val colors = object : UnusedColorRepository() {
         private val palette = listOf(ColorFactory.generate(key = "black", name = "مشکی", hex = "#2B2930", isLight = false, sortOrder = 1))
         override fun findAll(): List<Color> = palette
-        override fun findByKey(key: ColorKey): Color? = error("not used here")
     }
 
     private val useCase = FindRelatedProductsUc(

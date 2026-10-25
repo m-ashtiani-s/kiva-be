@@ -9,7 +9,6 @@ val seedModule = module(createdAtStart = true) {
     single {
         DevCatalogSeeder(
             createProductUc = get(),
-            adjustInventoryUc = get(),
             listCategoriesUc = get(),
             listMaterialsUc = get(),
             clock = get(),

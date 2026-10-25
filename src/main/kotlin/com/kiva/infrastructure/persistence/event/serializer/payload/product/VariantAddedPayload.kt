@@ -5,6 +5,7 @@ import com.kiva.common.event.valueobject.EventSequence
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
 import com.kiva.domain.aggregate.product.entity.event.VariantAdded
+import com.kiva.domain.aggregate.product.model.valueobject.Barcode
 import com.kiva.domain.aggregate.product.model.valueobject.ProductId
 import com.kiva.domain.aggregate.product.model.valueobject.Sku
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
@@ -26,6 +27,7 @@ data class VariantAddedPayload(
     val isDefault: Boolean,
     val sortOrder: Int,
     val media: List<ProductMediaPayload>,
+    val barcode: String? = null,
 ) : EventPayload<VariantAdded> {
 
     constructor(event: VariantAdded) : this(
@@ -41,6 +43,7 @@ data class VariantAddedPayload(
         isDefault = event.isDefault,
         sortOrder = event.sortOrder,
         media = event.media.map { ProductMediaPayload(it) },
+        barcode = event.barcode?.value,
     )
 
     override fun toDomainEvent(): VariantAdded = VariantAdded(
@@ -55,6 +58,7 @@ data class VariantAddedPayload(
         isDefault = isDefault,
         sortOrder = sortOrder,
         media = media.map { it.toDomain() },
+        barcode = barcode?.let(Barcode::constructFromPersisted),
         id = EventId.constructFromPersisted(id),
     )
 }

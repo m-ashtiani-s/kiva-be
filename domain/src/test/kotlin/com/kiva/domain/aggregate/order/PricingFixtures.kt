@@ -12,6 +12,8 @@ import com.kiva.domain.aggregate.settings.model.valueobject.PaymentGatewayCode
 import com.kiva.domain.aggregate.settings.model.valueobject.ShippingMethodCode
 import com.kiva.domain.aggregate.settings.model.valueobject.ShippingMethodCode.POST
 import com.kiva.domain.aggregate.settings.model.valueobject.ShippingMethodCode.TIPAX
+import com.kiva.domain.aggregate.settings.model.valueobject.ShopFeatures
+import com.kiva.domain.aggregate.settings.model.valueobject.SiteStats
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
@@ -75,6 +77,15 @@ object PricingFixtures {
         reservationEnabled = reservationEnabled,
         reservationHoldDays = reservationHoldDays,
         returnWindowDays = 7,
+        lowStockThreshold = 5,
+        preShipmentFeedbackHours = 24,
+        supportPhone = null,
+        supportEmail = null,
+        supportHours = emptyList(),
+        social = emptyList(),
+        siteStats = SiteStats.NONE,
+        features = ShopFeatures.NONE,
+        version = 0,
         paymentGateways = listOf(
             PaymentGatewayOption.constructFromPersisted(PaymentGatewayCode.ZARINPAL, "زرین‌پال", "#F2C230", "ز", null, isActive = true, isDefault = true, sortOrder = 1),
         ),

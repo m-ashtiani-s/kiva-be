@@ -12,6 +12,8 @@ import com.kiva.domain.aggregate.product.entity.event.ProductCreated
 import com.kiva.domain.aggregate.product.entity.event.ProductDetailsChanged
 import com.kiva.domain.aggregate.product.entity.event.ProductDomainEvent
 import com.kiva.domain.aggregate.product.entity.event.ProductPriceChanged
+import com.kiva.domain.aggregate.product.entity.event.ProductPublishScheduled
+import com.kiva.domain.aggregate.product.entity.event.ProductPublishUnscheduled
 import com.kiva.domain.aggregate.product.entity.event.ProductPublished
 import com.kiva.domain.aggregate.product.entity.event.ProductUnpublished
 import com.kiva.domain.aggregate.product.entity.event.VariantAdded
@@ -19,6 +21,7 @@ import com.kiva.domain.aggregate.product.entity.event.VariantChanged
 import com.kiva.domain.aggregate.product.entity.event.VariantDeactivated
 import com.kiva.domain.aggregate.product.entity.event.VariantMediaReplaced
 import com.kiva.domain.aggregate.product.entity.event.VariantReactivated
+import com.kiva.domain.aggregate.product.model.valueobject.Barcode
 import com.kiva.domain.aggregate.product.model.valueobject.PriceTag
 import com.kiva.domain.aggregate.product.model.valueobject.ProductDetails
 import com.kiva.domain.aggregate.product.model.valueobject.ProductId
@@ -29,6 +32,7 @@ import com.kiva.domain.aggregate.product.model.valueobject.ProductStatus.ARCHIVE
 import com.kiva.domain.aggregate.product.model.valueobject.ProductStatus.DRAFT
 import com.kiva.domain.aggregate.product.model.valueobject.Sku
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
+import java.time.Duration
 import java.time.Instant
 import kotlin.properties.Delegates
 
@@ -65,6 +69,10 @@ class Product private constructor() : EventSourceEntity<ProductDomainEvent>() {
     var status: ProductStatus = DRAFT
         private set
 
+    /** When a draft is set to go into the shop (the job publishes it then), or null. Only a draft has one. */
+    var publishAt: Instant? = null
+        private set
+
     private val variantList = mutableListOf<Variant>()
 
     /** The colors, in the order they were added (deactivated ones included). */
@@ -89,6 +97,9 @@ class Product private constructor() : EventSourceEntity<ProductDomainEvent>() {
     }
 
     companion object {
+        /** How far ahead a draft can be scheduled (the contract's 365 days). */
+        val MAX_SCHEDULE_AHEAD: Duration = Duration.ofDays(365)
+
         /**
          * A new product, always a DRAFT and without colors (add them with [addVariant]). Without a typed SKU it gets one
          * from its id (`KV-1001`). It can't fail: every part is already a valid value.
@@ -158,6 +169,7 @@ class Product private constructor() : EventSourceEntity<ProductDomainEvent>() {
         media: List<ProductMedia>,
         by: UserId,
         now: Instant,
+        barcode: Barcode? = null,
     ): Result<Product, AddVariantFailure> {
         if (!canBeEdited()) return Result.failure(AddVariantFailure.ProductIsArchived)
         require(variantList.none { it.id == variantId }) { "Variant ${variantId.value} is already on product ${id.value}" }
@@ -167,13 +179,13 @@ class Product private constructor() : EventSourceEntity<ProductDomainEvent>() {
         if (variantSku == this.sku || variantList.any { it.sku == variantSku }) return Result.failure(AddVariantFailure.SkuAlreadyUsed)
 
         val isDefault = makeDefault || defaultVariant() == null
-        raiseEvent(VariantAdded(id, nextSequence(), now, by, variantId, colorKey, variantSku, ownPriceTag, isDefault, sortOrder, media.toList()))
+        raiseEvent(VariantAdded(id, nextSequence(), now, by, variantId, colorKey, variantSku, ownPriceTag, isDefault, sortOrder, media.toList(), barcode))
         return Result.success(this)
     }
 
     /**
-     * Changes a color's own price tag (null = follow the product's) and its position, and can make it the default.
-     * [makeDefault] false leaves the default where it is: to move it, make another color the default.
+     * Changes a color's own price tag (null = follow the product's), its position and its barcode, and can make it the
+     * default. [makeDefault] false leaves the default where it is: to move it, make another color the default.
      * The same values again record nothing.
      */
     fun changeVariant(
@@ -183,17 +195,18 @@ class Product private constructor() : EventSourceEntity<ProductDomainEvent>() {
         makeDefault: Boolean,
         by: UserId,
         now: Instant,
+        barcode: Barcode? = findVariant(variantId)?.barcode,
     ): Result<Product, ChangeVariantFailure> {
         if (!canBeEdited()) return Result.failure(ChangeVariantFailure.ProductIsArchived)
         val variant = findVariant(variantId) ?: return Result.failure(ChangeVariantFailure.VariantNotFound(variantId))
         if (makeDefault && !variant.isActive) return Result.failure(ChangeVariantFailure.InactiveVariantCannotBeDefault)
 
         val isDefault = makeDefault || variant.isDefault
-        if (variant.ownPriceTag == ownPriceTag && variant.sortOrder == sortOrder && variant.isDefault == isDefault) {
+        if (variant.ownPriceTag == ownPriceTag && variant.sortOrder == sortOrder && variant.isDefault == isDefault && variant.barcode == barcode) {
             return Result.success(this)
         }
 
-        raiseEvent(VariantChanged(id, nextSequence(), now, by, variantId, ownPriceTag, sortOrder, isDefault))
+        raiseEvent(VariantChanged(id, nextSequence(), now, by, variantId, ownPriceTag, sortOrder, isDefault, barcode))
         return Result.success(this)
     }
 
@@ -254,6 +267,34 @@ class Product private constructor() : EventSourceEntity<ProductDomainEvent>() {
         return Result.success(this)
     }
 
+    /**
+     * Sets a draft to go into the shop at [at]: it stays a draft until then (the job publishes it). Only a draft with an
+     * active color can be scheduled, at most [MAX_SCHEDULE_AHEAD] ahead; a moment already passed is for the caller to
+     * publish right away instead. The same moment again changes nothing; another one replaces it.
+     */
+    fun schedulePublish(at: Instant, by: UserId, now: Instant): Result<Product, SchedulePublishFailure> {
+        when (status) {
+            ACTIVE -> return Result.failure(SchedulePublishFailure.PublishAtNotAllowed)
+            ARCHIVED -> return Result.failure(SchedulePublishFailure.ProductIsArchived)
+            DRAFT -> Unit
+        }
+        require(at.isAfter(now)) { "A schedule in the past is a publish now: $at <= $now" }
+        if (activeVariants().isEmpty()) return Result.failure(SchedulePublishFailure.NoActiveVariant)
+        if (at.isAfter(now.plus(MAX_SCHEDULE_AHEAD))) return Result.failure(SchedulePublishFailure.PublishAtTooFar)
+        if (at == publishAt) return Result.success(this)
+
+        raiseEvent(ProductPublishScheduled(id, nextSequence(), now, by, at))
+        return Result.success(this)
+    }
+
+    /** Calls off a draft's schedule; it stays a draft. */
+    fun unschedulePublish(by: UserId, now: Instant): Result<Product, UnschedulePublishFailure> {
+        if (publishAt == null) return Result.failure(UnschedulePublishFailure.NotScheduled)
+
+        raiseEvent(ProductPublishUnscheduled(id, nextSequence(), now, by))
+        return Result.success(this)
+    }
+
     /** ACTIVE back to DRAFT: out of the shop for now. */
     fun unpublish(by: UserId, now: Instant): Result<Product, UnpublishFailure> {
         when (status) {
@@ -287,9 +328,21 @@ class Product private constructor() : EventSourceEntity<ProductDomainEvent>() {
             }
             is ProductDetailsChanged -> details = event.details
             is ProductPriceChanged -> priceTag = event.priceTag
-            is ProductPublished -> status = ACTIVE
-            is ProductUnpublished -> status = DRAFT
-            is ProductArchived -> status = ARCHIVED
+            // Publishing, taking out or archiving always ends a schedule.
+            is ProductPublished -> {
+                status = ACTIVE
+                publishAt = null
+            }
+            is ProductUnpublished -> {
+                status = DRAFT
+                publishAt = null
+            }
+            is ProductArchived -> {
+                status = ARCHIVED
+                publishAt = null
+            }
+            is ProductPublishScheduled -> publishAt = event.publishAt
+            is ProductPublishUnscheduled -> publishAt = null
             is VariantAdded -> {
                 if (event.isDefault) variantList.replaceAll { it.copy(isDefault = false) }
                 variantList += Variant(
@@ -301,12 +354,13 @@ class Product private constructor() : EventSourceEntity<ProductDomainEvent>() {
                     isActive = true,
                     sortOrder = event.sortOrder,
                     media = event.media.toList(),
+                    barcode = event.barcode,
                 )
             }
             is VariantChanged -> {
                 if (event.isDefault) variantList.replaceAll { it.copy(isDefault = false) }
                 updateVariant(event.variantId) {
-                    it.copy(ownPriceTag = event.ownPriceTag, sortOrder = event.sortOrder, isDefault = event.isDefault)
+                    it.copy(ownPriceTag = event.ownPriceTag, sortOrder = event.sortOrder, isDefault = event.isDefault, barcode = event.barcode)
                 }
             }
             is VariantDeactivated -> {
@@ -405,6 +459,24 @@ class Product private constructor() : EventSourceEntity<ProductDomainEvent>() {
 
         data class InvalidStatusTransition(val from: ProductStatus, val to: ProductStatus) :
             PublishFailure("INVALID_STATUS_TRANSITION", FailureKind.BUSINESS_RULE, mapOf("from" to from.name, "to" to to.name))
+    }
+
+    sealed class SchedulePublishFailure(code: String, kind: FailureKind, field: String? = null, meta: Map<String, Any> = emptyMap()) :
+        ResultFailure(code, kind, field, meta = meta) {
+        /** Only a draft waits for its moment; a product in the shop is there already. */
+        data object PublishAtNotAllowed : SchedulePublishFailure("PUBLISH_AT_NOT_ALLOWED", FailureKind.INVALID, "publishAt")
+
+        data object ProductIsArchived : SchedulePublishFailure("PRODUCT_ARCHIVED", FailureKind.BUSINESS_RULE)
+
+        data object NoActiveVariant : SchedulePublishFailure("NO_ACTIVE_VARIANT", FailureKind.BUSINESS_RULE)
+
+        data object PublishAtTooFar :
+            SchedulePublishFailure("PUBLISH_AT_TOO_FAR", FailureKind.INVALID, "publishAt", mapOf("maxDays" to MAX_SCHEDULE_AHEAD.toDays().toInt()))
+    }
+
+    sealed class UnschedulePublishFailure(code: String, kind: FailureKind) : ResultFailure(code, kind) {
+        /** No schedule to call off: the draft is a draft already. */
+        data object NotScheduled : UnschedulePublishFailure("PRODUCT_ALREADY_DRAFT", FailureKind.BUSINESS_RULE)
     }
 
     sealed class UnpublishFailure(code: String, kind: FailureKind, meta: Map<String, Any> = emptyMap()) :

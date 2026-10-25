@@ -8,6 +8,12 @@ import com.kiva.domain.aggregate.order.model.valueobject.ShippingFreeReason
 import com.kiva.infrastructure.persistence.event.InventoryEventSamples
 import com.kiva.infrastructure.persistence.event.OrderEventSamples
 import com.kiva.infrastructure.persistence.event.ProductEventSamples
+import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderCancelledPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderChangeAppliedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderChangeRejectedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderChangeRequestedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderDeliveredPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderPhotosSentPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderPlacedPayload
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Nested
@@ -49,6 +55,28 @@ class DomainEventSerializerOrderTest {
             val printed = "${OrderEventSamples.orderPlaced} ${OrderPlacedPayload(OrderEventSamples.orderPlaced)}"
 
             listOf("ولیعصر", "0912", "1965843117", "@sara_m", "زنگ").forEach { assertFalse(it in printed, "$it in $printed") }
+        }
+
+        @Test
+        fun `printing a cancellation, the photos sent or a delivery shows none of the notes nor the operator's message`() {
+            val printed = listOf(
+                OrderEventSamples.orderCancelled, OrderCancelledPayload(OrderEventSamples.orderCancelled),
+                OrderEventSamples.orderPhotosSent, OrderPhotosSentPayload(OrderEventSamples.orderPhotosSent),
+                OrderEventSamples.orderDelivered, OrderDeliveredPayload(OrderEventSamples.orderDelivered),
+            ).joinToString(" ")
+
+            listOf("ارزون", "این کیف", "پیک").forEach { assertFalse(it in printed, "$it in $printed") }
+        }
+
+        @Test
+        fun `printing a change request, its rejection or its application shows none of the notes`() {
+            val printed = listOf(
+                OrderEventSamples.orderChangeRequested, OrderChangeRequestedPayload(OrderEventSamples.orderChangeRequested),
+                OrderEventSamples.orderChangeRejected, OrderChangeRejectedPayload(OrderEventSamples.orderChangeRejected),
+                OrderEventSamples.orderChangeApplied, OrderChangeAppliedPayload(OrderEventSamples.orderChangeApplied),
+            ).joinToString(" ")
+
+            listOf("مشکی‌اش", "تموم شده", "گذاشتیم").forEach { assertFalse(it in printed, "$it in $printed") }
         }
     }
 
@@ -149,12 +177,264 @@ class DomainEventSerializerOrderTest {
             }
         """.trimIndent()
 
+        private val orderPhotosAttachedJson = """
+            {
+              "id": "5d0f3a2c-8b1e-4c7d-9a6f-000000000006",
+              "orderId": 42,
+              "sequence": 5,
+              "occurredOn": "2026-10-12T08:00:00.123456789Z",
+              "occurredByUserId": 900,
+              "items": [
+                { "mediaId": "med_0000000000000000000001", "lineId": 1, "view": "FRONT", "sortOrder": 0 },
+                { "mediaId": "med_0000000000000000000002", "lineId": null, "view": null, "sortOrder": 1 }
+              ]
+            }
+        """.trimIndent()
+
+        private val orderPhotosSentJson = """
+            {
+              "id": "5d0f3a2c-8b1e-4c7d-9a6f-000000000007",
+              "orderId": 42,
+              "sequence": 6,
+              "occurredOn": "2026-10-12T08:00:00.123456789Z",
+              "occurredByUserId": 900,
+              "batchNo": 1,
+              "channel": "BALE",
+              "manual": true,
+              "message": "این کیف خودته",
+              "feedbackDeadline": "2026-10-13T08:00:00.123456789Z"
+            }
+        """.trimIndent()
+
+        private val orderPhotosApprovedJson = """
+            {
+              "id": "5d0f3a2c-8b1e-4c7d-9a6f-000000000008",
+              "orderId": 42,
+              "sequence": 7,
+              "occurredOn": "2026-10-12T08:00:00.123456789Z",
+              "occurredByUserId": 0,
+              "automatic": true
+            }
+        """.trimIndent()
+
+        private val orderShippedJson = """
+            {
+              "id": "5d0f3a2c-8b1e-4c7d-9a6f-000000000009",
+              "orderId": 42,
+              "sequence": 8,
+              "occurredOn": "2026-10-12T08:00:00.123456789Z",
+              "occurredByUserId": 900,
+              "carrier": "POST",
+              "trackingCode": "183920674512039845612307",
+              "shippedOn": "2026-10-13T06:30:00Z",
+              "showInDailyList": true,
+              "reservationGroupId": 1001
+            }
+        """.trimIndent()
+
+        private val orderShipmentCorrectedJson = """
+            {
+              "id": "5d0f3a2c-8b1e-4c7d-9a6f-000000000010",
+              "orderId": 42,
+              "sequence": 9,
+              "occurredOn": "2026-10-12T08:00:00.123456789Z",
+              "occurredByUserId": 900,
+              "trackingCode": "183920674512039845612308",
+              "shippedOn": "2026-10-13T06:00:00Z",
+              "showInDailyList": false
+            }
+        """.trimIndent()
+
+        private val orderDeliveredJson = """
+            {
+              "id": "5d0f3a2c-8b1e-4c7d-9a6f-000000000014",
+              "orderId": 42,
+              "sequence": 10,
+              "occurredOn": "2026-10-12T08:00:00.123456789Z",
+              "occurredByUserId": 900,
+              "returnableUntil": "2026-10-19T08:00:00.123456789Z",
+              "note": "با پیک رسید"
+            }
+        """.trimIndent()
+
+        private val orderCancelledJson = """
+            {
+              "id": "5d0f3a2c-8b1e-4c7d-9a6f-000000000015",
+              "orderId": 42,
+              "sequence": 5,
+              "occurredOn": "2026-10-12T08:00:00.123456789Z",
+              "occurredByUserId": 7,
+              "by": "CUSTOMER",
+              "reason": "FOUND_CHEAPER",
+              "note": "ارزون‌ترش رو پیدا کردم"
+            }
+        """.trimIndent()
+
+        private val orderRefundedJson = """
+            {
+              "id": "5d0f3a2c-8b1e-4c7d-9a6f-000000000016",
+              "orderId": 42,
+              "sequence": 6,
+              "occurredOn": "2026-10-12T08:00:00.123456789Z",
+              "occurredByUserId": 900,
+              "refundId": 31,
+              "amount": 3480000
+            }
+        """.trimIndent()
+
+        private val orderChangeRequestedJson = """
+            {
+              "id": "5d0f3a2c-8b1e-4c7d-9a6f-000000000021",
+              "orderId": 42,
+              "sequence": 8,
+              "occurredOn": "2026-10-12T08:00:00.123456789Z",
+              "occurredByUserId": 7,
+              "changeType": "COLOR",
+              "lineId": 1,
+              "desiredVariantId": 302,
+              "note": "می‌شه رنگ مشکی‌اش رو بفرستید؟"
+            }
+        """.trimIndent()
+
+        private val orderChangeRejectedJson = """
+            {
+              "id": "5d0f3a2c-8b1e-4c7d-9a6f-000000000022",
+              "orderId": 42,
+              "sequence": 9,
+              "occurredOn": "2026-10-12T08:00:00.123456789Z",
+              "occurredByUserId": 900,
+              "note": "مشکی تموم شده"
+            }
+        """.trimIndent()
+
+        private val orderLineReplacedJson = """
+            {
+              "id": "5d0f3a2c-8b1e-4c7d-9a6f-000000000023",
+              "orderId": 42,
+              "sequence": 9,
+              "occurredOn": "2026-10-12T08:00:00.123456789Z",
+              "occurredByUserId": 900,
+              "lineId": 1,
+              "line": {
+                "lineId": 1, "productId": 3, "variantId": 302,
+                "name": "کیف دستی آیدا", "slug": "aida-handbag", "sku": "KV-1003-BLACK",
+                "colorKey": "black", "colorName": "مشکی", "colorHex": "#1B1B1B",
+                "imageUrl": "2026/10/med_0000000000000000000009/480.webp",
+                "quantity": 1,
+                "priceTag": { "price": 2990000, "compareAtPrice": 3290000 },
+                "reservable": true, "returnable": true
+              },
+              "priceDifference": 200000
+            }
+        """.trimIndent()
+
+        private val orderLineRemovedJson = """
+            {
+              "id": "5d0f3a2c-8b1e-4c7d-9a6f-000000000024",
+              "orderId": 42,
+              "sequence": 9,
+              "occurredOn": "2026-10-12T08:00:00.123456789Z",
+              "occurredByUserId": 900,
+              "lineId": 2,
+              "paidShare": 621000
+            }
+        """.trimIndent()
+
+        private val orderChangeAppliedJson = """
+            {
+              "id": "5d0f3a2c-8b1e-4c7d-9a6f-000000000025",
+              "orderId": 42,
+              "sequence": 10,
+              "occurredOn": "2026-10-12T08:00:00.123456789Z",
+              "occurredByUserId": 900,
+              "changeType": "COLOR",
+              "variantId": 302,
+              "note": "مشکیش رو گذاشتیم",
+              "balanceDueAfter": 200000
+            }
+        """.trimIndent()
+
+        private val orderBalancePaidJson = """
+            {
+              "id": "5d0f3a2c-8b1e-4c7d-9a6f-000000000026",
+              "orderId": 42,
+              "sequence": 11,
+              "occurredOn": "2026-10-12T08:00:00.123456789Z",
+              "occurredByUserId": 7,
+              "paymentId": "pay_0000000000C3",
+              "amount": 200000
+            }
+        """.trimIndent()
+
+        private val orderReturnRequestedJson = """
+            {
+              "id": "5d0f3a2c-8b1e-4c7d-9a6f-000000000030",
+              "orderId": 42,
+              "sequence": 11,
+              "occurredOn": "2026-10-12T08:00:00.123456789Z",
+              "occurredByUserId": 7,
+              "returnId": 12
+            }
+        """.trimIndent()
+
+        private val orderReturnReceivedJson = """
+            {
+              "id": "5d0f3a2c-8b1e-4c7d-9a6f-000000000031",
+              "orderId": 42,
+              "sequence": 12,
+              "occurredOn": "2026-10-12T08:00:00.123456789Z",
+              "occurredByUserId": 900,
+              "returnId": 12
+            }
+        """.trimIndent()
+
+        private val orderReturnEndedJson = """
+            {
+              "id": "5d0f3a2c-8b1e-4c7d-9a6f-000000000032",
+              "orderId": 42,
+              "sequence": 13,
+              "occurredOn": "2026-10-12T08:00:00.123456789Z",
+              "occurredByUserId": 900,
+              "returnId": 12,
+              "outcome": "REFUNDED"
+            }
+        """.trimIndent()
+
+        private val orderPersonalDataErasedJson = """
+            {
+              "id": "5d0f3a2c-8b1e-4c7d-9a6f-000000000040",
+              "orderId": 42,
+              "sequence": 14,
+              "occurredOn": "2026-10-12T08:00:00.123456789Z",
+              "occurredByUserId": 7,
+              "reason": "ACCOUNT_DELETED"
+            }
+        """.trimIndent()
+
         private val stored = listOf(
             OrderEventSamples.orderPlaced to orderPlacedJson,
             OrderEventSamples.orderPaymentFailed to orderPaymentFailedJson,
             OrderEventSamples.orderPaid to orderPaidJson,
             OrderEventSamples.orderExpired to orderExpiredJson,
             OrderEventSamples.orderReleasedFromReservation to orderReleasedFromReservationJson,
+            OrderEventSamples.orderPhotosAttached to orderPhotosAttachedJson,
+            OrderEventSamples.orderPhotosSent to orderPhotosSentJson,
+            OrderEventSamples.orderPhotosApproved to orderPhotosApprovedJson,
+            OrderEventSamples.orderShipped to orderShippedJson,
+            OrderEventSamples.orderShipmentCorrected to orderShipmentCorrectedJson,
+            OrderEventSamples.orderDelivered to orderDeliveredJson,
+            OrderEventSamples.orderCancelled to orderCancelledJson,
+            OrderEventSamples.orderRefunded to orderRefundedJson,
+            OrderEventSamples.orderChangeRequested to orderChangeRequestedJson,
+            OrderEventSamples.orderChangeRejected to orderChangeRejectedJson,
+            OrderEventSamples.orderLineReplaced to orderLineReplacedJson,
+            OrderEventSamples.orderLineRemoved to orderLineRemovedJson,
+            OrderEventSamples.orderChangeApplied to orderChangeAppliedJson,
+            OrderEventSamples.orderBalancePaid to orderBalancePaidJson,
+            OrderEventSamples.orderReturnRequested to orderReturnRequestedJson,
+            OrderEventSamples.orderReturnReceived to orderReturnReceivedJson,
+            OrderEventSamples.orderReturnEnded to orderReturnEndedJson,
+            OrderEventSamples.orderPersonalDataErased to orderPersonalDataErasedJson,
         )
 
         @Test

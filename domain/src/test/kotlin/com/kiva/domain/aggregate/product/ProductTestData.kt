@@ -6,12 +6,14 @@ import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.category.model.valueobject.CategoryId
 import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
 import com.kiva.domain.aggregate.material.model.valueobject.MaterialId
+import com.kiva.domain.aggregate.media.model.valueobject.MediaId
+import com.kiva.domain.aggregate.media.model.valueobject.MediaType
 import com.kiva.domain.aggregate.product.entity.Product
 import com.kiva.domain.aggregate.product.model.valueobject.BagType
 import com.kiva.domain.aggregate.product.model.valueobject.Highlights
 import com.kiva.domain.aggregate.product.model.valueobject.MaterialDescription
 import com.kiva.domain.aggregate.product.model.valueobject.MaxPerOrder
-import com.kiva.domain.aggregate.product.model.valueobject.MediaType
+import com.kiva.domain.aggregate.product.model.valueobject.MediaView
 import com.kiva.domain.aggregate.product.model.valueobject.PriceTag
 import com.kiva.domain.aggregate.product.model.valueobject.ProductDetails
 import com.kiva.domain.aggregate.product.model.valueobject.ProductId
@@ -85,8 +87,11 @@ object ProductTestData {
         now = now,
     ).getOrNull()!!
 
-    fun photo(name: String): ProductMedia =
-        ProductMedia.constructFromPersisted(MediaType.IMAGE, "https://cdn.kiva.ir/p/1/$name.webp", null, null)
+    fun photo(name: String): ProductMedia = media(name, MediaType.IMAGE)
+
+    /** A gallery item whose file id is made from [name] (`med_front00000…`), so two names are two files. */
+    fun media(name: String, type: MediaType, view: MediaView = MediaView.FRONT): ProductMedia =
+        ProductMedia.constructFromPersisted(MediaId.constructFromPersisted("med_" + name.filter { it.isLetterOrDigit() }.padEnd(22, '0').take(22)), type, view, null)
 
     /** Every field of a product, its colors' too (a Variant's equals only compares ids): for replay tests. */
     fun Product.snapshot(): List<Any?> = listOf(

@@ -53,4 +53,7 @@ enum class SecurityEventType {
 
     /** The shop sent its cap of SMS in the last hour; no code goes out until the hour moves. */
     SMS_HOURLY_CAP_REACHED,
+
+    /** The user deleted their account (`DELETE /me`); `detail.ordersErased` is how many of its orders were made anonymous. */
+    ACCOUNT_DELETED,
 }

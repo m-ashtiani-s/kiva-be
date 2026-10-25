@@ -3,6 +3,7 @@ package com.kiva.infrastructure.persistence.exposed
 import com.kiva.application.port.IdempotencyStore
 import com.kiva.application.port.IdempotentRequest
 import com.kiva.application.port.RequestHash
+import com.kiva.common.valueobject.UserId
 import com.kiva.infrastructure.persistence.exposed.tbl.IdempotencyKeyTbl
 import org.jetbrains.exposed.v1.core.TextColumnType
 import org.jetbrains.exposed.v1.core.and
@@ -38,6 +39,8 @@ class IdempotencyStoreImpl : IdempotencyStore {
             IdempotencyStore.Earlier.OtherRequest
         }
     }
+
+    override fun deleteAllOf(userId: UserId): Int = IdempotencyKeyTbl.deleteWhere { IdempotencyKeyTbl.userId eq userId.value }
 
     override fun deleteRecordedBefore(before: Instant): Int = IdempotencyKeyTbl.deleteWhere { createdOn less before.atOffset(ZoneOffset.UTC) }
 

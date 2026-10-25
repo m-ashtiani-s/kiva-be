@@ -1,0 +1,7 @@
+# The owner's SMS alerts (tools/ops/alerts.sh); started by kiva-alerts.timer. LAUNCH.md, step 6.8.
+[Unit]
+Description=Kiva alerts: log, /health and backup, texted to the owner
+
+[Service]
+Type=oneshot
+ExecStart=/opt/kiva-ops/alerts.sh

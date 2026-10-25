@@ -2,11 +2,13 @@ package com.kiva.infrastructure.httpserver.controller.httprest.model.response
 
 import com.kiva.application.dto.OrderDetailDto
 import com.kiva.application.dto.OrderListDto
+import com.kiva.application.dto.PreShipmentMediaDto
 import com.kiva.application.usecase.order.usecase.command.ReorderUc
-import com.kiva.domain.aggregate.order.model.valueobject.OrderTotals
+import com.kiva.domain.aggregate.order.model.valueobject.OrderTotalsView
 import com.kiva.infrastructure.common.http.PageMetaHttpResponse
+import com.kiva.infrastructure.httpserver.API_V1
+import com.kiva.infrastructure.media.MediaUrls
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonObject
 
 /** Contract schema `OrderListResponse`: one page of order cards, and the counts of the tabs. */
 @Serializable
@@ -16,8 +18,8 @@ data class OrderListHttpResponse(
     val counts: OrderCountsHttpResponse,
 ) {
     companion object {
-        fun from(list: OrderListDto) = OrderListHttpResponse(
-            items = list.page.items.map(OrderSummaryHttpResponse::from),
+        fun from(list: OrderListDto, urls: MediaUrls) = OrderListHttpResponse(
+            items = list.page.items.map { OrderSummaryHttpResponse.from(it, urls) },
             meta = list.page.let { PageMetaHttpResponse(it.page, it.size, it.totalItems, it.totalPages, it.hasNext) },
             counts = list.counts.let { OrderCountsHttpResponse(it.all, it.current, it.delivered, it.cancelled) },
         )
@@ -28,9 +30,8 @@ data class OrderListHttpResponse(
 data class OrderCountsHttpResponse(val all: Long, val current: Long, val delivered: Long, val cancelled: Long)
 
 /**
- * Contract schema `OrderDetail`: every field of the card (OrderSummary) and the page's own. In this phase the photos
- * before shipping are still to come ([preShipmentMediaDetail] WAITING, no items), there are no returns and no invoice,
- * and the gift is never wrapped.
+ * Contract schema `OrderDetail`: every field of the card (OrderSummary) and the page's own: its returns newest first
+ * (phase 7). There is no invoice yet (phase 14), and the gift is never wrapped.
  */
 @Serializable
 data class OrderDetailHttpResponse(
@@ -59,14 +60,13 @@ data class OrderDetailHttpResponse(
     val timeline: List<OrderEventHttpResponse>,
     val customerNote: String?,
     val gift: OrderGiftHttpResponse?,
-    // ReturnRequest objects, from the returns phase on.
-    val returns: List<JsonObject>,
+    val returns: List<ReturnRequestHttpResponse>,
     val invoiceUrl: String?,
+    val refunds: List<RefundHttpResponse>,
 ) {
     companion object {
-        fun from(order: OrderDetailDto): OrderDetailHttpResponse {
-            val card = OrderSummaryHttpResponse.from(order.summary)
-            val messengerName = OrderTexts.messengerName(order.messenger.channel)
+        fun from(order: OrderDetailDto, urls: MediaUrls): OrderDetailHttpResponse {
+            val card = OrderSummaryHttpResponse.from(order.summary, urls)
             return OrderDetailHttpResponse(
                 code = card.code,
                 placedAt = card.placedAt,
@@ -83,40 +83,31 @@ data class OrderDetailHttpResponse(
                 shipment = card.shipment,
                 preShipmentMedia = card.preShipmentMedia,
                 actions = card.actions,
-                items = order.items.map(OrderItemHttpResponse::from),
+                items = order.items.map { OrderItemHttpResponse.from(it, urls) },
                 address = OrderAddressHttpResponse.from(order.address),
                 totals = OrderTotalsHttpResponse.from(order.totals),
                 payment = order.payment?.let(OrderPaymentInfoHttpResponse::from),
-                preShipmentMediaDetail = PreShipmentMediaHttpResponse(
-                    status = "WAITING",
-                    channel = order.messenger.channel.name,
-                    channelName = messengerName,
-                    phone = order.messenger.phone,
-                    note = order.messenger.note,
-                    sentAt = null,
-                    waitingMessage = OrderTexts.photosWaiting(messengerName),
-                    items = emptyList(),
-                    feedback = null,
-                    feedbackDeadline = null,
-                ),
+                preShipmentMediaDetail = PreShipmentMediaHttpResponse.from(order.photos, order.messenger, urls),
                 timeline = order.timeline.map { entry ->
                     OrderEventHttpResponse(
                         status = entry.status.name,
-                        label = OrderTexts.timelineLabel(entry.status),
+                        label = OrderTexts.timelineLabel(entry.kind, entry.status, order.summary.shippingMethodName, entry.amount),
                         at = entry.at.toString(),
-                        note = entry.failureReason?.let { PaymentTexts.failureReason(it, order.summary.status) },
+                        note = entry.failureReason?.let { PaymentTexts.failureReason(it, order.summary.status) } ?: entry.note,
                     )
                 },
                 customerNote = order.customerNote,
                 gift = order.gift?.let { OrderGiftHttpResponse(wrap = false, message = it.message) },
-                returns = emptyList(),
-                invoiceUrl = null,
+                returns = order.returns.map { ReturnRequestHttpResponse.from(it, urls) },
+                // Once it was paid, a cancelled or returned order too (roadmap phase 14, decision 13).
+                invoiceUrl = "$API_V1/me/orders/${order.summary.code}/invoice".takeIf { order.summary.paidOn != null },
+                refunds = order.refunds.map(RefundHttpResponse::from),
             )
         }
     }
 }
 
-/** Contract schema `OrderItem`: a line as bought. No photos yet; reviews and returns come in later phases. */
+/** Contract schema `OrderItem`: a line as bought. [returnableUntil] once delivered, for a returnable line; reviews come with phase 8. */
 @Serializable
 data class OrderItemHttpResponse(
     val id: Int,
@@ -135,7 +126,7 @@ data class OrderItemHttpResponse(
     val returnableUntil: String?,
 ) {
     companion object {
-        fun from(item: OrderDetailDto.Item) = OrderItemHttpResponse(
+        fun from(item: OrderDetailDto.Item, urls: MediaUrls) = OrderItemHttpResponse(
             id = item.lineId,
             productId = item.productId,
             variantId = item.variantId,
@@ -143,28 +134,31 @@ data class OrderItemHttpResponse(
             name = item.name,
             slug = item.slug,
             color = item.color.let { ColorHttpResponse(it.key, it.name, it.hex, it.isLight, it.sortOrder) },
-            image = item.imageUrl,
+            image = item.imageUrl?.let(urls::of),
             quantity = item.quantity,
             unitPrice = item.unitPrice.toman,
             unitCompareAtPrice = item.unitCompareAtPrice?.toman,
             lineTotal = item.lineTotal.toman,
-            reviewed = false,
-            returnableUntil = null,
+            reviewed = item.reviewed,
+            returnableUntil = item.returnableUntil?.toString(),
         )
     }
 }
 
-/** Contract schema `AddressSnapshot`. Personal data: [toString] shows none of it. */
+/**
+ * Contract schema `AddressSnapshot`. Personal data: [toString] shows none of it. An erased order's (its account deleted)
+ * has only the province and the city; the rest is null.
+ */
 @Serializable
 data class OrderAddressHttpResponse(
     val provinceName: String,
     val cityName: String,
-    val addressLine: String,
+    val addressLine: String?,
     val plaque: String?,
     val unit: String?,
-    val postalCode: String,
-    val recipientName: String,
-    val recipientPhone: String,
+    val postalCode: String?,
+    val recipientName: String?,
+    val recipientPhone: String?,
     val fullText: String,
 ) {
     override fun toString(): String = "OrderAddressHttpResponse(****)"
@@ -184,7 +178,10 @@ data class OrderAddressHttpResponse(
     }
 }
 
-/** Contract schema `OrderTotals`. No refunds or change requests yet. */
+/**
+ * Contract schema `OrderTotals`, as they stand now (OrderTotalsView): after a change request the current lines' amounts,
+ * [payable] everything paid, [balanceDue] what is owed; [refunded] is what the completed refunds gave back.
+ */
 @Serializable
 data class OrderTotalsHttpResponse(
     val itemsCompareAtTotal: Long,
@@ -201,7 +198,7 @@ data class OrderTotalsHttpResponse(
     val currency: String,
 ) {
     companion object {
-        fun from(totals: OrderTotals) = OrderTotalsHttpResponse(
+        fun from(totals: OrderTotalsView) = OrderTotalsHttpResponse(
             itemsCompareAtTotal = totals.itemsCompareAtTotal.toman,
             productDiscount = totals.productDiscount.toman,
             subtotal = totals.subtotal.toman,
@@ -211,16 +208,18 @@ data class OrderTotalsHttpResponse(
             shippingFreeReason = totals.shippingFreeReason?.name,
             giftWrapCost = 0,
             payable = totals.payable.toman,
-            refunded = 0,
-            balanceDue = 0,
+            refunded = totals.refunded.toman,
+            balanceDue = totals.balanceDue.toman,
             currency = PriceInfoHttpResponse.TOMAN,
         )
     }
 }
 
-/** Contract schema `OrderPaymentInfo`: the order's latest attempt to pay. */
+/** Contract schema `OrderPaymentInfo`: an attempt to pay the order, or ([purpose] BALANCE) what a change left owed. */
 @Serializable
 data class OrderPaymentInfoHttpResponse(
+    val purpose: String,
+    val amount: Long,
     val gateway: String,
     val gatewayName: String,
     val status: String,
@@ -230,6 +229,8 @@ data class OrderPaymentInfoHttpResponse(
 ) {
     companion object {
         fun from(payment: OrderDetailDto.Payment) = OrderPaymentInfoHttpResponse(
+            purpose = payment.purpose.name,
+            amount = payment.amount.toman,
             gateway = payment.gateway.name,
             gatewayName = payment.gatewayName,
             status = payment.outcome.name,
@@ -240,25 +241,120 @@ data class OrderPaymentInfoHttpResponse(
     }
 }
 
-/** Contract schema `PreShipmentMedia`. Personal data: [toString] shows the channel and status only. */
+/**
+ * Contract schema `PreShipmentMedia`: [items] is the last batch sent, and [waitingMessage] stands in while none was. The
+ * panel's answer to `PUT …/pre-shipment-media` is the same shape with the draft in [items] ([fromDraft]). Personal data:
+ * [toString] shows the channel and status only.
+ */
 @Serializable
 data class PreShipmentMediaHttpResponse(
     val status: String,
     val channel: String,
     val channelName: String,
-    val phone: String,
+    val phone: String?,
+    val username: String?,
     val note: String?,
     val sentAt: String?,
     val waitingMessage: String?,
-    // OrderMediaItem objects and the customer's feedback, from the photos phase on.
-    val items: List<JsonObject>,
-    val feedback: JsonObject?,
+    val items: List<OrderMediaItemHttpResponse>,
+    val feedback: PreShipmentFeedbackHttpResponse?,
     val feedbackDeadline: String?,
 ) {
     override fun toString(): String = "PreShipmentMediaHttpResponse(status=$status, channel=$channel)"
+
+    companion object {
+        /** What the customer sees: the batch sent, never the draft. */
+        fun from(photos: PreShipmentMediaDto, messenger: OrderDetailDto.Messenger, urls: MediaUrls) = of(photos, messenger, photos.sent, urls)
+
+        /** The panel's view of the draft it just set. */
+        fun fromDraft(photos: PreShipmentMediaDto, messenger: OrderDetailDto.Messenger, urls: MediaUrls) = of(photos, messenger, photos.draft, urls)
+
+        private fun of(photos: PreShipmentMediaDto, messenger: OrderDetailDto.Messenger, items: List<PreShipmentMediaDto.Photo>, urls: MediaUrls): PreShipmentMediaHttpResponse {
+            val messengerName = OrderTexts.messengerName(messenger.channel)
+            return PreShipmentMediaHttpResponse(
+                status = photos.status.name,
+                channel = messenger.channel.name,
+                channelName = messengerName,
+                phone = messenger.phone,
+                username = messenger.username,
+                note = messenger.note,
+                sentAt = photos.sentOn?.toString(),
+                waitingMessage = OrderTexts.photosWaiting(messengerName).takeIf { photos.sent.isEmpty() },
+                items = items.map { OrderMediaItemHttpResponse.from(it, urls) },
+                feedback = photos.feedback?.let(PreShipmentFeedbackHttpResponse::from),
+                feedbackDeadline = photos.feedbackDeadline?.toString(),
+            )
+        }
+    }
 }
 
-/** Contract schema `OrderEvent`: one line of the timeline. [note] says why an attempt to pay failed. */
+/** Contract schema `OrderMediaItem`: a MediaAsset, and the order line it shows, its view and when it was taken. */
+@Serializable
+data class OrderMediaItemHttpResponse(
+    val id: String,
+    val type: String,
+    val url: String,
+    val thumbnailUrl: String?,
+    val srcSet: List<MediaAssetHttpResponse.SrcSetItem>,
+    val posterUrl: String?,
+    val width: Int,
+    val height: Int,
+    val durationSec: Int?,
+    val mimeType: String,
+    val alt: String?,
+    val blurhash: String?,
+    val orderItemId: Int?,
+    val view: String?,
+    val capturedAt: String,
+) {
+    companion object {
+        fun from(photo: PreShipmentMediaDto.Photo, urls: MediaUrls): OrderMediaItemHttpResponse {
+            val asset = MediaAssetHttpResponse.from(photo.media, urls)
+            return OrderMediaItemHttpResponse(
+                id = asset.id, type = asset.type, url = asset.url, thumbnailUrl = asset.thumbnailUrl, srcSet = asset.srcSet, posterUrl = asset.posterUrl,
+                width = asset.width, height = asset.height, durationSec = asset.durationSec, mimeType = asset.mimeType, alt = asset.alt,
+                blurhash = asset.blurhash, orderItemId = photo.lineId, view = photo.view?.name, capturedAt = photo.capturedAt.toString(),
+            )
+        }
+    }
+}
+
+/**
+ * `PreShipmentMedia.feedback`: the customer's last answer. For a change request what they asked, and once staff resolved
+ * it, how ([resolution]); its fields stay null for «همونه!». Personal data: [toString] shows the decision only.
+ */
+@Serializable
+data class PreShipmentFeedbackHttpResponse(
+    val decision: String,
+    val changeType: String?,
+    val orderItemId: Int?,
+    val desiredVariantId: Long?,
+    val note: String?,
+    val at: String,
+    val resolution: ChangeResolutionHttpResponse?,
+) {
+    override fun toString(): String = "PreShipmentFeedbackHttpResponse(decision=$decision, changeType=$changeType)"
+
+    companion object {
+        fun from(feedback: PreShipmentMediaDto.Feedback) = PreShipmentFeedbackHttpResponse(
+            decision = feedback.decision.name,
+            changeType = feedback.changeType?.name,
+            orderItemId = feedback.lineId,
+            desiredVariantId = feedback.desiredVariantId,
+            note = feedback.note,
+            at = feedback.at.toString(),
+            resolution = feedback.resolution?.let { ChangeResolutionHttpResponse(it.decision.name, it.variantId, it.note, it.at.toString()) },
+        )
+    }
+}
+
+/** `PreShipmentMedia.feedback.resolution`: APPLY or REJECT, the color put in (COLOR, MODEL), staff's note for the customer. */
+@Serializable
+data class ChangeResolutionHttpResponse(val decision: String, val variantId: Long?, val note: String?, val at: String) {
+    override fun toString(): String = "ChangeResolutionHttpResponse(decision=$decision, variantId=$variantId)"
+}
+
+/** Contract schema `OrderEvent`: one line of the timeline. [note] says why an attempt to pay failed, or is staff's or the customer's note. */
 @Serializable
 data class OrderEventHttpResponse(val status: String, val label: String, val at: String, val note: String?)
 

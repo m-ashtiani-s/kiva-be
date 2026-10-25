@@ -25,7 +25,8 @@ class GetCustomerUc(
     override suspend fun execute(query: Qry): Result<AdminCustomerDto, Failure> {
         logger.info("GetCustomerUc.execute customer=${query.customerId.value}")
         return transactionManager.inTransaction {
-            val user = adminCustomerRepository.findById(query.customerId) ?: return@inTransaction Result.failure(Failure.NotFound)
+            // A deleted account is no customer any more (roadmap phase 14, decision 12).
+            val user = adminCustomerRepository.findById(query.customerId)?.takeUnless { it.isDeleted } ?: return@inTransaction Result.failure(Failure.NotFound)
             Result.success(AdminCustomerDto.from(user, orderQmRepository.purchasesOf(listOf(user.id))[user.id]))
         }
     }

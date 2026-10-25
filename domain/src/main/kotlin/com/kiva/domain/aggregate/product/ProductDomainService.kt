@@ -15,6 +15,7 @@ import com.kiva.domain.aggregate.color.repository.ColorRepository
 import com.kiva.domain.aggregate.material.model.valueobject.MaterialId
 import com.kiva.domain.aggregate.material.repository.MaterialRepository
 import com.kiva.domain.aggregate.product.entity.Product
+import com.kiva.domain.aggregate.product.model.valueobject.Barcode
 import com.kiva.domain.aggregate.product.model.valueobject.PriceTag
 import com.kiva.domain.aggregate.product.model.valueobject.ProductDetails
 import com.kiva.domain.aggregate.product.model.valueobject.ProductId
@@ -60,6 +61,7 @@ class ProductDomainService(
         val makeDefault: Boolean,
         val sortOrder: Int?,
         val media: List<ProductMedia>,
+        val barcode: Barcode? = null,
     )
 
     fun getProduct(id: ProductId): Result<Product, GetProductFailure> {
@@ -107,6 +109,7 @@ class ProductDomainService(
                 media = variant.media,
                 by = by,
                 now = now,
+                barcode = variant.barcode,
             ).unwrapOr { failure ->
                 return Result.failure(
                     when (failure) {
@@ -156,6 +159,7 @@ class ProductDomainService(
             media = variant.media,
             by = by,
             now = now,
+            barcode = variant.barcode,
         ).mapOnFailure {
             when (it) {
                 Product.AddVariantFailure.ProductIsArchived -> AddVariantFailure.ProductIsArchived

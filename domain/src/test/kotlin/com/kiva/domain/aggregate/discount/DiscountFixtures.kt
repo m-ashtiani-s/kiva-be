@@ -70,6 +70,9 @@ object DiscountFixtures {
         categoryIds = categoryIds.map(CategoryId::constructFromPersisted).toSet(),
         productIds = productIds.map(ProductId::constructFromPersisted).toSet(),
         isActive = isActive,
+        createdOn = Instant.parse("2026-10-01T00:00:00Z"),
+        updatedOn = Instant.parse("2026-10-01T00:00:00Z"),
+        version = 0,
     )
 
     val kiva10: DiscountCode = code()

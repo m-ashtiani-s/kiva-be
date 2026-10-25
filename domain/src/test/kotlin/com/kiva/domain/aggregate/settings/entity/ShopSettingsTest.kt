@@ -4,6 +4,8 @@ import com.kiva.common.valueobject.Money
 import com.kiva.domain.aggregate.settings.model.valueobject.DeliveryDays
 import com.kiva.domain.aggregate.settings.model.valueobject.PaymentGatewayCode
 import com.kiva.domain.aggregate.settings.model.valueobject.ShippingMethodCode
+import com.kiva.domain.aggregate.settings.model.valueobject.ShopFeatures
+import com.kiva.domain.aggregate.settings.model.valueobject.SiteStats
 import org.junit.jupiter.api.Test
 import java.time.DayOfWeek
 import kotlin.test.assertEquals
@@ -35,6 +37,15 @@ class ShopSettingsTest {
         reservationEnabled = false,
         reservationHoldDays = reservationHoldDays,
         returnWindowDays = returnWindowDays,
+        lowStockThreshold = 5,
+        preShipmentFeedbackHours = 24,
+        supportPhone = null,
+        supportEmail = null,
+        supportHours = emptyList(),
+        social = emptyList(),
+        siteStats = SiteStats.NONE,
+        features = ShopFeatures.NONE,
+        version = 0,
         paymentGateways = listOf(gateway(PaymentGatewayCode.ZARINPAL)),
     )
 

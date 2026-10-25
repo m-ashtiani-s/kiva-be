@@ -1,5 +1,7 @@
 package com.kiva.application.usecase.product.usecase.query
 
+import com.kiva.common.valueobject.UserId
+import com.kiva.application.usecase.wishlist.WishlistHearts
 import com.kiva.application.dto.ProductCardDto
 import com.kiva.application.repository.ProductQmRepository
 import com.kiva.application.usecase.product.ProductCards
@@ -31,12 +33,13 @@ class FindRelatedProductsUc(
     private val colorRepository: ColorRepository,
     private val clock: Clock,
     private val shopSettingsRepository: ShopSettingsRepository,
+    private val wishlistHearts: WishlistHearts = WishlistHearts.NONE,
 ) : QueryUseCase<FindRelatedProductsUc.Qry, List<ProductCardDto>, FindRelatedProductsUc.Failure> {
 
     private val logger = getLogger()
 
-    /** The path segment and `?limit=` as they arrived. */
-    data class Qry(val productId: String, val limit: String? = null)
+    /** The path segment and `?limit=` as they arrived; [viewer] the logged-in customer, for the hearts (none: a guest). */
+    data class Qry(val productId: String, val limit: String? = null, val viewer: UserId? = null)
 
     override suspend fun execute(query: Qry): Result<List<ProductCardDto>, Failure> {
         logger.info("FindRelatedProductsUc.execute productId=${query.productId} limit=${query.limit}")
@@ -51,8 +54,9 @@ class FindRelatedProductsUc(
             val related = productQmRepository.findRelated(productId, limit) ?: return@inTransaction Result.failure(Failure.ProductNotFound)
             val categories = categoryRepository.findAll().associateBy { it.slug }
             val palette = colorRepository.findAll().associateBy { it.key }
-            val freeShippingThreshold = shopSettingsRepository.get().freeShippingThreshold
-            Result.success(related.map { ProductCards.cardOf(it, categories.getValue(it.categorySlug), palette, now, freeShippingThreshold) })
+            val settings = shopSettingsRepository.get()
+            val cards = related.map { ProductCards.cardOf(it, categories.getValue(it.categorySlug), palette, now, settings.freeShippingThreshold, settings.lowStockThreshold) }
+            Result.success(wishlistHearts.mark(cards, query.viewer))
         }
     }
 

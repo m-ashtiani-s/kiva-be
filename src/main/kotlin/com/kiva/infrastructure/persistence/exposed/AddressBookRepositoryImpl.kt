@@ -53,6 +53,8 @@ class AddressBookRepositoryImpl : AddressBookRepository {
      * one default per customer and checks it statement by statement: removed rows first, then the changed rows that stop
      * being the default, then the other changes, and the new rows last.
      */
+    override fun deleteAllOf(userId: UserId): Int = AddressTbl.deleteWhere { AddressTbl.userId eq userId.value }
+
     override fun save(book: AddressBook) {
         val stored = rowsOf(book.userId).associate { it[AddressTbl.addressId] to it.toAddress() }
         val wanted = book.addresses.associateBy { it.id.value }

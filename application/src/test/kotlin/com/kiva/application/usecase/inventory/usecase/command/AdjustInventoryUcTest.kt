@@ -1,16 +1,28 @@
 package com.kiva.application.usecase.inventory.usecase.command
 
-import com.kiva.application.repository.ProductFacetsQm
+import com.kiva.application.dto.ActorNameDto
 import com.kiva.application.dto.InventoryAdjustmentDto
+import com.kiva.application.port.AuditChange
+import com.kiva.application.port.AuditEntry
+import com.kiva.application.port.AuditTrail
+import com.kiva.application.port.PanelActor
+import com.kiva.application.repository.InventoryAdjustmentQm
+import com.kiva.application.repository.InventoryAdjustmentQmRepository
 import com.kiva.application.repository.ProductCardQm
 import com.kiva.application.repository.ProductDetailQm
+import com.kiva.application.repository.ProductFacetsQm
 import com.kiva.application.repository.ProductFilter
 import com.kiva.application.repository.ProductQmRepository
 import com.kiva.application.repository.ProductRef
 import com.kiva.application.repository.VariantQm
+import com.kiva.application.usecase.audit.AuditAction
+import com.kiva.application.usecase.audit.AuditEntityType
 import com.kiva.application.util.MockTransactionManager
+import com.kiva.application.util.UnusedProductQmRepository
+import com.kiva.application.util.UnusedUserRepository
 import com.kiva.common.event.ConcurrentChangeException
 import com.kiva.common.event.valueobject.EventAggregateId
+import com.kiva.common.event.valueobject.EventId
 import com.kiva.common.pagination.Page
 import com.kiva.common.pagination.Pageable
 import com.kiva.common.railway.FailureKind
@@ -22,6 +34,7 @@ import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
 import com.kiva.domain.aggregate.inventory.InventoryDomainService
 import com.kiva.domain.aggregate.inventory.entity.Inventory
 import com.kiva.domain.aggregate.inventory.entity.event.InventoryDomainEvent
+import com.kiva.domain.aggregate.inventory.entity.event.StockAdjusted
 import com.kiva.domain.aggregate.inventory.model.valueobject.AdjustmentReason
 import com.kiva.domain.aggregate.inventory.model.valueobject.StockDelta
 import com.kiva.domain.aggregate.inventory.repository.InventoryRepository
@@ -29,6 +42,8 @@ import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
 import com.kiva.domain.aggregate.product.model.valueobject.ProductId
 import com.kiva.domain.aggregate.product.model.valueobject.Sku
 import com.kiva.domain.aggregate.product.model.valueobject.VariantId
+import com.kiva.domain.aggregate.user.entity.User
+import com.kiva.domain.aggregate.user.repository.UserRepository
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -44,7 +59,7 @@ import kotlin.test.assertNull
  * saved first, running [someoneElse] at that moment to make that other request's change.
  */
 private class InMemoryInventories : InventoryRepository {
-    private val streams = mutableMapOf<VariantId, List<InventoryDomainEvent>>()
+    val streams = mutableMapOf<VariantId, List<InventoryDomainEvent>>()
     var refuseNextSaves = 0
     var someoneElse: () -> Unit = {}
 
@@ -68,36 +83,43 @@ private class InMemoryInventories : InventoryRepository {
 }
 
 /** The read model as far as stock needs it: which colors some product has. */
-private class KnownColors(vararg colors: VariantQm) : ProductQmRepository {
+private class KnownColors(vararg colors: VariantQm) : UnusedProductQmRepository() {
     private val byId = colors.associateBy { it.variantId }
 
     override fun findVariant(variantId: VariantId): VariantQm? = byId[variantId]
 
-    override fun find(filter: ProductFilter, pageable: Pageable): Page<ProductCardQm> = error("not used here")
-
     override fun findDetail(ref: ProductRef): ProductDetailQm? = error("not used here")
-
-    override fun facets(filter: ProductFilter, now: Instant): ProductFacetsQm = error("not used here")
 
     override fun findRelated(productId: ProductId, limit: Int): List<ProductCardQm>? = error("not used here")
 
-    override fun isSlugTaken(slug: Slug): Boolean = error("not used here")
-
     override fun findTakenSkus(skus: Collection<Sku>): Set<Sku> = error("not used here")
-
-    override fun countActiveByCategory(): Map<Slug, Int> = error("not used here")
 
     override fun countActiveByMaterial(): Map<Slug, Int> = error("not used here")
 
-    override fun countActiveByColor(): Map<ColorKey, Int> = error("not used here")
-
     override fun refreshSearchText(of: ProductQmRepository.NamedInSearch): Int = error("not used here")
+}
+
+/** The history as the projector writes it: one row per StockAdjusted, with the stock on hand after it. */
+private class History(private val inventories: InMemoryInventories) : InventoryAdjustmentQmRepository {
+    override fun findByEventId(eventId: EventId): InventoryAdjustmentQm? {
+        val (variantId, stream) = inventories.streams.entries.firstOrNull { (_, events) -> events.any { it.id == eventId } } ?: return null
+        val upTo = stream.takeWhile { it.id != eventId } + stream.first { it.id == eventId }
+        val event = upTo.last() as StockAdjusted
+        return InventoryAdjustmentQm(
+            id = 7, variantId = variantId, sku = Sku.constructFromPersisted("KV-1001-LILAC"), delta = event.delta.value, reason = event.reason,
+            note = event.note?.value, stockAfter = Inventory(upTo).onHand, occurredOn = event.occurredOn, occurredBy = event.occurredByUserId,
+        )
+    }
+
+    override fun find(variantId: VariantId?, pageable: Pageable): Page<InventoryAdjustmentQm> = error("not used here")
 }
 
 class AdjustInventoryUcTest {
 
     private val now = Instant.parse("2026-10-06T08:00:00Z")
     private val staff = UserId.constructFromPersisted(1)
+    private val actor = PanelActor(staff, "10.0.0.1")
+    private val audit = mutableListOf<AuditEntry>()
     private val lilac = VariantId.constructFromPersisted(101)
 
     private val transactionManager = MockTransactionManager()
@@ -109,11 +131,22 @@ class AdjustInventoryUcTest {
         KnownColors(
             VariantQm(lilac, ProductId.constructFromPersisted(1), ColorKey.constructFromPersisted("lilac"), Sku.constructFromPersisted("KV-1001-LILAC"), isActive = true),
         ),
+        History(inventories),
+        object : UnusedUserRepository() {
+            override fun findById(id: UserId): User? = null
+        },
+        object : AuditTrail {
+            override fun record(entry: AuditEntry) {
+                audit += entry
+            }
+
+            override fun deleteRecordedBefore(before: Instant, limit: Int): Int = 0
+        },
         Clock.fixed(now, ZoneOffset.UTC),
     )
 
     private fun cmd(delta: Int, reason: String, note: String? = null, variantId: Long = 101) =
-        AdjustInventoryUc.Cmd(variantId, delta, reason, note, staff)
+        AdjustInventoryUc.Cmd(variantId, delta, reason, note, actor)
 
     /** [onHand] bags of lilac delivered before the test, [reserved] of them promised to one order. */
     private fun lilacInStock(onHand: Int, reserved: Int = 0) = inventories.changedElsewhere(lilac) {
@@ -130,20 +163,24 @@ class AdjustInventoryUcTest {
             val result = useCase.execute(cmd(12, "RESTOCK", note = "  بارنامه ۲۳۴ "))
 
             assertEquals(
-                Result.success(InventoryAdjustmentDto(101, "KV-1001-LILAC", 12, AdjustmentReason.RESTOCK, "بارنامه ۲۳۴", 12, 12, now, 1)),
+                Result.success(InventoryAdjustmentDto(7, 101, "KV-1001-LILAC", 12, AdjustmentReason.RESTOCK, "بارنامه ۲۳۴", 12, now, ActorNameDto.Unknown)),
                 result,
             )
+            val row = audit.single()
+            assertEquals(listOf<Any?>(AuditAction.INVENTORY_ADJUSTED, AuditEntityType.INVENTORY, "101", "KV-1001-LILAC"), listOf(row.action, row.entityType, row.entityId, row.entityLabel))
+            assertEquals(listOf(AuditChange("stockOnHand", "0", "12"), AuditChange("reason", null, "RESTOCK")), row.changes)
             assertEquals(12, stored()?.onHand)
             assertEquals(1, transactionManager.transactionsOpened)
         }
 
         @Test
-        fun `the stock after the change counts what is reserved`() = runTest {
+        fun `the stock after is what is on hand, reserved bags included`() = runTest {
             lilacInStock(onHand = 10, reserved = 3)
 
             val result = useCase.execute(cmd(-2, "DAMAGED"))
 
-            assertEquals(listOf(8, 5), result.getOrNull()?.let { listOf(it.onHandAfter, it.availableAfter) })
+            assertEquals(8, result.getOrNull()?.stockAfter)
+            assertEquals(listOf(AuditChange("stockOnHand", "10", "8"), AuditChange("reason", null, "DAMAGED")), audit.single().changes)
         }
     }
 
@@ -208,7 +245,7 @@ class AdjustInventoryUcTest {
 
             val result = useCase.execute(cmd(-1, "DAMAGED"))
 
-            assertEquals(6, result.getOrNull()?.onHandAfter)
+            assertEquals(6, result.getOrNull()?.stockAfter)
             assertEquals(6, stored()?.onHand)
             assertEquals(2, transactionManager.transactionsOpened)
         }

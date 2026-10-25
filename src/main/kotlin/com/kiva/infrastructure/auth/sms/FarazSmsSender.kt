@@ -1,11 +1,14 @@
 package com.kiva.infrastructure.auth.sms
 
+import com.kiva.application.port.SmsKind
 import com.kiva.application.port.SmsSender
 import com.kiva.common.logging.getLogger
 import com.kiva.common.valueobject.IranianMobileNumber
+import com.kiva.domain.aggregate.contact.model.valueobject.TicketCode
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpPurpose
+import com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnCode
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.plugins.HttpTimeout
@@ -37,6 +40,18 @@ import kotlin.coroutines.cancellation.CancellationException
  * | a login or phone-change code | [FarazSmsConfig.codePattern] («کد ورود: %code%») | `code` |
  * | «your account moved» to the old phone | [FarazSmsConfig.phoneChangedPattern], optional | `ending` (the new number's last 4 digits) |
  * | «پرداخت موفق» | [FarazSmsConfig.orderPaidPattern], optional | `order` (the order's code, `KV-218340`) |
+ * | «عکس کیفت فرستاده شد» | [FarazSmsConfig.photosSentPattern], optional | `order` |
+ * | «پولت برگشت» | [FarazSmsConfig.refundCompletedPattern], optional | `order` |
+ * | «لغو شد» | [FarazSmsConfig.orderCancelledPattern], optional | `order` |
+ * | «ارسال شد» | [FarazSmsConfig.orderShippedPattern], optional | `order`, `carrier` (its name), `tracking` |
+ * | «تحویل شد» | [FarazSmsConfig.orderDeliveredPattern], optional | `order` |
+ * | «درخواستت بررسی شد» | [FarazSmsConfig.changeResolvedPattern], optional | `order` |
+ * | «مرجوعی تأیید شد» | [FarazSmsConfig.returnApprovedPattern], optional | `code` (the return's code, `RT-1012`) |
+ * | «مرجوعی رد شد» | [FarazSmsConfig.returnRejectedPattern], optional | `code` |
+ * | «جمع‌آوری مرجوعی» | [FarazSmsConfig.returnPickupPattern], optional | `code`, `carrier` (its name) |
+ * | «مرجوعی بسته شد» | [FarazSmsConfig.returnClosedPattern], optional | `code` |
+ * | «موجود شد» | [FarazSmsConfig.backInStockPattern], optional; without it the job tells nobody | `product`, `link` |
+ * | «پشتیبانی رسیدگی کرد» | [FarazSmsConfig.contactRepliedPattern], optional | `code` (the contact message's, `CT-482113`) |
  *
  * A message without its pattern is not sent, and a WARN says so: the panel approves each pattern before it can be used,
  * and the code that sends the message goes on all the same (the phone still changes, the order is still paid).
@@ -62,6 +77,18 @@ class FarazSmsSender(private val config: FarazSmsConfig, engine: HttpClientEngin
         logger.info("SMS provider is Faraz SMS ($this)")
         if (config.phoneChangedPattern == null) logger.warn("Faraz SMS: no pattern for the «your account moved» notice (KIVA_FARAZ_PHONE_CHANGED_PATTERN); it won't be sent")
         if (config.orderPaidPattern == null) logger.warn("Faraz SMS: no pattern for «پرداخت موفق» (KIVA_FARAZ_ORDER_PAID_PATTERN); it won't be sent")
+        if (config.photosSentPattern == null) logger.warn("Faraz SMS: no pattern for «عکس کیفت فرستاده شد» (KIVA_FARAZ_PHOTOS_SENT_PATTERN); it won't be sent")
+        if (config.refundCompletedPattern == null) logger.warn("Faraz SMS: no pattern for «پولت برگشت» (KIVA_FARAZ_REFUND_COMPLETED_PATTERN); it won't be sent")
+        if (config.orderCancelledPattern == null) logger.warn("Faraz SMS: no pattern for «لغو شد» (KIVA_FARAZ_ORDER_CANCELLED_PATTERN); it won't be sent")
+        if (config.orderShippedPattern == null) logger.warn("Faraz SMS: no pattern for «ارسال شد» (KIVA_FARAZ_ORDER_SHIPPED_PATTERN); it won't be sent")
+        if (config.orderDeliveredPattern == null) logger.warn("Faraz SMS: no pattern for «تحویل شد» (KIVA_FARAZ_ORDER_DELIVERED_PATTERN); it won't be sent")
+        if (config.changeResolvedPattern == null) logger.warn("Faraz SMS: no pattern for «درخواستت بررسی شد» (KIVA_FARAZ_CHANGE_RESOLVED_PATTERN); it won't be sent")
+        if (config.returnApprovedPattern == null) logger.warn("Faraz SMS: no pattern for «مرجوعی تأیید شد» (KIVA_FARAZ_RETURN_APPROVED_PATTERN); it won't be sent")
+        if (config.returnRejectedPattern == null) logger.warn("Faraz SMS: no pattern for «مرجوعی رد شد» (KIVA_FARAZ_RETURN_REJECTED_PATTERN); it won't be sent")
+        if (config.returnPickupPattern == null) logger.warn("Faraz SMS: no pattern for «جمع‌آوری مرجوعی» (KIVA_FARAZ_RETURN_PICKUP_PATTERN); it won't be sent")
+        if (config.returnClosedPattern == null) logger.warn("Faraz SMS: no pattern for «مرجوعی بسته شد» (KIVA_FARAZ_RETURN_CLOSED_PATTERN); it won't be sent")
+        if (config.backInStockPattern == null) logger.warn("Faraz SMS: no pattern for «موجود شد» (KIVA_FARAZ_BACK_IN_STOCK_PATTERN); the stock alerts wait")
+        if (config.contactRepliedPattern == null) logger.warn("Faraz SMS: no pattern for «پشتیبانی رسیدگی کرد» (KIVA_FARAZ_CONTACT_REPLIED_PATTERN); it won't be sent")
     }
 
     /** How long to wait for the provider: to connect, and for the whole call. */
@@ -85,9 +112,77 @@ class FarazSmsSender(private val config: FarazSmsConfig, engine: HttpClientEngin
         send("«پرداخت موفق» of order ${orderCode.value}", pattern, to, mapOf("order" to orderCode.value))
     }
 
+    override suspend fun sendPhotosSent(to: IranianMobileNumber, orderCode: OrderCode) {
+        val pattern = config.photosSentPattern ?: return notSent("«عکس کیفت فرستاده شد» of order ${orderCode.value}", to)
+        send("«عکس کیفت فرستاده شد» of order ${orderCode.value}", pattern, to, mapOf("order" to orderCode.value))
+    }
+
+    override suspend fun sendRefundCompleted(to: IranianMobileNumber, orderCode: OrderCode) {
+        val pattern = config.refundCompletedPattern ?: return notSent("«پولت برگشت» of order ${orderCode.value}", to)
+        send("«پولت برگشت» of order ${orderCode.value}", pattern, to, mapOf("order" to orderCode.value))
+    }
+
+    override suspend fun sendOrderCancelled(to: IranianMobileNumber, orderCode: OrderCode) {
+        val pattern = config.orderCancelledPattern ?: return notSent("«لغو شد» of order ${orderCode.value}", to)
+        send("«لغو شد» of order ${orderCode.value}", pattern, to, mapOf("order" to orderCode.value))
+    }
+
+    override suspend fun sendOrderShipped(to: IranianMobileNumber, orderCode: OrderCode, carrierName: String, trackingCode: String) {
+        val pattern = config.orderShippedPattern ?: return notSent("«ارسال شد» of order ${orderCode.value}", to)
+        send("«ارسال شد» of order ${orderCode.value}", pattern, to, mapOf("order" to orderCode.value, "carrier" to carrierName, "tracking" to trackingCode))
+    }
+
+    override suspend fun sendOrderDelivered(to: IranianMobileNumber, orderCode: OrderCode) {
+        val pattern = config.orderDeliveredPattern ?: return notSent("«تحویل شد» of order ${orderCode.value}", to)
+        send("«تحویل شد» of order ${orderCode.value}", pattern, to, mapOf("order" to orderCode.value))
+    }
+
+    override suspend fun sendChangeResolved(to: IranianMobileNumber, orderCode: OrderCode) {
+        val pattern = config.changeResolvedPattern ?: return notSent("«درخواستت بررسی شد» of order ${orderCode.value}", to)
+        send("«درخواستت بررسی شد» of order ${orderCode.value}", pattern, to, mapOf("order" to orderCode.value))
+    }
+
+    override suspend fun sendReturnApproved(to: IranianMobileNumber, returnCode: ReturnCode) {
+        val pattern = config.returnApprovedPattern ?: return notSent("«مرجوعی تأیید شد» of return ${returnCode.value}", to)
+        send("«مرجوعی تأیید شد» of return ${returnCode.value}", pattern, to, mapOf("code" to returnCode.value))
+    }
+
+    override suspend fun sendReturnRejected(to: IranianMobileNumber, returnCode: ReturnCode) {
+        val pattern = config.returnRejectedPattern ?: return notSent("«مرجوعی رد شد» of return ${returnCode.value}", to)
+        send("«مرجوعی رد شد» of return ${returnCode.value}", pattern, to, mapOf("code" to returnCode.value))
+    }
+
+    override suspend fun sendReturnPickup(to: IranianMobileNumber, returnCode: ReturnCode, carrierName: String) {
+        val pattern = config.returnPickupPattern ?: return notSent("«جمع‌آوری مرجوعی» of return ${returnCode.value}", to)
+        send("«جمع‌آوری مرجوعی» of return ${returnCode.value}", pattern, to, mapOf("code" to returnCode.value, "carrier" to carrierName))
+    }
+
+    override suspend fun sendReturnClosed(to: IranianMobileNumber, returnCode: ReturnCode) {
+        val pattern = config.returnClosedPattern ?: return notSent("«مرجوعی بسته شد» of return ${returnCode.value}", to)
+        send("«مرجوعی بسته شد» of return ${returnCode.value}", pattern, to, mapOf("code" to returnCode.value))
+    }
+
+    override suspend fun sendBackInStock(to: IranianMobileNumber, productName: String, link: String) {
+        val pattern = config.backInStockPattern ?: return notSent("«موجود شد»", to)
+        send("«موجود شد»", pattern, to, mapOf("product" to productName, "link" to link))
+    }
+
+    override suspend fun sendContactReplied(to: IranianMobileNumber, ticketCode: TicketCode) {
+        val pattern = config.contactRepliedPattern ?: return notSent("«پشتیبانی رسیدگی کرد» of ${ticketCode.value}", to)
+        send("«پشتیبانی رسیدگی کرد» of ${ticketCode.value}", pattern, to, mapOf("code" to ticketCode.value))
+    }
+
+    override fun canSend(kind: SmsKind): Boolean = when (kind) {
+        SmsKind.BACK_IN_STOCK -> config.backInStockPattern != null
+    }
+
     override fun toString(): String =
         "FarazSmsSender(baseUrl=${config.baseUrl}, line=${config.lineNumber}, codePattern=${config.codePattern}, " +
-            "phoneChangedPattern=${config.phoneChangedPattern}, orderPaidPattern=${config.orderPaidPattern})"
+            "phoneChangedPattern=${config.phoneChangedPattern}, orderPaidPattern=${config.orderPaidPattern}, photosSentPattern=${config.photosSentPattern}, refundCompletedPattern=${config.refundCompletedPattern}, " +
+            "orderCancelledPattern=${config.orderCancelledPattern}, orderShippedPattern=${config.orderShippedPattern}, orderDeliveredPattern=${config.orderDeliveredPattern}, " +
+            "changeResolvedPattern=${config.changeResolvedPattern}, returnApprovedPattern=${config.returnApprovedPattern}, " +
+            "returnRejectedPattern=${config.returnRejectedPattern}, returnPickupPattern=${config.returnPickupPattern}, returnClosedPattern=${config.returnClosedPattern}, backInStockPattern=${config.backInStockPattern}, " +
+            "contactRepliedPattern=${config.contactRepliedPattern})"
 
     // ============ inside ============
 
@@ -150,6 +245,18 @@ class FarazSmsSender(private val config: FarazSmsConfig, engine: HttpClientEngin
  * @property codePattern the approved pattern of login and phone-change codes; its variable is `code`.
  * @property phoneChangedPattern optional; its variable is `ending`.
  * @property orderPaidPattern optional; its variable is `order`.
+ * @property photosSentPattern optional; its variable is `order`.
+ * @property refundCompletedPattern optional; its variable is `order`.
+ * @property orderCancelledPattern optional; its variable is `order`.
+ * @property orderShippedPattern optional; its variables are `order`, `carrier` and `tracking`.
+ * @property orderDeliveredPattern optional; its variable is `order`.
+ * @property changeResolvedPattern optional; its variable is `order`.
+ * @property returnApprovedPattern optional; its variable is `code` (the return's).
+ * @property returnRejectedPattern optional; its variable is `code`.
+ * @property returnPickupPattern optional; its variables are `code` and `carrier`.
+ * @property returnClosedPattern optional; its variable is `code`.
+ * @property backInStockPattern optional; its variables are `product` and `link`.
+ * @property contactRepliedPattern optional; its variable is `code` (the contact message's).
  */
 class FarazSmsConfig(
     val baseUrl: String,
@@ -158,6 +265,18 @@ class FarazSmsConfig(
     val codePattern: String,
     val phoneChangedPattern: String? = null,
     val orderPaidPattern: String? = null,
+    val photosSentPattern: String? = null,
+    val refundCompletedPattern: String? = null,
+    val orderCancelledPattern: String? = null,
+    val orderShippedPattern: String? = null,
+    val orderDeliveredPattern: String? = null,
+    val changeResolvedPattern: String? = null,
+    val returnApprovedPattern: String? = null,
+    val returnRejectedPattern: String? = null,
+    val returnPickupPattern: String? = null,
+    val returnClosedPattern: String? = null,
+    val backInStockPattern: String? = null,
+    val contactRepliedPattern: String? = null,
 ) {
     init {
         require(baseUrl.matches(Regex("https?://[^/\\s]+(/[^\\s]*)?")) && !baseUrl.endsWith("/")) {
@@ -165,14 +284,21 @@ class FarazSmsConfig(
         }
         require(apiKey.isNotBlank() && apiKey.none(Char::isWhitespace)) { "KIVA_FARAZ_API_KEY is empty or has spaces in it" }
         require(lineNumber.matches(Regex("\\+?[0-9]{4,20}"))) { "kiva.sms.faraz.lineNumber must be a line number, was '$lineNumber'" }
-        listOfNotNull(codePattern, phoneChangedPattern, orderPaidPattern).forEach { pattern ->
+        listOfNotNull(
+            codePattern, phoneChangedPattern, orderPaidPattern, photosSentPattern, refundCompletedPattern, orderCancelledPattern, orderShippedPattern, orderDeliveredPattern,
+            changeResolvedPattern, returnApprovedPattern, returnRejectedPattern, returnPickupPattern, returnClosedPattern, backInStockPattern,
+            contactRepliedPattern,
+        ).forEach { pattern ->
             require(pattern.matches(Regex("[A-Za-z0-9_-]{2,64}"))) { "A Faraz SMS pattern code must be letters and digits, was '$pattern'" }
         }
     }
 
     override fun toString(): String =
         "FarazSmsConfig(baseUrl=$baseUrl, apiKey=<hidden>, lineNumber=$lineNumber, codePattern=$codePattern, " +
-            "phoneChangedPattern=$phoneChangedPattern, orderPaidPattern=$orderPaidPattern)"
+            "phoneChangedPattern=$phoneChangedPattern, orderPaidPattern=$orderPaidPattern, photosSentPattern=$photosSentPattern, refundCompletedPattern=$refundCompletedPattern, orderCancelledPattern=$orderCancelledPattern, " +
+            "orderShippedPattern=$orderShippedPattern, orderDeliveredPattern=$orderDeliveredPattern, changeResolvedPattern=$changeResolvedPattern, " +
+            "returnApprovedPattern=$returnApprovedPattern, returnRejectedPattern=$returnRejectedPattern, returnPickupPattern=$returnPickupPattern, returnClosedPattern=$returnClosedPattern, backInStockPattern=$backInStockPattern, " +
+            "contactRepliedPattern=$contactRepliedPattern)"
 }
 
 /** The provider didn't take the SMS. Its message has no key, code or whole number in it. */

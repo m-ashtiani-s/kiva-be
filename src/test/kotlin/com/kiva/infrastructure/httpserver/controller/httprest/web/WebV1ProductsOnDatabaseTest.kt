@@ -1,5 +1,7 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
+import com.kiva.infrastructure.auth.JwtAccessTokens
+import com.kiva.infrastructure.httpserver.auth.configureAuthentication
 import com.kiva.application.usecase.catalog.usecase.query.ListCategoriesUc
 import com.kiva.application.usecase.product.usecase.query.FindProductsUc
 import com.kiva.application.usecase.product.usecase.query.FindRelatedProductsUc
@@ -12,6 +14,7 @@ import com.kiva.infrastructure.httpserver.configureHttp
 import com.kiva.infrastructure.persistence.exposed.CategoryRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ColorRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.MaterialRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.MediaRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ProductQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ShopSettingsRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.StoredCatalog
@@ -90,7 +93,8 @@ class WebV1ProductsOnDatabaseTest {
         environment { config = MapApplicationConfig() }
         application {
             configureHttp()
-            routing { route(API_V1) { webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, siteUrl = "https://kiva.ir") } }
+            configureAuthentication(JwtAccessTokens(ByteArray(32) { 7 })) { true }
+            routing { route(API_V1) { webV1Products(findProductsUc, getProductFacetsUc, getProductUc, findRelatedProductsUc, siteUrl = "https://kiva.ir", mediaUrls = testMediaUrls) } }
         }
         block()
     }
@@ -276,7 +280,7 @@ class WebV1ProductsOnDatabaseTest {
 
     @Test
     fun `the menus' productCount is the facets' count without filters`() = withApp {
-        val menu = ListCategoriesUc(ExposedTransactionManager(db), CategoryRepositoryImpl(), ProductQmRepositoryImpl())
+        val menu = ListCategoriesUc(ExposedTransactionManager(db), CategoryRepositoryImpl(), ProductQmRepositoryImpl(), MediaRepositoryImpl())
             .execute(ListCategoriesUc.Qry).getOrNull()!!
 
         assertEquals(menu.associate { it.slug to it.productCount.toLong() }, facetsOf("").counts("categories"))

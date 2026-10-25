@@ -1,5 +1,16 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.web
 
+import com.kiva.application.dto.InvoiceDto
+import com.kiva.application.port.InvoiceRenderer
+import com.kiva.application.usecase.order.usecase.query.GetMyInvoiceUc
+import com.kiva.application.usecase.wishlist.WishlistHearts
+import com.kiva.infrastructure.pdf.PdfBoxInvoiceRenderer
+import com.kiva.infrastructure.persistence.exposed.SiteContentRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.WishlistRepositoryImpl
+import com.kiva.application.usecase.wishlist.usecase.command.MoveCartItemToWishlistUc
+import com.kiva.application.usecase.review.ReviewMarks
+import com.kiva.infrastructure.persistence.exposed.ProductQmRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.ReviewRepositoryImpl
 import com.kiva.application.port.PaymentGateways
 import com.kiva.application.repository.OfferQmRepository
 import com.kiva.application.usecase.address.usecase.command.AddAddressUc
@@ -8,6 +19,7 @@ import com.kiva.application.usecase.address.usecase.command.SetDefaultAddressUc
 import com.kiva.application.usecase.address.usecase.command.UpdateAddressUc
 import com.kiva.application.usecase.address.usecase.query.GetMyAddressUc
 import com.kiva.application.usecase.address.usecase.query.ListMyAddressesUc
+import com.kiva.application.usecase.cart.CartBulkAdd
 import com.kiva.application.usecase.cart.CartCommands
 import com.kiva.application.usecase.cart.usecase.command.AddCartItemUc
 import com.kiva.application.usecase.cart.usecase.command.ApplyDiscountCodeUc
@@ -31,9 +43,16 @@ import com.kiva.application.usecase.checkout.usecase.query.GetPaymentResultUc
 import com.kiva.application.usecase.discount.Discounts
 import com.kiva.application.usecase.idempotency.IdempotencyGuard
 import com.kiva.application.usecase.idempotency.usecase.command.DeleteOldIdempotencyKeysUc
+import com.kiva.application.usecase.order.OrderByCode
+import com.kiva.application.usecase.order.OrderCancellation
+import com.kiva.application.usecase.order.OrderDetails
+import com.kiva.application.usecase.order.OrderNotices
+import com.kiva.application.usecase.order.usecase.command.CancelMyOrderUc
 import com.kiva.application.usecase.order.usecase.command.ExpireUnpaidOrderUc
 import com.kiva.application.usecase.order.usecase.command.ReorderUc
+import com.kiva.application.usecase.order.usecase.command.SubmitMediaFeedbackUc
 import com.kiva.application.usecase.order.usecase.query.FindExpirableOrdersUc
+import com.kiva.application.usecase.order.usecase.query.GetMyOrderMediaUc
 import com.kiva.application.usecase.order.usecase.query.GetMyOrderUc
 import com.kiva.application.usecase.order.usecase.query.GetOrderSummaryUc
 import com.kiva.application.usecase.order.usecase.query.ListMyOrdersUc
@@ -41,9 +60,14 @@ import com.kiva.application.usecase.payment.PaymentConfirmation
 import com.kiva.application.usecase.payment.usecase.command.ReconcilePaymentUc
 import com.kiva.application.usecase.payment.usecase.query.FindStalePaymentsUc
 import com.kiva.application.usecase.reservation.Reservations
+import com.kiva.application.usecase.returnrequest.ReturnRequests
 import com.kiva.application.usecase.reservation.usecase.command.ReleaseReservationGroupUc
 import com.kiva.application.usecase.reservation.usecase.query.FindDueReservationGroupsUc
 import com.kiva.application.usecase.reservation.usecase.query.GetMyReservationUc
+import com.kiva.application.usecase.tracking.usecase.query.ListDailyShipmentDaysUc
+import com.kiva.application.usecase.tracking.usecase.query.ListDailyShipmentsUc
+import com.kiva.application.usecase.tracking.usecase.query.ListMyTrackingUc
+import com.kiva.application.usecase.tracking.usecase.query.LookupGuestTrackingUc
 import com.kiva.common.valueobject.IranianMobileNumber
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.address.AddressBookDomainService
@@ -53,6 +77,7 @@ import com.kiva.domain.aggregate.discount.DiscountDomainService
 import com.kiva.domain.aggregate.inventory.InventoryDomainService
 import com.kiva.domain.aggregate.order.OrderDomainService
 import com.kiva.domain.aggregate.payment.PaymentDomainService
+import com.kiva.domain.aggregate.refund.RefundDomainService
 import com.kiva.domain.aggregate.reservation.ReservationDomainService
 import com.kiva.infrastructure.MutableClock
 import com.kiva.infrastructure.cart.RandomCartIds
@@ -74,11 +99,15 @@ import com.kiva.infrastructure.persistence.exposed.DiscountRedemptionRepositoryI
 import com.kiva.infrastructure.persistence.exposed.GeoRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.IdempotencyStoreImpl
 import com.kiva.infrastructure.persistence.exposed.InventoryRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.MediaRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.OfferQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.OrderIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.OrderQmRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.OrderRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.PaymentRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.RefundIdGeneratorImpl
+import com.kiva.infrastructure.persistence.exposed.RefundRepositoryImpl
+import com.kiva.infrastructure.persistence.exposed.ReturnRequestRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ReservationGroupIdGeneratorImpl
 import com.kiva.infrastructure.persistence.exposed.ReservationGroupRepositoryImpl
 import com.kiva.infrastructure.persistence.exposed.ShopSettingsRepositoryImpl
@@ -88,6 +117,7 @@ import com.kiva.infrastructure.persistence.exposed.tbl.DiscountCodeTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.DiscountRedemptionTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.EventStoreTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.OrderQmTbl
+import com.kiva.infrastructure.persistence.exposed.tbl.ReturnRequestTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.ProductQmTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.ProductVariantQmTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.UserTbl
@@ -98,12 +128,15 @@ import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
+import java.util.Collections
 import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.isNotNull
 import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.like
+import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.jdbc.deleteAll
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.select
@@ -132,16 +165,17 @@ class PurchaseTestStack(val clock: MutableClock) {
     val orders = OrderRepositoryImpl()
     val orderQm = OrderQmRepositoryImpl()
     val payments = PaymentRepositoryImpl()
-    private val inventories = InventoryRepositoryImpl()
+    val inventories = InventoryRepositoryImpl()
     val gateways = PaymentGateways(listOf(gateway))
-    private val cartDomain = CartDomainService(RandomCartIds())
+    val cartDomain = CartDomainService(RandomCartIds())
     val groups = ReservationGroupRepositoryImpl()
     val reservationDomain = ReservationDomainService(ReservationGroupIdGeneratorImpl())
-    private val reservations = Reservations(groups, books, geo, orderQm, reservationDomain)
+    val reservations = Reservations(groups, books, geo, orderQm, reservationDomain)
     val discountCodes = DiscountCodeRepositoryImpl()
     val redemptions = DiscountRedemptionRepositoryImpl()
     val discounts = Discounts(discountCodes, redemptions, orderQm, DiscountDomainService())
-    private val cartCommands = CartCommands(transactions, carts, cartDomain, offers, settings, reservations, discounts, clock)
+    val cartCommands = CartCommands(transactions, carts, cartDomain, offers, settings, reservations, discounts, clock)
+    val cartBulkAdd = CartBulkAdd(cartCommands, cartDomain)
     private val addressService = AddressBookDomainService(geo, AddressIdGeneratorImpl())
 
     val openCart = OpenCartUc(cartCommands, cartDomain)
@@ -183,14 +217,40 @@ class PurchaseTestStack(val clock: MutableClock) {
         GetPaymentInitUc(transactions, payments, orderQm),
     )
 
-    val getCart = GetCartUc(transactions, carts, offers, settings, reservations, discounts, clock)
+    val getCart = GetCartUc(transactions, carts, offers, settings, reservations, discounts, clock, WishlistHearts.of(WishlistRepositoryImpl()))
+
+    // One order named by its code, and its page: the customer's and the panel's (phase 2).
+    val orderByCode = OrderByCode(orderQm, orders)
+    val refunds = RefundRepositoryImpl()
+    val returns = ReturnRequestRepositoryImpl()
+    val returnRequests = ReturnRequests(returns, orderQm, MediaRepositoryImpl(), refunds, ColorRepositoryImpl())
+    val reviewMarks = ReviewMarks(ReviewRepositoryImpl(), ProductQmRepositoryImpl())
+    val orderDetails = OrderDetails(payments, ColorRepositoryImpl(), reservations, MediaRepositoryImpl(), refunds, returnRequests)
+    val orderNotices = OrderNotices(auth.sms)
+    val orderCancellation = OrderCancellation(
+        orderQm, orders, payments, redemptions, stock, inventories, refunds, RefundIdGeneratorImpl(), RefundDomainService(RefundIdGeneratorImpl()),
+    )
+
+    /** The purchase receipt's renderer, the real one; a test may look at what it was given. */
+    val invoiceRenderer = RecordingInvoiceRenderer()
 
     val myOrderUseCases = MyOrderUseCases(
-        ListMyOrdersUc(transactions, orderQm, settings, reservations, clock),
-        GetMyOrderUc(transactions, orderQm, payments, settings, ColorRepositoryImpl(), reservations, clock),
-        ReorderUc(transactions, orderQm, cartCommands, cartDomain),
+        ListMyOrdersUc(transactions, orderQm, settings, reservations, orderDetails, reviewMarks, clock),
+        GetMyOrderUc(transactions, orderByCode, orderDetails, reviewMarks, settings, clock),
+        ReorderUc(transactions, orderQm, cartBulkAdd),
         getCart,
         GetMyReservationUc(transactions, reservations, clock),
+        GetMyOrderMediaUc(transactions, orderByCode, orderDetails),
+        SubmitMediaFeedbackUc(transactions, orderByCode, orderQm, orders, offers, clock),
+        CancelMyOrderUc(transactions, orderByCode, orderCancellation, users, orderNotices, clock),
+        ListMyTrackingUc(transactions, orderQm, settings),
+        GetMyInvoiceUc(transactions, orderByCode, orderDetails, settings, SiteContentRepositoryImpl(), invoiceRenderer, "https://kiva.ir", clock),
+    )
+
+    val trackingUseCases = TrackingUseCases(
+        LookupGuestTrackingUc(transactions, orderQm, orderDetails, users, settings, clock),
+        ListDailyShipmentDaysUc(transactions, orderQm, settings, clock),
+        ListDailyShipmentsUc(transactions, orderQm, settings, clock),
     )
 
     val cartUseCases = CartUseCases(
@@ -205,6 +265,7 @@ class PurchaseTestStack(val clock: MutableClock) {
         MergeGuestCartUc(cartCommands, cartDomain),
         ApplyDiscountCodeUc(cartCommands, cartDomain, discounts),
         RemoveDiscountCodeUc(cartCommands, cartDomain),
+        MoveCartItemToWishlistUc(cartCommands, cartDomain, WishlistRepositoryImpl(), ProductQmRepositoryImpl()),
     )
 
     val addressUseCases = AddressUseCases(
@@ -218,7 +279,7 @@ class PurchaseTestStack(val clock: MutableClock) {
 
     val checkoutUseCases = CheckoutUseCases(
         openCart,
-        GetCheckoutContextUc(transactions, carts, offers, settings, books, geo, users, gateways, reservations, discounts, clock),
+        GetCheckoutContextUc(transactions, carts, offers, settings, books, geo, users, gateways, reservations, discounts, clock, WishlistHearts.of(WishlistRepositoryImpl())),
         placeOrder,
         startPayment,
         GetOrderSummaryUc(transactions, orderQm, settings, reservations, clock),
@@ -229,15 +290,17 @@ class PurchaseTestStack(val clock: MutableClock) {
         environment { config = MapApplicationConfig() }
         application {
             configureHttp(listOf(ORIGIN))
-            configureAuthentication(auth.accessTokens)
+            configureAuthentication(auth.accessTokens, auth.accountCheck)
             routing {
                 route(API_V1) {
-                    webV1Auth(auth.authUseCases, listOf(ORIGIN))
-                    webV1Cart(cartUseCases)
+                    webV1Auth(auth.authUseCases, listOf(ORIGIN), testMediaUrls)
+                    // The account, for deleting it while an order is being placed (phase 14).
+                    webV1Me(auth.meUseCases)
+                    webV1Cart(cartUseCases, testMediaUrls)
                     webV1Addresses(addressUseCases)
-                    webV1Checkout(checkoutUseCases)
+                    webV1Checkout(checkoutUseCases, testMediaUrls)
                     webV1Payments(paymentUseCases, PaymentConfig.DEFAULT.resultUrl)
-                    webV1MyOrders(myOrderUseCases)
+                    webV1MyOrders(myOrderUseCases, testMediaUrls)
                 }
             }
         }
@@ -273,10 +336,11 @@ class PurchaseTestStack(val clock: MutableClock) {
 
     fun deleteWhatWasStored() {
         transaction(db) {
-            val userIds = UserTbl.select(UserTbl.id).where { UserTbl.phone like "0990%" }.map { it[UserTbl.id].value }
+            val userIds = UserTbl.select(UserTbl.id).where { (UserTbl.phone like "0990%") or UserTbl.deletedOn.isNotNull() }.map { it[UserTbl.id].value }
             val orderIds = OrderQmTbl.select(OrderQmTbl.orderId).where { OrderQmTbl.userId inList userIds }.map { it[OrderQmTbl.orderId] }
             EventStoreTbl.deleteWhere { (aggregateName eq "ORDER") and (aggregateId inList orderIds.map { it.toString() }) }
             OrderQmTbl.deleteWhere { orderId inList orderIds }
+            ReturnRequestTbl.deleteWhere { ReturnRequestTbl.orderId inList orderIds }
             CartTbl.deleteWhere { userId.isNull() }
             // A code with uses can't go; the uses go with their test orders, and then every code a test made.
             DiscountRedemptionTbl.deleteWhere { DiscountRedemptionTbl.orderId inList orderIds }
@@ -285,4 +349,11 @@ class PurchaseTestStack(val clock: MutableClock) {
         // Payments stay: their log is append-only, and their orders' ids are never handed out again.
         auth.deleteTestUsers()
     }
+}
+
+/** The real receipt renderer, remembering every receipt it was given. */
+class RecordingInvoiceRenderer(private val real: InvoiceRenderer = PdfBoxInvoiceRenderer()) : InvoiceRenderer {
+    val rendered: MutableList<InvoiceDto> = Collections.synchronizedList(mutableListOf())
+
+    override fun render(invoice: InvoiceDto): ByteArray = real.render(invoice).also { rendered += invoice }
 }

@@ -14,6 +14,7 @@ import com.kiva.domain.aggregate.color.model.valueobject.ColorName
 import com.kiva.domain.aggregate.color.model.valueobject.HexColor
 import com.kiva.domain.aggregate.color.repository.ColorRepository
 import com.kiva.domain.aggregate.material.entity.Material
+import com.kiva.domain.aggregate.material.model.valueobject.CareInstructions
 import com.kiva.domain.aggregate.material.model.valueobject.MaterialFamily
 import com.kiva.domain.aggregate.material.model.valueobject.MaterialId
 import com.kiva.domain.aggregate.material.model.valueobject.MaterialName
@@ -67,16 +68,24 @@ private object OneCategory : CategoryRepository {
     override fun findAll() = listOf(shoulder)
     override fun findBySlug(slug: Slug) = shoulder.takeIf { it.slug == slug }
     override fun findById(id: CategoryId) = shoulder.takeIf { it.id == id }
+    override fun insert(category: Category) = error("read only")
+    override fun update(category: Category) = error("read only")
+    override fun delete(id: CategoryId) = error("read only")
+    override fun countWithIcon(colorKey: ColorKey) = if (colorKey == shoulder.icon.colorKey) 1 else 0
 }
 
 /** Material 4 (چرم مصنوعی مات) exists; nothing else. */
 private object OneMaterial : MaterialRepository {
     private val matte = Material.constructFromPersisted(
         MaterialId.constructFromPersisted(4), Slug.constructFromPersisted("faux-leather-matte"),
-        MaterialName.constructFromPersisted("چرم مصنوعی مات درجه یک"), MaterialFamily.FAUX_LEATHER, null, emptyList(),
+        MaterialName.constructFromPersisted("چرم مصنوعی مات درجه یک"), MaterialFamily.FAUX_LEATHER, null, CareInstructions.NONE,
     )
     override fun findAll() = listOf(matte)
     override fun findById(id: MaterialId) = matte.takeIf { it.id == id }
+    override fun findBySlug(slug: Slug) = matte.takeIf { it.slug == slug }
+    override fun insert(material: Material) = error("read only")
+    override fun update(material: Material) = error("read only")
+    override fun delete(id: MaterialId) = error("read only")
 }
 
 /** The palette is black, lilac and cream. */
@@ -86,6 +95,10 @@ private object ThreeColors : ColorRepository {
     }
     override fun findAll() = palette
     override fun findByKey(key: ColorKey) = palette.firstOrNull { it.key == key }
+    override fun maxSortOrder() = palette.maxOf { it.sortOrder }
+    override fun insert(color: Color) = error("read only")
+    override fun update(color: Color) = error("read only")
+    override fun delete(key: ColorKey) = error("read only")
 }
 
 // ============ tests ============

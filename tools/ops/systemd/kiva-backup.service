@@ -1,0 +1,10 @@
+# The nightly backup (tools/ops/backup.sh); started by kiva-backup.timer. LAUNCH.md, step 6.3.
+[Unit]
+Description=Kiva nightly backup (database and media)
+After=postgresql.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/kiva-ops/backup.sh
+Nice=10
+IOSchedulingClass=idle

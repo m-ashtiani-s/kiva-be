@@ -10,6 +10,7 @@ import com.kiva.domain.aggregate.payment.model.valueobject.CardMask
 import com.kiva.domain.aggregate.payment.model.valueobject.GatewayAuthority
 import com.kiva.domain.aggregate.payment.model.valueobject.GatewayRefId
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentFailureReason
+import com.kiva.domain.aggregate.payment.model.valueobject.PaymentPurpose
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentRedirect
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentStatus
 import com.kiva.domain.aggregate.settings.model.valueobject.PaymentGatewayCode
@@ -88,6 +89,18 @@ class PaymentRepositoryImplTest {
         val payment = stored()
 
         assertEquals(payment.state(), transaction(db) { repository.find(payment.publicId) }?.state())
+    }
+
+    @Test
+    fun `what an attempt pays reads back - the order itself by default, or a balance after a change`() {
+        val ofTheOrder = stored()
+        val ofABalance = stored(
+            Payment.start(ids.nextPaymentPublicId(), newOrder(), sara, PaymentGatewayCode.ZARINPAL, Money.constructFromPersisted(200_000), now, PaymentPurpose.BALANCE),
+        )
+
+        assertEquals(PaymentPurpose.ORDER, transaction(db) { repository.find(ofTheOrder.publicId) }?.purpose)
+        assertEquals(PaymentPurpose.BALANCE, transaction(db) { repository.lock(ofABalance.publicId) }?.purpose)
+        assertEquals(listOf(PaymentPurpose.BALANCE), transaction(db) { repository.lockAttemptsOf(ofABalance.orderId) }.map { it.purpose })
     }
 
     @Test

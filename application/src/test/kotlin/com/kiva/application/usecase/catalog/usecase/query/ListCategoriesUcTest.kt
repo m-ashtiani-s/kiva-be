@@ -13,16 +13,20 @@ import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
+import com.kiva.common.valueobject.SeoMeta
+import com.kiva.domain.aggregate.media.repository.MediaRepository
 
 class ListCategoriesUcTest {
 
     private val transactionManager = MockTransactionManager()
     private val categories = mockk<CategoryRepository>()
     private val productQm = mockk<ProductQmRepository>()
-    private val useCase = ListCategoriesUc(transactionManager, categories, productQm)
+    private val media = mockk<MediaRepository>()
+    private val useCase = ListCategoriesUc(transactionManager, categories, productQm, media)
 
     @Test
     fun `returns every category in the repository's order, hidden ones included, with their products in the shop, in one transaction`() = runTest {
+        every { media.findAll(emptyList()) } returns emptyList()
         every { productQm.countActiveByCategory() } returns mapOf(Slug.constructFromPersisted("shoulder") to 2)
         every { categories.findAll() } returns listOf(
             CategoryFactory.generate(id = 1, slug = "shoulder", name = "کیف دوشی"),
@@ -37,10 +41,10 @@ class ListCategoriesUcTest {
         assertEquals(
             Result.success(
                 listOf(
-                    CategoryDto(1, "shoulder", "کیف دوشی", null, BagType.HOBO, "lilac", 1, showInMenu = true, productCount = 2),
+                    CategoryDto(1, "shoulder", "کیف دوشی", null, BagType.HOBO, "lilac", null, null, 1, showInMenu = true, SeoMeta.NONE, productCount = 2),
                     CategoryDto(
-                        3, "cross", "کراس‌بادی", "برای دست‌های آزاد", BagType.CROSSBODY, "red", 3,
-                        showInMenu = false, productCount = 0,
+                        3, "cross", "کراس‌بادی", "برای دست‌های آزاد", BagType.CROSSBODY, "red", null, null, 3,
+                        showInMenu = false, SeoMeta.NONE, productCount = 0,
                     ),
                 ),
             ),

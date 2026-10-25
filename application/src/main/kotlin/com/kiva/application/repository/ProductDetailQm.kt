@@ -1,12 +1,12 @@
 package com.kiva.application.repository
 
+import com.kiva.application.dto.GalleryItemDto
 import com.kiva.common.valueobject.Slug
 import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
 import com.kiva.domain.aggregate.product.model.valueobject.Highlights
 import com.kiva.domain.aggregate.product.model.valueobject.MaterialDescription
 import com.kiva.domain.aggregate.product.model.valueobject.PriceTag
 import com.kiva.domain.aggregate.product.model.valueobject.ProductDescription
-import com.kiva.domain.aggregate.product.model.valueobject.ProductMedia
 import com.kiva.domain.aggregate.product.model.valueobject.ProductSpecs
 import com.kiva.domain.aggregate.product.model.valueobject.ShortDescription
 import com.kiva.domain.aggregate.product.model.valueobject.Sku
@@ -43,6 +43,6 @@ data class ProductDetailQm(
         val priceTag: PriceTag,
         val isDefault: Boolean,
         val available: Int,
-        val media: List<ProductMedia>,
+        val media: List<GalleryItemDto>,
     )
 }

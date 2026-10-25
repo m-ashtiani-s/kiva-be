@@ -85,7 +85,7 @@ class RequireRolesOnDatabaseTest {
         environment { config = MapApplicationConfig() }
         application {
             configureHttp()
-            configureAuthentication(stack.accessTokens)
+            configureAuthentication(stack.accessTokens, stack.accountCheck)
             routing {
                 route(API_V1) {
                     requireRoles(checkPanelAccess, ADMIN, CATALOG_MANAGER) {

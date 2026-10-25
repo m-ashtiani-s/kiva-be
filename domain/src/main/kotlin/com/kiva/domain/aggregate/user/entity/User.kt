@@ -39,14 +39,19 @@ import java.time.LocalDate
  *
  * The phone being unique across users is not its job: it can't see other users. A unique index has the last word.
  *
+ * Deleting the account ([erase], roadmap phase 14) doesn't remove the row: orders, refunds and reviews point at its id.
+ * It is left as a tombstone: [deletedOn] set, the phone and everything personal gone, CUSTOMER only. Without a phone
+ * nobody can log in to it, and the phone is free: logging in with it makes a new account.
+ *
  * @property phone what the user logs in with. It changes only through the phone change flow (codes from both numbers).
+ *   Null only for a deleted account (the database's user_deleted_phone_check says the same).
  * @property email typed by the user and never verified, so never used to log in or to get an account back.
  * @property marketingSmsOptIn false until the user chooses it themselves.
  * @property version the version this user was read with; the repository raises it on every save.
  */
 class User private constructor(
     val id: UserId,
-    val phone: IranianMobileNumber,
+    val phone: IranianMobileNumber?,
     val firstName: PersonName?,
     val lastName: PersonName?,
     val email: Email?,
@@ -58,9 +63,21 @@ class User private constructor(
     val roles: Roles,
     val createdOn: Instant,
     val version: Long,
+    val deletedOn: Instant? = null,
 ) {
+    init {
+        // Second wall: only erase() makes a user without a phone, and then always with deletedOn.
+        require((deletedOn == null) == (phone != null)) { "User ${id.value}: a phone exactly while not deleted" }
+    }
+
     /** Has a panel role. Picks the kind of session at login: staff sessions are shorter. */
     val isStaff: Boolean get() = roles.isStaff
+
+    /** The account was deleted ([erase]): a tombstone nobody logs in to. */
+    val isDeleted: Boolean get() = deletedOn != null
+
+    /** The phone of an account that isn't deleted; asking a deleted one for it is a bug. */
+    val activePhone: IranianMobileNumber get() = checkNotNull(phone) { "User ${id.value} is deleted: no phone" }
 
     companion object {
         /**
@@ -90,7 +107,7 @@ class User private constructor(
 
         fun constructFromPersisted(
             id: UserId,
-            phone: IranianMobileNumber,
+            phone: IranianMobileNumber?,
             firstName: PersonName?,
             lastName: PersonName?,
             email: Email?,
@@ -102,9 +119,10 @@ class User private constructor(
             roles: Roles,
             createdOn: Instant,
             version: Long,
+            deletedOn: Instant? = null,
         ): User = User(
             id, phone, firstName, lastName, email, birthDate, gender, defaultMessenger, defaultMessengerPhone,
-            marketingSmsOptIn, roles, createdOn, version,
+            marketingSmsOptIn, roles, createdOn, version, deletedOn,
         )
     }
 
@@ -191,8 +209,39 @@ class User private constructor(
      * and the new phone was found free. The old phone is free from then on: logging in with it makes a new account.
      */
     fun changePhone(newPhone: IranianMobileNumber): Result<User, ChangePhoneFailure> {
+        check(!isDeleted) { "User ${id.value} is deleted: its phone can't change" }
         if (newPhone == phone) return Result.failure(ChangePhoneFailure.SameAsCurrent)
         return Result.success(User(id, newPhone, firstName, lastName, email, birthDate, gender, defaultMessenger, defaultMessengerPhone, marketingSmsOptIn, roles, createdOn, version))
+    }
+
+    // ============ deleting the account ============
+
+    /**
+     * The account deleted at [now] (`DELETE /me`, roadmap phase 14, decision 1): the phone, the name, the email, the
+     * birth date, the gender, the default messenger and the marketing opt-in are gone, the roles are CUSTOMER only. The
+     * row stays for the orders, refunds and reviews that point at it. Erasing a deleted account again changes nothing.
+     *
+     * Whether it may be deleted (no active order, not staff) and what else goes with it are the use case's: this user
+     * can't see its orders.
+     */
+    fun erase(now: Instant): User {
+        if (isDeleted) return this
+        return User(
+            id = id,
+            phone = null,
+            firstName = null,
+            lastName = null,
+            email = null,
+            birthDate = null,
+            gender = Gender.UNSPECIFIED,
+            defaultMessenger = null,
+            defaultMessengerPhone = null,
+            marketingSmsOptIn = false,
+            roles = Roles.CUSTOMER_ONLY,
+            createdOn = createdOn,
+            version = version,
+            deletedOn = now,
+        )
     }
 
     /**
@@ -213,7 +262,7 @@ class User private constructor(
         roles: Roles = this.roles,
     ): User = User(
         id, phone, firstName, lastName, email, birthDate, gender, defaultMessenger, defaultMessengerPhone,
-        marketingSmsOptIn, roles, createdOn, version,
+        marketingSmsOptIn, roles, createdOn, version, deletedOn,
     )
 
     override fun equals(other: Any?): Boolean = other is User && other.id == id

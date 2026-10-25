@@ -1,0 +1,117 @@
+package com.kiva.application.usecase.audit
+
+/**
+ * What a panel write did, as the change log stores it (roadmap section 5.1). The contract leaves the list open; ours is
+ * closed, so the HTTP layer has a Persian sentence for every value and its `when` stays complete. Each phase adds the
+ * actions of its own endpoints; a stored name is never renamed.
+ */
+enum class AuditAction {
+    USER_ROLES_CHANGED,
+
+    CATEGORY_CREATED,
+    CATEGORY_UPDATED,
+    CATEGORY_DELETED,
+    COLOR_CREATED,
+    COLOR_UPDATED,
+    COLOR_DELETED,
+    MATERIAL_CREATED,
+    MATERIAL_UPDATED,
+    MATERIAL_DELETED,
+
+    PRODUCT_CREATED,
+
+    /** A `PUT` of the product that changed its price and nothing else. */
+    PRODUCT_PRICE_CHANGED,
+    PRODUCT_UPDATED,
+    PRODUCT_PUBLISHED,
+    PRODUCT_UNPUBLISHED,
+    PRODUCT_ARCHIVED,
+    PRODUCT_PUBLISH_SCHEDULED,
+    PRODUCT_PUBLISH_UNSCHEDULED,
+
+    VARIANT_ADDED,
+    VARIANT_UPDATED,
+    VARIANT_DEACTIVATED,
+
+    INVENTORY_ADJUSTED,
+
+    // ---- orders (phase 2) ----
+    ORDER_STATUS_CHANGED,
+    ORDER_NOTE_ADDED,
+    ORDER_MEDIA_SET,
+    ORDER_PHOTO_SENT,
+    ORDER_SHIPPED,
+    REFUND_CREATED,
+    REFUND_UPDATED,
+
+    // ---- change requests (phase 3) ----
+    ORDER_CHANGE_RESOLVED,
+
+    // ---- settings, discount codes (phase 4) ----
+    SETTINGS_UPDATED,
+    DISCOUNT_CODE_CREATED,
+    DISCOUNT_CODE_UPDATED,
+    DISCOUNT_CODE_DEACTIVATED,
+
+    PAGE_SAVED,
+    FAQ_SAVED,
+    ANNOUNCEMENTS_SAVED,
+
+    // ---- returns (phase 7) ----
+    RETURN_DECIDED,
+    RETURN_PICKUP_SCHEDULED,
+    RETURN_RECEIVED,
+    RETURN_CLOSED,
+
+    // ---- reviews (phase 8) ----
+    REVIEW_MODERATED,
+    REVIEW_REPLIED,
+    REVIEW_REPLY_DELETED,
+
+    // ---- marketing (phase 11) ----
+    CAMPAIGN_CREATED,
+    CAMPAIGN_UPDATED,
+    CAMPAIGN_DELETED,
+    BANNER_CREATED,
+    BANNER_UPDATED,
+    BANNER_DELETED,
+    TESTIMONIAL_CREATED,
+    TESTIMONIAL_UPDATED,
+    TESTIMONIAL_DELETED,
+
+    /** Phase 13: a contact message's status, note or reply; `changes` never keep the reply's or the note's text. */
+    CONTACT_MESSAGE_UPDATED,
+
+    // ---- the blog (phase 15): `changes` keep the blocks only as «changed» and how many ----
+    BLOG_POST_CREATED,
+    BLOG_POST_UPDATED,
+    BLOG_POST_DELETED,
+}
+
+/** The kind of thing a panel write changed: the contract's AuditEntityType, value for value. */
+enum class AuditEntityType {
+    PRODUCT,
+    VARIANT,
+    INVENTORY,
+
+    /** In the contract, never written: a media upload is not logged. */
+    MEDIA,
+    CATEGORY,
+    COLOR,
+    MATERIAL,
+    ORDER,
+    RETURN,
+    REFUND,
+    DISCOUNT_CODE,
+    CAMPAIGN,
+    BANNER,
+    ANNOUNCEMENT,
+    TESTIMONIAL,
+    FAQ,
+    PAGE,
+    SETTINGS,
+    REVIEW,
+    CONTACT_MESSAGE,
+    USER,
+    BLOG_POST,
+}

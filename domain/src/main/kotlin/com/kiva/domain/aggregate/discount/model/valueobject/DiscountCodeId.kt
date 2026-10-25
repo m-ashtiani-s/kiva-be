@@ -1,6 +1,10 @@
 package com.kiva.domain.aggregate.discount.model.valueobject
 
-/** The id of a discount code (its row's). Codes are made by SQL until the panel's discount codes are built. */
+import com.kiva.common.railway.FailureKind
+import com.kiva.common.railway.Result
+import com.kiva.common.railway.ResultFailure
+
+/** The id of a discount code (its row's), given out by the repository when the panel makes one. */
 @JvmInline
 value class DiscountCodeId private constructor(val value: Long) {
 
@@ -9,8 +13,15 @@ value class DiscountCodeId private constructor(val value: Long) {
     }
 
     companion object {
+        /** An id as a path sent it; the panel answers a malformed one as it answers one nobody has (404). */
+        fun makeNew(raw: Long): Result<DiscountCodeId, Failure> = if (raw > 0) Result.success(DiscountCodeId(raw)) else Result.failure(Failure.Invalid)
+
         /** For values read back from storage. Still checked by `init`. */
         fun constructFromPersisted(value: Long): DiscountCodeId = DiscountCodeId(value)
+    }
+
+    sealed class Failure(code: String) : ResultFailure(code, FailureKind.INVALID) {
+        data object Invalid : Failure("DISCOUNT_CODE_ID_INVALID")
     }
 }
 

@@ -22,6 +22,7 @@ import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.lessEq
 import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.core.statements.UpdateBuilder
@@ -43,6 +44,7 @@ class PaymentRepositoryImpl : PaymentRepository {
             it[userId] = payment.userId.value
             it[gateway] = payment.gateway
             it[amount] = payment.amount.toman
+            it[purpose] = payment.purpose
             it[createdOn] = payment.createdOn.utc()
             it[version] = payment.version
             it.writeChanges(payment)
@@ -83,6 +85,11 @@ class PaymentRepositoryImpl : PaymentRepository {
     override fun findAttemptsOf(orderId: OrderId): List<Payment> =
         PaymentTbl.selectAll().where { PaymentTbl.orderId eq orderId.value }.orderBy(PaymentTbl.id).map { it.toPayment() }
 
+    override fun findAttemptsOfOrders(orderIds: Collection<OrderId>): List<Payment> {
+        if (orderIds.isEmpty()) return emptyList()
+        return PaymentTbl.selectAll().where { PaymentTbl.orderId inList orderIds.map { it.value } }.orderBy(PaymentTbl.id).map { it.toPayment() }
+    }
+
     override fun find(publicId: PaymentPublicId): Payment? =
         PaymentTbl.selectAll().where { PaymentTbl.publicId eq publicId.value }.singleOrNull()?.toPayment()
 
@@ -111,7 +118,7 @@ class PaymentRepositoryImpl : PaymentRepository {
 
     private fun lockAndRead(which: Op<Boolean>): Payment? = PaymentTbl.selectAll().where { which }.forUpdate().singleOrNull()?.toPayment()
 
-    /** Every column a change can touch; the attempt's id, order, owner, gateway, amount and creation never change. */
+    /** Every column a change can touch; the attempt's id, order, owner, gateway, amount, purpose and creation never change. */
     private fun UpdateBuilder<*>.writeChanges(payment: Payment) {
         this[PaymentTbl.status] = payment.status
         this[PaymentTbl.authority] = payment.authority?.value
@@ -145,6 +152,7 @@ class PaymentRepositoryImpl : PaymentRepository {
         verifyingSince = this[PaymentTbl.verifyingSince]?.toInstant(),
         settledOn = this[PaymentTbl.settledOn]?.toInstant(),
         version = this[PaymentTbl.version],
+        purpose = this[PaymentTbl.purpose],
     )
 
     private fun Instant.utc(): OffsetDateTime = atOffset(ZoneOffset.UTC)

@@ -5,8 +5,14 @@ import com.kiva.domain.aggregate.discount.model.valueobject.DiscountType
 import org.jetbrains.exposed.v1.core.dao.id.LongIdTable
 import org.jetbrains.exposed.v1.javatime.timestampWithTimeZone
 
-/** Discount codes. Created by V20__discount_codes.sql (Exposed never creates tables); keep both in step. */
+/** Discount codes. Created by V20__discount_codes.sql and V30__admin_settings.sql (Exposed never creates tables); keep them in step. */
 object DiscountCodeTbl : LongIdTable(name = "discountcode_tbl", columnName = "pId") {
+    /** The unique key on the code's text (V20's inline UNIQUE). */
+    const val CODE_KEY = "discountcode_tbl_code_key"
+
+    /** The identity column's sequence: a new code's id is taken from it before the insert. */
+    const val ID_SEQUENCE_OF = "pg_get_serial_sequence('discountcode_tbl', 'pId')"
+
     val code = varchar("code", 32).uniqueIndex()
     val type = enumerationByName<DiscountType>("type", 7)
     val value = integer("value")
@@ -24,6 +30,8 @@ object DiscountCodeTbl : LongIdTable(name = "discountcode_tbl", columnName = "pI
     val productIds = array<Long>("productIds")
     val isActive = bool("isActive").default(true)
     val createdOn = timestampWithTimeZone("createdOn")
+    val updatedOn = timestampWithTimeZone("updatedOn")
+    val version = long("version")
 }
 
 /** Each order's use of a discount code. Created by V20__discount_codes.sql. */

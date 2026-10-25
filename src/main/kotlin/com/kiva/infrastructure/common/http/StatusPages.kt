@@ -2,15 +2,18 @@ package com.kiva.infrastructure.common.http
 
 import com.kiva.common.event.ConcurrentChangeException
 import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
 import io.ktor.server.plugins.BadRequestException
-import io.ktor.server.plugins.NotFoundException
 import io.ktor.server.plugins.ContentTransformationException
+import io.ktor.server.plugins.NotFoundException
 import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.request.httpMethod
 import io.ktor.server.request.path
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import org.slf4j.LoggerFactory
 
 private val logger = LoggerFactory.getLogger("com.kiva.infrastructure.common.http.StatusPages")
@@ -58,7 +61,12 @@ fun Application.configureStatusPages() {
         // 429s, which already are problems and are left alone. The plugin's Retry-After header stays.
         status(HttpStatusCode.TooManyRequests) { _ ->
             val alreadyProblem = content.contentType?.match(ContentType.Application.ProblemJson) == true
-            if (!alreadyProblem) call.respondProblem(call.problem(HttpStatusCode.TooManyRequests, RATE_LIMITED))
+            if (!alreadyProblem) {
+                // The wait in the meta too, for the frontend's countdown (contract: every 429 has meta.retryAfterSeconds).
+                val wait = call.response.headers[HttpHeaders.RetryAfter]?.toLongOrNull()
+                val problem = call.problem(HttpStatusCode.TooManyRequests, RATE_LIMITED)
+                call.respondProblem(if (wait == null) problem else problem.copy(meta = buildJsonObject { put(RETRY_AFTER_SECONDS, wait) }))
+            }
         }
         // The CORS plugin's 403 for a request from a site that isn't ours has no body either.
         status(HttpStatusCode.Forbidden) { _ ->

@@ -78,7 +78,7 @@ class UpdateMyProfileUc(
         val today = clock.instant().atZone(SHOP_ZONE).toLocalDate()
 
         return transactionManager.inTransaction {
-            val user = userRepository.findById(command.userId) ?: return@inTransaction Result.failure(Failure.AccountGone)
+            val user = userRepository.findById(command.userId)?.takeUnless { it.isDeleted } ?: return@inTransaction Result.failure(Failure.AccountGone)
             val updated = user.updateProfile(patch, today)
                 .mapOnFailure { Failure.InvalidInput(it.causes) }
                 .unwrapOr { return@inTransaction Result.failure(it) }

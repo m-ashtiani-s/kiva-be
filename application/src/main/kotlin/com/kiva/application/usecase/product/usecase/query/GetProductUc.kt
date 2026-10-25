@@ -1,8 +1,11 @@
 package com.kiva.application.usecase.product.usecase.query
 
-import com.kiva.application.dto.PriceDto
+import com.kiva.application.usecase.stockalert.StockAlertFlags
+import com.kiva.application.usecase.campaign.LiveCampaign
+import com.kiva.domain.aggregate.campaign.model.policy.CampaignShowcasePolicy
+import com.kiva.common.valueobject.UserId
+import com.kiva.application.usecase.wishlist.WishlistHearts
 import com.kiva.application.dto.ProductDetailDto
-import com.kiva.application.repository.ProductDetailQm
 import com.kiva.application.repository.ProductQmRepository
 import com.kiva.application.repository.ProductRef
 import com.kiva.application.usecase.product.ProductCards
@@ -15,13 +18,9 @@ import com.kiva.common.railway.unwrapOr
 import com.kiva.common.transaction.TransactionManager
 import com.kiva.common.usecase.QueryUseCase
 import com.kiva.domain.aggregate.category.repository.CategoryRepository
-import com.kiva.domain.aggregate.color.entity.Color
 import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
 import com.kiva.domain.aggregate.color.repository.ColorRepository
 import com.kiva.domain.aggregate.material.repository.MaterialRepository
-import com.kiva.domain.aggregate.product.model.policy.StockPolicy
-import com.kiva.domain.aggregate.product.model.valueobject.MaxPerOrder
-import com.kiva.domain.aggregate.product.model.valueobject.MediaType
 import com.kiva.domain.aggregate.settings.repository.ShopSettingsRepository
 import java.time.Clock
 
@@ -44,12 +43,15 @@ class GetProductUc(
     private val colorRepository: ColorRepository,
     private val clock: Clock,
     private val shopSettingsRepository: ShopSettingsRepository,
+    private val wishlistHearts: WishlistHearts = WishlistHearts.NONE,
+    private val stockAlertFlags: StockAlertFlags = StockAlertFlags.NONE,
+    private val liveCampaign: LiveCampaign = LiveCampaign.NONE,
 ) : QueryUseCase<GetProductUc.Qry, ProductDetailDto, GetProductUc.Failure> {
 
     private val logger = getLogger()
 
-    /** The path segment and `?color=` as they arrived. */
-    data class Qry(val idOrSlug: String, val color: String? = null)
+    /** The path segment and `?color=` as they arrived; [viewer] the logged-in customer, for the heart (none: a guest). */
+    data class Qry(val idOrSlug: String, val color: String? = null, val viewer: UserId? = null)
 
     override suspend fun execute(query: Qry): Result<ProductDetailDto, Failure> {
         logger.info("GetProductUc.execute idOrSlug=${query.idOrSlug} color=${query.color}")
@@ -69,10 +71,10 @@ class GetProductUc(
             val category = categoryRepository.findBySlug(product.card.categorySlug) ?: error("No category ${product.card.categorySlug.value}")
             val material = materialRepository.findAll().first { it.slug == product.materialSlug }
             val palette = colorRepository.findAll().associateBy { it.key }
-            val card = ProductCards.cardOf(product.card, category, palette, now, shopSettingsRepository.get().freeShippingThreshold)
+            val settings = shopSettingsRepository.get()
+            val card = wishlistHearts.mark(listOf(ProductCards.cardOf(product.card, category, palette, now, settings.freeShippingThreshold, settings.lowStockThreshold)), query.viewer).single()
 
-            Result.success(
-                ProductDetailDto(
+            val page = ProductDetailDto(
                     card = card,
                     selectedColorKey = asked?.takeIf { key -> product.variants.any { it.colorKey == key } }?.value ?: card.defaultColorKey,
                     shortDescription = product.shortDescription?.value,
@@ -81,30 +83,22 @@ class GetProductUc(
                     material = ProductDetailDto.MaterialRef(material.id.value, material.slug.value, material.name.value, material.family),
                     materialDescription = product.materialDescription?.value,
                     specs = product.specs,
-                    variants = product.variants.map { variantOf(it, palette, product.card.maxPerOrder) },
+                    variants = product.variants.map {
+                        ProductCards.variantOf(
+                            it.variantId, it.sku, it.colorKey, it.priceTag, it.isDefault, it.available, it.media, palette, product.card.maxPerOrder,
+                            settings.lowStockThreshold,
+                        )
+                    },
                     returnable = product.returnable,
                     reservable = product.reservable,
                     maxPerOrder = product.card.maxPerOrder.value,
                     publishedAt = product.publishedOn,
                     updatedAt = product.updatedOn,
-                ),
-            )
+                    campaign = liveCampaign.showing(product.card.productId, card.price.discountPercent >= CampaignShowcasePolicy.MIN_DISCOUNT_PERCENT, now)
+                        ?.let { ProductDetailDto.CampaignBadge(it.slug.value, it.title, it.window.endsAt) },
+                )
+            Result.success(stockAlertFlags.mark(page, query.viewer))
         }
-    }
-
-    /** One color: its price tag, and its stock through StockPolicy, so only a few left shows a number. */
-    private fun variantOf(variant: ProductDetailQm.Variant, palette: Map<ColorKey, Color>, maxPerOrder: MaxPerOrder): ProductDetailDto.Variant {
-        val swatch = palette.getValue(variant.colorKey)
-        return ProductDetailDto.Variant(
-            id = variant.variantId.value,
-            sku = variant.sku.value,
-            color = ProductDetailDto.Swatch(swatch.key.value, swatch.name.value, swatch.hex.value, swatch.isLight, swatch.sortOrder),
-            isDefault = variant.isDefault,
-            price = PriceDto.from(variant.priceTag),
-            stock = StockPolicy.stockOf(variant.available, maxPerOrder),
-            media = variant.media,
-            hasVideo = variant.media.any { it.type == MediaType.VIDEO },
-        )
     }
 
     sealed class Failure(

@@ -1,90 +1,152 @@
 package com.kiva.domain.aggregate.product.model.valueobject
 
 import com.kiva.common.railway.FailureKind
+import com.kiva.common.railway.InputProblems
 import com.kiva.common.railway.Result
 import com.kiva.common.railway.ResultFailure
+import com.kiva.common.text.normalizePersianLetters
+import com.kiva.domain.aggregate.material.model.valueobject.CareInstructions
 
 /**
- * What a bag is like: the product page's spec tab, comparisons and the occasion filter.
+ * What a bag is like (the contract's ProductSpecs, every part of it): the product page's spec tab, comparisons, the
+ * occasion filter and SEO. Everything is optional: a spec nobody filled in is simply not shown.
  *
- * Only what the shop has data for today (the prototype's spec per bag form). The rest of the contract's
- * ProductSpecs (lining, hardware, warranty, what fits inside, ...) comes with the admin panel. Everything is optional:
- * a spec nobody filled in is simply not shown.
- *
- * @property strap the strap in words («بند دوشی ثابت ۵۵ سانتی‌متر»).
- * @property pockets the pockets in words («۱ جیب زیپ‌دار داخلی، ۲ جیب موبایل»).
+ * Its parts check themselves (Dimensions, StrapInfo, PocketInfo, LiningInfo, HardwareInfo, WarrantyInfo,
+ * CareInstructions); here are the limits on the whole: the weight, at most [MAX_STRAPS] straps, the laptop size and the
+ * capacity, the stitching and where it was made. Every problem comes back at once, each under its own field
+ * (`weightGrams`, `straps`), and the caller puts `specs` in front.
  */
 @ConsistentCopyVisibility
 data class ProductSpecs private constructor(
     val dimensions: Dimensions?,
     val weightGrams: Int?,
     val closure: ClosureType?,
-    val strap: String?,
-    val pockets: String?,
+    val straps: List<StrapInfo>,
+    val pockets: PocketInfo?,
+    val laptopMaxInch: Double?,
+    val capacityLiters: Double?,
+    val waterproof: Boolean,
     val occasions: Set<Occasion>,
+    val fits: Set<FitItem>,
+    val lining: LiningInfo?,
+    val hardware: HardwareInfo?,
+    val stitching: String?,
+    val handmade: Boolean,
+    val madeIn: String?,
+    val careInstructions: CareInstructions,
+    val warranty: WarrantyInfo?,
 ) {
     // Second wall, for every way in: [makeNew] already refuses bad input with a Failure, so this only ever fails
     // when stored data is wrong. That is a bug: stop loudly.
     init {
         require(weightGrams == null || weightGrams in 1..MAX_WEIGHT_GRAMS) { "Invalid weight $weightGrams" }
-        require(isValidText(strap) && isValidText(pockets)) { "Invalid spec text: strap='$strap' pockets='$pockets'" }
+        require(straps.size <= MAX_STRAPS) { "Too many straps: ${straps.size}" }
+        require(isPositiveUpTo(laptopMaxInch, MAX_LAPTOP_INCH) && isPositiveUpTo(capacityLiters, MAX_CAPACITY_LITERS)) { "Invalid laptop or capacity" }
+        require(isText(stitching, MAX_STITCHING) && isText(madeIn, MAX_MADE_IN)) { "Invalid spec text" }
     }
 
     companion object {
         /** No bag weighs 20 kg; a bigger number is a typo. */
         const val MAX_WEIGHT_GRAMS = 20_000
-        const val MAX_TEXT_LENGTH = 200
+        const val MAX_STRAPS = 4
+        const val MAX_LAPTOP_INCH = 20.0
+        const val MAX_CAPACITY_LITERS = 100.0
+        const val MAX_STITCHING = 100
+        const val MAX_MADE_IN = 40
 
-        val NONE = ProductSpecs(null, null, null, null, null, emptySet())
+        val NONE = ProductSpecs(
+            null, null, null, emptyList(), null, null, null, false, emptySet(), emptySet(), null, null, null, false, null, CareInstructions.NONE, null,
+        )
 
-        /**
-         * Texts are trimmed and blank means "not given". Every problem is reported at once, each under its own field,
-         * so the admin form can mark them all together.
-         */
+        /** The parts already made by their own value objects; every limit on the whole checked here, all at once. */
         fun makeNew(
-            dimensions: Dimensions?,
-            weightGrams: Int?,
-            closure: ClosureType?,
-            strap: String?,
-            pockets: String?,
-            occasions: Set<Occasion>,
-        ): Result<ProductSpecs, Failure> {
-            val strapText = strap?.trim()?.ifEmpty { null }
-            val pocketsText = pockets?.trim()?.ifEmpty { null }
-
-            val problems = buildList {
-                if (weightGrams != null && weightGrams !in 1..MAX_WEIGHT_GRAMS) add(Failure.WeightInvalid)
-                if (strapText != null && strapText.length > MAX_TEXT_LENGTH) add(Failure.StrapTooLong)
-                if (pocketsText != null && pocketsText.length > MAX_TEXT_LENGTH) add(Failure.PocketsTooLong)
-            }
-            if (problems.isNotEmpty()) return Result.failure(Failure.Invalid(problems))
-
-            return Result.success(ProductSpecs(dimensions, weightGrams, closure, strapText, pocketsText, occasions.toSet()))
+            dimensions: Dimensions? = null,
+            weightGrams: Int? = null,
+            closure: ClosureType? = null,
+            straps: List<StrapInfo> = emptyList(),
+            pockets: PocketInfo? = null,
+            laptopMaxInch: Double? = null,
+            capacityLiters: Double? = null,
+            waterproof: Boolean = false,
+            occasions: Set<Occasion> = emptySet(),
+            fits: Set<FitItem> = emptySet(),
+            lining: LiningInfo? = null,
+            hardware: HardwareInfo? = null,
+            stitching: String? = null,
+            handmade: Boolean = false,
+            madeIn: String? = null,
+            careInstructions: CareInstructions = CareInstructions.NONE,
+            warranty: WarrantyInfo? = null,
+        ): Result<ProductSpecs, InputProblems> {
+            val stitchingText = clean(stitching)
+            val madeInText = clean(madeIn)
+            val problems = problemsOfWhole(weightGrams, straps.size, laptopMaxInch, capacityLiters, stitching, madeIn)
+            if (problems.isNotEmpty()) return Result.failure(InputProblems(problems))
+            return Result.success(
+                ProductSpecs(
+                    dimensions, weightGrams, closure, straps.toList(), pockets, laptopMaxInch, capacityLiters, waterproof, occasions.toSet(),
+                    fits.toSet(), lining, hardware, stitchingText, handmade, madeInText, careInstructions, warranty,
+                ),
+            )
         }
 
         /** For values read back from storage. Still checked by `init`. */
         fun constructFromPersisted(
-            dimensions: Dimensions?,
-            weightGrams: Int?,
-            closure: ClosureType?,
-            strap: String?,
-            pockets: String?,
-            occasions: Set<Occasion>,
-        ): ProductSpecs = ProductSpecs(dimensions, weightGrams, closure, strap, pockets, occasions.toSet())
+            dimensions: Dimensions? = null,
+            weightGrams: Int? = null,
+            closure: ClosureType? = null,
+            straps: List<StrapInfo> = emptyList(),
+            pockets: PocketInfo? = null,
+            laptopMaxInch: Double? = null,
+            capacityLiters: Double? = null,
+            waterproof: Boolean = false,
+            occasions: Set<Occasion> = emptySet(),
+            fits: Set<FitItem> = emptySet(),
+            lining: LiningInfo? = null,
+            hardware: HardwareInfo? = null,
+            stitching: String? = null,
+            handmade: Boolean = false,
+            madeIn: String? = null,
+            careInstructions: CareInstructions = CareInstructions.NONE,
+            warranty: WarrantyInfo? = null,
+        ): ProductSpecs = ProductSpecs(
+            dimensions, weightGrams, closure, straps.toList(), pockets, laptopMaxInch, capacityLiters, waterproof, occasions.toSet(), fits.toSet(),
+            lining, hardware, stitching, handmade, madeIn, careInstructions, warranty,
+        )
 
-        private fun isValidText(text: String?): Boolean = text == null || (text.isNotBlank() && text.length <= MAX_TEXT_LENGTH)
+        /**
+         * The limits on the whole alone, for a form whose parts are not all valid yet: a caller that checks the parts
+         * on their own still reports these together with theirs.
+         */
+        fun problemsOfWhole(
+            weightGrams: Int?,
+            strapsCount: Int,
+            laptopMaxInch: Double?,
+            capacityLiters: Double?,
+            stitching: String?,
+            madeIn: String?,
+        ): List<Problem> = buildList {
+            if (weightGrams != null && weightGrams !in 1..MAX_WEIGHT_GRAMS) add(Problem.WeightInvalid)
+            if (strapsCount > MAX_STRAPS) add(Problem.StrapsTooMany)
+            if (!isPositiveUpTo(laptopMaxInch, MAX_LAPTOP_INCH)) add(Problem.LaptopInvalid)
+            if (!isPositiveUpTo(capacityLiters, MAX_CAPACITY_LITERS)) add(Problem.CapacityInvalid)
+            if ((clean(stitching)?.length ?: 0) > MAX_STITCHING) add(Problem.StitchingTooLong)
+            if ((clean(madeIn)?.length ?: 0) > MAX_MADE_IN) add(Problem.MadeInTooLong)
+        }
+
+        private fun clean(text: String?): String? = text?.normalizePersianLetters()?.ifEmpty { null }
+
+        private fun isPositiveUpTo(value: Double?, max: Double): Boolean = value == null || (value.isFinite() && value > 0 && value <= max)
+
+        private fun isText(text: String?, max: Int): Boolean = text == null || (text.isNotBlank() && text.length <= max)
     }
 
-    // The whole failure is the `specs` field; each problem inside names its own field (specs.weightGrams, ...).
-    sealed class Failure(
-        code: String,
-        field: String,
-        causes: List<ResultFailure> = emptyList(),
-        meta: Map<String, Any> = emptyMap(),
-    ) : ResultFailure(code, FailureKind.INVALID, field = field, causes = causes, meta = meta) {
-        data class Invalid(val problems: List<Failure>) : Failure("SPECS_INVALID", "specs", causes = problems)
-        data object WeightInvalid : Failure("WEIGHT_INVALID", "weightGrams", meta = mapOf("maxGrams" to MAX_WEIGHT_GRAMS))
-        data object StrapTooLong : Failure("STRAP_TOO_LONG", "strap", meta = mapOf("maxLength" to MAX_TEXT_LENGTH))
-        data object PocketsTooLong : Failure("POCKETS_TOO_LONG", "pockets", meta = mapOf("maxLength" to MAX_TEXT_LENGTH))
+    sealed class Problem(code: String, field: String, meta: Map<String, Any>) : ResultFailure(code, FailureKind.INVALID, field, meta = meta) {
+        data object WeightInvalid : Problem("WEIGHT_INVALID", "weightGrams", mapOf("maxGrams" to MAX_WEIGHT_GRAMS))
+        data object StrapsTooMany : Problem("STRAPS_TOO_MANY", "straps", mapOf("maxItems" to MAX_STRAPS))
+        data object LaptopInvalid : Problem("LAPTOP_MAX_INCH_INVALID", "laptopMaxInch", mapOf("max" to MAX_LAPTOP_INCH.toInt()))
+        data object CapacityInvalid : Problem("CAPACITY_LITERS_INVALID", "capacityLiters", mapOf("max" to MAX_CAPACITY_LITERS.toInt()))
+        data object StitchingTooLong : Problem("STITCHING_TOO_LONG", "stitching", mapOf("maxLength" to MAX_STITCHING))
+        data object MadeInTooLong : Problem("MADE_IN_TOO_LONG", "madeIn", mapOf("maxLength" to MAX_MADE_IN))
     }
 }

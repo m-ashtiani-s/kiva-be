@@ -9,11 +9,13 @@ import com.kiva.domain.aggregate.user.model.ProfilePatch
 import com.kiva.domain.aggregate.user.model.valueobject.Role.ADMIN
 import com.kiva.domain.aggregate.user.model.valueobject.Role.OPERATOR
 import com.kiva.domain.aggregate.user.model.valueobject.Role.SUPPORT
+import com.kiva.domain.aggregate.user.model.valueobject.Roles
 import com.kiva.domain.aggregate.user.repository.PhoneTakenException
 import com.kiva.domain.aggregate.user.repository.UserRepository.FoundOrRegistered
 import com.kiva.infrastructure.TestDatabase
 import com.kiva.infrastructure.persistence.exposed.tbl.UserTbl
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.like
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.select
@@ -47,9 +49,22 @@ class UserRepositoryImplTest {
     private val today = LocalDate.of(2026, 10, 9)
     private val admin = UserId.constructFromPersisted(1)
 
+    /** Deleted accounts have no phone any more, so they are removed by id. */
+    private val erased = mutableListOf<Long>()
+
     @AfterEach
     fun deleteTestUsers() {
-        transaction(db) { UserTbl.deleteWhere { UserTbl.phone like "0990%" } }
+        transaction(db) {
+            UserTbl.deleteWhere { UserTbl.phone like "0990%" }
+            UserTbl.deleteWhere { UserTbl.id inList erased }
+        }
+    }
+
+    /** [user] deleted and saved, as DELETE /me leaves it. */
+    private fun erase(user: User): User {
+        erased += user.id.value
+        save(user.erase(now))
+        return read(user.id) ?: fail("the tombstone is gone")
     }
 
     private fun phone(n: Int) = IranianMobileNumber.constructFromPersisted("0990" + n.toString().padStart(7, '0'))
@@ -277,5 +292,66 @@ class UserRepositoryImplTest {
 
         save((read(user.id) ?: fail()).setPanelRoles(listOf(ADMIN), by = admin).getOrNull() ?: fail())
         assertTrue(transaction(db) { repository.hasAnyAdmin() })
+    }
+
+    @Test
+    fun `a deleted account is read back as a tombstone - no phone, nothing personal, CUSTOMER only, and when`() {
+        val user = register(phone(21)).user.with(fullProfile)
+        save(user)
+
+        val tombstone = erase(read(user.id) ?: fail())
+
+        assertTrue(tombstone.isDeleted)
+        assertEquals(now, tombstone.deletedOn)
+        assertNull(tombstone.phone)
+        assertEquals(listOf(null, null, null, null), listOf(tombstone.firstName, tombstone.lastName, tombstone.email, tombstone.birthDate))
+        assertEquals(Roles.CUSTOMER_ONLY, tombstone.roles)
+        assertEquals(true, transaction(db) { repository.isDeleted(user.id) })
+    }
+
+    @Test
+    fun `a deleted account's phone finds nobody, and logging in with it makes a new account with a new id`() {
+        val user = register(phone(22)).user
+        erase(user)
+
+        assertNull(transaction(db) { repository.findByPhone(phone(22)) })
+        val again = register(phone(22))
+
+        assertTrue(again.isNew)
+        assertTrue(again.user.id != user.id)
+        assertFalse(again.user.isDeleted)
+        assertEquals(false, transaction(db) { repository.isDeleted(again.user.id) })
+    }
+
+    @Test
+    fun `any number of deleted accounts have no phone at once - the unique key only counts phones`() {
+        val first = register(phone(23)).user
+        val second = register(phone(24)).user
+
+        erase(first)
+        erase(second)
+
+        assertEquals(listOf(null, null), listOf(read(first.id)?.phone, read(second.id)?.phone))
+    }
+
+    @Test
+    fun `the database refuses a phone on a deleted account and a live one without a phone - user_deleted_phone_check`() {
+        val user = register(phone(25)).user
+        val tombstone = erase(user)
+
+        val refusals = listOf(
+            "UPDATE user_tbl SET phone = '09900000025' WHERE \"pId\" = ${tombstone.id.value}",
+            "UPDATE user_tbl SET \"deletedOn\" = NULL WHERE \"pId\" = ${tombstone.id.value}",
+        ).map { sql -> runCatching { transaction(db) { exec(sql) } }.exceptionOrNull()?.message.orEmpty() }
+
+        refusals.forEach { assertTrue("user_deleted_phone_check" in it, it) }
+    }
+
+    @Test
+    fun `isDeleted of an id nobody has is null, and lockAndFind reads the account like findById`() {
+        val user = register(phone(26)).user
+
+        assertNull(transaction(db) { repository.isDeleted(UserId.constructFromPersisted(Long.MAX_VALUE)) })
+        assertEquals(user.snapshot(), transaction(db) { repository.lockAndFind(user.id) }?.snapshot())
     }
 }

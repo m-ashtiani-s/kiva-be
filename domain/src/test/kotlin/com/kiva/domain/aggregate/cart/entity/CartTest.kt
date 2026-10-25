@@ -98,7 +98,7 @@ class CartTest {
 
         @Test
         fun `a line never holds more than 20 - 15 and then 10 stops at 20`() {
-            val roomy = offers(nila(NILA_BLACK, available = 50, maxPerOrder = 30))
+            val roomy = offers(nila(NILA_BLACK, available = 50, maxPerOrder = 20))
             val cart = userCart()
 
             cart.add(itemId(1), variant(NILA_BLACK), quantity(15), roomy, now)

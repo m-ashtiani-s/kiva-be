@@ -3,9 +3,11 @@ package com.kiva.infrastructure.auth.sms
 import com.kiva.application.port.SmsSender
 import com.kiva.common.logging.getLogger
 import com.kiva.common.valueobject.IranianMobileNumber
+import com.kiva.domain.aggregate.contact.model.valueobject.TicketCode
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpPurpose
+import com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnCode
 
 /**
  * Development only (`kiva.sms.provider = log`): writes the code to the log instead of sending it, so you can log in
@@ -29,5 +31,53 @@ class LogSmsSender : SmsSender {
 
     override suspend fun sendOrderPaid(to: IranianMobileNumber, orderCode: OrderCode) {
         logger.warn("SMS to ${to.masked()}: order ${orderCode.value} is paid, /track?order=${orderCode.value}")
+    }
+
+    override suspend fun sendPhotosSent(to: IranianMobileNumber, orderCode: OrderCode) {
+        logger.warn("SMS to ${to.masked()}: the photos of order ${orderCode.value} were sent on the messenger")
+    }
+
+    override suspend fun sendRefundCompleted(to: IranianMobileNumber, orderCode: OrderCode) {
+        logger.warn("SMS to ${to.masked()}: a refund of order ${orderCode.value} was completed")
+    }
+
+    override suspend fun sendOrderCancelled(to: IranianMobileNumber, orderCode: OrderCode) {
+        logger.warn("SMS to ${to.masked()}: order ${orderCode.value} was cancelled")
+    }
+
+    override suspend fun sendOrderShipped(to: IranianMobileNumber, orderCode: OrderCode, carrierName: String, trackingCode: String) {
+        logger.warn("SMS to ${to.masked()}: order ${orderCode.value} was shipped by $carrierName")
+    }
+
+    override suspend fun sendOrderDelivered(to: IranianMobileNumber, orderCode: OrderCode) {
+        logger.warn("SMS to ${to.masked()}: order ${orderCode.value} was delivered")
+    }
+
+    override suspend fun sendChangeResolved(to: IranianMobileNumber, orderCode: OrderCode) {
+        logger.warn("SMS to ${to.masked()}: the change request of order ${orderCode.value} was resolved")
+    }
+
+    override suspend fun sendReturnApproved(to: IranianMobileNumber, returnCode: ReturnCode) {
+        logger.warn("SMS to ${to.masked()}: return ${returnCode.value} was approved")
+    }
+
+    override suspend fun sendReturnRejected(to: IranianMobileNumber, returnCode: ReturnCode) {
+        logger.warn("SMS to ${to.masked()}: return ${returnCode.value} was turned down")
+    }
+
+    override suspend fun sendReturnPickup(to: IranianMobileNumber, returnCode: ReturnCode, carrierName: String) {
+        logger.warn("SMS to ${to.masked()}: the parcel of return ${returnCode.value} will be collected by $carrierName")
+    }
+
+    override suspend fun sendReturnClosed(to: IranianMobileNumber, returnCode: ReturnCode) {
+        logger.warn("SMS to ${to.masked()}: return ${returnCode.value} was closed")
+    }
+
+    override suspend fun sendBackInStock(to: IranianMobileNumber, productName: String, link: String) {
+        logger.warn("SMS to ${to.masked()}: «$productName» is back, $link")
+    }
+
+    override suspend fun sendContactReplied(to: IranianMobileNumber, ticketCode: TicketCode) {
+        logger.warn("SMS to ${to.masked()}: support replied to ${ticketCode.value}")
     }
 }

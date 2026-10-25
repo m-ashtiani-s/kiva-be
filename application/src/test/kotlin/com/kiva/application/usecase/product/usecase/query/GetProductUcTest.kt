@@ -1,15 +1,21 @@
 package com.kiva.application.usecase.product.usecase.query
 
-import com.kiva.application.repository.ProductFacetsQm
+import com.kiva.application.dto.GalleryItemDto
 import com.kiva.application.dto.PriceDto
 import com.kiva.application.dto.ProductDetailDto
+import com.kiva.application.dto.UploadedMediaDto
 import com.kiva.application.repository.ProductCardQm
 import com.kiva.application.repository.ProductDetailQm
+import com.kiva.application.repository.ProductFacetsQm
 import com.kiva.application.repository.ProductFilter
 import com.kiva.application.repository.ProductQmRepository
 import com.kiva.application.repository.ProductRef
 import com.kiva.application.repository.VariantQm
 import com.kiva.application.util.MockTransactionManager
+import com.kiva.application.util.UnusedCategoryRepository
+import com.kiva.application.util.UnusedColorRepository
+import com.kiva.application.util.UnusedMaterialRepository
+import com.kiva.application.util.UnusedProductQmRepository
 import com.kiva.application.util.factory.CategoryFactory
 import com.kiva.application.util.factory.ColorFactory
 import com.kiva.application.util.factory.MaterialFactory
@@ -29,15 +35,15 @@ import com.kiva.domain.aggregate.material.entity.Material
 import com.kiva.domain.aggregate.material.model.valueobject.MaterialFamily
 import com.kiva.domain.aggregate.material.model.valueobject.MaterialId
 import com.kiva.domain.aggregate.material.repository.MaterialRepository
+import com.kiva.domain.aggregate.media.model.valueobject.MediaType
 import com.kiva.domain.aggregate.product.model.valueobject.BagType
 import com.kiva.domain.aggregate.product.model.valueobject.Highlights
 import com.kiva.domain.aggregate.product.model.valueobject.MaterialDescription
 import com.kiva.domain.aggregate.product.model.valueobject.MaxPerOrder
-import com.kiva.domain.aggregate.product.model.valueobject.MediaType
+import com.kiva.domain.aggregate.product.model.valueobject.MediaView
 import com.kiva.domain.aggregate.product.model.valueobject.PriceTag
 import com.kiva.domain.aggregate.product.model.valueobject.ProductDescription
 import com.kiva.domain.aggregate.product.model.valueobject.ProductId
-import com.kiva.domain.aggregate.product.model.valueobject.ProductMedia
 import com.kiva.domain.aggregate.product.model.valueobject.ProductName
 import com.kiva.domain.aggregate.product.model.valueobject.ProductSpecs
 import com.kiva.domain.aggregate.product.model.valueobject.Sku
@@ -53,7 +59,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 /** The read model as far as a page needs it: hands back [product] and remembers how it was asked for. */
-private class PageReadModel(var product: ProductDetailQm? = null) : ProductQmRepository {
+private class PageReadModel(var product: ProductDetailQm? = null) : UnusedProductQmRepository() {
     var askedRef: ProductRef? = null
 
     override fun findDetail(ref: ProductRef): ProductDetailQm? {
@@ -61,23 +67,13 @@ private class PageReadModel(var product: ProductDetailQm? = null) : ProductQmRep
         return product
     }
 
-    override fun find(filter: ProductFilter, pageable: Pageable): Page<ProductCardQm> = error("not used here")
-
     override fun findVariant(variantId: VariantId): VariantQm? = error("not used here")
-
-    override fun facets(filter: ProductFilter, now: Instant): ProductFacetsQm = error("not used here")
 
     override fun findRelated(productId: ProductId, limit: Int): List<ProductCardQm>? = error("not used here")
 
-    override fun isSlugTaken(slug: Slug): Boolean = error("not used here")
-
     override fun findTakenSkus(skus: Collection<Sku>): Set<Sku> = error("not used here")
 
-    override fun countActiveByCategory(): Map<Slug, Int> = error("not used here")
-
     override fun countActiveByMaterial(): Map<Slug, Int> = error("not used here")
-
-    override fun countActiveByColor(): Map<ColorKey, Int> = error("not used here")
 
     override fun refreshSearchText(of: ProductQmRepository.NamedInSearch): Int = error("not used here")
 }
@@ -88,24 +84,21 @@ class GetProductUcTest {
     private val transactionManager = MockTransactionManager()
     private val readModel = PageReadModel()
 
-    private val categories = object : CategoryRepository {
+    private val categories = object : UnusedCategoryRepository() {
         private val shoulder = CategoryFactory.generate(id = 1, slug = "shoulder", name = "کیف دوشی")
         override fun findAll(): List<Category> = listOf(shoulder)
         override fun findBySlug(slug: Slug): Category? = shoulder.takeIf { it.slug == slug }
-        override fun findById(id: CategoryId): Category? = error("not used here")
     }
-    private val materials = object : MaterialRepository {
+    private val materials = object : UnusedMaterialRepository() {
         private val matte = MaterialFactory.generate(id = 4, slug = "faux-leather-matte", name = "چرم مصنوعی مات", family = MaterialFamily.FAUX_LEATHER)
         override fun findAll(): List<Material> = listOf(MaterialFactory.generate(id = 1), matte)
-        override fun findById(id: MaterialId): Material? = error("not used here")
     }
-    private val colors = object : ColorRepository {
+    private val colors = object : UnusedColorRepository() {
         private val palette = listOf(
             ColorFactory.generate(key = "lilac", name = "یاسی", hex = "#C8B6E2", isLight = true, sortOrder = 4),
             ColorFactory.generate(key = "black", name = "مشکی", hex = "#2B2930", isLight = false, sortOrder = 1),
         )
         override fun findAll(): List<Color> = palette
-        override fun findByKey(key: ColorKey): Color? = error("not used here")
     }
 
     private val useCase = GetProductUc(
@@ -115,8 +108,13 @@ class GetProductUcTest {
     private fun money(toman: Long) = Money.constructFromPersisted(toman)
     private fun priceTag(price: Long, compareAt: Long? = null) = PriceTag.constructFromPersisted(money(price), compareAt?.let(::money))
 
-    private val photo = ProductMedia.constructFromPersisted(MediaType.IMAGE, "https://cdn.kiva.ir/p/1/lilac/front.webp", null, "نمای جلو")
-    private val video = ProductMedia.constructFromPersisted(MediaType.VIDEO, "https://cdn.kiva.ir/p/1/lilac/turn.mp4", null, null)
+    private fun item(id: String, type: MediaType, view: MediaView, alt: String?) = GalleryItemDto(
+        UploadedMediaDto(id, type, "image/webp", "p/1/$id/1600.webp", "p/1/$id/320.webp", emptyList(), null, 1600, 1200, null, alt, null),
+        view,
+    )
+
+    private val photo = item("med_0000000000000000000001", MediaType.IMAGE, MediaView.FRONT, "نمای جلو")
+    private val video = item("med_0000000000000000000002", MediaType.VIDEO, MediaView.SIDE, null)
 
     private val lilac = ProductDetailQm.Variant(
         VariantId.constructFromPersisted(101), ColorKey.constructFromPersisted("lilac"), Sku.constructFromPersisted("KV-1001-LILAC"),
@@ -140,7 +138,7 @@ class GetProductUcTest {
             soldCount = 0,
             newUntil = null,
             maxPerOrder = MaxPerOrder.DEFAULT,
-            colors = listOf(lilac, black).map { ProductCardQm.Color(it.variantId, it.colorKey, it.isDefault, it.available) },
+            colors = listOf(lilac, black).map { ProductCardQm.Color(it.variantId, it.colorKey, it.isDefault, it.available, Money.constructFromPersisted(1_450_000)) },
         ),
         materialSlug = Slug.constructFromPersisted("faux-leather-matte"),
         materialDescription = MaterialDescription.constructFromPersisted("چرم مصنوعی مات درجه یک"),
@@ -168,11 +166,12 @@ class GetProductUcTest {
                 ProductDetailDto.Variant(
                     101, "KV-1001-LILAC", ProductDetailDto.Swatch("lilac", "یاسی", "#C8B6E2", true, 4), isDefault = true,
                     PriceDto(1_450_000, 1_750_000, 17, 300_000), StockInfo(StockStatus.IN_STOCK, null, 5), listOf(photo, video), hasVideo = true,
+                    stockAlertSubscribed = false, // a guest waits for nothing (phase 10)
                 ),
                 // Two left of black: only now is the number shown.
                 ProductDetailDto.Variant(
                     102, "KV-1001-BLACK", ProductDetailDto.Swatch("black", "مشکی", "#2B2930", false, 1), isDefault = false,
-                    PriceDto(1_890_000, null, 0, 0), StockInfo(StockStatus.LOW_STOCK, 2, 2), emptyList(), hasVideo = false,
+                    PriceDto(1_890_000, null, 0, 0), StockInfo(StockStatus.LOW_STOCK, 2, 2), emptyList(), hasVideo = false, stockAlertSubscribed = false,
                 ),
             ),
             page.variants,

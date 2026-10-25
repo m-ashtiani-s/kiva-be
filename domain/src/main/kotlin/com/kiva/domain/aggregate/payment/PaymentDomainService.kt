@@ -13,6 +13,7 @@ import com.kiva.domain.aggregate.payment.model.valueobject.CardMask
 import com.kiva.domain.aggregate.payment.model.valueobject.GatewayRefId
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentFailureReason
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentPublicId
+import com.kiva.domain.aggregate.payment.model.valueobject.PaymentPurpose
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentStatus
 import com.kiva.domain.aggregate.payment.repository.PaymentIdGenerator
 import com.kiva.domain.aggregate.reservation.ReservationDomainService
@@ -46,6 +47,10 @@ class PaymentDomainService(private val paymentIdGenerator: PaymentIdGenerator) {
      * 3. the gateway is available now ([gatewayAvailable]: switched on and with an adapter; PAYMENT_GATEWAY_UNAVAILABLE);
      * 4. the order has had fewer than PaymentPolicy.MAX_ATTEMPTS_PER_ORDER attempts (429, until its time to pay ends).
      *
+     * A paid order that owes something after a change (phase 3, roadmap section 8.5) gets an attempt of its balance
+     * instead (purpose BALANCE), for exactly what it owes now: it may be paid while PaymentPolicy.canPayBalance (else
+     * ORDER_ALREADY_PAID), has no time to pay, and counts its own PaymentPolicy.MAX_ATTEMPTS_PER_ORDER attempts.
+     *
      * Only then is the attempt's id taken. The earlier attempts stay as they are: one still open in another tab that is
      * paid first wins, and the rules of [beginConfirming] keep the order from being paid twice. [attempts] are every
      * attempt of the order, locked by the caller.
@@ -60,12 +65,29 @@ class PaymentDomainService(private val paymentIdGenerator: PaymentIdGenerator) {
     ): Result<Payment, StartAttemptFailure> {
         logger.info("startAttempt order=${order.code.value} gateway=$gateway attempts=${attempts.size}")
         require(attempts.all { it.orderId == order.id }) { "The attempts are not those of order ${order.id.value}" }
-        if (order.status.isPaid) return Result.failure(StartAttemptFailure.AlreadyPaid)
+        if (order.status.isPaid) return startBalanceAttempt(order, attempts, gateway, gatewayAvailable, by, now)
         if (!order.canStartPayment(now)) return Result.failure(StartAttemptFailure.Expired)
         if (!gatewayAvailable) return Result.failure(StartAttemptFailure.GatewayUnavailable)
         PaymentPolicy.refusalToAttempt(attempts.size, order.holdUntil, now)?.let { return Result.failure(StartAttemptFailure.TooManyAttempts(it)) }
 
         return Result.success(Payment.start(paymentIdGenerator.nextPaymentPublicId(), order.id, by, gateway, order.totals.payable, now))
+    }
+
+    /** [startAttempt] of a paid order: what a change left owed, or nothing to pay. */
+    private fun startBalanceAttempt(
+        order: Order,
+        attempts: List<Payment>,
+        gateway: PaymentGatewayCode,
+        gatewayAvailable: Boolean,
+        by: UserId,
+        now: Instant,
+    ): Result<Payment, StartAttemptFailure> {
+        if (!order.canPayBalance) return Result.failure(StartAttemptFailure.AlreadyPaid)
+        if (!gatewayAvailable) return Result.failure(StartAttemptFailure.GatewayUnavailable)
+        PaymentPolicy.refusalToPayBalance(attempts.count { it.purpose == PaymentPurpose.BALANCE })?.let { return Result.failure(StartAttemptFailure.TooManyAttempts(it)) }
+
+        logger.info("startAttempt: order ${order.code.value} owes ${order.balanceDue.toman} after a change; the attempt pays that")
+        return Result.success(Payment.start(paymentIdGenerator.nextPaymentPublicId(), order.id, by, gateway, order.balanceDue, now, PaymentPurpose.BALANCE))
     }
 
     /**
@@ -98,14 +120,16 @@ class PaymentDomainService(private val paymentIdGenerator: PaymentIdGenerator) {
      * for an attempt the shopper never came back from. [attempts] as in [shopperReturned].
      *
      * - The order no longer waits (expired, or paid by another attempt): the attempt fails as ORDER_NOT_PAYABLE without
-     *   being confirmed, so its money is never taken.
+     *   being confirmed, so its money is never taken. An attempt of a balance (BALANCE) waits only while the order still
+     *   owes **exactly its amount**: paid by another attempt, changed again by staff meanwhile, or cancelled, it is refused
+     *   the same way.
      * - Another attempt is being confirmed: nothing changes yet. If that one is confirmed, this one is later refused as
      *   above; if not, this one is confirmed later, by the reconciliation job.
      */
     fun beginConfirming(payment: Payment, order: Order, attempts: List<Payment>, now: Instant): Return {
         requireSameOrder(payment, order, attempts)
         check(payment.status == PaymentStatus.REDIRECTED) { "Only an attempt with an open session may be confirmed, not ${payment.status}" }
-        if (!order.isAwaitingPayment) {
+        if (!waitsFor(payment, order)) {
             payment.refuseAsNotPayable(now).orBug()
             return Return.NotPayable
         }
@@ -118,13 +142,20 @@ class PaymentDomainService(private val paymentIdGenerator: PaymentIdGenerator) {
         return Return.Confirming
     }
 
+    /** [order] still waits for [payment]'s money: unpaid for an attempt of the order, owing exactly its amount for one of a balance. */
+    private fun waitsFor(payment: Payment, order: Order): Boolean = when (payment.purpose) {
+        PaymentPurpose.ORDER -> order.isAwaitingPayment
+        PaymentPurpose.BALANCE -> order.canPayBalance && order.balanceDue == payment.amount
+    }
+
     /**
-     * The gateway confirmed the attempt being confirmed: it succeeds, and the order is paid with it. The gateway has the
-     * money, so the attempt succeeds even when the order can't take it any more; that is a bug (the rules above keep it
-     * from happening), told back as [Confirmed.OrderNotPaid] for the caller to log loudly and support to give back.
+     * The gateway confirmed the attempt being confirmed: it succeeds, and the order is paid with it (an attempt of a
+     * balance pays what the order owes: Order.payBalance). The gateway has the money, so the attempt succeeds even when the
+     * order can't take it any more; that is a bug (the rules above keep it from happening), told back as
+     * [Confirmed.OrderNotPaid] for the caller to log loudly and support to give back.
      *
      * [reservation] is what paying does to the customer's «رزرو ۴ روزه», decided by ReservationDomainService.onPaid with
-     * what is true now; none for an order that neither joined nor asked for one.
+     * what is true now; none for an order that neither joined nor asked for one, nor for a balance.
      */
     fun confirmed(
         payment: Payment,
@@ -137,10 +168,11 @@ class PaymentDomainService(private val paymentIdGenerator: PaymentIdGenerator) {
     ): Confirmed {
         requireSameOrder(payment, order, listOf(payment))
         payment.succeed(refId, cardMask, now).orBug()
-        return when (val paid = order.markPaid(payment.publicId, payment.amount, reservation.held, by, now, reservation.groupId)) {
-            is Result.Success -> Confirmed.Paid
-            is Result.Failure -> Confirmed.OrderNotPaid(paid.failure)
+        val refused = when (payment.purpose) {
+            PaymentPurpose.ORDER -> order.markPaid(payment.publicId, payment.amount, reservation.held, by, now, reservation.groupId).failureOrNull()
+            PaymentPurpose.BALANCE -> order.payBalance(payment.publicId, payment.amount, by, now).failureOrNull()
         }
+        return if (refused == null) Confirmed.Paid else Confirmed.OrderNotPaid(refused)
     }
 
     /**
@@ -148,16 +180,16 @@ class PaymentDomainService(private val paymentIdGenerator: PaymentIdGenerator) {
      * gateway still reverses it (PaymentPolicy.REVERSE_WINDOW from its confirmation). Otherwise support gives it back.
      */
     fun mayReverse(payment: Payment, order: Order, now: Instant): Boolean =
-        payment.status == PaymentStatus.SUCCEEDED && order.paidByPaymentId != payment.publicId &&
+        payment.status == PaymentStatus.SUCCEEDED && !order.isPaidBy(payment.publicId) &&
             now.isBefore(checkNotNull(payment.settledOn).plus(PaymentPolicy.REVERSE_WINDOW))
 
     /**
-     * The gateway gave a confirmed attempt's money back ([mayReverse]): it is REFUNDED. Never the attempt that paid its
-     * order: that one is refunded only with its order (a later phase).
+     * The gateway gave a confirmed attempt's money back ([mayReverse]): it is REFUNDED. Never an attempt that paid its
+     * order or its balance: that money goes back only as a refund of the order.
      */
     fun reversed(payment: Payment, order: Order, now: Instant) {
         requireSameOrder(payment, order, listOf(payment))
-        require(order.paidByPaymentId != payment.publicId) { "Payment ${payment.publicId.value} paid order ${order.code.value}; it isn't reversed alone" }
+        require(!order.isPaidBy(payment.publicId)) { "Payment ${payment.publicId.value} paid order ${order.code.value}; it isn't reversed alone" }
         payment.refund(now).orBug()
     }
 
@@ -265,7 +297,7 @@ class PaymentDomainService(private val paymentIdGenerator: PaymentIdGenerator) {
     sealed interface Confirmed {
         data object Paid : Confirmed
 
-        /** The money came in, but the order couldn't take it: a bug, to be logged as PAID_BUT_ORDER_NOT_PAYABLE. */
-        data class OrderNotPaid(val failure: Order.MarkPaidFailure) : Confirmed
+        /** The money came in, but the order couldn't take it (Order.MarkPaidFailure, Order.PayBalanceFailure): a bug, to be logged as PAID_BUT_ORDER_NOT_PAYABLE. */
+        data class OrderNotPaid(val failure: ResultFailure) : Confirmed
     }
 }

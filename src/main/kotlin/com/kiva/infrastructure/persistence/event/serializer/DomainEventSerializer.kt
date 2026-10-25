@@ -6,17 +6,37 @@ import com.kiva.domain.aggregate.inventory.entity.event.ReservationReleased
 import com.kiva.domain.aggregate.inventory.entity.event.StockAdjusted
 import com.kiva.domain.aggregate.inventory.entity.event.StockReserved
 import com.kiva.domain.aggregate.inventory.entity.event.StockShipped
+import com.kiva.domain.aggregate.order.entity.event.OrderBalancePaid
+import com.kiva.domain.aggregate.order.entity.event.OrderCancelled
+import com.kiva.domain.aggregate.order.entity.event.OrderChangeApplied
+import com.kiva.domain.aggregate.order.entity.event.OrderChangeRejected
+import com.kiva.domain.aggregate.order.entity.event.OrderChangeRequested
+import com.kiva.domain.aggregate.order.entity.event.OrderDelivered
 import com.kiva.domain.aggregate.order.entity.event.OrderDomainEvent
 import com.kiva.domain.aggregate.order.entity.event.OrderExpired
+import com.kiva.domain.aggregate.order.entity.event.OrderLineRemoved
+import com.kiva.domain.aggregate.order.entity.event.OrderLineReplaced
 import com.kiva.domain.aggregate.order.entity.event.OrderPaid
 import com.kiva.domain.aggregate.order.entity.event.OrderPaymentFailed
+import com.kiva.domain.aggregate.order.entity.event.OrderPersonalDataErased
+import com.kiva.domain.aggregate.order.entity.event.OrderPhotosApproved
+import com.kiva.domain.aggregate.order.entity.event.OrderPhotosAttached
+import com.kiva.domain.aggregate.order.entity.event.OrderPhotosSent
 import com.kiva.domain.aggregate.order.entity.event.OrderPlaced
+import com.kiva.domain.aggregate.order.entity.event.OrderRefunded
 import com.kiva.domain.aggregate.order.entity.event.OrderReleasedFromReservation
+import com.kiva.domain.aggregate.order.entity.event.OrderReturnEnded
+import com.kiva.domain.aggregate.order.entity.event.OrderReturnReceived
+import com.kiva.domain.aggregate.order.entity.event.OrderReturnRequested
+import com.kiva.domain.aggregate.order.entity.event.OrderShipmentCorrected
+import com.kiva.domain.aggregate.order.entity.event.OrderShipped
 import com.kiva.domain.aggregate.product.entity.event.ProductArchived
 import com.kiva.domain.aggregate.product.entity.event.ProductCreated
 import com.kiva.domain.aggregate.product.entity.event.ProductDetailsChanged
 import com.kiva.domain.aggregate.product.entity.event.ProductDomainEvent
 import com.kiva.domain.aggregate.product.entity.event.ProductPriceChanged
+import com.kiva.domain.aggregate.product.entity.event.ProductPublishScheduled
+import com.kiva.domain.aggregate.product.entity.event.ProductPublishUnscheduled
 import com.kiva.domain.aggregate.product.entity.event.ProductPublished
 import com.kiva.domain.aggregate.product.entity.event.ProductUnpublished
 import com.kiva.domain.aggregate.product.entity.event.VariantAdded
@@ -29,15 +49,35 @@ import com.kiva.infrastructure.persistence.event.serializer.payload.inventory.Re
 import com.kiva.infrastructure.persistence.event.serializer.payload.inventory.StockAdjustedPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.inventory.StockReservedPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.inventory.StockShippedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderBalancePaidPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderCancelledPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderChangeAppliedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderChangeRejectedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderChangeRequestedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderDeliveredPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderExpiredPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderLineRemovedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderLineReplacedPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderPaidPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderPaymentFailedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderPersonalDataErasedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderPhotosApprovedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderPhotosAttachedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderPhotosSentPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderPlacedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderRefundedPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderReleasedFromReservationPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderReturnEndedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderReturnReceivedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderReturnRequestedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderShipmentCorrectedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.order.OrderShippedPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.product.ProductArchivedPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.product.ProductCreatedPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.product.ProductDetailsChangedPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.product.ProductPriceChangedPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.product.ProductPublishScheduledPayload
+import com.kiva.infrastructure.persistence.event.serializer.payload.product.ProductPublishUnscheduledPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.product.ProductPublishedPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.product.ProductUnpublishedPayload
 import com.kiva.infrastructure.persistence.event.serializer.payload.product.VariantAddedPayload
@@ -72,6 +112,8 @@ object DomainEventSerializer {
         is ProductPriceChanged -> json.encodeToString(ProductPriceChangedPayload(event))
         is ProductPublished -> json.encodeToString(ProductPublishedPayload(event))
         is ProductUnpublished -> json.encodeToString(ProductUnpublishedPayload(event))
+        is ProductPublishScheduled -> json.encodeToString(ProductPublishScheduledPayload(event))
+        is ProductPublishUnscheduled -> json.encodeToString(ProductPublishUnscheduledPayload(event))
         is ProductArchived -> json.encodeToString(ProductArchivedPayload(event))
         is VariantAdded -> json.encodeToString(VariantAddedPayload(event))
         is VariantChanged -> json.encodeToString(VariantChangedPayload(event))
@@ -90,6 +132,8 @@ object DomainEventSerializer {
             ProductPriceChanged.TYPE.value -> json.decodeFromString<ProductPriceChangedPayload>(payload)
             ProductPublished.TYPE.value -> json.decodeFromString<ProductPublishedPayload>(payload)
             ProductUnpublished.TYPE.value -> json.decodeFromString<ProductUnpublishedPayload>(payload)
+            ProductPublishScheduled.TYPE.value -> json.decodeFromString<ProductPublishScheduledPayload>(payload)
+            ProductPublishUnscheduled.TYPE.value -> json.decodeFromString<ProductPublishUnscheduledPayload>(payload)
             ProductArchived.TYPE.value -> json.decodeFromString<ProductArchivedPayload>(payload)
             VariantAdded.TYPE.value -> json.decodeFromString<VariantAddedPayload>(payload)
             VariantChanged.TYPE.value -> json.decodeFromString<VariantChangedPayload>(payload)
@@ -131,6 +175,24 @@ object DomainEventSerializer {
         is OrderPaid -> json.encodeToString(OrderPaidPayload(event))
         is OrderExpired -> json.encodeToString(OrderExpiredPayload(event))
         is OrderReleasedFromReservation -> json.encodeToString(OrderReleasedFromReservationPayload(event))
+        is OrderPhotosAttached -> json.encodeToString(OrderPhotosAttachedPayload(event))
+        is OrderPhotosSent -> json.encodeToString(OrderPhotosSentPayload(event))
+        is OrderPhotosApproved -> json.encodeToString(OrderPhotosApprovedPayload(event))
+        is OrderShipped -> json.encodeToString(OrderShippedPayload(event))
+        is OrderShipmentCorrected -> json.encodeToString(OrderShipmentCorrectedPayload(event))
+        is OrderDelivered -> json.encodeToString(OrderDeliveredPayload(event))
+        is OrderCancelled -> json.encodeToString(OrderCancelledPayload(event))
+        is OrderRefunded -> json.encodeToString(OrderRefundedPayload(event))
+        is OrderChangeRequested -> json.encodeToString(OrderChangeRequestedPayload(event))
+        is OrderChangeRejected -> json.encodeToString(OrderChangeRejectedPayload(event))
+        is OrderLineReplaced -> json.encodeToString(OrderLineReplacedPayload(event))
+        is OrderLineRemoved -> json.encodeToString(OrderLineRemovedPayload(event))
+        is OrderChangeApplied -> json.encodeToString(OrderChangeAppliedPayload(event))
+        is OrderBalancePaid -> json.encodeToString(OrderBalancePaidPayload(event))
+        is OrderReturnRequested -> json.encodeToString(OrderReturnRequestedPayload(event))
+        is OrderReturnReceived -> json.encodeToString(OrderReturnReceivedPayload(event))
+        is OrderReturnEnded -> json.encodeToString(OrderReturnEndedPayload(event))
+        is OrderPersonalDataErased -> json.encodeToString(OrderPersonalDataErasedPayload(event))
     }
 
     fun deserializeOrder(payload: String, payloadVersion: Int, eventType: String): OrderDomainEvent {
@@ -142,6 +204,24 @@ object DomainEventSerializer {
             OrderPaid.TYPE.value -> json.decodeFromString<OrderPaidPayload>(payload)
             OrderExpired.TYPE.value -> json.decodeFromString<OrderExpiredPayload>(payload)
             OrderReleasedFromReservation.TYPE.value -> json.decodeFromString<OrderReleasedFromReservationPayload>(payload)
+            OrderPhotosAttached.TYPE.value -> json.decodeFromString<OrderPhotosAttachedPayload>(payload)
+            OrderPhotosSent.TYPE.value -> json.decodeFromString<OrderPhotosSentPayload>(payload)
+            OrderPhotosApproved.TYPE.value -> json.decodeFromString<OrderPhotosApprovedPayload>(payload)
+            OrderShipped.TYPE.value -> json.decodeFromString<OrderShippedPayload>(payload)
+            OrderShipmentCorrected.TYPE.value -> json.decodeFromString<OrderShipmentCorrectedPayload>(payload)
+            OrderDelivered.TYPE.value -> json.decodeFromString<OrderDeliveredPayload>(payload)
+            OrderCancelled.TYPE.value -> json.decodeFromString<OrderCancelledPayload>(payload)
+            OrderRefunded.TYPE.value -> json.decodeFromString<OrderRefundedPayload>(payload)
+            OrderChangeRequested.TYPE.value -> json.decodeFromString<OrderChangeRequestedPayload>(payload)
+            OrderChangeRejected.TYPE.value -> json.decodeFromString<OrderChangeRejectedPayload>(payload)
+            OrderLineReplaced.TYPE.value -> json.decodeFromString<OrderLineReplacedPayload>(payload)
+            OrderLineRemoved.TYPE.value -> json.decodeFromString<OrderLineRemovedPayload>(payload)
+            OrderChangeApplied.TYPE.value -> json.decodeFromString<OrderChangeAppliedPayload>(payload)
+            OrderBalancePaid.TYPE.value -> json.decodeFromString<OrderBalancePaidPayload>(payload)
+            OrderReturnRequested.TYPE.value -> json.decodeFromString<OrderReturnRequestedPayload>(payload)
+            OrderReturnReceived.TYPE.value -> json.decodeFromString<OrderReturnReceivedPayload>(payload)
+            OrderReturnEnded.TYPE.value -> json.decodeFromString<OrderReturnEndedPayload>(payload)
+            OrderPersonalDataErased.TYPE.value -> json.decodeFromString<OrderPersonalDataErasedPayload>(payload)
             else -> error("Unknown order event type '$eventType'")
         }
         return eventPayload.toDomainEvent()

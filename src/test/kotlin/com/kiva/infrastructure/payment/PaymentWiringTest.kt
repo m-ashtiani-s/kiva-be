@@ -11,9 +11,12 @@ import com.kiva.domain.aggregate.settings.model.valueobject.PaymentGatewayCode.S
 import com.kiva.domain.aggregate.settings.model.valueobject.PaymentGatewayCode.ZARINPAL
 import com.kiva.domain.aggregate.settings.model.valueobject.ShippingMethodCode
 import com.kiva.common.valueobject.Money
+import com.kiva.domain.aggregate.settings.model.valueobject.ShopFeatures
+import com.kiva.domain.aggregate.settings.model.valueobject.SiteStats
 import com.kiva.infrastructure.TestDatabase
 import com.kiva.infrastructure.config.AppConfig
 import com.kiva.infrastructure.config.AuthConfig
+import com.kiva.infrastructure.config.BlogConfig
 import com.kiva.infrastructure.config.DatasourceConfig
 import com.kiva.infrastructure.di.infrastructureModule
 import org.junit.jupiter.api.Test
@@ -38,6 +41,15 @@ class PaymentWiringTest {
         reservationEnabled = false,
         reservationHoldDays = 4,
         returnWindowDays = 7,
+        lowStockThreshold = 5,
+        preShipmentFeedbackHours = 24,
+        supportPhone = null,
+        supportEmail = null,
+        supportHours = emptyList(),
+        social = emptyList(),
+        siteStats = SiteStats.NONE,
+        features = ShopFeatures.NONE,
+        version = 0,
         paymentGateways = listOf(ZARINPAL, SAMAN, MELLAT).mapIndexed { index, code ->
             PaymentGatewayOption.constructFromPersisted(code, code.name, "#F2C230", "ز", null, isActive = code in active, isDefault = code == default, sortOrder = index)
         },
@@ -85,6 +97,7 @@ class PaymentWiringTest {
         val config = AppConfig(
             DatasourceConfig("jdbc:postgresql://localhost:5432/kiva_test", "unused", "unused", 1),
             auth = AuthConfig(otpPepper = ByteArray(32) { 7 }, jwtSecret = ByteArray(32) { 8 }, maxSmsPerHour = 300),
+            blog = BlogConfig(voterPepper = ByteArray(32) { 9 }),
             payment = PaymentConfig(
                 PaymentProvider.ZARINPAL, "https://api.kiva.ir", "https://kiva.ir/checkout/result",
                 ZarinpalConfig("1344b5d4-0048-11e8-94db-005056a205be", sandbox = false),

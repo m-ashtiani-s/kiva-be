@@ -4,6 +4,7 @@ import com.kiva.application.dto.OrderSummaryDto
 import com.kiva.application.dto.PaymentInitDto
 import com.kiva.application.dto.ReservationInfoDto
 import com.kiva.domain.aggregate.order.model.valueobject.OrderActions
+import com.kiva.infrastructure.media.MediaUrls
 import kotlinx.serialization.Serializable
 
 /** Contract schema `PlaceOrderResponse`: the order, and where to pay it; [payment] is `null` for an order paid at once. */
@@ -11,8 +12,9 @@ import kotlinx.serialization.Serializable
 data class PlaceOrderHttpResponse(val order: OrderSummaryHttpResponse, val payment: PaymentInitHttpResponse?)
 
 /**
- * Contract schema `OrderSummary`: an order's card. [reservation] only for an order held with «رزرو ۴ روزه». In this phase
- * the shipment only waits, the photos before shipping are still to come, and [balanceDue] is 0 (no change requests yet).
+ * Contract schema `OrderSummary`: an order's card. [reservation] only for an order held with «رزرو ۴ روزه». [payable] is
+ * everything paid so far and [balanceDue] what a change to a dearer color left owed (usually 0); the shipment waits until
+ * the order is shipped.
  */
 @Serializable
 data class OrderSummaryHttpResponse(
@@ -33,8 +35,10 @@ data class OrderSummaryHttpResponse(
     val actions: OrderActionsHttpResponse,
 ) {
     companion object {
-        fun from(order: OrderSummaryDto): OrderSummaryHttpResponse {
+        fun from(order: OrderSummaryDto, urls: MediaUrls): OrderSummaryHttpResponse {
             val current = OrderTexts.currentStepOf(order.status)
+            // When each of the four steps was reached: paid, photos first sent, shipped, delivered.
+            val reachedOn = listOf(order.paidOn, order.firstPhotosSentOn, order.shipment?.shippedOn, order.shipment?.deliveredOn)
             return OrderSummaryHttpResponse(
                 code = order.code,
                 placedAt = order.placedOn.toString(),
@@ -42,9 +46,9 @@ data class OrderSummaryHttpResponse(
                 statusLabel = OrderTexts.statusLabel(order.status),
                 statusTone = OrderTexts.statusTone(order.status),
                 payable = order.payable.toman,
-                balanceDue = 0,
+                balanceDue = order.balanceDue.toman,
                 shippingMethod = OrderShippingMethodHttpResponse(order.shippingMethod.name, order.shippingMethodName),
-                itemsPreview = order.items.map { OrderItemPreviewHttpResponse(it.productId, it.name, it.colorKey, it.imageUrl, it.quantity) },
+                itemsPreview = order.items.map { OrderItemPreviewHttpResponse(it.productId, it.name, it.colorKey, it.imageUrl?.let(urls::of), it.quantity) },
                 itemsCount = order.itemsCount,
                 progress = OrderProgressHttpResponse(
                     currentStepIndex = current ?: 0,
@@ -54,27 +58,26 @@ data class OrderSummaryHttpResponse(
                             index == current -> "CURRENT"
                             else -> "DONE"
                         }
-                        // Only the first step's moment is known in this phase: the payment.
-                        OrderProgressStepHttpResponse(key, label, icon, state, if (index == 0 && current != null) order.paidOn?.toString() else null)
+                        OrderProgressStepHttpResponse(key, label, icon, state, reachedOn[index]?.takeIf { current != null && index <= current }?.toString())
                     },
                 ),
                 reservation = order.reservation?.let(ReservationInfoHttpResponse::from),
                 shipment = ShipmentHttpResponse(
                     carrier = order.shippingMethod.name,
                     carrierName = order.shippingMethodName,
-                    trackingCode = null,
-                    trackingUrl = null,
-                    shippedAt = null,
-                    deliveredAt = null,
-                    waitingMessage = OrderTexts.shipmentWaiting(order.shippingMethodName),
+                    trackingCode = order.shipment?.trackingCode,
+                    trackingUrl = order.shipment?.trackingUrl,
+                    shippedAt = order.shipment?.shippedOn?.toString(),
+                    deliveredAt = order.shipment?.deliveredOn?.toString(),
+                    waitingMessage = if (order.shipment == null) OrderTexts.shipmentWaiting(order.shippingMethodName) else null,
                 ),
                 preShipmentMedia = PreShipmentMediaSummaryHttpResponse(
-                    status = "WAITING",
+                    status = order.photos.status.name,
                     channel = order.messengerChannel.name,
                     channelName = OrderTexts.messengerName(order.messengerChannel),
-                    count = 0,
-                    hasVideo = false,
-                    sentAt = null,
+                    count = order.photos.count,
+                    hasVideo = order.photos.hasVideo,
+                    sentAt = order.photos.sentOn?.toString(),
                 ),
                 actions = OrderActionsHttpResponse.from(order.actions),
             )

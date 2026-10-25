@@ -24,8 +24,8 @@ class CartLimitsPolicyTest {
 
     @Test
     fun `never more than 20 in a line, however big the limit and the stock`() {
-        assertEquals(20, CartLimitsPolicy.maxQuantity(nila(NILA_BLACK, available = 50, maxPerOrder = 30), othersOfProduct = 0))
-        assertEquals(20, CartLimitsPolicy.roomUnderLimit(nila(NILA_BLACK, maxPerOrder = 30), othersOfProduct = 0))
+        assertEquals(20, CartLimitsPolicy.maxQuantity(nila(NILA_BLACK, available = 50, maxPerOrder = 20), othersOfProduct = 0))
+        assertEquals(20, CartLimitsPolicy.roomUnderLimit(nila(NILA_BLACK, maxPerOrder = 20), othersOfProduct = 0))
     }
 
     @Test

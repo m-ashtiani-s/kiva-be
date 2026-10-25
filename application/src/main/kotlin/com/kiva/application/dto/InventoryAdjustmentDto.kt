@@ -4,23 +4,22 @@ import com.kiva.domain.aggregate.inventory.model.valueobject.AdjustmentReason
 import java.time.Instant
 
 /**
- * One stock change by hand and the stock right after it (the contract's InventoryAdjustment).
+ * One hand change of a color's stock, as the panel's history shows it (the contract's InventoryAdjustment): a row of
+ * inventoryadjustmentqm_tbl.
  *
- * The contract's numeric `id` is not here yet: an adjustment's own id comes with the adjustments list that is built
- * from these events.
- *
- * @property sku the code of the color, from the read model.
- * @property onHandAfter bags in the warehouse after the change (the contract's `stockAfter`).
- * @property availableAfter of those, the ones that can still be sold.
+ * @property id the row's id (the contract's `id`).
+ * @property sku the code of the color.
+ * @property stockAfter bags in the warehouse right after the change.
+ * @property createdBy who made it, by name (the system for the seeder's and the jobs' changes).
  */
 data class InventoryAdjustmentDto(
+    val id: Long,
     val variantId: Long,
     val sku: String,
     val delta: Int,
     val reason: AdjustmentReason,
     val note: String?,
-    val onHandAfter: Int,
-    val availableAfter: Int,
-    val adjustedAt: Instant,
-    val adjustedBy: Long,
+    val stockAfter: Int,
+    val createdAt: Instant,
+    val createdBy: ActorNameDto,
 )

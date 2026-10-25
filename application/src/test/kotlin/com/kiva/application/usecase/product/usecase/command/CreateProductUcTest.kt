@@ -1,49 +1,38 @@
 package com.kiva.application.usecase.product.usecase.command
 
-import com.kiva.application.repository.ProductFacetsQm
 import com.kiva.application.dto.CreatedProductDto
-import com.kiva.application.repository.ProductCardQm
-import com.kiva.application.repository.ProductDetailQm
-import com.kiva.application.repository.ProductFilter
-import com.kiva.application.repository.ProductQmRepository
-import com.kiva.application.repository.ProductRef
-import com.kiva.application.repository.VariantQm
+import com.kiva.application.port.PanelActor
+import com.kiva.application.usecase.audit.AuditAction
+import com.kiva.application.usecase.media.MediaAttachments
+import com.kiva.application.usecase.product.ProductInput
 import com.kiva.application.usecase.product.usecase.command.CreateProductUc.Cmd
 import com.kiva.application.util.MockTransactionManager
-import com.kiva.application.util.factory.CategoryFactory
-import com.kiva.application.util.factory.ColorFactory
-import com.kiva.application.util.factory.MaterialFactory
-import com.kiva.common.pagination.Page
-import com.kiva.common.pagination.Pageable
 import com.kiva.common.railway.FailureKind
 import com.kiva.common.railway.Result
 import com.kiva.common.railway.ResultFailure
 import com.kiva.common.valueobject.Money
+import com.kiva.common.valueobject.SeoMeta
 import com.kiva.common.valueobject.Slug
 import com.kiva.common.valueobject.UserId
-import com.kiva.domain.aggregate.category.entity.Category
 import com.kiva.domain.aggregate.category.model.valueobject.CategoryId
-import com.kiva.domain.aggregate.category.repository.CategoryRepository
-import com.kiva.domain.aggregate.color.entity.Color
 import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
-import com.kiva.domain.aggregate.color.repository.ColorRepository
-import com.kiva.domain.aggregate.material.entity.Material
-import com.kiva.domain.aggregate.material.model.valueobject.MaterialId
-import com.kiva.domain.aggregate.material.repository.MaterialRepository
+import com.kiva.domain.aggregate.inventory.InventoryDomainService
+import com.kiva.domain.aggregate.inventory.entity.event.StockAdjusted
+import com.kiva.domain.aggregate.inventory.model.valueobject.AdjustmentReason
+import com.kiva.domain.aggregate.media.model.valueobject.MediaPurpose
+import com.kiva.domain.aggregate.media.model.valueobject.MediaType
 import com.kiva.domain.aggregate.product.ProductDomainService
 import com.kiva.domain.aggregate.product.entity.Product
-import com.kiva.domain.aggregate.product.entity.event.ProductDomainEvent
 import com.kiva.domain.aggregate.product.model.valueobject.BagType
 import com.kiva.domain.aggregate.product.model.valueobject.ClosureType
+import com.kiva.domain.aggregate.product.model.valueobject.HtmlSanitizer
 import com.kiva.domain.aggregate.product.model.valueobject.MaxPerOrder
+import com.kiva.domain.aggregate.product.model.valueobject.MediaView
 import com.kiva.domain.aggregate.product.model.valueobject.Occasion
 import com.kiva.domain.aggregate.product.model.valueobject.PriceTag
 import com.kiva.domain.aggregate.product.model.valueobject.ProductId
-import com.kiva.domain.aggregate.product.model.valueobject.HtmlSanitizer
 import com.kiva.domain.aggregate.product.model.valueobject.ProductStatus
 import com.kiva.domain.aggregate.product.model.valueobject.Sku
-import com.kiva.domain.aggregate.product.model.valueobject.VariantId
-import com.kiva.domain.aggregate.product.repository.ProductIdGenerator
 import com.kiva.domain.aggregate.product.repository.ProductCodeTakenException
 import com.kiva.domain.aggregate.product.repository.ProductRepository
 import kotlinx.coroutines.test.runTest
@@ -56,84 +45,17 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/** Products kept in memory as their events, like the real repository. */
-private class InMemoryProducts : ProductRepository {
-    val streams = mutableMapOf<ProductId, List<ProductDomainEvent>>()
-
-    override fun get(id: ProductId): Product? = streams[id]?.let { Product(it) }
-
-    override fun save(product: Product) {
-        streams[product.id] = streams[product.id].orEmpty() + product.getRecordedEvents()
-    }
-}
-
-/** The save refused the way the database refuses it when another product took one of the codes a moment earlier. */
-private class TakenOnSave(products: ProductRepository, private val taken: (Product) -> ProductCodeTakenException) :
-    ProductRepository by products {
-    override fun save(product: Product) = throw taken(product)
-}
-
-/** Ids from 1, like the database sequences on an empty database. */
-private class CountingIds : ProductIdGenerator {
-    var productsTaken = 0L
-    var variantsTaken = 100L
-
-    override fun nextProductId(): ProductId = ProductId.constructFromPersisted(++productsTaken)
-
-    override fun nextVariantId(): VariantId = VariantId.constructFromPersisted(++variantsTaken)
-}
-
-/** The read model as far as creating a product needs it: the slugs and codes already in use. */
-private class ReadModel(val takenSlugs: Set<String> = emptySet(), val takenSkus: Set<String> = emptySet()) : ProductQmRepository {
-    override fun find(filter: ProductFilter, pageable: Pageable): Page<ProductCardQm> = error("not used here")
-
-    override fun findDetail(ref: ProductRef): ProductDetailQm? = error("not used here")
-
-    override fun facets(filter: ProductFilter, now: Instant): ProductFacetsQm = error("not used here")
-
-    override fun findRelated(productId: ProductId, limit: Int): List<ProductCardQm>? = error("not used here")
-
-    override fun isSlugTaken(slug: Slug): Boolean = slug.value in takenSlugs
-
-    override fun findTakenSkus(skus: Collection<Sku>): Set<Sku> = skus.filter { it.value in takenSkus }.toSet()
-
-    override fun findVariant(variantId: VariantId): VariantQm? = error("not used here")
-
-    override fun countActiveByCategory(): Map<Slug, Int> = error("not used here")
-
-    override fun countActiveByMaterial(): Map<Slug, Int> = error("not used here")
-
-    override fun countActiveByColor(): Map<ColorKey, Int> = error("not used here")
-
-    override fun refreshSearchText(of: ProductQmRepository.NamedInSearch): Int = error("not used here")
-}
-
 class CreateProductUcTest {
 
     private val now = Instant.parse("2026-10-06T08:00:00Z")
-    private val staff = UserId.constructFromPersisted(1)
+    private val staff = PanelActor(UserId.constructFromPersisted(1), "10.0.0.1")
 
     private val transactionManager = MockTransactionManager()
     private val products = InMemoryProducts()
     private val ids = CountingIds()
-
-    // The shoulder category, satin, and a palette of lilac, black and cream.
-    private val categories = object : CategoryRepository {
-        private val shoulder = CategoryFactory.generate(id = 1, slug = "shoulder")
-        override fun findAll(): List<Category> = listOf(shoulder)
-        override fun findBySlug(slug: Slug): Category? = shoulder.takeIf { it.slug == slug }
-        override fun findById(id: CategoryId): Category? = shoulder.takeIf { it.id == id }
-    }
-    private val materials = object : MaterialRepository {
-        private val satin = MaterialFactory.generate(id = 11, slug = "satin", name = "ساتن")
-        override fun findAll(): List<Material> = listOf(satin)
-        override fun findById(id: MaterialId): Material? = satin.takeIf { it.id == id }
-    }
-    private val colors = object : ColorRepository {
-        private val palette = listOf("lilac", "black", "cream").map { ColorFactory.generate(key = it) }
-        override fun findAll(): List<Color> = palette
-        override fun findByKey(key: ColorKey): Color? = palette.firstOrNull { it.key == key }
-    }
+    private val inventories = InMemoryInventories()
+    private val media = InMemoryMedia()
+    private val audit = RecordingAuditTrail()
 
     private fun useCase(
         readModel: ReadModel = ReadModel(),
@@ -141,22 +63,40 @@ class CreateProductUcTest {
         sanitizer: HtmlSanitizer = HtmlSanitizer { it },
     ) = CreateProductUc(
         transactionManager,
-        ProductDomainService(repository, ids, categories, materials, colors),
+        ProductDomainService(repository, ids, Catalog.categories, Catalog.materials, Catalog.colors),
         repository,
         readModel,
-        sanitizer,
+        ProductInput(sanitizer),
+        MediaAttachments(media),
+        InventoryDomainService(inventories),
+        inventories,
+        audit,
         Clock.fixed(now, ZoneOffset.UTC),
     )
 
-    private fun color(key: String, sku: String? = null, price: Long? = null, compareAt: Long? = null, isDefault: Boolean = false) =
-        Cmd.Variant(key, sku, price, compareAt, isDefault, sortOrder = null)
-
-    private fun cmd(
-        slug: String = "mahak-shoulder-bag",
+    private fun color(
+        key: String,
         sku: String? = null,
-        status: String? = null,
-        variants: List<Cmd.Variant> = listOf(color("lilac"), color("black")),
-    ) = Cmd(
+        price: Long? = null,
+        compareAt: Long? = null,
+        isDefault: Boolean? = null,
+        isActive: Boolean? = null,
+        stock: Int? = null,
+        barcode: String? = null,
+        gallery: List<ProductInput.Media>? = null,
+    ) = ProductInput.Variant(key, sku, barcode, price, compareAt, stock, isDefault, isActive, null, gallery)
+
+    private fun fields(
+        slug: String? = "mahak-shoulder-bag",
+        sku: String? = null,
+        specs: ProductInput.Specs = ProductInput.Specs(
+            dimensions = ProductInput.Size(34.0, 26.0, 12.0),
+            weightGrams = 650,
+            closure = "ZIPPER",
+            straps = listOf(ProductInput.Strap(type = "SHOULDER", lengthCm = 55.0)),
+            occasions = listOf("DAILY", "WORK"),
+        ),
+    ) = ProductInput.Fields(
         name = "کیف دوشی ماهک",
         slug = slug,
         sku = sku,
@@ -169,16 +109,22 @@ class CreateProductUcTest {
         shortDescription = null,
         description = "<p>کیف دوشی جادار</p>",
         highlights = listOf("یراق‌آلات فلزی ضدزنگ"),
-        specs = Cmd.Specs(Cmd.Dimensions(34.0, 26.0, 12.0), 650, "ZIPPER", "بند دوشی ثابت", null, listOf("DAILY", "WORK")),
-        newUntil = Instant.parse("2026-11-01T00:00:00Z"),
+        specs = specs,
+        tags = listOf("چرم", "روزمره"),
+        newUntil = "2026-11-01T00:00:00Z",
         maxPerOrder = null,
         returnable = null,
         reservable = null,
         sortPriority = null,
-        status = status,
-        variants = variants,
-        by = staff,
+        seo = ProductInput.Seo("ماهک | کیوا", null, null),
     )
+
+    private fun cmd(
+        fields: ProductInput.Fields = fields(),
+        status: String? = null,
+        variants: List<ProductInput.Variant> = listOf(color("lilac"), color("black")),
+        actor: PanelActor? = staff,
+    ) = Cmd(fields, status, variants, actor)
 
     private fun stored(id: Long = 1): Product? = products.get(ProductId.constructFromPersisted(id))
 
@@ -211,17 +157,19 @@ class CreateProductUcTest {
             assertEquals(
                 listOf<Any?>(
                     "mahak-shoulder-bag", "KV-1001", "کیف دوشی ماهک", 1L, 11L, BagType.HOBO, "ساتن با سگک فلزی طلایی",
-                    "<p>کیف دوشی جادار</p>", listOf("یراق‌آلات فلزی ضدزنگ"), Instant.parse("2026-11-01T00:00:00Z"),
+                    "<p>کیف دوشی جادار</p>", listOf("یراق‌آلات فلزی ضدزنگ"), Instant.parse("2026-11-01T00:00:00Z"), listOf("چرم", "روزمره"),
                 ),
                 listOf(
                     product.slug.value, product.sku.value, details.name.value, details.categoryId.value, details.materialId.value,
                     details.bagType, details.materialDescription?.value, details.description?.value, details.highlights.items, details.newUntil,
+                    details.tags.items,
                 ),
             )
             assertEquals(
-                listOf<Any?>(34.0, 650, ClosureType.ZIPPER, "بند دوشی ثابت", null, setOf(Occasion.DAILY, Occasion.WORK)),
-                details.specs.let { listOf(it.dimensions?.lengthCm, it.weightGrams, it.closure, it.strap, it.pockets, it.occasions) },
+                listOf<Any?>(34.0, 650, ClosureType.ZIPPER, 55.0, setOf(Occasion.DAILY, Occasion.WORK)),
+                details.specs.let { listOf(it.dimensions?.lengthCm, it.weightGrams, it.closure, it.straps.single().lengthCm, it.occasions) },
             )
+            assertEquals(SeoMeta.constructFromPersisted("ماهک | کیوا", null, false), details.seo)
             assertEquals(listOf<Any?>(MaxPerOrder.DEFAULT, true, true, 0, null), listOf(details.maxPerOrder, details.returnable, details.reservable, details.sortPriority, details.shortDescription))
             assertEquals(PriceTag.constructFromPersisted(Money.constructFromPersisted(1_890_000), null), product.priceTag)
         }
@@ -243,20 +191,72 @@ class CreateProductUcTest {
 
         @Test
         fun `a typed code is kept, made uppercase, and a blank one is made from the id`() = runTest {
-            useCase().execute(cmd(sku = "kv-mahak", variants = listOf(color("lilac", sku = " "), color("black", sku = "kv-mahak-night"))))
+            useCase().execute(cmd(fields(sku = "kv-mahak"), variants = listOf(color("lilac", sku = " "), color("black", sku = "kv-mahak-night"))))
 
             val product = stored()!!
             assertEquals(listOf("KV-MAHAK", "KV-MAHAK-LILAC", "KV-MAHAK-NIGHT"), listOf(product.sku.value) + product.variants.map { it.sku.value })
         }
 
         @Test
-        fun `a color with its own price keeps it, crossed-out price included`() = runTest {
-            useCase().execute(cmd(variants = listOf(color("lilac", price = 1_450_000, compareAt = 1_750_000), color("black"))))
+        fun `a color with its own price keeps it, crossed-out price included, and its barcode`() = runTest {
+            useCase().execute(cmd(variants = listOf(color("lilac", price = 1_450_000, compareAt = 1_750_000, barcode = "6260001"), color("black"))))
 
+            val variants = stored()!!.variants
             assertEquals(
                 listOf(PriceTag.constructFromPersisted(Money.constructFromPersisted(1_450_000), Money.constructFromPersisted(1_750_000)), null),
-                stored()!!.variants.map { it.ownPriceTag },
+                variants.map { it.ownPriceTag },
             )
+            assertEquals(listOf("6260001", null), variants.map { it.barcode?.value })
+        }
+
+        @Test
+        fun `a gallery is kept in its final order with each file's own type, and its files are marked used`() = runTest {
+            val photo = media.upload(1)
+            val video = media.upload(2, type = MediaType.VIDEO)
+            val detail = media.upload(3)
+            val gallery = listOf(
+                ProductInput.Media(photo.value, "FRONT", sortOrder = 2),
+                ProductInput.Media(video.value, "SIDE", sortOrder = 1),
+                ProductInput.Media(detail.value, "DETAIL", isPrimary = true, alt = "سگک"),
+            )
+
+            useCase().execute(cmd(variants = listOf(color("lilac", gallery = gallery))))
+
+            val kept = stored()!!.variants.single().media
+            assertEquals(listOf(detail, video, photo), kept.map { it.mediaId })
+            assertEquals(listOf(MediaType.IMAGE, MediaType.VIDEO, MediaType.IMAGE), kept.map { it.type })
+            assertEquals(listOf(MediaView.DETAIL, MediaView.SIDE, MediaView.FRONT), kept.map { it.view })
+            assertEquals("سگک", kept.first().alt?.value)
+            assertEquals(setOf(photo, video, detail), media.attached)
+        }
+
+        @Test
+        fun `the starting stock of each color is one RESTOCK in the same transaction, none for a color without`() = runTest {
+            useCase().execute(cmd(variants = listOf(color("lilac", stock = 12), color("black"), color("cream", stock = 3))))
+
+            assertEquals(
+                mapOf(101L to listOf(12), 103L to listOf(3)),
+                inventories.streams.mapKeys { it.key.value }.mapValues { (_, events) -> events.map { (it as StockAdjusted).delta.value } },
+            )
+            assertTrue(inventories.streams.values.flatten().all { (it as StockAdjusted).reason == AdjustmentReason.RESTOCK })
+            assertEquals(1, transactionManager.transactionsOpened)
+        }
+
+        @Test
+        fun `a color sent inactive is added and taken out of the shop, the next one becoming the default`() = runTest {
+            useCase().execute(cmd(variants = listOf(color("lilac", isActive = false), color("black"))))
+
+            assertEquals(listOf(false to false, true to true), stored()!!.variants.map { it.isActive to it.isDefault })
+        }
+
+        @Test
+        fun `one PRODUCT_CREATED row for the panel, none for the seeder`() = runTest {
+            useCase().execute(cmd())
+            useCase().execute(cmd(fields(slug = "nila-bag"), actor = null))
+
+            val row = audit.recorded.single()
+            assertEquals(listOf<Any?>(AuditAction.PRODUCT_CREATED, "1", "کیف دوشی ماهک", null, staff), listOf(row.action, row.entityId, row.entityLabel, row.changes, row.actor))
+            assertEquals(UserId.SYSTEM, stored(2)!!.let { products.streams.getValue(it.id).first().occurredByUserId })
         }
     }
 
@@ -264,17 +264,30 @@ class CreateProductUcTest {
     inner class Refusing {
         @Test
         fun `every wrong input is reported at once under its full path, before any transaction`() = runTest {
-            val wrong = cmd(slug = "Mahak Bag", status = "LIVE", variants = listOf(color("lilac", compareAt = 2_000_000), color("Lilac", price = -5)))
-                .copy(
+            val wrongSpecs = ProductInput.Specs(
+                dimensions = ProductInput.Size(0.0, 26.0, 12.0),
+                weightGrams = 0,
+                closure = "VELCRO",
+                straps = listOf(ProductInput.Strap(lengthCm = 250.0)),
+                occasions = listOf("DAILY", "PICNIC"),
+            )
+            val wrong = cmd(
+                fields(slug = "Mahak Bag", specs = wrongSpecs).copy(
                     name = " ",
                     categoryId = 0,
                     bagType = "SHOULDER",
                     price = 1_000_000,
                     compareAtPrice = 900_000,
                     highlights = List(9) { "ویژگی $it" },
-                    specs = Cmd.Specs(Cmd.Dimensions(0.0, 26.0, 12.0), 0, "VELCRO", null, null, listOf("DAILY", "PICNIC")),
-                    maxPerOrder = 0,
-                )
+                    maxPerOrder = 21,
+                    tags = listOf("خوب", " "),
+                ),
+                status = "LIVE",
+                variants = listOf(
+                    color("lilac", compareAt = 2_000_000, stock = 10_001),
+                    color("Lilac", price = -5, barcode = "x", gallery = listOf(ProductInput.Media("med_bad", "FRONT"), ProductInput.Media(null, "TOP"))),
+                ),
+            )
 
             val failure = useCase().execute(wrong).failureOrNull()!!
 
@@ -282,24 +295,59 @@ class CreateProductUcTest {
             assertEquals(
                 listOf(
                     "slug SLUG_INVALID",
-                    "status PRODUCT_STATUS_INVALID",
                     "name PRODUCT_NAME_REQUIRED",
                     "categoryId CATEGORY_ID_INVALID",
                     "bagType BAG_TYPE_INVALID",
                     "highlights HIGHLIGHTS_TOO_MANY",
                     "specs.dimensions DIMENSIONS_INVALID",
-                    "specs.closure CLOSURE_TYPE_INVALID",
+                    "specs.closure.type CLOSURE_TYPE_INVALID",
+                    "specs.straps.0.lengthCm STRAP_LENGTH_INVALID",
                     "specs.occasions.1 OCCASION_INVALID",
                     "specs.weightGrams WEIGHT_INVALID",
+                    "tags.1 TAG_INVALID",
                     "maxPerOrder MAX_PER_ORDER_INVALID",
                     "compareAtPrice COMPARE_AT_PRICE_NOT_ABOVE_PRICE",
+                    "status PRODUCT_STATUS_INVALID",
                     "variants.0.priceOverride PRICE_OVERRIDE_REQUIRED",
+                    "variants.0.stockQuantity STOCK_QUANTITY_INVALID",
                     "variants.1.colorKey COLOR_KEY_INVALID",
+                    "variants.1.barcode BARCODE_INVALID",
                     "variants.1.priceOverride MONEY_NEGATIVE",
+                    "variants.1.media.0.mediaId MEDIA_ID_INVALID",
+                    "variants.1.media.1.mediaId FIELD_REQUIRED",
+                    "variants.1.media.1.view MEDIA_VIEW_INVALID",
                 ),
                 fieldErrors(failure),
             )
             assertEquals(0, transactionManager.transactionsOpened)
+        }
+
+        @Test
+        fun `a gallery's own rules - a second primary, a file twice, more than 20`() = runTest {
+            val first = media.upload(1)
+            val twoPrimaries = listOf(ProductInput.Media(first.value, "FRONT", isPrimary = true), ProductInput.Media(media.upload(2).value, "BACK", isPrimary = true))
+            val twice = listOf(ProductInput.Media(first.value, "FRONT"), ProductInput.Media(first.value, "BACK"))
+            val tooMany = (1..21).map { ProductInput.Media(InMemoryMedia.mediaId(it).value, "FRONT") }
+
+            assertEquals(listOf("variants.0.media.1.isPrimary MEDIA_PRIMARY_DUPLICATE"), fieldErrors(useCase().execute(cmd(variants = listOf(color("lilac", gallery = twoPrimaries)))).failureOrNull()!!))
+            assertEquals(listOf("variants.0.media.1.mediaId MEDIA_DUPLICATE"), fieldErrors(useCase().execute(cmd(variants = listOf(color("lilac", gallery = twice)))).failureOrNull()!!))
+            assertEquals(listOf("variants.0.media MEDIA_TOO_MANY"), fieldErrors(useCase().execute(cmd(variants = listOf(color("lilac", gallery = tooMany)))).failureOrNull()!!))
+        }
+
+        @Test
+        fun `a file that is not an uploaded product file is refused at its place in the form`() = runTest {
+            val preShipment = media.upload(1, purpose = MediaPurpose.PRE_SHIPMENT)
+            val product = media.upload(2)
+            val gallery = listOf(ProductInput.Media(product.value, "FRONT"), ProductInput.Media(preShipment.value, "BACK"), ProductInput.Media(InMemoryMedia.mediaId(9).value, "SIDE"))
+
+            val failure = useCase().execute(cmd(variants = listOf(color("lilac"), color("black", gallery = gallery)))).failureOrNull()!!
+
+            assertEquals(
+                listOf("variants.1.media.1.mediaId MEDIA_PURPOSE_MISMATCH", "variants.1.media.2.mediaId MEDIA_NOT_FOUND"),
+                fieldErrors(failure),
+            )
+            assertNull(stored())
+            assertTrue(media.attached.isEmpty())
         }
 
         @Test
@@ -333,6 +381,7 @@ class CreateProductUcTest {
             assertEquals(Result.failure(CreateProductUc.Failure.DuplicateSlug(Slug.constructFromPersisted("mahak-shoulder-bag"))), slugTaken)
             assertEquals(Result.failure(CreateProductUc.Failure.DuplicateSku("variants.1.sku", "KV-1002-BLACK")), colorCodeTaken)
             assertTrue(products.streams.isEmpty())
+            assertTrue(inventories.streams.isEmpty())
         }
 
         @Test
@@ -354,19 +403,23 @@ class CreateProductUcTest {
 
         @Test
         fun `a category nobody has is CATEGORY_NOT_FOUND on categoryId`() = runTest {
-            val result = useCase().execute(cmd().copy(categoryId = 9))
+            val result = useCase().execute(cmd(fields().copy(categoryId = 9)))
 
             assertEquals(Result.failure(CreateProductUc.Failure.CategoryNotFound(CategoryId.constructFromPersisted(9))), result)
             assertEquals(FailureKind.INVALID, result.failureOrNull()?.kind)
         }
 
         @Test
-        fun `status ACTIVE without any color is NO_ACTIVE_VARIANT and nothing is saved`() = runTest {
-            val result = useCase().execute(cmd(status = "ACTIVE", variants = emptyList()))
+        fun `status ACTIVE without an active color is NO_ACTIVE_VARIANT and nothing is saved`() = runTest {
+            val noColor = useCase().execute(cmd(status = "ACTIVE", variants = emptyList()))
+            val onlyInactive = useCase().execute(cmd(status = "ACTIVE", variants = listOf(color("lilac", isActive = false, stock = 4))))
 
-            assertEquals(Result.failure(CreateProductUc.Failure.NoActiveVariant), result)
-            assertEquals(FailureKind.BUSINESS_RULE, result.failureOrNull()?.kind)
+            assertEquals(Result.failure(CreateProductUc.Failure.NoActiveVariant), noColor)
+            assertEquals(Result.failure(CreateProductUc.Failure.NoActiveVariant), onlyInactive)
+            assertEquals(FailureKind.BUSINESS_RULE, noColor.failureOrNull()?.kind)
             assertNull(stored())
+            assertTrue(inventories.streams.isEmpty())
+            assertTrue(audit.recorded.isEmpty())
         }
     }
 }

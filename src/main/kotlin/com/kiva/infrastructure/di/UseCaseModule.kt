@@ -1,8 +1,83 @@
 package com.kiva.infrastructure.di
 
+import com.kiva.application.usecase.blog.BlogPostWriting
+import com.kiva.application.usecase.blog.BlogPosts
+import com.kiva.application.usecase.blog.usecase.command.CreateBlogPostUc
+import com.kiva.application.usecase.blog.usecase.command.DeleteBlogPostUc
+import com.kiva.application.usecase.blog.usecase.command.UpdateBlogPostUc
+import com.kiva.application.usecase.blog.usecase.query.FindAdminBlogPostsUc
+import com.kiva.application.usecase.blog.usecase.query.GetAdminBlogPostUc
+import com.kiva.application.usecase.blog.usecase.query.GetBlogPostUc
+import com.kiva.application.usecase.blog.usecase.query.ListBlogCategoriesUc
+import com.kiva.application.usecase.blog.usecase.query.ListBlogPostsUc
+import com.kiva.application.usecase.blog.usecase.query.ListRelatedBlogPostsUc
+import com.kiva.application.usecase.blog.usecase.command.SendBlogFeedbackUc
+import com.kiva.application.usecase.order.usecase.query.GetMyInvoiceUc
+import com.kiva.application.usecase.stockalert.StockAlertCounts
+import com.kiva.application.usecase.stockalert.usecase.command.DeleteOldStockAlertsUc
+import com.kiva.application.usecase.stockalert.usecase.command.NotifyStockAlertUc
+import com.kiva.application.usecase.stockalert.usecase.query.FindDueStockAlertsUc
+import com.kiva.application.usecase.stockalert.usecase.query.FindAdminStockAlertGroupsUc
+import com.kiva.application.usecase.product.usecase.query.GetProductInquiryUc
+import com.kiva.application.usecase.stockalert.usecase.query.ListMyStockAlertsUc
+import com.kiva.application.usecase.stockalert.usecase.command.CancelMyStockAlertUc
+import com.kiva.application.usecase.stockalert.usecase.command.CreateStockAlertUc
+import com.kiva.application.usecase.stockalert.StockAlertFlags
+import com.kiva.application.usecase.stockalert.StockAlerts
+import com.kiva.domain.aggregate.stockalert.StockAlertDomainService
+import com.kiva.domain.aggregate.campaign.CampaignDomainService
+import com.kiva.application.usecase.campaign.CampaignProducts
+import com.kiva.application.usecase.banner.Banners
+import com.kiva.application.usecase.testimonial.TestimonialReferences
+import com.kiva.application.usecase.content.usecase.query.GetSiteStatsUc
+import com.kiva.application.usecase.search.usecase.query.SearchSuggestUc
+import com.kiva.application.usecase.search.usecase.query.GetSearchHintsUc
+import com.kiva.application.usecase.contact.usecase.command.CreateContactMessageUc
+import com.kiva.application.usecase.contact.usecase.command.DeleteOldContactDataUc
+import com.kiva.application.usecase.newsletter.usecase.command.SubscribeNewsletterUc
+import com.kiva.application.usecase.newsletter.usecase.command.UnsubscribeNewsletterUc
+import com.kiva.application.usecase.newsletter.usecase.query.FindNewsletterSubscriptionsUc
+import com.kiva.application.usecase.contact.usecase.command.UpdateContactMessageUc
+import com.kiva.application.usecase.contact.usecase.query.FindAdminContactMessagesUc
+import com.kiva.application.usecase.contact.usecase.query.ListContactTopicsUc
+import com.kiva.domain.aggregate.contact.TicketCodeGenerator
+import com.kiva.application.usecase.content.usecase.query.GetHomePageUc
+import com.kiva.application.usecase.catalog.CategoryMenu
+import com.kiva.application.usecase.testimonial.Testimonials
+import com.kiva.application.usecase.testimonial.usecase.command.CreateTestimonialUc
+import com.kiva.application.usecase.testimonial.usecase.command.DeleteTestimonialUc
+import com.kiva.application.usecase.testimonial.usecase.command.UpdateTestimonialUc
+import com.kiva.application.usecase.testimonial.usecase.query.GetAdminTestimonialUc
+import com.kiva.application.usecase.testimonial.usecase.query.ListAdminTestimonialsUc
+import com.kiva.application.usecase.testimonial.usecase.query.ListTestimonialsUc
+import com.kiva.application.usecase.banner.usecase.command.CreateBannerUc
+import com.kiva.application.usecase.banner.usecase.command.DeleteBannerUc
+import com.kiva.application.usecase.banner.usecase.command.UpdateBannerUc
+import com.kiva.application.usecase.banner.usecase.query.GetAdminBannerUc
+import com.kiva.application.usecase.banner.usecase.query.ListAdminBannersUc
+import com.kiva.application.usecase.banner.usecase.query.ListBannersUc
+import com.kiva.application.usecase.campaign.LiveCampaign
+import com.kiva.application.usecase.campaign.usecase.query.GetActiveCampaignUc
+import com.kiva.application.usecase.campaign.CampaignShowcases
+import com.kiva.application.usecase.campaign.usecase.command.CreateCampaignUc
+import com.kiva.application.usecase.campaign.usecase.command.DeleteCampaignUc
+import com.kiva.application.usecase.campaign.usecase.command.UpdateCampaignUc
+import com.kiva.application.usecase.campaign.usecase.query.GetAdminCampaignUc
+import com.kiva.application.usecase.campaign.usecase.query.ListAdminCampaignsUc
+import com.kiva.application.usecase.account.usecase.query.GetMyDashboardUc
+import com.kiva.application.usecase.review.ReviewsAwaiting
+import com.kiva.application.usecase.wishlist.WishlistHearts
+import com.kiva.application.usecase.wishlist.usecase.query.GetSharedWishlistUc
+import com.kiva.application.usecase.wishlist.usecase.command.RevokeWishlistShareUc
+import com.kiva.application.usecase.wishlist.usecase.command.ShareMyWishlistUc
 import com.kiva.application.usecase.account.usecase.command.ConfirmPhoneChangeUc
+import com.kiva.application.usecase.account.usecase.command.DeleteMyAccountUc
+import com.kiva.application.usecase.account.usecase.command.RequestAccountDeletionUc
 import com.kiva.application.usecase.account.usecase.command.RequestPhoneChangeUc
 import com.kiva.application.usecase.account.usecase.command.UpdateMyProfileUc
+import com.kiva.application.usecase.account.AccountEraser
+import com.kiva.application.usecase.account.ActiveOrdersCheck
+import com.kiva.application.usecase.account.usecase.query.CheckAccountLiveUc
 import com.kiva.application.usecase.account.usecase.query.GetMeUc
 import com.kiva.application.usecase.address.usecase.command.AddAddressUc
 import com.kiva.application.usecase.address.usecase.command.DeleteAddressUc
@@ -13,13 +88,17 @@ import com.kiva.application.usecase.address.usecase.query.ListMyAddressesUc
 import com.kiva.application.usecase.admin.usecase.command.CheckPanelAccessUc
 import com.kiva.application.usecase.admin.usecase.command.SetUserRolesUc
 import com.kiva.application.usecase.admin.usecase.query.FindCustomersUc
+import com.kiva.application.usecase.admin.usecase.query.GetCustomerDetailUc
 import com.kiva.application.usecase.admin.usecase.query.GetCustomerUc
+import com.kiva.application.usecase.audit.usecase.command.DeleteOldAuditEntriesUc
+import com.kiva.application.usecase.audit.usecase.query.ListAuditLogUc
 import com.kiva.application.usecase.auth.OtpIssuer
 import com.kiva.application.usecase.auth.usecase.command.BootstrapAdminUc
 import com.kiva.application.usecase.auth.usecase.command.LogoutUc
 import com.kiva.application.usecase.auth.usecase.command.RefreshSessionUc
 import com.kiva.application.usecase.auth.usecase.command.SendLoginCodeUc
 import com.kiva.application.usecase.auth.usecase.command.VerifyLoginCodeUc
+import com.kiva.application.usecase.cart.CartBulkAdd
 import com.kiva.application.usecase.cart.CartCommands
 import com.kiva.application.usecase.cart.usecase.command.AddCartItemUc
 import com.kiva.application.usecase.cart.usecase.command.ApplyDiscountCodeUc
@@ -33,7 +112,21 @@ import com.kiva.application.usecase.cart.usecase.command.RemoveCartItemUc
 import com.kiva.application.usecase.cart.usecase.command.RemoveDiscountCodeUc
 import com.kiva.application.usecase.cart.usecase.command.SetCartReservationUc
 import com.kiva.application.usecase.cart.usecase.query.GetCartUc
+import com.kiva.application.usecase.catalog.usecase.command.CreateCategoryUc
+import com.kiva.application.usecase.catalog.usecase.command.CreateColorUc
+import com.kiva.application.usecase.catalog.usecase.command.CreateMaterialUc
+import com.kiva.application.usecase.catalog.usecase.command.DeleteCategoryUc
+import com.kiva.application.usecase.catalog.usecase.command.DeleteColorUc
+import com.kiva.application.usecase.catalog.usecase.command.DeleteMaterialUc
+import com.kiva.application.usecase.catalog.usecase.command.UpdateCategoryUc
+import com.kiva.application.usecase.catalog.usecase.command.UpdateColorUc
+import com.kiva.application.usecase.catalog.usecase.command.UpdateMaterialUc
+import com.kiva.application.usecase.catalog.usecase.query.GetAdminCategoryUc
+import com.kiva.application.usecase.catalog.usecase.query.GetAdminColorUc
+import com.kiva.application.usecase.catalog.usecase.query.GetAdminMaterialUc
 import com.kiva.application.usecase.catalog.usecase.query.GetCategoryUc
+import com.kiva.application.usecase.catalog.usecase.query.ListAdminCategoriesUc
+import com.kiva.application.usecase.catalog.usecase.query.ListAdminMaterialsUc
 import com.kiva.application.usecase.catalog.usecase.query.ListCategoriesUc
 import com.kiva.application.usecase.catalog.usecase.query.ListColorsUc
 import com.kiva.application.usecase.catalog.usecase.query.ListMaterialsUc
@@ -44,30 +137,126 @@ import com.kiva.application.usecase.checkout.usecase.command.StartPaymentUc
 import com.kiva.application.usecase.checkout.usecase.query.GetCheckoutContextUc
 import com.kiva.application.usecase.checkout.usecase.query.GetPaymentInitUc
 import com.kiva.application.usecase.checkout.usecase.query.GetPaymentResultUc
+import com.kiva.application.usecase.content.usecase.command.SaveAnnouncementsUc
+import com.kiva.application.usecase.content.usecase.command.SaveFaqUc
+import com.kiva.application.usecase.content.usecase.command.SavePageUc
+import com.kiva.application.usecase.content.usecase.query.GetFaqUc
+import com.kiva.application.usecase.content.usecase.query.GetPageUc
+import com.kiva.application.usecase.content.usecase.query.GetSiteConfigUc
+import com.kiva.application.usecase.content.usecase.query.ListAnnouncementsUc
+import com.kiva.application.usecase.content.usecase.query.ListFaqForEditUc
+import com.kiva.application.usecase.content.usecase.query.ListPagesUc
+import com.kiva.application.usecase.discount.DiscountCodeReferences
 import com.kiva.application.usecase.discount.Discounts
+import com.kiva.application.usecase.discount.usecase.command.CreateDiscountCodeUc
+import com.kiva.application.usecase.discount.usecase.command.DeactivateDiscountCodeUc
+import com.kiva.application.usecase.discount.usecase.command.UpdateDiscountCodeUc
+import com.kiva.application.usecase.discount.usecase.query.GetDiscountCodeUc
+import com.kiva.application.usecase.discount.usecase.query.ListDiscountCodesUc
 import com.kiva.application.usecase.geo.usecase.query.ListCitiesOfProvinceUc
 import com.kiva.application.usecase.geo.usecase.query.ListProvincesUc
 import com.kiva.application.usecase.idempotency.IdempotencyGuard
 import com.kiva.application.usecase.idempotency.usecase.command.DeleteOldIdempotencyKeysUc
 import com.kiva.application.usecase.inventory.usecase.command.AdjustInventoryUc
+import com.kiva.application.usecase.inventory.usecase.query.ListInventoryAdjustmentsUc
+import com.kiva.application.usecase.media.MediaAttachments
+import com.kiva.application.usecase.media.usecase.command.DeleteUnattachedMediaUc
+import com.kiva.application.usecase.media.usecase.command.UploadMediaUc
+import com.kiva.application.usecase.media.usecase.query.FindUnattachedMediaUc
+import com.kiva.application.usecase.order.OrderByCode
+import com.kiva.application.usecase.order.OrderCancellation
+import com.kiva.application.usecase.order.OrderDetails
+import com.kiva.application.usecase.order.OrderNotices
+import com.kiva.application.usecase.order.usecase.command.AddOrderNoteUc
+import com.kiva.application.usecase.order.usecase.command.ApproveSilentPhotosUc
+import com.kiva.application.usecase.order.usecase.command.CancelMyOrderUc
+import com.kiva.application.usecase.order.usecase.command.ChangeOrderStatusUc
 import com.kiva.application.usecase.order.usecase.command.ExpireUnpaidOrderUc
 import com.kiva.application.usecase.order.usecase.command.ReorderUc
+import com.kiva.application.usecase.order.usecase.command.ResolveChangeRequestUc
+import com.kiva.application.usecase.order.usecase.command.SendPreShipmentMediaUc
+import com.kiva.application.usecase.order.usecase.command.SetPreShipmentMediaUc
+import com.kiva.application.usecase.order.usecase.command.ShipOrderUc
+import com.kiva.application.usecase.order.usecase.command.SubmitMediaFeedbackUc
+import com.kiva.application.usecase.order.usecase.query.FindAdminOrdersUc
 import com.kiva.application.usecase.order.usecase.query.FindExpirableOrdersUc
+import com.kiva.application.usecase.order.usecase.query.FindSilentPhotoOrdersUc
+import com.kiva.application.usecase.order.usecase.query.GetAdminOrderUc
+import com.kiva.application.usecase.order.usecase.query.GetMyOrderMediaUc
 import com.kiva.application.usecase.order.usecase.query.GetMyOrderUc
 import com.kiva.application.usecase.order.usecase.query.GetOrderSummaryUc
 import com.kiva.application.usecase.order.usecase.query.ListMyOrdersUc
 import com.kiva.application.usecase.payment.PaymentConfirmation
 import com.kiva.application.usecase.payment.usecase.command.ReconcilePaymentUc
 import com.kiva.application.usecase.payment.usecase.query.FindStalePaymentsUc
+import com.kiva.application.usecase.product.ProductInput
+import com.kiva.application.usecase.product.usecase.command.AddVariantUc
+import com.kiva.application.usecase.product.usecase.command.ArchiveProductUc
+import com.kiva.application.usecase.product.usecase.command.ChangeProductStatusUc
 import com.kiva.application.usecase.product.usecase.command.CreateProductUc
+import com.kiva.application.usecase.product.usecase.command.DeactivateVariantUc
+import com.kiva.application.usecase.product.usecase.command.PublishScheduledProductUc
+import com.kiva.application.usecase.product.usecase.command.UpdateProductUc
+import com.kiva.application.usecase.product.usecase.command.UpdateVariantUc
+import com.kiva.application.usecase.product.usecase.query.FindAdminProductsUc
+import com.kiva.application.usecase.product.usecase.query.FindDueScheduledProductsUc
 import com.kiva.application.usecase.product.usecase.query.FindProductsUc
 import com.kiva.application.usecase.product.usecase.query.FindRelatedProductsUc
+import com.kiva.application.usecase.product.usecase.query.GetAdminProductUc
 import com.kiva.application.usecase.product.usecase.query.GetProductFacetsUc
 import com.kiva.application.usecase.product.usecase.query.GetProductUc
+import com.kiva.application.usecase.refund.usecase.command.CreateRefundUc
+import com.kiva.application.usecase.refund.usecase.command.UpdateRefundUc
+import com.kiva.application.usecase.returnrequest.AdminReturnRequests
+import com.kiva.application.usecase.review.RatingBook
+import com.kiva.application.usecase.review.ReviewMarks
+import com.kiva.application.usecase.wishlist.WishlistCards
+import com.kiva.application.usecase.wishlist.usecase.command.AddToWishlistUc
+import com.kiva.application.usecase.wishlist.usecase.command.AddWishlistToCartUc
+import com.kiva.application.usecase.wishlist.usecase.command.MoveCartItemToWishlistUc
+import com.kiva.application.usecase.wishlist.usecase.command.ClearMyWishlistUc
+import com.kiva.application.usecase.wishlist.usecase.command.RemoveFromWishlistUc
+import com.kiva.application.usecase.wishlist.usecase.query.GetMyWishlistIdsUc
+import com.kiva.application.usecase.wishlist.usecase.query.GetMyWishlistUc
+import com.kiva.application.usecase.review.ReviewPurchases
+import com.kiva.application.usecase.review.Reviews
+import com.kiva.application.usecase.review.usecase.command.CreateReviewUc
+import com.kiva.application.usecase.review.usecase.command.DeleteMyReviewUc
+import com.kiva.application.usecase.review.usecase.command.DeleteReviewReplyUc
+import com.kiva.application.usecase.review.usecase.command.ModerateReviewUc
+import com.kiva.application.usecase.review.usecase.command.ReplyToReviewUc
+import com.kiva.application.usecase.review.usecase.command.UpdateMyReviewUc
+import com.kiva.application.usecase.review.usecase.command.VoteReviewHelpfulUc
+import com.kiva.application.usecase.review.usecase.query.FindAdminReviewsUc
+import com.kiva.application.usecase.review.usecase.query.GetAdminReviewUc
+import com.kiva.application.usecase.review.usecase.query.GetReviewSummaryUc
+import com.kiva.application.usecase.review.usecase.query.ListProductReviewsUc
+import com.kiva.application.usecase.review.usecase.query.GetMyReviewUc
+import com.kiva.application.usecase.review.usecase.query.ListMyReviewsUc
+import com.kiva.application.usecase.review.usecase.query.ListProductsAwaitingMyReviewUc
+import com.kiva.application.usecase.returnrequest.ReturnByIdForPanel
+import com.kiva.application.usecase.returnrequest.ReturnNotices
+import com.kiva.application.usecase.returnrequest.ReturnRequests
+import com.kiva.application.usecase.returnrequest.usecase.command.CloseReturnUc
+import com.kiva.application.usecase.returnrequest.usecase.command.CreateReturnUc
+import com.kiva.application.usecase.returnrequest.usecase.command.DecideReturnUc
+import com.kiva.application.usecase.returnrequest.usecase.command.ReceiveReturnUc
+import com.kiva.application.usecase.returnrequest.usecase.command.ScheduleReturnPickupUc
+import com.kiva.application.usecase.returnrequest.usecase.query.FindAdminReturnsUc
+import com.kiva.application.usecase.returnrequest.usecase.query.GetAdminReturnUc
+import com.kiva.application.usecase.returnrequest.usecase.query.GetMyReturnUc
+import com.kiva.application.usecase.returnrequest.usecase.query.ListMyReturnsUc
+import com.kiva.application.usecase.report.usecase.query.GetReportOverviewUc
 import com.kiva.application.usecase.reservation.Reservations
 import com.kiva.application.usecase.reservation.usecase.command.ReleaseReservationGroupUc
 import com.kiva.application.usecase.reservation.usecase.query.FindDueReservationGroupsUc
 import com.kiva.application.usecase.reservation.usecase.query.GetMyReservationUc
+import com.kiva.application.usecase.settings.usecase.command.UpdateSettingsUc
+import com.kiva.application.usecase.settings.usecase.query.GetAdminSettingsUc
+import com.kiva.application.usecase.tracking.usecase.query.ListDailyShipmentDaysUc
+import com.kiva.application.usecase.tracking.usecase.query.ListDailyShipmentsUc
+import com.kiva.application.usecase.tracking.usecase.query.ListMyTrackingUc
+import com.kiva.application.usecase.tracking.usecase.query.LookupGuestTrackingUc
 import com.kiva.infrastructure.config.AppConfig
 import org.koin.dsl.module
 
@@ -75,8 +264,40 @@ val useCaseModule = module(createdAtStart = true) {
     // --- catalog: queries ---
     single { ListColorsUc(transactionManager = get(), colorRepository = get(), productQmRepository = get()) }
     single { ListMaterialsUc(transactionManager = get(), materialRepository = get(), productQmRepository = get()) }
-    single { ListCategoriesUc(transactionManager = get(), categoryRepository = get(), productQmRepository = get()) }
-    single { GetCategoryUc(transactionManager = get(), categoryRepository = get(), productQmRepository = get()) }
+    single { ListCategoriesUc(transactionManager = get(), categoryRepository = get(), productQmRepository = get(), mediaRepository = get()) }
+    single { GetCategoryUc(transactionManager = get(), categoryRepository = get(), productQmRepository = get(), mediaRepository = get()) }
+
+    // --- admin: categories, colors and materials (step 1.3) ---
+    single { MediaAttachments(mediaRepository = get()) }
+    single { ListAdminCategoriesUc(transactionManager = get(), categoryRepository = get(), productQmRepository = get(), mediaRepository = get()) }
+    single { GetAdminCategoryUc(transactionManager = get(), categoryRepository = get(), productQmRepository = get(), mediaRepository = get()) }
+    single {
+        CreateCategoryUc(
+            transactionManager = get(), categoryRepository = get(), categoryIdGenerator = get(), colorRepository = get(), mediaAttachments = get(),
+            auditTrail = get(), clock = get(),
+        )
+    }
+    single {
+        UpdateCategoryUc(
+            transactionManager = get(), categoryRepository = get(), colorRepository = get(), productQmRepository = get(), mediaAttachments = get(),
+            auditTrail = get(), clock = get(),
+        )
+    }
+    single { DeleteCategoryUc(transactionManager = get(), categoryRepository = get(), productQmRepository = get(), auditTrail = get(), clock = get()) }
+    single { GetAdminColorUc(transactionManager = get(), colorRepository = get()) }
+    single { CreateColorUc(transactionManager = get(), colorRepository = get(), auditTrail = get(), clock = get()) }
+    single { UpdateColorUc(transactionManager = get(), colorRepository = get(), productQmRepository = get(), auditTrail = get(), clock = get()) }
+    single {
+        DeleteColorUc(
+            transactionManager = get(), colorRepository = get(), categoryRepository = get(), productQmRepository = get(), testimonialRepository = get(), auditTrail = get(),
+            clock = get(),
+        )
+    }
+    single { ListAdminMaterialsUc(transactionManager = get(), materialRepository = get(), productQmRepository = get()) }
+    single { GetAdminMaterialUc(transactionManager = get(), materialRepository = get(), productQmRepository = get()) }
+    single { CreateMaterialUc(transactionManager = get(), materialRepository = get(), materialIdGenerator = get(), auditTrail = get(), clock = get()) }
+    single { UpdateMaterialUc(transactionManager = get(), materialRepository = get(), productQmRepository = get(), auditTrail = get(), clock = get()) }
+    single { DeleteMaterialUc(transactionManager = get(), materialRepository = get(), productQmRepository = get(), auditTrail = get(), clock = get()) }
 
     // --- address book ---
     single { ListMyAddressesUc(transactionManager = get(), addressBookRepository = get(), geoRepository = get()) }
@@ -120,7 +341,7 @@ val useCaseModule = module(createdAtStart = true) {
     single {
         GetCartUc(
             transactionManager = get(), cartRepository = get(), offerQmRepository = get(), shopSettingsRepository = get(), reservations = get(),
-            discounts = get(), clock = get(),
+            discounts = get(), clock = get(), wishlistHearts = get(),
         )
     }
 
@@ -129,7 +350,7 @@ val useCaseModule = module(createdAtStart = true) {
         GetCheckoutContextUc(
             transactionManager = get(), cartRepository = get(), offerQmRepository = get(), shopSettingsRepository = get(),
             addressBookRepository = get(), geoRepository = get(), userRepository = get(), paymentGateways = get(), reservations = get(),
-            discounts = get(), clock = get(),
+            discounts = get(), clock = get(), wishlistHearts = get(),
         )
     }
     single {
@@ -198,14 +419,63 @@ val useCaseModule = module(createdAtStart = true) {
     single { GetMyReservationUc(transactionManager = get(), reservations = get(), clock = get()) }
 
     // --- orders ---
-    single { ListMyOrdersUc(transactionManager = get(), orderQmRepository = get(), shopSettingsRepository = get(), reservations = get(), clock = get()) }
     single {
-        GetMyOrderUc(
-            transactionManager = get(), orderQmRepository = get(), paymentRepository = get(), shopSettingsRepository = get(), colorRepository = get(),
-            reservations = get(), clock = get(),
+        ListMyOrdersUc(
+            transactionManager = get(), orderQmRepository = get(), shopSettingsRepository = get(), reservations = get(), orderDetails = get(), reviewMarks = get(),
+            clock = get(),
         )
     }
-    single { ReorderUc(transactionManager = get(), orderQmRepository = get(), cartCommands = get(), cartDomainService = get()) }
+    single { OrderByCode(orderQmRepository = get(), orderRepository = get()) }
+    single {
+        OrderDetails(
+            paymentRepository = get(), colorRepository = get(), reservations = get(), mediaRepository = get(), refundRepository = get(), returnRequests = get(),
+        )
+    }
+    single { OrderNotices(smsSender = get()) }
+    single {
+        OrderCancellation(
+            orderQmRepository = get(), orderRepository = get(), paymentRepository = get(), discountRedemptionRepository = get(), inventoryDomainService = get(),
+            inventoryRepository = get(), refundRepository = get(), refundIdGenerator = get(), refundDomainService = get(),
+        )
+    }
+    single {
+        CancelMyOrderUc(
+            transactionManager = get(), orderByCode = get(), orderCancellation = get(), userRepository = get(), orderNotices = get(), clock = get(),
+        )
+    }
+    single { GetMyOrderMediaUc(transactionManager = get(), orderByCode = get(), orderDetails = get()) }
+    single {
+        SubmitMediaFeedbackUc(
+            transactionManager = get(), orderByCode = get(), orderQmRepository = get(), orderRepository = get(), offerQmRepository = get(), clock = get(),
+        )
+    }
+    single { ListMyTrackingUc(transactionManager = get(), orderQmRepository = get(), shopSettingsRepository = get()) }
+
+    // --- tracking (phase 2) ---
+    single {
+        LookupGuestTrackingUc(
+            transactionManager = get(), orderQmRepository = get(), orderDetails = get(), userRepository = get(), shopSettingsRepository = get(), clock = get(),
+        )
+    }
+    single { ListDailyShipmentDaysUc(transactionManager = get(), orderQmRepository = get(), shopSettingsRepository = get(), clock = get()) }
+    single { ListDailyShipmentsUc(transactionManager = get(), orderQmRepository = get(), shopSettingsRepository = get(), clock = get()) }
+    single { FindSilentPhotoOrdersUc(transactionManager = get(), orderQmRepository = get(), clock = get()) }
+    single { ApproveSilentPhotosUc(transactionManager = get(), orderRepository = get(), clock = get()) }
+    single { GetMyOrderUc(transactionManager = get(), orderByCode = get(), orderDetails = get(), reviewMarks = get(), shopSettingsRepository = get(), clock = get()) }
+    single {
+        GetMyInvoiceUc(
+            transactionManager = get(),
+            orderByCode = get(),
+            orderDetails = get(),
+            shopSettingsRepository = get(),
+            siteContentRepository = get(),
+            invoiceRenderer = get(),
+            siteUrl = get<AppConfig>().shop.siteUrl,
+            clock = get(),
+        )
+    }
+    single { CartBulkAdd(cartCommands = get(), cartDomainService = get()) }
+    single { ReorderUc(transactionManager = get(), orderQmRepository = get(), cartBulkAdd = get()) }
     single { GetOrderSummaryUc(transactionManager = get(), orderQmRepository = get(), shopSettingsRepository = get(), reservations = get(), clock = get()) }
 
     // --- geo: queries ---
@@ -222,6 +492,8 @@ val useCaseModule = module(createdAtStart = true) {
             materialRepository = get(),
             clock = get(),
             shopSettingsRepository = get(),
+            wishlistHearts = get(),
+            liveCampaign = get(),
         )
     }
     single {
@@ -232,6 +504,7 @@ val useCaseModule = module(createdAtStart = true) {
             colorRepository = get(),
             materialRepository = get(),
             clock = get(),
+            liveCampaign = get(),
         )
     }
     single {
@@ -242,6 +515,7 @@ val useCaseModule = module(createdAtStart = true) {
             colorRepository = get(),
             clock = get(),
             shopSettingsRepository = get(),
+            wishlistHearts = get(),
         )
     }
 
@@ -254,6 +528,19 @@ val useCaseModule = module(createdAtStart = true) {
             colorRepository = get(),
             clock = get(),
             shopSettingsRepository = get(),
+            wishlistHearts = get(),
+            stockAlertFlags = get(),
+            liveCampaign = get(),
+        )
+    }
+
+    // --- admin: products (step 1.4) ---
+    single { FindAdminProductsUc(transactionManager = get(), productQmRepository = get(), categoryRepository = get(), shopSettingsRepository = get()) }
+    single {
+        GetAdminProductUc(
+            transactionManager = get(), productQmRepository = get(), categoryRepository = get(), materialRepository = get(), colorRepository = get(),
+            userRepository = get(), shopSettingsRepository = get(), clock = get(),
+            stockAlertCounts = get(),
         )
     }
 
@@ -264,8 +551,34 @@ val useCaseModule = module(createdAtStart = true) {
             productDomainService = get(),
             productRepository = get(),
             productQmRepository = get(),
-            htmlSanitizer = get(),
+            productInput = get(),
+            mediaAttachments = get(),
+            inventoryDomainService = get(),
+            inventoryRepository = get(),
+            auditTrail = get(),
             clock = get(),
+        )
+    }
+    single { ProductInput(htmlSanitizer = get()) }
+    single { ChangeProductStatusUc(transactionManager = get(), productRepository = get(), auditTrail = get(), clock = get()) }
+    single { ArchiveProductUc(transactionManager = get(), productRepository = get(), wishlistRepository = get(), auditTrail = get(), clock = get()) }
+    single {
+        AddVariantUc(
+            transactionManager = get(), productDomainService = get(), productRepository = get(), productQmRepository = get(), colorRepository = get(),
+            productInput = get(), mediaAttachments = get(), inventoryDomainService = get(), inventoryRepository = get(), auditTrail = get(), clock = get(),
+        )
+    }
+    single {
+        UpdateVariantUc(
+            transactionManager = get(), productRepository = get(), productInput = get(), mediaAttachments = get(), auditTrail = get(), clock = get(),
+        )
+    }
+    single { DeactivateVariantUc(transactionManager = get(), productRepository = get(), auditTrail = get(), clock = get()) }
+    single { FindDueScheduledProductsUc(transactionManager = get(), productQmRepository = get(), clock = get()) }
+    single { PublishScheduledProductUc(transactionManager = get(), productRepository = get(), clock = get()) }
+    single {
+        UpdateProductUc(
+            transactionManager = get(), productDomainService = get(), productRepository = get(), productInput = get(), auditTrail = get(), clock = get(),
         )
     }
 
@@ -308,6 +621,53 @@ val useCaseModule = module(createdAtStart = true) {
 
     // --- account ---
     single { GetMeUc(transactionManager = get(), userRepository = get()) }
+    single { CheckAccountLiveUc(transactionManager = get(), userRepository = get()) }
+    // Deleting the account (phase 14): what an active order is, and what goes with the account.
+    single { ActiveOrdersCheck(orderQmRepository = get(), refundRepository = get()) }
+    single {
+        AccountEraser(
+            addressBookRepository = get(),
+            cartRepository = get(),
+            wishlistRepository = get(),
+            wishlistShareRepository = get(),
+            stockAlertRepository = get(),
+            idempotencyStore = get(),
+            contactMessageRepository = get(),
+            newsletterSubscriptionRepository = get(),
+            reviewRepository = get(),
+            blogFeedbackRepository = get(),
+        )
+    }
+    single {
+        RequestAccountDeletionUc(
+            transactionManager = get(),
+            userRepository = get(),
+            activeOrdersCheck = get(),
+            otpIssuer = get(),
+            smsSender = get(),
+            clock = get(),
+        )
+    }
+    single {
+        DeleteMyAccountUc(
+            transactionManager = get(),
+            cartRepository = get(),
+            wishlistRepository = get(),
+            addressBookRepository = get(),
+            reservationGroupRepository = get(),
+            userRepository = get(),
+            orderQmRepository = get(),
+            activeOrdersCheck = get(),
+            otpChallengeRepository = get(),
+            otpCodes = get(),
+            orderRepository = get(),
+            accountEraser = get(),
+            authSessionRepository = get(),
+            accountDeletionReasonRepository = get(),
+            securityEventLog = get(),
+            clock = get(),
+        )
+    }
     single { UpdateMyProfileUc(transactionManager = get(), userRepository = get(), clock = get()) }
     single {
         RequestPhoneChangeUc(
@@ -349,11 +709,408 @@ val useCaseModule = module(createdAtStart = true) {
     single { FindCustomersUc(transactionManager = get(), adminCustomerRepository = get(), orderQmRepository = get()) }
     single { GetCustomerUc(transactionManager = get(), adminCustomerRepository = get(), orderQmRepository = get()) }
     single {
-        SetUserRolesUc(transactionManager = get(), userRepository = get(), authSessionRepository = get(), securityEventLog = get(), clock = get())
+        SetUserRolesUc(
+            transactionManager = get(),
+            userRepository = get(),
+            authSessionRepository = get(),
+            securityEventLog = get(),
+            auditTrail = get(),
+            clock = get(),
+        )
     }
     single {
         BootstrapAdminUc(transactionManager = get(), userRepository = get(), authSessionRepository = get(), securityEventLog = get(), clock = get())
     }
+    single {
+        GetCustomerDetailUc(
+            transactionManager = get(), adminCustomerRepository = get(), orderQmRepository = get(), addressBookRepository = get(), geoRepository = get(),
+        )
+    }
+
+    // --- admin: orders (phase 2) ---
+    single { FindAdminOrdersUc(transactionManager = get(), orderQmRepository = get(), adminCustomerRepository = get()) }
+    single { AddOrderNoteUc(transactionManager = get(), orderByCode = get(), orderNoteRepository = get(), userRepository = get(), auditTrail = get(), clock = get()) }
+    single {
+        SetPreShipmentMediaUc(
+            transactionManager = get(), orderByCode = get(), orderRepository = get(), mediaAttachments = get(), auditTrail = get(), clock = get(),
+        )
+    }
+    single {
+        SendPreShipmentMediaUc(
+            transactionManager = get(), orderByCode = get(), orderRepository = get(), userRepository = get(), shopSettingsRepository = get(),
+            auditTrail = get(), orderNotices = get(), clock = get(),
+        )
+    }
+    single {
+        GetAdminOrderUc(
+            transactionManager = get(), orderByCode = get(), orderDetails = get(), orderQmRepository = get(), paymentRepository = get(),
+            reservationGroupRepository = get(), adminCustomerRepository = get(), orderNoteRepository = get(), userRepository = get(),
+            shopSettingsRepository = get(), clock = get(),
+        )
+    }
+
+    single {
+        ChangeOrderStatusUc(
+            transactionManager = get(), orderByCode = get(), orderCancellation = get(), orderQmRepository = get(), orderRepository = get(),
+            shopSettingsRepository = get(), userRepository = get(), auditTrail = get(), orderNotices = get(), clock = get(),
+        )
+    }
+    single {
+        ShipOrderUc(
+            transactionManager = get(), orderByCode = get(), orderQmRepository = get(), orderRepository = get(), reservationGroupRepository = get(),
+            inventoryDomainService = get(), inventoryRepository = get(), shopSettingsRepository = get(), userRepository = get(), auditTrail = get(),
+            orderNotices = get(), clock = get(),
+        )
+    }
+
+    // --- admin: change requests (phase 3) ---
+    single {
+        ResolveChangeRequestUc(
+            transactionManager = get(), orderByCode = get(), orderCancellation = get(), orderQmRepository = get(), orderRepository = get(),
+            paymentRepository = get(), offerQmRepository = get(), inventoryDomainService = get(), inventoryRepository = get(), refundRepository = get(),
+            refundIdGenerator = get(), refundDomainService = get(), userRepository = get(), auditTrail = get(), orderNotices = get(), clock = get(),
+        )
+    }
+
+    // --- returns (phase 7) ---
+    single {
+        ReturnRequests(
+            returnRequestRepository = get(), orderQmRepository = get(), mediaRepository = get(), refundRepository = get(), colorRepository = get(),
+        )
+    }
+    single {
+        CreateReturnUc(
+            transactionManager = get(), orderByCode = get(), orderQmRepository = get(), orderRepository = get(), mediaRepository = get(),
+            returnDomainService = get(), returnRequestRepository = get(), clock = get(),
+        )
+    }
+    single { ListMyReturnsUc(transactionManager = get(), returnRequestRepository = get(), returnRequests = get(), shopSettingsRepository = get()) }
+    single { GetMyReturnUc(transactionManager = get(), returnRequestRepository = get(), returnRequests = get(), shopSettingsRepository = get()) }
+
+    // --- admin: returns (phase 7) ---
+    single { ReturnNotices(smsSender = get()) }
+    single { ReturnByIdForPanel(returnRequestRepository = get(), orderQmRepository = get(), orderRepository = get()) }
+    single {
+        AdminReturnRequests(
+            returnRequests = get(), adminCustomerRepository = get(), refundRepository = get(), paymentRepository = get(), refundDomainService = get(),
+        )
+    }
+    single { FindAdminReturnsUc(transactionManager = get(), returnRequestRepository = get(), adminReturnRequests = get(), shopSettingsRepository = get()) }
+    single { GetAdminReturnUc(transactionManager = get(), returnRequestRepository = get(), adminReturnRequests = get(), shopSettingsRepository = get()) }
+    single {
+        DecideReturnUc(
+            transactionManager = get(), returnByIdForPanel = get(), returnRequestRepository = get(), orderRepository = get(), userRepository = get(),
+            auditTrail = get(), returnNotices = get(), clock = get(),
+        )
+    }
+    single {
+        ReceiveReturnUc(
+            transactionManager = get(), returnByIdForPanel = get(), returnRequestRepository = get(), orderRepository = get(),
+            inventoryDomainService = get(), inventoryRepository = get(), auditTrail = get(), clock = get(),
+        )
+    }
+    single {
+        CloseReturnUc(
+            transactionManager = get(), returnByIdForPanel = get(), returnRequestRepository = get(), refundRepository = get(), orderRepository = get(),
+            userRepository = get(), auditTrail = get(), returnNotices = get(), clock = get(),
+        )
+    }
+    single {
+        ScheduleReturnPickupUc(
+            transactionManager = get(), returnByIdForPanel = get(), returnRequestRepository = get(), shopSettingsRepository = get(), userRepository = get(),
+            auditTrail = get(), returnNotices = get(), clock = get(),
+        )
+    }
+
+    // --- reviews (phase 8) ---
+    single { RatingBook(productRatingRepository = get()) }
+    single { Reviews(mediaRepository = get(), reviewVoteRepository = get(), productQmRepository = get(), colorRepository = get()) }
+    single { ReviewPurchases(orderQmRepository = get()) }
+    single { ReviewMarks(reviewRepository = get(), productQmRepository = get()) }
+    single { ReviewsAwaiting(reviewPurchases = get(), reviewRepository = get(), productQmRepository = get()) }
+    single {
+        GetMyDashboardUc(
+            transactionManager = get(), userRepository = get(), orderQmRepository = get(), wishlistRepository = get(), addressBookRepository = get(),
+            reviewRepository = get(), reviewsAwaiting = get(), reservations = get(), clock = get(),
+        )
+    }
+
+    // --- stock alerts (phase 10) ---
+    single { StockAlertDomainService(ids = get()) }
+    single { StockAlerts(productQmRepository = get(), colorRepository = get(), userRepository = get()) }
+    single { StockAlertFlags.of(get()) }
+    single { StockAlertCounts.of(get()) }
+    single {
+        CreateStockAlertUc(
+            transactionManager = get(), productQmRepository = get(), stockAlertRepository = get(), stockAlertDomainService = get(), stockAlerts = get(),
+            clock = get(),
+        )
+    }
+    single { ListMyStockAlertsUc(transactionManager = get(), stockAlertRepository = get(), stockAlerts = get(), clock = get()) }
+    single { CancelMyStockAlertUc(transactionManager = get(), stockAlertRepository = get(), clock = get()) }
+    single { FindDueStockAlertsUc(transactionManager = get(), stockAlertRepository = get()) }
+    single {
+        NotifyStockAlertUc(
+            transactionManager = get(), stockAlertRepository = get(), productQmRepository = get(), userRepository = get(), smsSender = get(),
+            siteUrl = get<AppConfig>().shop.siteUrl, clock = get(),
+        )
+    }
+    single { DeleteOldStockAlertsUc(transactionManager = get(), stockAlertRepository = get(), clock = get()) }
+    single {
+        FindAdminStockAlertGroupsUc(
+            transactionManager = get(), stockAlertRepository = get(), productQmRepository = get(), colorRepository = get(), shopSettingsRepository = get(),
+        )
+    }
+    single { GetProductInquiryUc(transactionManager = get(), productQmRepository = get(), colorRepository = get(), shopSettingsRepository = get()) }
+
+    // --- marketing (phase 11) ---
+    single { CampaignDomainService(campaignRepository = get()) }
+    single { CampaignProducts(productQmRepository = get()) }
+    single { CampaignShowcases(productQmRepository = get(), categoryRepository = get(), colorRepository = get(), shopSettingsRepository = get()) }
+    single { ListAdminCampaignsUc(transactionManager = get(), campaignRepository = get(), campaignShowcases = get(), clock = get()) }
+    single { GetAdminCampaignUc(transactionManager = get(), campaignRepository = get(), campaignShowcases = get(), clock = get()) }
+    single {
+        CreateCampaignUc(
+            transactionManager = get(), campaignRepository = get(), campaignDomainService = get(), campaignProducts = get(), auditTrail = get(), clock = get(),
+        )
+    }
+    single {
+        UpdateCampaignUc(
+            transactionManager = get(), campaignRepository = get(), campaignDomainService = get(), campaignProducts = get(), auditTrail = get(), clock = get(),
+        )
+    }
+    single { DeleteCampaignUc(transactionManager = get(), campaignRepository = get(), auditTrail = get(), clock = get()) }
+    single { LiveCampaign.of(get()) }
+    single { GetActiveCampaignUc(transactionManager = get(), campaignRepository = get(), campaignShowcases = get(), clock = get()) }
+    single { Banners(mediaRepository = get()) }
+    single { ListBannersUc(transactionManager = get(), bannerRepository = get(), banners = get(), clock = get()) }
+    single { ListAdminBannersUc(transactionManager = get(), bannerRepository = get(), banners = get()) }
+    single { GetAdminBannerUc(transactionManager = get(), bannerRepository = get(), banners = get()) }
+    single { CreateBannerUc(transactionManager = get(), bannerRepository = get(), mediaAttachments = get(), auditTrail = get(), clock = get()) }
+    single { UpdateBannerUc(transactionManager = get(), bannerRepository = get(), mediaAttachments = get(), auditTrail = get(), clock = get()) }
+    single { DeleteBannerUc(transactionManager = get(), bannerRepository = get(), auditTrail = get(), clock = get()) }
+    single { TestimonialReferences(productQmRepository = get()) }
+    single { Testimonials(productQmRepository = get(), colorRepository = get(), mediaRepository = get()) }
+    single { ListTestimonialsUc(transactionManager = get(), testimonialRepository = get(), testimonials = get(), shopSettingsRepository = get()) }
+    single { ListAdminTestimonialsUc(transactionManager = get(), testimonialRepository = get(), testimonials = get()) }
+    single { GetAdminTestimonialUc(transactionManager = get(), testimonialRepository = get(), testimonials = get()) }
+    single {
+        CreateTestimonialUc(
+            transactionManager = get(), testimonialRepository = get(), references = get(), mediaAttachments = get(), auditTrail = get(), clock = get(),
+        )
+    }
+    single {
+        UpdateTestimonialUc(
+            transactionManager = get(), testimonialRepository = get(), references = get(), mediaAttachments = get(), auditTrail = get(), clock = get(),
+        )
+    }
+    single { DeleteTestimonialUc(transactionManager = get(), testimonialRepository = get(), auditTrail = get(), clock = get()) }
+    single { GetSiteStatsUc(transactionManager = get(), shopSettingsRepository = get()) }
+
+    // --- search (phase 12) ---
+    single {
+        GetSearchHintsUc(transactionManager = get(), categoryRepository = get(), colorRepository = get(), productQmRepository = get(), siteContentRepository = get())
+    }
+    single {
+        SearchSuggestUc(
+            transactionManager = get(), productQmRepository = get(), categoryRepository = get(), colorRepository = get(), shopSettingsRepository = get(),
+            clock = get(),
+        )
+    }
+    single { CategoryMenu(categoryRepository = get(), productQmRepository = get(), mediaRepository = get()) }
+    single {
+        GetHomePageUc(
+            transactionManager = get(), siteContentRepository = get(), shopSettingsRepository = get(), productQmRepository = get(),
+            categoryRepository = get(), colorRepository = get(), categoryMenu = get(), bannerRepository = get(), banners = get(),
+            campaignRepository = get(), campaignShowcases = get(), testimonialRepository = get(), testimonials = get(), clock = get(),
+        )
+    }
+
+    // --- blog (phase 15) ---
+    single {
+        BlogPosts(
+            blogPostRepository = get(),
+            blogCategoryRepository = get(),
+            blogAuthorRepository = get(),
+            blogFeedbackRepository = get(),
+            mediaRepository = get(),
+            productQmRepository = get(),
+            categoryRepository = get(),
+            colorRepository = get(),
+            shopSettingsRepository = get(),
+            adminCustomerRepository = get(),
+        )
+    }
+    single { BlogPostWriting(blogCategoryRepository = get(), blogAuthorRepository = get(), mediaAttachments = get(), productQmRepository = get()) }
+    single {
+        CreateBlogPostUc(
+            transactionManager = get(), blogPostRepository = get(), blogPostWriting = get(), blogPosts = get(), mediaAttachments = get(),
+            sanitizer = get(), auditTrail = get(), clock = get(),
+        )
+    }
+    single {
+        UpdateBlogPostUc(
+            transactionManager = get(), blogPostRepository = get(), blogPostWriting = get(), blogPosts = get(), mediaAttachments = get(),
+            sanitizer = get(), auditTrail = get(), clock = get(),
+        )
+    }
+    single { DeleteBlogPostUc(transactionManager = get(), blogPostRepository = get(), auditTrail = get(), clock = get()) }
+    single { GetAdminBlogPostUc(transactionManager = get(), blogPostRepository = get(), blogPosts = get(), clock = get()) }
+    single { FindAdminBlogPostsUc(transactionManager = get(), blogPostRepository = get(), blogCategoryRepository = get(), blogPosts = get(), clock = get()) }
+    single { ListBlogCategoriesUc(transactionManager = get(), blogPosts = get(), clock = get()) }
+    single { ListBlogPostsUc(transactionManager = get(), blogPostRepository = get(), blogCategoryRepository = get(), blogPosts = get(), clock = get()) }
+    single { GetBlogPostUc(transactionManager = get(), blogPostRepository = get(), blogPosts = get(), clock = get()) }
+    single { ListRelatedBlogPostsUc(transactionManager = get(), blogPostRepository = get(), blogPosts = get(), clock = get()) }
+    single { SendBlogFeedbackUc(transactionManager = get(), blogPostRepository = get(), blogFeedbackRepository = get(), voterHashes = get(), clock = get()) }
+
+    // --- contact and newsletter (phase 13) ---
+    single { TicketCodeGenerator() }
+    single { ListContactTopicsUc() }
+    single { CreateContactMessageUc(transactionManager = get(), contactMessageRepository = get(), ticketCodeGenerator = get(), clock = get()) }
+    single { FindAdminContactMessagesUc(transactionManager = get(), contactMessageRepository = get(), userRepository = get()) }
+    single {
+        SubscribeNewsletterUc(
+            transactionManager = get(), subscriptionRepository = get(), emailSender = get(), siteUrl = get<AppConfig>().shop.siteUrl, clock = get(),
+        )
+    }
+    single { UnsubscribeNewsletterUc(transactionManager = get(), subscriptionRepository = get(), clock = get()) }
+    single { FindNewsletterSubscriptionsUc(transactionManager = get(), subscriptionRepository = get()) }
+    single { DeleteOldContactDataUc(transactionManager = get(), contactMessageRepository = get(), subscriptionRepository = get(), clock = get()) }
+    single {
+        UpdateContactMessageUc(
+            transactionManager = get(), contactMessageRepository = get(), userRepository = get(), auditTrail = get(), smsSender = get(),
+            emailSender = get(), clock = get(),
+        )
+    }
+
+    // --- wishlist (phase 9) ---
+    single { WishlistHearts.of(get()) }
+    single { WishlistCards(productQmRepository = get(), categoryRepository = get(), colorRepository = get(), shopSettingsRepository = get()) }
+    single {
+        GetMyWishlistUc(
+            transactionManager = get(), wishlistRepository = get(), wishlistShareRepository = get(), wishlistCards = get(), shopSettingsRepository = get(),
+            clock = get(),
+        )
+    }
+    single { GetMyWishlistIdsUc(transactionManager = get(), wishlistRepository = get()) }
+    single { ClearMyWishlistUc(transactionManager = get(), wishlistRepository = get()) }
+    single { AddToWishlistUc(transactionManager = get(), wishlistRepository = get(), wishlistCards = get(), clock = get()) }
+    single { RemoveFromWishlistUc(transactionManager = get(), wishlistRepository = get(), productQmRepository = get()) }
+    single {
+        AddWishlistToCartUc(transactionManager = get(), wishlistRepository = get(), wishlistCards = get(), cartBulkAdd = get(), clock = get())
+    }
+    single { MoveCartItemToWishlistUc(cartCommands = get(), cartDomainService = get(), wishlistRepository = get(), productQmRepository = get()) }
+    single {
+        ShareMyWishlistUc(
+            transactionManager = get(), wishlistRepository = get(), wishlistShareRepository = get(), tokens = get(), shopSettingsRepository = get(),
+            clock = get(),
+        )
+    }
+    single { RevokeWishlistShareUc(transactionManager = get(), wishlistRepository = get(), wishlistShareRepository = get()) }
+    single {
+        GetSharedWishlistUc(
+            transactionManager = get(), wishlistShareRepository = get(), wishlistRepository = get(), userRepository = get(), wishlistCards = get(),
+            shopSettingsRepository = get(), clock = get(),
+        )
+    }
+    single {
+        CreateReviewUc(
+            transactionManager = get(), productQmRepository = get(), reviewRepository = get(), reviewDomainService = get(), reviewPurchases = get(),
+            orderByCode = get(), mediaRepository = get(), shopSettingsRepository = get(), clock = get(),
+        )
+    }
+    single { GetMyReviewUc(transactionManager = get(), reviewRepository = get(), reviews = get()) }
+    single {
+        ListProductReviewsUc(
+            transactionManager = get(), productQmRepository = get(), reviewRepository = get(), productRatingRepository = get(), reviews = get(),
+        )
+    }
+    single { GetReviewSummaryUc(transactionManager = get(), productQmRepository = get(), productRatingRepository = get()) }
+    single { VoteReviewHelpfulUc(transactionManager = get(), reviewRepository = get(), reviewVoteRepository = get(), clock = get()) }
+    single { UpdateMyReviewUc(transactionManager = get(), reviewRepository = get(), clock = get()) }
+    single { DeleteMyReviewUc(transactionManager = get(), reviewRepository = get(), ratingBook = get(), clock = get()) }
+    single { ListMyReviewsUc(transactionManager = get(), reviewRepository = get(), reviews = get()) }
+    single { FindAdminReviewsUc(transactionManager = get(), reviewRepository = get(), reviews = get(), adminCustomerRepository = get()) }
+    single { GetAdminReviewUc(transactionManager = get(), reviewRepository = get(), reviews = get()) }
+    single {
+        ModerateReviewUc(
+            transactionManager = get(), reviewRepository = get(), ratingBook = get(), productQmRepository = get(), auditTrail = get(), clock = get(),
+        )
+    }
+    single { ReplyToReviewUc(transactionManager = get(), reviewRepository = get(), productQmRepository = get(), auditTrail = get(), clock = get()) }
+    single { DeleteReviewReplyUc(transactionManager = get(), reviewRepository = get(), productQmRepository = get(), auditTrail = get(), clock = get()) }
+    single {
+        ListProductsAwaitingMyReviewUc(transactionManager = get(), reviewsAwaiting = get(), colorRepository = get())
+    }
+
+    // --- admin: refunds (phase 2) ---
+    single {
+        CreateRefundUc(
+            transactionManager = get(), orderByCode = get(), orderQmRepository = get(), orderRepository = get(), paymentRepository = get(),
+            refundRepository = get(), returnRequestRepository = get(), refundDomainService = get(), auditTrail = get(), clock = get(),
+        )
+    }
+    single {
+        UpdateRefundUc(
+            transactionManager = get(), refundRepository = get(), orderQmRepository = get(), orderRepository = get(), returnRequestRepository = get(), userRepository = get(),
+            auditTrail = get(), orderNotices = get(), clock = get(),
+        )
+    }
+
+    // --- admin: the shop's settings (phase 4) ---
+    single { GetAdminSettingsUc(transactionManager = get(), shopSettingsRepository = get(), paymentGateways = get()) }
+    single { UpdateSettingsUc(transactionManager = get(), shopSettingsRepository = get(), auditTrail = get(), clock = get()) }
+
+    // --- admin: discount codes (phase 4) ---
+    single { DiscountCodeReferences(categoryRepository = get(), productQmRepository = get()) }
+    single { ListDiscountCodesUc(transactionManager = get(), discountCodeRepository = get()) }
+    single { GetDiscountCodeUc(transactionManager = get(), discountCodeRepository = get()) }
+    single { CreateDiscountCodeUc(transactionManager = get(), discountCodeRepository = get(), references = get(), auditTrail = get(), clock = get()) }
+    single { UpdateDiscountCodeUc(transactionManager = get(), discountCodeRepository = get(), references = get(), auditTrail = get(), clock = get()) }
+    single { DeactivateDiscountCodeUc(transactionManager = get(), discountCodeRepository = get(), auditTrail = get(), clock = get()) }
+
+    // --- admin: the report (phase 4) ---
+    single { GetReportOverviewUc(transactionManager = get(), reportQmRepository = get()) }
+
+    // --- content: static pages (phase 5) ---
+    single { GetPageUc(transactionManager = get(), staticPageRepository = get()) }
+    single { ListPagesUc(transactionManager = get(), staticPageRepository = get()) }
+    single { SavePageUc(transactionManager = get(), staticPageRepository = get(), sanitizer = get(), auditTrail = get(), clock = get()) }
+
+    // --- content: the FAQ (phase 5) ---
+    single { GetFaqUc(transactionManager = get(), faqRepository = get(), htmlText = get()) }
+    single { ListFaqForEditUc(transactionManager = get(), faqRepository = get()) }
+    single { SaveFaqUc(transactionManager = get(), faqRepository = get(), sanitizer = get(), auditTrail = get(), clock = get()) }
+
+    // --- content: the announcement bar (phase 5) ---
+    single { ListAnnouncementsUc(transactionManager = get(), announcementBarRepository = get()) }
+    single { SaveAnnouncementsUc(transactionManager = get(), announcementBarRepository = get(), auditTrail = get(), clock = get()) }
+
+    // --- content: GET /config (phase 5) ---
+    single {
+        GetSiteConfigUc(
+            transactionManager = get(), siteContentRepository = get(), shopSettingsRepository = get(), paymentGateways = get(),
+            announcementBarRepository = get(), clock = get(),
+        )
+    }
+
+    // --- admin: the change log ---
+    single { ListAuditLogUc(transactionManager = get(), auditLogQmRepository = get()) }
+    single { DeleteOldAuditEntriesUc(transactionManager = get(), auditTrail = get(), clock = get()) }
+
+    // --- admin: uploads ---
+    single {
+        UploadMediaUc(
+            transactionManager = get(),
+            mediaProcessor = get(),
+            mediaStorage = get(),
+            mediaRepository = get(),
+            mediaIdGenerator = get(),
+            clock = get(),
+        )
+    }
+    single { FindUnattachedMediaUc(transactionManager = get(), mediaRepository = get(), clock = get()) }
+    single { DeleteUnattachedMediaUc(transactionManager = get(), mediaRepository = get(), mediaStorage = get(), clock = get()) }
 
     // --- inventory: commands ---
     single {
@@ -362,7 +1119,11 @@ val useCaseModule = module(createdAtStart = true) {
             inventoryDomainService = get(),
             inventoryRepository = get(),
             productQmRepository = get(),
+            inventoryAdjustmentQmRepository = get(),
+            userRepository = get(),
+            auditTrail = get(),
             clock = get(),
         )
     }
+    single { ListInventoryAdjustmentsUc(transactionManager = get(), inventoryAdjustmentQmRepository = get(), userRepository = get()) }
 }

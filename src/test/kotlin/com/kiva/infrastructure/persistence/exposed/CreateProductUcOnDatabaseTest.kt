@@ -1,9 +1,11 @@
 package com.kiva.infrastructure.persistence.exposed
 
+import com.kiva.application.usecase.media.MediaAttachments
+import com.kiva.application.usecase.product.ProductInput
 import com.kiva.application.usecase.product.usecase.command.CreateProductUc
 import com.kiva.common.railway.Result
 import com.kiva.common.valueobject.Slug
-import com.kiva.common.valueobject.UserId
+import com.kiva.domain.aggregate.inventory.InventoryDomainService
 import com.kiva.domain.aggregate.product.ProductDomainService
 import com.kiva.domain.aggregate.product.entity.Product
 import com.kiva.domain.aggregate.product.repository.ProductRepository
@@ -38,7 +40,6 @@ class CreateProductUcOnDatabaseTest {
     private val db = TestDatabase.database
     private val transactions = ExposedTransactionManager(db)
     private val products = ProductRepositoryImpl()
-    private val staff = UserId.constructFromPersisted(12)
 
     private val slugs = listOf("race-bag", "race-bag-other")
 
@@ -57,7 +58,11 @@ class CreateProductUcOnDatabaseTest {
         ProductDomainService(repository, ProductIdGeneratorImpl(), CategoryRepositoryImpl(), MaterialRepositoryImpl(), ColorRepositoryImpl()),
         repository,
         ProductQmRepositoryImpl(),
-        JsoupHtmlSanitizer,
+        ProductInput(JsoupHtmlSanitizer),
+        MediaAttachments(MediaRepositoryImpl()),
+        InventoryDomainService(InventoryRepositoryImpl()),
+        InventoryRepositoryImpl(),
+        AuditTrailImpl(),
         Clock.systemUTC(),
     )
 
@@ -76,27 +81,31 @@ class CreateProductUcOnDatabaseTest {
     }
 
     private fun cmd(slug: String, sku: String? = null) = CreateProductUc.Cmd(
-        name = "کیف مسابقه",
-        slug = slug,
-        sku = sku,
-        categoryId = transaction(db) { CategoryRepositoryImpl().findBySlug(Slug.constructFromPersisted("shoulder"))!!.id.value },
-        bagType = "HOBO",
-        materialId = transaction(db) { MaterialRepositoryImpl().findAll().first().id.value },
-        materialDescription = null,
-        price = 1_000_000,
-        compareAtPrice = null,
-        shortDescription = null,
-        description = null,
-        highlights = emptyList(),
-        specs = CreateProductUc.Cmd.Specs.NONE,
-        newUntil = null,
-        maxPerOrder = null,
-        returnable = null,
-        reservable = null,
-        sortPriority = null,
+        fields = ProductInput.Fields(
+            name = "کیف مسابقه",
+            slug = slug,
+            sku = sku,
+            categoryId = transaction(db) { CategoryRepositoryImpl().findBySlug(Slug.constructFromPersisted("shoulder"))!!.id.value },
+            bagType = "HOBO",
+            materialId = transaction(db) { MaterialRepositoryImpl().findAll().first().id.value },
+            materialDescription = null,
+            price = 1_000_000,
+            compareAtPrice = null,
+            shortDescription = null,
+            description = null,
+            highlights = null,
+            specs = null,
+            tags = null,
+            newUntil = null,
+            maxPerOrder = null,
+            returnable = null,
+            reservable = null,
+            sortPriority = null,
+            seo = null,
+        ),
         status = null,
-        variants = listOf(CreateProductUc.Cmd.Variant("lilac", null, null, null, isDefault = false, sortOrder = null)),
-        by = staff,
+        variants = listOf(ProductInput.Variant("lilac")),
+        actor = null,
     )
 
     private fun countWithSlug(slug: String) = transaction(db) { ProductQmTbl.selectAll().where { ProductQmTbl.slug eq slug }.count() }

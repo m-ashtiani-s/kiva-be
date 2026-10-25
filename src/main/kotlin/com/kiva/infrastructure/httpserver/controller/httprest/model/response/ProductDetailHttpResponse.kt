@@ -1,14 +1,18 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.model.response
 
+import com.kiva.application.dto.RatingSummaryDto
+import com.kiva.application.dto.GalleryItemDto
 import com.kiva.application.dto.ProductDetailDto
-import com.kiva.domain.aggregate.product.model.valueobject.ProductMedia
+import com.kiva.domain.aggregate.product.model.valueobject.PocketInfo
 import com.kiva.domain.aggregate.product.model.valueobject.ProductSpecs
+import com.kiva.domain.aggregate.product.model.valueobject.StrapInfo
+import com.kiva.infrastructure.media.MediaUrls
 import kotlinx.serialization.Serializable
 
 /**
  * Contract schema `ProductDetail`: every field of the card (ProductSummary), then the page's own.
  *
- * Not sent yet: `tags`, `perks`, `campaign` and `stockAlert` (nothing keeps them yet), and the media `id`s (they come
+ * Not sent yet: `tags` and `perks` (nothing keeps them yet), and the media `id`s (they come
  * with uploads). `ratingSummary` is required, so it goes out empty until reviews exist.
  */
 @Serializable
@@ -23,16 +27,19 @@ data class ProductDetailHttpResponse(
     val price: PriceInfoHttpResponse,
     val colors: List<ProductColorOptionHttpResponse>,
     val colorsCount: Int,
-    val defaultColorKey: String,
-    val displayColorKey: String,
+    val defaultColorKey: String?,
+    val displayColorKey: String?,
     val image: MediaAssetHttpResponse?,
+    val hoverImage: MediaAssetHttpResponse?,
     val badges: List<ProductBadgeHttpResponse>,
     val stock: StockInfoHttpResponse,
     val isNew: Boolean,
     val hasVideo: Boolean,
     val soldCount: Int,
     val freeShippingEligible: Boolean,
-    val selectedColorKey: String,
+    val rating: RatingBriefHttpResponse,
+    val isWishlisted: Boolean?,
+    val selectedColorKey: String?,
     val shortDescription: String? = null,
     val description: String? = null,
     val highlights: List<String>,
@@ -43,6 +50,8 @@ data class ProductDetailHttpResponse(
     val variants: List<ProductVariantHttpResponse>,
     val breadcrumbs: List<BreadcrumbHttpResponse>,
     val ratingSummary: RatingSummaryHttpResponse,
+    val stockAlert: ProductStockAlertHttpResponse?,
+    val campaign: ProductCampaignHttpResponse?,
     val policies: ProductPoliciesHttpResponse,
     val shareUrl: String,
     val seo: SeoMetaHttpResponse,
@@ -51,9 +60,9 @@ data class ProductDetailHttpResponse(
 ) {
     companion object {
         /** @param siteUrl the shop's address (`https://kiva.ir`): the page's address is always its slug's. */
-        fun from(detail: ProductDetailDto, siteUrl: String): ProductDetailHttpResponse {
+        fun from(detail: ProductDetailDto, siteUrl: String, urls: MediaUrls): ProductDetailHttpResponse {
             // The card exactly as in the list, its picture in the selected color.
-            val card = ProductSummaryHttpResponse.from(detail.card, filterColors = listOf(detail.selectedColorKey))
+            val card = ProductSummaryHttpResponse.from(detail.card, filterColors = listOfNotNull(detail.selectedColorKey), urls)
             // Asked for by number or code, the canonical address is still the slug's.
             val pageUrl = siteUrl.trimEnd('/') + card.url
 
@@ -71,12 +80,15 @@ data class ProductDetailHttpResponse(
                 defaultColorKey = card.defaultColorKey,
                 displayColorKey = card.displayColorKey,
                 image = card.image,
+                hoverImage = card.hoverImage,
                 badges = card.badges,
                 stock = card.stock,
                 isNew = card.isNew,
                 hasVideo = card.hasVideo,
                 soldCount = card.soldCount,
                 freeShippingEligible = card.freeShippingEligible,
+                rating = card.rating,
+                isWishlisted = card.isWishlisted,
                 selectedColorKey = detail.selectedColorKey,
                 shortDescription = detail.shortDescription,
                 description = detail.description,
@@ -85,14 +97,16 @@ data class ProductDetailHttpResponse(
                 materialDescription = detail.materialDescription,
                 specs = ProductSpecsHttpResponse.from(detail.specs),
                 specTable = ProductTexts.specTable(detail),
-                variants = detail.variants.map(ProductVariantHttpResponse::from),
+                variants = detail.variants.map { ProductVariantHttpResponse.from(it, urls) },
                 breadcrumbs = listOf(
                     BreadcrumbHttpResponse("خانه", "/"),
                     BreadcrumbHttpResponse("فروشگاه", "/products"),
                     BreadcrumbHttpResponse(detail.card.category.name, "/products?category=${detail.card.category.slug}"),
                     BreadcrumbHttpResponse(detail.card.name, url = null),
                 ),
-                ratingSummary = RatingSummaryHttpResponse.NONE,
+                ratingSummary = RatingSummaryHttpResponse.from(detail.card.rating),
+                stockAlert = detail.stockAlert?.let { ProductStockAlertHttpResponse(it.subscribed, it.alertId) },
+                campaign = detail.campaign?.let { ProductCampaignHttpResponse(it.slug, it.title, it.endsAt.toString()) },
                 policies = ProductPoliciesHttpResponse(returnable = detail.returnable, reservable = detail.reservable, maxPerOrder = detail.maxPerOrder),
                 shareUrl = pageUrl,
                 seo = SeoMetaHttpResponse(title = "${detail.card.name} | کیوا", description = detail.shortDescription, canonicalUrl = pageUrl),
@@ -107,10 +121,7 @@ data class ProductDetailHttpResponse(
 @Serializable
 data class MaterialRefHttpResponse(val id: Long, val slug: String, val name: String, val family: String)
 
-/**
- * Contract schema `ProductSpecs`, as far as the domain keeps specs today: the strap and the pockets are one text each,
- * so they go out as one strap's label and the pockets' summary.
- */
+/** Contract schema `ProductSpecs`, every part of it. Labels (closure, occasions, straps, pockets) are the server's own Persian. */
 @Serializable
 data class ProductSpecsHttpResponse(
     val dimensions: DimensionsHttpResponse? = null,
@@ -118,16 +129,38 @@ data class ProductSpecsHttpResponse(
     val closure: ClosureHttpResponse? = null,
     val straps: List<StrapHttpResponse>? = null,
     val pockets: PocketsHttpResponse? = null,
+    val laptopMaxInch: Double? = null,
+    val capacityLiters: Double? = null,
+    val waterproof: Boolean = false,
     val occasions: List<OccasionHttpResponse>,
+    val fits: List<String> = emptyList(),
+    val lining: LiningHttpResponse? = null,
+    val hardware: HardwareHttpResponse? = null,
+    val stitching: String? = null,
+    val handmade: Boolean = false,
+    val madeIn: String? = null,
+    val careInstructions: List<String> = emptyList(),
+    val warranty: WarrantyHttpResponse? = null,
 ) {
     companion object {
         fun from(specs: ProductSpecs) = ProductSpecsHttpResponse(
             dimensions = specs.dimensions?.let { DimensionsHttpResponse(it.lengthCm, it.heightCm, it.widthCm) },
             weightGrams = specs.weightGrams,
             closure = specs.closure?.let { ClosureHttpResponse(it.name, ProductTexts.closure(it)) },
-            straps = specs.strap?.let { listOf(StrapHttpResponse(it)) },
-            pockets = specs.pockets?.let { PocketsHttpResponse(it) },
+            straps = specs.straps.takeIf { it.isNotEmpty() }?.map(StrapHttpResponse::from),
+            pockets = specs.pockets?.let(PocketsHttpResponse::from),
+            laptopMaxInch = specs.laptopMaxInch,
+            capacityLiters = specs.capacityLiters,
+            waterproof = specs.waterproof,
             occasions = specs.occasions.sorted().map { OccasionHttpResponse(it.name, ProductTexts.occasion(it)) },
+            fits = specs.fits.sorted().map { it.name },
+            lining = specs.lining?.let { LiningHttpResponse(it.material, it.color) },
+            hardware = specs.hardware?.let { HardwareHttpResponse(it.material, it.finish) },
+            stitching = specs.stitching,
+            handmade = specs.handmade,
+            madeIn = specs.madeIn,
+            careInstructions = specs.careInstructions.items,
+            warranty = specs.warranty?.let { WarrantyHttpResponse(it.months, it.description) },
         )
     }
 }
@@ -138,11 +171,70 @@ data class DimensionsHttpResponse(val lengthCm: Double, val heightCm: Double, va
 @Serializable
 data class ClosureHttpResponse(val type: String, val label: String)
 
+/** Contract schema `StrapInfo`. [label] is the panel's, or one made from the kind and the length. */
 @Serializable
-data class StrapHttpResponse(val label: String)
+data class StrapHttpResponse(
+    val type: String? = null,
+    val label: String,
+    val lengthCm: Double? = null,
+    val minLengthCm: Double? = null,
+    val maxLengthCm: Double? = null,
+    val adjustable: Boolean = false,
+    val detachable: Boolean = false,
+    val material: String? = null,
+) {
+    companion object {
+        fun from(strap: StrapInfo) = StrapHttpResponse(
+            type = strap.type?.name,
+            label = ProductTexts.strap(strap),
+            lengthCm = strap.lengthCm,
+            minLengthCm = strap.minLengthCm,
+            maxLengthCm = strap.maxLengthCm,
+            adjustable = strap.adjustable,
+            detachable = strap.detachable,
+            material = strap.material,
+        )
+    }
+}
+
+/** Contract schema `PocketInfo`. [summary] is the panel's, or one made from the counts. */
+@Serializable
+data class PocketsHttpResponse(
+    val internal: Int = 0,
+    val internalZip: Int = 0,
+    val external: Int = 0,
+    val phone: Int = 0,
+    val cardSlots: Int = 0,
+    val billSlots: Int = 0,
+    val coinPocket: Boolean = false,
+    val detachablePouch: Boolean = false,
+    val laptopSleeve: Boolean = false,
+    val summary: String,
+) {
+    companion object {
+        fun from(pockets: PocketInfo) = PocketsHttpResponse(
+            internal = pockets.internal,
+            internalZip = pockets.internalZip,
+            external = pockets.external,
+            phone = pockets.phone,
+            cardSlots = pockets.cardSlots,
+            billSlots = pockets.billSlots,
+            coinPocket = pockets.coinPocket,
+            detachablePouch = pockets.detachablePouch,
+            laptopSleeve = pockets.laptopSleeve,
+            summary = ProductTexts.pockets(pockets),
+        )
+    }
+}
 
 @Serializable
-data class PocketsHttpResponse(val summary: String)
+data class LiningHttpResponse(val material: String? = null, val color: String? = null)
+
+@Serializable
+data class HardwareHttpResponse(val material: String? = null, val finish: String? = null)
+
+@Serializable
+data class WarrantyHttpResponse(val months: Int, val description: String? = null)
 
 @Serializable
 data class OccasionHttpResponse(val code: String, val label: String)
@@ -157,7 +249,7 @@ data class SpecRowHttpResponse(
     val tone: String? = null,
 )
 
-/** Contract schema `ProductVariant`. Not sent yet: `stockAlertSubscribed` (no accounts yet). */
+/** Contract schema `ProductVariant`. [stockAlertSubscribed]: the viewer waits for this color (a guest false; phase 10). */
 @Serializable
 data class ProductVariantHttpResponse(
     val id: Long,
@@ -168,42 +260,69 @@ data class ProductVariantHttpResponse(
     val stock: StockInfoHttpResponse,
     val media: List<ProductMediaHttpResponse>,
     val hasVideo: Boolean,
+    val stockAlertSubscribed: Boolean?,
 ) {
     companion object {
-        fun from(variant: ProductDetailDto.Variant) = ProductVariantHttpResponse(
+        fun from(variant: ProductDetailDto.Variant, urls: MediaUrls) = ProductVariantHttpResponse(
             id = variant.id,
             sku = variant.sku,
             color = variant.color.let { ColorHttpResponse(it.key, it.name, it.hex, it.isLight, it.sortOrder) },
             isDefault = variant.isDefault,
             price = PriceInfoHttpResponse.from(variant.price),
             stock = StockInfoHttpResponse.from(variant.stock),
-            media = variant.media.mapIndexed(ProductMediaHttpResponse::from),
+            media = variant.media.mapIndexed { index, item -> ProductMediaHttpResponse.from(index, item, urls) },
             hasVideo = variant.hasVideo,
+            stockAlertSubscribed = variant.stockAlertSubscribed,
         )
     }
 }
 
-/** Contract schema `ProductMedia`, without its `id` until uploads exist. The first of a gallery is the main photo. */
+/**
+ * Contract schema `ProductMedia`: the file (MediaAsset, every address full) and its place in the color's gallery. The
+ * first of a gallery is the main photo. Every photo is a real one, so `isUnedited` is always true.
+ */
 @Serializable
 data class ProductMediaHttpResponse(
+    val id: String,
     val type: String,
     val url: String,
-    val alt: String? = null,
-    val view: String? = null,
-    val viewLabel: String? = null,
+    val thumbnailUrl: String?,
+    val srcSet: List<MediaAssetHttpResponse.SrcSetItem>,
+    val posterUrl: String?,
+    val width: Int,
+    val height: Int,
+    val durationSec: Int?,
+    val mimeType: String,
+    val alt: String?,
+    val blurhash: String?,
+    val view: String?,
+    val viewLabel: String?,
     val sortOrder: Int,
     val isPrimary: Boolean,
+    val isUnedited: Boolean = true,
 ) {
     companion object {
-        fun from(index: Int, media: ProductMedia) = ProductMediaHttpResponse(
-            type = media.type.name,
-            url = media.url,
-            alt = media.alt,
-            view = media.view?.name,
-            viewLabel = media.view?.let { ProductTexts.mediaView(it) },
-            sortOrder = index,
-            isPrimary = index == 0,
-        )
+        fun from(index: Int, item: GalleryItemDto, urls: MediaUrls): ProductMediaHttpResponse {
+            val asset = MediaAssetHttpResponse.from(item.media, urls)
+            return ProductMediaHttpResponse(
+                id = asset.id,
+                type = asset.type,
+                url = asset.url,
+                thumbnailUrl = asset.thumbnailUrl,
+                srcSet = asset.srcSet,
+                posterUrl = asset.posterUrl,
+                width = asset.width,
+                height = asset.height,
+                durationSec = asset.durationSec,
+                mimeType = asset.mimeType,
+                alt = asset.alt,
+                blurhash = asset.blurhash,
+                view = item.view.name,
+                viewLabel = ProductTexts.mediaView(item.view),
+                sortOrder = index,
+                isPrimary = index == 0,
+            )
+        }
     }
 }
 
@@ -213,10 +332,14 @@ data class BreadcrumbHttpResponse(val label: String, val url: String? = null)
 
 /** Contract schema `RatingSummary`. */
 @Serializable
-data class RatingSummaryHttpResponse(val average: Double, val count: Int, val distribution: List<RatingShareHttpResponse>) {
+data class RatingSummaryHttpResponse(val average: Double, val count: Int, val distribution: List<RatingShareHttpResponse>, val verifiedBuyerPercent: Int?) {
     companion object {
         /** No reviews yet: nothing counted, every star from 5 down to 1. */
-        val NONE = RatingSummaryHttpResponse(0.0, 0, (5 downTo 1).map { RatingShareHttpResponse(it, 0, 0.0) })
+        val NONE = RatingSummaryHttpResponse(0.0, 0, (5 downTo 1).map { RatingShareHttpResponse(it, 0, 0.0) }, null)
+
+        fun from(summary: RatingSummaryDto) = RatingSummaryHttpResponse(
+            summary.average, summary.count, summary.distribution.map { RatingShareHttpResponse(it.stars, it.count, it.percent) }, summary.verifiedBuyerPercent,
+        )
     }
 }
 

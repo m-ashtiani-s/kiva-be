@@ -110,5 +110,18 @@ class DiscountValueObjectsTest {
             assertFalse(redemption.confirm(now.plusSeconds(180)))
             assertEquals(DiscountRedemptionStatus.RELEASED, redemption.status)
         }
+
+        @Test
+        fun `a confirmed use is given back when its paid order is cancelled - once, and only a confirmed one`() {
+            val redemption = held()
+            assertFalse(redemption.giveBack(now.plusSeconds(30)), "a held use is released, not given back")
+            redemption.confirm(now.plusSeconds(60))
+
+            assertTrue(redemption.giveBack(now.plusSeconds(120)))
+            assertFalse(redemption.giveBack(now.plusSeconds(180)))
+            assertEquals(DiscountRedemptionStatus.RELEASED, redemption.status)
+            assertEquals(now.plusSeconds(120), redemption.settledOn)
+            assertEquals(DiscountRedemptionStatus.HELD, redemption.storedStatus, "the repository writes over the status it read")
+        }
     }
 }

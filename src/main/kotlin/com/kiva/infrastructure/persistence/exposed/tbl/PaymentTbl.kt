@@ -2,6 +2,7 @@ package com.kiva.infrastructure.persistence.exposed.tbl
 
 import com.kiva.domain.aggregate.payment.model.PaymentLogEntry
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentFailureReason
+import com.kiva.domain.aggregate.payment.model.valueobject.PaymentPurpose
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentRedirect
 import com.kiva.domain.aggregate.payment.model.valueobject.PaymentStatus
 import com.kiva.domain.aggregate.settings.model.valueobject.PaymentGatewayCode
@@ -10,7 +11,7 @@ import org.jetbrains.exposed.v1.core.dao.id.LongIdTable
 import org.jetbrains.exposed.v1.javatime.timestampWithTimeZone
 import org.jetbrains.exposed.v1.json.jsonb
 
-/** Payment attempts. Created by V16__payments.sql (Exposed never creates tables); keep both in step. */
+/** Payment attempts. Created by V16__payments.sql and grown by V29__balance_payments.sql (Exposed never creates tables); keep them in step. */
 object PaymentTbl : LongIdTable(name = "payment_tbl", columnName = "pId") {
     val publicId = varchar("publicId", 16).uniqueIndex()
     val orderId = long("orderId")
@@ -30,6 +31,9 @@ object PaymentTbl : LongIdTable(name = "payment_tbl", columnName = "pId") {
     val verifyingSince = timestampWithTimeZone("verifyingSince").nullable()
     val settledOn = timestampWithTimeZone("settledOn").nullable()
     val version = long("version").default(0)
+
+    // V29: what the attempt pays, the order or its balance after a change.
+    val purpose = enumerationByName<PaymentPurpose>("purpose", 7)
 }
 
 /** The log of every exchange with a gateway; append-only (a trigger refuses UPDATE and DELETE). Created by V16__payments.sql. */

@@ -1,7 +1,8 @@
 package com.kiva.domain.aggregate.product.entity
 
 import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
-import com.kiva.domain.aggregate.product.model.valueobject.MediaType
+import com.kiva.domain.aggregate.media.model.valueobject.MediaType
+import com.kiva.domain.aggregate.product.model.valueobject.Barcode
 import com.kiva.domain.aggregate.product.model.valueobject.PriceTag
 import com.kiva.domain.aggregate.product.model.valueobject.ProductMedia
 import com.kiva.domain.aggregate.product.model.valueobject.Sku
@@ -20,6 +21,7 @@ import com.kiva.domain.aggregate.product.model.valueobject.VariantId
  * @property isDefault the color a product card shows first. Among the active colors exactly one is the default.
  * @property sortOrder position among the product's colors, smallest first.
  * @property media gallery in order; the first one is the card photo.
+ * @property barcode the barcode on this color's label, or null.
  */
 @ConsistentCopyVisibility
 data class Variant internal constructor(
@@ -31,6 +33,7 @@ data class Variant internal constructor(
     val isActive: Boolean,
     val sortOrder: Int,
     val media: List<ProductMedia>,
+    val barcode: Barcode? = null,
 ) {
     /** A color with a video gets the «ویدیو دارد» badge and passes the `hasVideo` filter. */
     val hasVideo: Boolean get() = media.any { it.type == MediaType.VIDEO }

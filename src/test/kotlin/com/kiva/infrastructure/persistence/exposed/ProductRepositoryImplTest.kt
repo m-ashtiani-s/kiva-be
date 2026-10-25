@@ -36,6 +36,10 @@ import kotlin.test.assertTrue
  */
 class ProductRepositoryImplTest {
 
+    init {
+        SampleMedia.ensureStored()
+    }
+
     private val db = TestDatabase.database
     private val repository = ProductRepositoryImpl()
     private val ids = ProductIdGeneratorImpl()

@@ -38,6 +38,34 @@ value class DiscountCodeText private constructor(val value: String) {
 
         /** For values read back from storage. Still checked by `init`. */
         fun constructFromPersisted(value: String): DiscountCodeText = DiscountCodeText(value)
+
+        /** A code the panel makes: at least 3 characters (the contract), where the shop still reads the older 2-letter ones. */
+        private val PANEL_FORMAT = Regex("[A-Z0-9_-]{3,32}")
+
+        /**
+         * A code as the panel typed it (roadmap phase 4, decision 9), normalised the way a shopper's is: ` paeez۱۵ ` is
+         * PAEEZ15. Blank is FIELD_REQUIRED; anything [PANEL_FORMAT] refuses is DISCOUNT_CODE_TEXT_INVALID, both on `code`.
+         * [legacyAllowed] for an edit: the older 2-letter codes stay valid, and the use case refuses one that isn't the code's
+         * own text ([isLegacy]).
+         */
+        fun makeNewInPanel(raw: String?, legacyAllowed: Boolean = false): Result<DiscountCodeText, PanelFailure> {
+            val text = raw?.normalizeDigits()?.trim()?.uppercase(Locale.ROOT).orEmpty()
+            return when {
+                text.isEmpty() -> Result.failure(PanelFailure.Required)
+                PANEL_FORMAT.matches(text) -> Result.success(DiscountCodeText(text))
+                legacyAllowed && FORMAT.matches(text) -> Result.success(DiscountCodeText(text))
+                else -> Result.failure(PanelFailure.Invalid)
+            }
+        }
+    }
+
+    /** One of the older 2-letter codes, which the shop still reads but the panel no longer makes. */
+    val isLegacy: Boolean get() = value.length < 3
+
+    sealed class PanelFailure(code: String) : ResultFailure(code, FailureKind.INVALID, field = "code") {
+        data object Required : PanelFailure("FIELD_REQUIRED")
+
+        data object Invalid : PanelFailure("DISCOUNT_CODE_TEXT_INVALID")
     }
 
     sealed class Failure(code: String, kind: FailureKind, field: String? = null) : ResultFailure(code, kind, field = field) {

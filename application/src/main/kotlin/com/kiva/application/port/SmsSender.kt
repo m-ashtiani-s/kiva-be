@@ -1,9 +1,11 @@
 package com.kiva.application.port
 
 import com.kiva.common.valueobject.IranianMobileNumber
+import com.kiva.domain.aggregate.contact.model.valueobject.TicketCode
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpPurpose
+import com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnCode
 
 /**
  * Sends SMS through the shop's SMS provider. The domain doesn't know which provider; development writes to the log.
@@ -31,4 +33,91 @@ interface SmsSender {
      * like [sendCode].
      */
     suspend fun sendOrderPaid(to: IranianMobileNumber, orderCode: OrderCode)
+
+    /**
+     * «عکس کیفت فرستاده شد»: the photos of the packed bag were sent to [to] on their messenger (by the operator, by hand),
+     * with the link to the order's page. Sent after the photos are recorded as sent; when it fails, only the log knows.
+     * Throws like [sendCode].
+     */
+    suspend fun sendPhotosSent(to: IranianMobileNumber, orderCode: OrderCode)
+
+    /**
+     * «پولت برگشت»: a refund of the order [orderCode] was completed, the money sent back to the customer. Sent after the
+     * refund is recorded as completed; when it fails, only the log knows. Throws like [sendCode].
+     */
+    suspend fun sendRefundCompleted(to: IranianMobileNumber, orderCode: OrderCode)
+
+    /**
+     * «لغو شد»: the order [orderCode] was cancelled (by the customer, or by staff when they chose to tell them). Sent after
+     * the cancellation is committed; when it fails, only the log knows. Throws like [sendCode].
+     */
+    suspend fun sendOrderCancelled(to: IranianMobileNumber, orderCode: OrderCode)
+
+    /**
+     * «ارسال شد»: the order [orderCode] left with [carrierName] under [trackingCode]. Sent after the shipment is committed
+     * (one for a whole reservation group), never for a correction; when it fails, only the log knows. Throws like [sendCode].
+     */
+    suspend fun sendOrderShipped(to: IranianMobileNumber, orderCode: OrderCode, carrierName: String, trackingCode: String)
+
+    /**
+     * «تحویل شد»: staff recorded the order [orderCode] as delivered and chose to tell the customer. Sent after the commit;
+     * when it fails, only the log knows. Throws like [sendCode].
+     */
+    suspend fun sendOrderDelivered(to: IranianMobileNumber, orderCode: OrderCode)
+
+    /**
+     * «درخواستت بررسی شد»: staff resolved the customer's change request of the order [orderCode] (carried it out or turned
+     * it down) and chose to tell them; the details, staff's note included, are on the order's page, never in the SMS (no
+     * free text in an SMS, roadmap section 1, row 14). Sent after the commit; when it fails, only the log knows. Throws
+     * like [sendCode].
+     */
+    suspend fun sendChangeResolved(to: IranianMobileNumber, orderCode: OrderCode)
+
+    /**
+     * «مرجوعی تأیید شد»: staff approved the return [returnCode]; how to send it back is on its page. Sent after the commit;
+     * when it fails, only the log knows. Throws like [sendCode].
+     */
+    suspend fun sendReturnApproved(to: IranianMobileNumber, returnCode: ReturnCode)
+
+    /**
+     * «مرجوعی رد شد»: staff turned the return [returnCode] down; why is on its page, never in the SMS (no free text in an
+     * SMS, roadmap section 1, row 14). Sent after the commit; when it fails, only the log knows. Throws like [sendCode].
+     */
+    suspend fun sendReturnRejected(to: IranianMobileNumber, returnCode: ReturnCode)
+
+    /**
+     * «جمع‌آوری مرجوعی»: [carrierName] will collect the parcel of the return [returnCode]; when is on its page. Sent after
+     * the commit, only when staff chose to tell the customer; when it fails, only the log knows. Throws like [sendCode].
+     */
+    suspend fun sendReturnPickup(to: IranianMobileNumber, returnCode: ReturnCode, carrierName: String)
+
+    /**
+     * «مرجوعی بسته شد»: staff closed the return [returnCode] without money back; why is on its page, never in the SMS.
+     * Sent after the commit, only when staff chose to tell the customer; when it fails, only the log knows. Throws like
+     * [sendCode].
+     */
+    suspend fun sendReturnClosed(to: IranianMobileNumber, returnCode: ReturnCode)
+
+    /**
+     * «موجود شد» (phase 10): [productName] (at most 30 characters) is back, [link] its page in the color that came back.
+     * Sent by the job after the subscription is marked NOTIFIED and committed; when it fails, only the log knows (it is
+     * never sent twice). Throws like [sendCode].
+     */
+    suspend fun sendBackInStock(to: IranianMobileNumber, productName: String, link: String)
+
+    /**
+     * «پشتیبانی به پیامت رسیدگی کرد» (phase 13): support replied to the contact message [ticketCode]. Only that, never the
+     * reply's text (no free text in an SMS, roadmap section 1, row 14): the operator calls or writes in a messenger. Sent
+     * after the commit; when it fails, only the log knows. Throws like [sendCode].
+     */
+    suspend fun sendContactReplied(to: IranianMobileNumber, ticketCode: TicketCode)
+
+    /**
+     * Whether an SMS of [kind] can go at all: an optional one whose pattern isn't set can't. A job that would use up
+     * what it tells (the subscriptions of «موجود شد») asks first (phase 10, decision 11). Every kind can, unless said.
+     */
+    fun canSend(kind: SmsKind): Boolean = true
 }
+
+/** The SMS a job asks [SmsSender.canSend] about before it starts. */
+enum class SmsKind { BACK_IN_STOCK }

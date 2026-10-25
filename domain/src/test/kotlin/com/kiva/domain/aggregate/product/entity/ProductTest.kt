@@ -2,6 +2,8 @@ package com.kiva.domain.aggregate.product.entity
 
 import com.kiva.common.railway.FailureKind
 import com.kiva.common.railway.Result
+import com.kiva.domain.aggregate.media.model.valueobject.MediaType
+import com.kiva.domain.aggregate.product.ProductTestData
 import com.kiva.domain.aggregate.product.ProductTestData.admin
 import com.kiva.domain.aggregate.product.ProductTestData.color
 import com.kiva.domain.aggregate.product.ProductTestData.details
@@ -14,7 +16,6 @@ import com.kiva.domain.aggregate.product.ProductTestData.variantId
 import com.kiva.domain.aggregate.product.ProductTestData.withColor
 import com.kiva.domain.aggregate.product.entity.event.ProductCreated
 import com.kiva.domain.aggregate.product.entity.event.ProductDetailsChanged
-import com.kiva.domain.aggregate.product.model.valueobject.MediaType
 import com.kiva.domain.aggregate.product.model.valueobject.ProductMedia
 import com.kiva.domain.aggregate.product.model.valueobject.ProductStatus.ACTIVE
 import com.kiva.domain.aggregate.product.model.valueobject.ProductStatus.ARCHIVED
@@ -200,7 +201,7 @@ class ProductTest {
 
         @Test
         fun `a color keeps its gallery as it was given, even if the caller's list changes later`() {
-            val front = ProductMedia.constructFromPersisted(MediaType.IMAGE, "https://cdn.kiva.ir/p/1/lilac/front.webp", null, null)
+            val front = ProductTestData.photo("lilacfront")
             val gallery = mutableListOf(front)
             val product = newProduct().withColor(101, "lilac", media = gallery)
 
@@ -308,6 +309,35 @@ class ProductTest {
 
             assertEquals(original.snapshot(), loaded.snapshot())
             assertEquals(emptyList(), loaded.getRecordedEvents())
+        }
+
+        @Test
+        fun `a new product created with two colors is version 3, one event each`() {
+            val product = newProduct().withColor(101, "black").withColor(102, "lilac")
+
+            assertEquals(3L, product.version)
+        }
+
+        @Test
+        fun `a product loaded from 5 events is version 5, and the next change makes it 6`() {
+            val original = newProduct().withColor(101, "black").withColor(102, "lilac")
+            original.changePrice(priceTag(1_450_000), admin, later)
+            original.publish(admin, later)
+            val loaded = Product(original.getRecordedEvents())
+            assertEquals(5L, loaded.version)
+
+            loaded.unpublish(admin, later)
+
+            assertEquals(6L, loaded.version)
+        }
+
+        @Test
+        fun `saving the same details again leaves the version where it was`() {
+            val product = newProduct()
+
+            product.changeDetails(details(), admin, later)
+
+            assertEquals(1L, product.version)
         }
 
         @Test

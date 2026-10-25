@@ -1,12 +1,15 @@
 package com.kiva.infrastructure.auth.sms
 
+import com.kiva.application.port.SmsKind
 import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.read.ListAppender
 import com.kiva.common.valueobject.IranianMobileNumber
+import com.kiva.domain.aggregate.contact.model.valueobject.TicketCode
 import com.kiva.domain.aggregate.order.model.valueobject.OrderCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpCode
 import com.kiva.domain.aggregate.otp.model.valueobject.OtpPurpose
+import com.kiva.domain.aggregate.returnrequest.model.valueobject.ReturnCode
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.MockRequestHandleScope
 import io.ktor.client.engine.mock.respond
@@ -136,11 +139,22 @@ class FarazSmsSenderTest {
     }
 
     @Test
-    fun `without their patterns the account-moved notice and «پرداخت موفق» are not sent, and nothing is called`() {
+    fun `without their patterns the account-moved notice and the order notices are not sent, and nothing is called`() {
         runBlocking {
             val sms = sender()
             sms.sendPhoneChangedNotice(sara, "9876")
             sms.sendOrderPaid(sara, OrderCode.constructFromPersisted("KV-218340"))
+            sms.sendPhotosSent(sara, OrderCode.constructFromPersisted("KV-218340"))
+            sms.sendRefundCompleted(sara, OrderCode.constructFromPersisted("KV-218340"))
+            sms.sendOrderCancelled(sara, OrderCode.constructFromPersisted("KV-218340"))
+            sms.sendOrderShipped(sara, OrderCode.constructFromPersisted("KV-218340"), "TIPAX_NAME", "TRK-123456")
+            sms.sendOrderDelivered(sara, OrderCode.constructFromPersisted("KV-218340"))
+            sms.sendChangeResolved(sara, OrderCode.constructFromPersisted("KV-218340"))
+            sms.sendReturnApproved(sara, ReturnCode.constructFromPersisted("RT-1012"))
+            sms.sendReturnRejected(sara, ReturnCode.constructFromPersisted("RT-1012"))
+            sms.sendReturnPickup(sara, ReturnCode.constructFromPersisted("RT-1012"), "TIPAX_NAME")
+            sms.sendReturnClosed(sara, ReturnCode.constructFromPersisted("RT-1012"))
+            sms.sendContactReplied(sara, TicketCode.constructFromPersisted("CT-482113"))
         }
 
         assertTrue(sent.isEmpty())
@@ -148,16 +162,61 @@ class FarazSmsSenderTest {
 
     @Test
     fun `with their patterns they are sent - the new number's ending, and the order's code`() {
-        val withAll = FarazSmsConfig("https://api.iranpayamak.com", key, "90008361", "vdXmsAfAQs", phoneChangedPattern = "pHoNe1234x", orderPaidPattern = "oRdEr5678y")
+        val withAll = FarazSmsConfig(
+            "https://api.iranpayamak.com", key, "90008361", "vdXmsAfAQs", phoneChangedPattern = "pHoNe1234x", orderPaidPattern = "oRdEr5678y",
+            photosSentPattern = "pH0t05ent1", refundCompletedPattern = "r3fund0ne1", orderCancelledPattern = "c4ncel1ed1",
+            orderShippedPattern = "sh1pped001", orderDeliveredPattern = "de1ivered1", changeResolvedPattern = "ch4nged001",
+            returnApprovedPattern = "rtApproved", returnRejectedPattern = "rtRejected", returnPickupPattern = "rtPickup01", returnClosedPattern = "rtClosed01",
+            contactRepliedPattern = "ctReplied1",
+        )
         runBlocking {
             val sms = sender(withAll)
             sms.sendPhoneChangedNotice(sara, "9876")
             sms.sendOrderPaid(sara, OrderCode.constructFromPersisted("KV-218340"))
+            sms.sendPhotosSent(sara, OrderCode.constructFromPersisted("KV-218340"))
+            sms.sendRefundCompleted(sara, OrderCode.constructFromPersisted("KV-218340"))
+            sms.sendOrderCancelled(sara, OrderCode.constructFromPersisted("KV-218340"))
+            sms.sendOrderShipped(sara, OrderCode.constructFromPersisted("KV-218340"), "TIPAX_NAME", "TRK-123456")
+            sms.sendOrderDelivered(sara, OrderCode.constructFromPersisted("KV-218340"))
+            sms.sendChangeResolved(sara, OrderCode.constructFromPersisted("KV-218340"))
+            sms.sendReturnApproved(sara, ReturnCode.constructFromPersisted("RT-1012"))
+            sms.sendReturnRejected(sara, ReturnCode.constructFromPersisted("RT-1012"))
+            sms.sendReturnPickup(sara, ReturnCode.constructFromPersisted("RT-1012"), "TIPAX_NAME")
+            sms.sendReturnClosed(sara, ReturnCode.constructFromPersisted("RT-1012"))
+            sms.sendContactReplied(sara, TicketCode.constructFromPersisted("CT-482113"))
         }
 
         assertEquals(
-            listOf("""{"code":"pHoNe1234x","attributes":{"ending":"9876"}}""", """{"code":"oRdEr5678y","attributes":{"order":"KV-218340"}}"""),
+            listOf(
+                """{"code":"pHoNe1234x","attributes":{"ending":"9876"}}""", """{"code":"oRdEr5678y","attributes":{"order":"KV-218340"}}""",
+                """{"code":"pH0t05ent1","attributes":{"order":"KV-218340"}}""", """{"code":"r3fund0ne1","attributes":{"order":"KV-218340"}}""",
+                """{"code":"c4ncel1ed1","attributes":{"order":"KV-218340"}}""",
+                """{"code":"sh1pped001","attributes":{"order":"KV-218340","carrier":"TIPAX_NAME","tracking":"TRK-123456"}}""",
+                """{"code":"de1ivered1","attributes":{"order":"KV-218340"}}""",
+                """{"code":"ch4nged001","attributes":{"order":"KV-218340"}}""",
+                """{"code":"rtApproved","attributes":{"code":"RT-1012"}}""", """{"code":"rtRejected","attributes":{"code":"RT-1012"}}""",
+                """{"code":"rtPickup01","attributes":{"code":"RT-1012","carrier":"TIPAX_NAME"}}""",
+                """{"code":"rtClosed01","attributes":{"code":"RT-1012"}}""",
+                """{"code":"ctReplied1","attributes":{"code":"CT-482113"}}""",
+            ),
             sent.map { (_, body) -> JsonObject(body.filterKeys { it == "code" || it == "attributes" }).toString() },
+        )
+    }
+
+    @Test
+    fun `«موجود شد» - without its pattern it can't be sent and the job asks first - with it the product and the link go as its variables`() {
+        val without = sender()
+        assertFalse(without.canSend(SmsKind.BACK_IN_STOCK))
+        runBlocking { without.sendBackInStock(sara, "کیف دوشی ماهک", "https://kivashop.ir/product/mahak-shoulder-bag?color=lilac") }
+        assertTrue(sent.isEmpty())
+
+        val with = sender(FarazSmsConfig("https://api.iranpayamak.com", key, "90008361", "vdXmsAfAQs", backInStockPattern = "b4ckIn5tck"))
+        assertTrue(with.canSend(SmsKind.BACK_IN_STOCK))
+        runBlocking { with.sendBackInStock(sara, "کیف دوشی ماهک", "https://kivashop.ir/product/mahak-shoulder-bag?color=lilac") }
+
+        assertEquals(
+            Json.parseToJsonElement("""{"code":"b4ckIn5tck","attributes":{"product":"کیف دوشی ماهک","link":"https://kivashop.ir/product/mahak-shoulder-bag?color=lilac"}}"""),
+            sent.single().second.let { body -> JsonObject(body.filterKeys { it == "code" || it == "attributes" }) },
         )
     }
 

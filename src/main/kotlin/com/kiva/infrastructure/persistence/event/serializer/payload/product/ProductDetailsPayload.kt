@@ -1,5 +1,6 @@
 package com.kiva.infrastructure.persistence.event.serializer.payload.product
 
+import com.kiva.common.valueobject.SeoMeta
 import com.kiva.domain.aggregate.category.model.valueobject.CategoryId
 import com.kiva.domain.aggregate.material.model.valueobject.MaterialId
 import com.kiva.domain.aggregate.product.model.valueobject.BagType
@@ -9,6 +10,7 @@ import com.kiva.domain.aggregate.product.model.valueobject.MaxPerOrder
 import com.kiva.domain.aggregate.product.model.valueobject.ProductDescription
 import com.kiva.domain.aggregate.product.model.valueobject.ProductDetails
 import com.kiva.domain.aggregate.product.model.valueobject.ProductName
+import com.kiva.domain.aggregate.product.model.valueobject.ProductTags
 import com.kiva.domain.aggregate.product.model.valueobject.ShortDescription
 import kotlinx.serialization.Serializable
 import java.time.Instant
@@ -18,7 +20,8 @@ import java.time.Instant
  *
  * [reservable] came after the first events were stored, so those don't have it. Its default is what they meant: until
  * then every product could be reserved. A field added with such a default keeps payload version 1; a change that
- * makes old payloads mean something else needs a new version and a reader for the old one.
+ * makes old payloads mean something else needs a new version and a reader for the old one. [tags] and [seo] came in
+ * step 1.5 the same way: none and none.
  */
 @Serializable
 data class ProductDetailsPayload(
@@ -36,6 +39,8 @@ data class ProductDetailsPayload(
     val returnable: Boolean,
     val reservable: Boolean = true,
     val sortPriority: Int,
+    val tags: List<String> = emptyList(),
+    val seo: SeoPayload? = null,
 ) {
     constructor(details: ProductDetails) : this(
         name = details.name.value,
@@ -52,6 +57,8 @@ data class ProductDetailsPayload(
         returnable = details.returnable,
         reservable = details.reservable,
         sortPriority = details.sortPriority,
+        tags = details.tags.items,
+        seo = details.seo.takeIf { it != SeoMeta.NONE }?.let { SeoPayload(it.title, it.description, it.noIndex) },
     )
 
     fun toDomain(): ProductDetails = ProductDetails(
@@ -69,5 +76,10 @@ data class ProductDetailsPayload(
         returnable = returnable,
         reservable = reservable,
         sortPriority = sortPriority,
+        tags = ProductTags.constructFromPersisted(tags),
+        seo = seo?.let { SeoMeta.constructFromPersisted(it.title, it.description, it.noIndex) } ?: SeoMeta.NONE,
     )
 }
+
+@Serializable
+data class SeoPayload(val title: String?, val description: String?, val noIndex: Boolean)

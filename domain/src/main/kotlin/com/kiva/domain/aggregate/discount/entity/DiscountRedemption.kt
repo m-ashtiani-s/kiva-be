@@ -13,13 +13,15 @@ import java.time.Instant
 /**
  * One order's use of a discount code (roadmap section 14): HELD from the placing, so it counts against the code's
  * limits while the order waits for its money; CONFIRMED when the order is paid (at once, with nothing to pay); RELEASED
- * when the order expires, giving the use back. An order uses a code once (a unique key on the order). The panel's
- * `usedCount` and `totalDiscountGiven` are its CONFIRMED rows.
+ * when the order expires, giving the use back, or when a paid order is cancelled ([giveBack], phase 2). An order uses a
+ * code once (a unique key on the order). The panel's `usedCount` and `totalDiscountGiven` are its CONFIRMED rows.
  *
- * Each change goes from HELD only; any other (a second confirmation, a release after the payment) changes nothing.
+ * Confirming and releasing go from HELD only, giving back from CONFIRMED only; any other (a second confirmation, a
+ * release after the payment) changes nothing.
  *
  * @property amount what the code took off the order.
  * @property settledOn when it was confirmed or released.
+ * @property storedStatus its status as it was read: the repository writes a change only over that one.
  */
 class DiscountRedemption private constructor(
     val codeId: DiscountCodeId,
@@ -34,6 +36,7 @@ class DiscountRedemption private constructor(
         private set
     var settledOn: Instant? = settledOn
         private set
+    val storedStatus: DiscountRedemptionStatus = status
 
     init {
         require((status == HELD) == (settledOn == null)) { "Redemption of order ${orderId.value} is $status with settledOn=$settledOn" }
@@ -44,6 +47,17 @@ class DiscountRedemption private constructor(
 
     /** The order expired: the use goes back to the code. True when this released it now. */
     fun release(now: Instant): Boolean = settle(RELEASED, now)
+
+    /**
+     * The paid order was cancelled: its use goes back to the code, so a code of one use may be used again. Only a
+     * CONFIRMED use; true when this gave it back now.
+     */
+    fun giveBack(now: Instant): Boolean {
+        if (status != CONFIRMED) return false
+        status = RELEASED
+        settledOn = now
+        return true
+    }
 
     private fun settle(to: DiscountRedemptionStatus, now: Instant): Boolean {
         if (status != HELD) return false

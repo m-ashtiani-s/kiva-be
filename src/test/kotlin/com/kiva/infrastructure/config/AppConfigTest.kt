@@ -1,6 +1,8 @@
 package com.kiva.infrastructure.config
 
 import com.kiva.domain.aggregate.settings.model.valueobject.PaymentGatewayCode
+import com.kiva.infrastructure.email.EmailConfig
+import com.kiva.infrastructure.email.EmailProvider
 import com.kiva.infrastructure.payment.PaymentProvider
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigResolveOptions
@@ -20,6 +22,7 @@ class AppConfigTest {
 
     private val pepper = ByteArray(32) { it.toByte() }
     private val jwtSecret = ByteArray(32) { (it + 100).toByte() }
+    private val voterPepper = ByteArray(32) { (it + 50).toByte() }
 
     private val valid = mapOf(
         "kiva.datasource.url" to "jdbc:postgresql://localhost:5432/kiva",
@@ -29,6 +32,7 @@ class AppConfigTest {
         "kiva.auth.otpPepper" to Base64.getEncoder().encodeToString(pepper),
         "kiva.auth.jwtSecret" to Base64.getEncoder().encodeToString(jwtSecret),
         "kiva.auth.maxSmsPerHour" to "300",
+        "kiva.blog.voterPepper" to Base64.getEncoder().encodeToString(voterPepper),
         "kiva.shop.siteUrl" to "https://kiva.ir",
         "kiva.seed.enabled" to "false",
         "kiva.http.allowedOrigins" to "http://localhost:5173",
@@ -39,6 +43,11 @@ class AppConfigTest {
         "kiva.payment.resultUrl" to "http://localhost:3100/checkout/result",
         "kiva.payment.zarinpal.sandbox" to "true",
         "kiva.jobs.enabled" to "true",
+        "kiva.media.root" to "build/media",
+        "kiva.media.publicBaseUrl" to "http://localhost:8080/media",
+        "kiva.media.serveLocally" to "true",
+        "kiva.media.vipsBin" to "vips",
+        "kiva.media.ffmpegBin" to "ffmpeg",
     )
 
     private fun read(vararg changes: Pair<String, String?>): AppConfig {
@@ -84,6 +93,15 @@ class AppConfigTest {
     fun `a pepper under 32 bytes or not in base64 is refused`() {
         assertTrue("at least 32 bytes" in refusal("kiva.auth.otpPepper" to Base64.getEncoder().encodeToString(ByteArray(31))))
         assertTrue("not base64" in refusal("kiva.auth.otpPepper" to "not base64 at all!"))
+    }
+
+    @Test
+    fun `without the blog's voter pepper the app doesn't start - under 32 bytes is refused - it never shows when printed`() {
+        assertContentEquals(voterPepper, read().blog.voterPepper)
+        val missing = refusal("kiva.blog.voterPepper" to null)
+        assertTrue("KIVA_BLOG_VOTER_PEPPER" in missing && "openssl rand -base64 32" in missing, missing)
+        assertTrue("at least 32 bytes" in refusal("kiva.blog.voterPepper" to Base64.getEncoder().encodeToString(ByteArray(31))))
+        assertEquals("BlogConfig(voterPepper=<hidden>)", read().blog.toString())
     }
 
     @Test
@@ -136,7 +154,7 @@ class AppConfigTest {
 
         val secrets = mapOf(
             "kiva.auth.otpPepper" to valid.getValue("kiva.auth.otpPepper"),
-            "kiva.auth.jwtSecret" to valid.getValue("kiva.auth.jwtSecret"),
+            "kiva.auth.jwtSecret" to valid.getValue("kiva.auth.jwtSecret"), "kiva.blog.voterPepper" to valid.getValue("kiva.blog.voterPepper"),
         )
         val withPepper = ConfigFactory.parseMap(secrets)
             .withFallback(file)
@@ -212,6 +230,22 @@ class AppConfigTest {
         assertEquals(null, settings.phoneChangedPattern)
         assertEquals(null, settings.orderPaidPattern)
         assertEquals("aB3dE5fG7h", read(*faraz, "kiva.sms.faraz.orderPaidPattern" to "aB3dE5fG7h").sms.faraz?.orderPaidPattern)
+        assertEquals(null, settings.photosSentPattern)
+        assertEquals("pH0t05ent1", read(*faraz, "kiva.sms.faraz.photosSentPattern" to "pH0t05ent1").sms.faraz?.photosSentPattern)
+        assertEquals("r3fund0ne1", read(*faraz, "kiva.sms.faraz.refundCompletedPattern" to "r3fund0ne1").sms.faraz?.refundCompletedPattern)
+        assertEquals("c4ncel1ed1", read(*faraz, "kiva.sms.faraz.orderCancelledPattern" to "c4ncel1ed1").sms.faraz?.orderCancelledPattern)
+        assertEquals("sh1pped001", read(*faraz, "kiva.sms.faraz.orderShippedPattern" to "sh1pped001").sms.faraz?.orderShippedPattern)
+        assertEquals("de1ivered1", read(*faraz, "kiva.sms.faraz.orderDeliveredPattern" to "de1ivered1").sms.faraz?.orderDeliveredPattern)
+        assertEquals("ch4nged001", read(*faraz, "kiva.sms.faraz.changeResolvedPattern" to "ch4nged001").sms.faraz?.changeResolvedPattern)
+        assertEquals(
+            listOf("rtApproved", "rtRejected", "rtPickup01", "rtClosed01"),
+            read(
+                *faraz, "kiva.sms.faraz.returnApprovedPattern" to "rtApproved", "kiva.sms.faraz.returnRejectedPattern" to "rtRejected",
+                "kiva.sms.faraz.returnPickupPattern" to "rtPickup01", "kiva.sms.faraz.returnClosedPattern" to "rtClosed01",
+            ).sms.faraz?.let { listOf(it.returnApprovedPattern, it.returnRejectedPattern, it.returnPickupPattern, it.returnClosedPattern) },
+        )
+        assertEquals(null, settings.contactRepliedPattern)
+        assertEquals("ctReplied1", read(*faraz, "kiva.sms.faraz.contactRepliedPattern" to "ctReplied1").sms.faraz?.contactRepliedPattern)
         assertEquals(null, read().sms.faraz, "the log provider has no Faraz settings")
     }
 
@@ -239,7 +273,7 @@ class AppConfigTest {
         val noEnvironment = ConfigResolveOptions.noSystem()
         val secrets = mapOf(
             "kiva.auth.otpPepper" to valid.getValue("kiva.auth.otpPepper"),
-            "kiva.auth.jwtSecret" to valid.getValue("kiva.auth.jwtSecret"),
+            "kiva.auth.jwtSecret" to valid.getValue("kiva.auth.jwtSecret"), "kiva.blog.voterPepper" to valid.getValue("kiva.blog.voterPepper"),
             "kiva.sms.provider" to "faraz",
         )
 
@@ -257,5 +291,98 @@ class AppConfigTest {
 
         assertFalse(merchantId in printed)
         assertTrue("merchantId=<hidden>" in printed)
+    }
+
+    // ============ media ============
+
+    @Test
+    fun `media is read with its root, public address and tools - served by the app only in development`() {
+        val media = read().media
+
+        assertEquals(java.nio.file.Paths.get("build/media"), media.root)
+        assertEquals("http://localhost:8080/media", media.publicBaseUrl)
+        assertTrue(media.serveLocally)
+        assertEquals(listOf("vips", "vipsheader", "ffmpeg", "ffprobe"), listOf(media.vipsBin, media.vipsHeaderBin, media.ffmpegBin, media.ffprobeBin))
+        assertEquals(false, read("kiva.media.serveLocally" to "false").media.serveLocally)
+    }
+
+    @Test
+    fun `a tool given by its full path has its sibling next to it`() {
+        val media = read("kiva.media.vipsBin" to "C:/tools/vips/bin/vips.exe", "kiva.media.ffmpegBin" to "/opt/ffmpeg/ffmpeg").media
+
+        assertEquals(java.nio.file.Paths.get("C:/tools/vips/bin/vipsheader.exe").toString(), media.vipsHeaderBin)
+        assertEquals(java.nio.file.Paths.get("/opt/ffmpeg/ffprobe").toString(), media.ffprobeBin)
+    }
+
+    @Test
+    fun `a public address with a slash at the end or without a scheme, or a serveLocally typo, stops the boot`() {
+        assertTrue("KIVA_MEDIA_PUBLIC_URL" in refusal("kiva.media.publicBaseUrl" to "https://api.kivashop.ir/media/"))
+        assertTrue("KIVA_MEDIA_PUBLIC_URL" in refusal("kiva.media.publicBaseUrl" to "api.kivashop.ir/media"))
+        assertTrue("yes" in refusal("kiva.media.serveLocally" to "yes"))
+    }
+
+    @Test
+    fun `application conf serves media from build in development`() {
+        val file = ConfigFactory.parseResources("application.conf")
+        val secrets = mapOf("kiva.auth.otpPepper" to valid.getValue("kiva.auth.otpPepper"), "kiva.auth.jwtSecret" to valid.getValue("kiva.auth.jwtSecret"), "kiva.blog.voterPepper" to valid.getValue("kiva.blog.voterPepper"))
+        val media = AppConfig.from(HoconApplicationConfig(ConfigFactory.parseMap(secrets).withFallback(file).resolve(ConfigResolveOptions.noSystem()))).media
+
+        assertEquals("http://localhost:8080/media", media.publicBaseUrl)
+        assertTrue(media.serveLocally)
+    }
+
+    private val smtp = arrayOf(
+        "kiva.email.provider" to "smtp",
+        "kiva.email.smtp.host" to "smtp.example.com",
+        "kiva.email.smtp.username" to "kiva",
+        "kiva.email.smtp.password" to "smtp-secret-1234",
+        "kiva.email.smtp.from" to "noreply@kivashop.ir",
+    )
+
+    @Test
+    fun `emails go to the log unless smtp is chosen, and smtp is read with its port 587 and STARTTLS by default`() {
+        assertEquals(EmailConfig.LOG, read().email)
+
+        val settings = assertNotNull(read(*smtp).email.smtp)
+        assertEquals(EmailProvider.SMTP, read(*smtp).email.provider)
+        assertEquals(listOf("smtp.example.com", "587", "kiva", "noreply@kivashop.ir", "true"), listOf(settings.host, settings.port.toString(), settings.username, settings.from, settings.startTls.toString()))
+        assertEquals(465, read(*smtp, "kiva.email.smtp.port" to "465").email.smtp?.port)
+        assertEquals(false, read(*smtp, "kiva.email.smtp.startTls" to "false").email.smtp?.startTls)
+    }
+
+    @Test
+    fun `smtp without its host or sender, with half a login, a bad port, a STARTTLS typo or an unknown provider stops the boot`() {
+        assertTrue("KIVA_SMTP_HOST" in refusal(*smtp, "kiva.email.smtp.host" to null))
+        assertTrue("KIVA_SMTP_HOST" in refusal(*smtp, "kiva.email.smtp.host" to "  "))
+        assertTrue("KIVA_SMTP_FROM" in refusal(*smtp, "kiva.email.smtp.from" to null))
+        assertTrue("KIVA_SMTP_PASSWORD" in refusal(*smtp, "kiva.email.smtp.password" to null))
+        assertTrue("KIVA_SMTP_PORT" in refusal(*smtp, "kiva.email.smtp.port" to "smtp"))
+        assertTrue("KIVA_SMTP_PORT" in refusal(*smtp, "kiva.email.smtp.port" to "70000"))
+        assertTrue("yes" in refusal(*smtp, "kiva.email.smtp.startTls" to "yes"))
+        assertTrue("mailgun" in refusal("kiva.email.provider" to "mailgun"))
+    }
+
+    @Test
+    fun `the SMTP password never shows when the settings are printed`() {
+        val printed = read(*smtp).toString()
+
+        assertFalse("smtp-secret-1234" in printed)
+        assertTrue("password=***" in printed)
+    }
+
+    @Test
+    fun `application conf sends emails to the log, and reads smtp from the environment with its defaults`() {
+        val file = ConfigFactory.parseResources("application.conf")
+        val noEnvironment = ConfigResolveOptions.noSystem()
+        val secrets = mapOf("kiva.auth.otpPepper" to valid.getValue("kiva.auth.otpPepper"), "kiva.auth.jwtSecret" to valid.getValue("kiva.auth.jwtSecret"), "kiva.blog.voterPepper" to valid.getValue("kiva.blog.voterPepper"))
+        assertEquals(EmailConfig.LOG, AppConfig.from(HoconApplicationConfig(ConfigFactory.parseMap(secrets).withFallback(file).resolve(noEnvironment))).email)
+
+        val chosen = secrets + ("kiva.email.provider" to "smtp")
+        val withoutHost = HoconApplicationConfig(ConfigFactory.parseMap(chosen).withFallback(file).resolve(noEnvironment))
+        assertTrue("KIVA_SMTP_HOST" in assertFailsWith<IllegalArgumentException> { AppConfig.from(withoutHost) }.message.orEmpty())
+
+        val complete = chosen + ("kiva.email.smtp.host" to "smtp.example.com") + ("kiva.email.smtp.from" to "noreply@kivashop.ir")
+        val settings = assertNotNull(AppConfig.from(HoconApplicationConfig(ConfigFactory.parseMap(complete).withFallback(file).resolve(noEnvironment))).email.smtp)
+        assertEquals(listOf("587", "true", "null"), listOf(settings.port.toString(), settings.startTls.toString(), settings.username.toString()))
     }
 }

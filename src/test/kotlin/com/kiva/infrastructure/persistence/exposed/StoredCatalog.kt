@@ -15,6 +15,7 @@ import com.kiva.domain.aggregate.product.model.valueobject.VariantId
 import com.kiva.infrastructure.TestDatabase
 import com.kiva.infrastructure.persistence.event.ProductEventSamples
 import com.kiva.infrastructure.persistence.exposed.tbl.EventStoreTbl
+import com.kiva.infrastructure.persistence.exposed.tbl.InventoryAdjustmentQmTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.ProductQmTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.ProductVariantQmTbl
 import org.jetbrains.exposed.v1.core.inList
@@ -34,6 +35,10 @@ class StoredCatalog {
     private val products = ProductRepositoryImpl()
     private val inventories = InventoryRepositoryImpl()
     private val ids = ProductIdGeneratorImpl()
+
+    init {
+        SampleMedia.ensureStored()
+    }
 
     private val productIds = mutableListOf<Long>()
     private val variantIds = mutableListOf<Long>()
@@ -59,10 +64,11 @@ class StoredCatalog {
         details: ProductDetails = ProductEventSamples.fullDetails,
         slug: String? = null,
         at: Instant = now,
+        by: UserId = staff,
     ): Product = transaction(db) {
         val id = ids.nextProductId()
         productIds += id.value
-        val product = Product.create(id, Slug.constructFromPersisted(slug ?: "bag-${id.value}"), null, details, priceTag, staff, at)
+        val product = Product.create(id, Slug.constructFromPersisted(slug ?: "bag-${id.value}"), null, details, priceTag, by, at)
             .orFail()
         colors.forEachIndexed { index, color ->
             val variantId = ids.nextVariantId().also { variantIds += it.value }
@@ -98,6 +104,7 @@ class StoredCatalog {
         transaction(db) {
             // By id alone, so a stream a test wrote by hand with one of these numbers goes too.
             EventStoreTbl.deleteWhere { aggregateId inList (productIds + variantIds).map { it.toString() } }
+            InventoryAdjustmentQmTbl.deleteWhere { variantId inList variantIds }
             ProductVariantQmTbl.deleteWhere { productId inList productIds }
             ProductQmTbl.deleteWhere { productId inList productIds }
         }

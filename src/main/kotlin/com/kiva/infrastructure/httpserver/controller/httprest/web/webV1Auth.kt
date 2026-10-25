@@ -22,6 +22,7 @@ import com.kiva.infrastructure.httpserver.controller.httprest.model.response.Aut
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.AuthTokensHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.CartHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.SendOtpHttpResponse
+import com.kiva.infrastructure.media.MediaUrls
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.plugins.BadRequestException
 import io.ktor.server.plugins.origin
@@ -57,7 +58,7 @@ class AuthUseCases(
  * The refresh token travels only in the `kiva_rt` cookie, which the browser sends by itself to the `/auth` endpoints; so
  * `/auth/refresh` and `/auth/logout` answer only the shop's own frontends ([allowedOrigins], checked on `Origin`).
  */
-fun Route.webV1Auth(useCases: AuthUseCases, allowedOrigins: List<String>) {
+fun Route.webV1Auth(useCases: AuthUseCases, allowedOrigins: List<String>, mediaUrls: MediaUrls) {
     rateLimit(OTP_SEND_RATE_LIMIT) {
         post("/auth/otp/send") {
             val request = call.receive<SendOtpHttpRequest>()
@@ -84,7 +85,7 @@ fun Route.webV1Auth(useCases: AuthUseCases, allowedOrigins: List<String>) {
         val user = useCases.getMe.execute(GetMeUc.Qry(session.userId)).unwrapOr { return@post call.respondFailure(it) }
 
         session.refreshToken?.let { call.response.setRefreshCookie(it, session.refreshTokenMaxAge) }
-        call.respond(AuthHttpResponse.of(session, user, CartHttpResponse.from(cart, merged.issues)))
+        call.respond(AuthHttpResponse.of(session, user, CartHttpResponse.from(cart, merged.issues, mediaUrls)))
     }
 
     // No body: the cookie is the whole request. A refused cookie is dropped, so the browser doesn't keep sending it.
