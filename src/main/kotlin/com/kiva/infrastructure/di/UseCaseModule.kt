@@ -8,6 +8,7 @@ import com.kiva.application.usecase.blog.usecase.command.UpdateBlogPostUc
 import com.kiva.application.usecase.blog.usecase.query.FindAdminBlogPostsUc
 import com.kiva.application.usecase.blog.usecase.query.GetAdminBlogPostUc
 import com.kiva.application.usecase.blog.usecase.query.GetBlogPostUc
+import com.kiva.application.usecase.blog.usecase.query.ListBlogAuthorsUc
 import com.kiva.application.usecase.blog.usecase.query.ListBlogCategoriesUc
 import com.kiva.application.usecase.blog.usecase.query.ListBlogPostsUc
 import com.kiva.application.usecase.blog.usecase.query.ListRelatedBlogPostsUc
@@ -958,6 +959,7 @@ val useCaseModule = module(createdAtStart = true) {
     single { GetAdminBlogPostUc(transactionManager = get(), blogPostRepository = get(), blogPosts = get(), clock = get()) }
     single { FindAdminBlogPostsUc(transactionManager = get(), blogPostRepository = get(), blogCategoryRepository = get(), blogPosts = get(), clock = get()) }
     single { ListBlogCategoriesUc(transactionManager = get(), blogPosts = get(), clock = get()) }
+    single { ListBlogAuthorsUc(transactionManager = get(), blogPosts = get()) }
     single { ListBlogPostsUc(transactionManager = get(), blogPostRepository = get(), blogCategoryRepository = get(), blogPosts = get(), clock = get()) }
     single { GetBlogPostUc(transactionManager = get(), blogPostRepository = get(), blogPosts = get(), clock = get()) }
     single { ListRelatedBlogPostsUc(transactionManager = get(), blogPostRepository = get(), blogPosts = get(), clock = get()) }

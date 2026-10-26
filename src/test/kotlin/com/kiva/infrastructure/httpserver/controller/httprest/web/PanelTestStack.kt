@@ -9,6 +9,7 @@ import com.kiva.application.usecase.blog.usecase.command.UpdateBlogPostUc
 import com.kiva.application.usecase.blog.usecase.query.FindAdminBlogPostsUc
 import com.kiva.application.usecase.blog.usecase.query.GetAdminBlogPostUc
 import com.kiva.application.usecase.blog.usecase.query.GetBlogPostUc
+import com.kiva.application.usecase.blog.usecase.query.ListBlogAuthorsUc
 import com.kiva.application.usecase.blog.usecase.query.ListBlogCategoriesUc
 import com.kiva.application.usecase.blog.usecase.query.ListBlogPostsUc
 import com.kiva.application.usecase.blog.usecase.query.ListRelatedBlogPostsUc
@@ -524,6 +525,7 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
         CreateBlogPostUc(transactions, blogPostRepository, blogPostWriting, blogPosts, mediaAttachments, JsoupHtmlSanitizer, auditTrail, clock),
         UpdateBlogPostUc(transactions, blogPostRepository, blogPostWriting, blogPosts, mediaAttachments, JsoupHtmlSanitizer, auditTrail, clock),
         DeleteBlogPostUc(transactions, blogPostRepository, auditTrail, clock),
+        ListBlogAuthorsUc(transactions, blogPosts),
     )
     val blog = BlogUseCases(
         ListBlogCategoriesUc(transactions, blogPosts, clock),

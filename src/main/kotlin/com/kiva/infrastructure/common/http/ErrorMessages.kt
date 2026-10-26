@@ -43,6 +43,7 @@ object ErrorMessages {
         "STAFF_ACCOUNT_CANNOT_BE_DELETED" to "حساب کارمند از این‌جا حذف نمی‌شه؛ اول ادمین نقش‌هات رو برداره",
         "INVOICE_NOT_AVAILABLE" to "رسید خرید بعد از پرداخت سفارش آماده می‌شه",
         "ROLE_CHANGE_NOT_ALLOWED" to "این تغییر نقش مجاز نیست: نقش‌های خودت رو نمی‌تونی عوض کنی، و آخرین ادمین هم باید ادمین بمونه",
+        "CUSTOMER_DELETED" to "حساب این مشتری حذف شده",
         // --- catalog & cart ---
         "PRODUCT_NOT_FOUND" to "این محصول پیدا نشد",
         "VARIANT_NOT_FOUND" to "این رنگ برای این محصول پیدا نشد",

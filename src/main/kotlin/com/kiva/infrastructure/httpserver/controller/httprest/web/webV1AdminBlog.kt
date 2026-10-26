@@ -6,6 +6,7 @@ import com.kiva.application.usecase.blog.usecase.command.DeleteBlogPostUc
 import com.kiva.application.usecase.blog.usecase.command.UpdateBlogPostUc
 import com.kiva.application.usecase.blog.usecase.query.FindAdminBlogPostsUc
 import com.kiva.application.usecase.blog.usecase.query.GetAdminBlogPostUc
+import com.kiva.application.usecase.blog.usecase.query.ListBlogAuthorsUc
 import com.kiva.common.railway.unwrapOr
 import com.kiva.domain.aggregate.user.model.valueobject.Role
 import com.kiva.infrastructure.common.http.pageable
@@ -15,6 +16,7 @@ import com.kiva.infrastructure.common.http.toHttpResponse
 import com.kiva.infrastructure.httpserver.auth.panelActor
 import com.kiva.infrastructure.httpserver.auth.requireRoles
 import com.kiva.infrastructure.httpserver.controller.httprest.model.request.BlogPostHttpRequest
+import com.kiva.infrastructure.httpserver.controller.httprest.model.response.AdminBlogAuthorHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.AdminBlogPostHttpResponse
 import com.kiva.infrastructure.media.MediaUrls
 import io.ktor.http.HttpStatusCode
@@ -33,6 +35,7 @@ class AdminBlogUseCases(
     val createPost: CreateBlogPostUc,
     val updatePost: UpdateBlogPostUc,
     val deletePost: DeleteBlogPostUc,
+    val listAuthors: ListBlogAuthorsUc,
 )
 
 /** The path parameter of one post. */
@@ -40,8 +43,8 @@ private const val POST_ID = "postId"
 
 /**
  * The panel's blog (contract tag `Admin · Content`, `[ADMIN, CONTENT_EDITOR]`; roadmap phase 15): every post in any
- * status, one with all its blocks, and writing, rewriting and deleting one. Mounted under `/api/v1`. The answer of a
- * save is the post as GET gives it.
+ * status, one with all its blocks, writing, rewriting and deleting one, and the authors to pick from (contract 1.22.0).
+ * Mounted under `/api/v1`. The answer of a save is the post as GET gives it.
  */
 fun Route.webV1AdminBlog(useCases: AdminBlogUseCases, siteUrl: String, mediaUrls: MediaUrls) {
     requireRoles(useCases.checkPanelAccess, Role.ADMIN, Role.CONTENT_EDITOR) {
@@ -73,6 +76,10 @@ fun Route.webV1AdminBlog(useCases: AdminBlogUseCases, siteUrl: String, mediaUrls
 
         delete("/admin/blog/posts/{$POST_ID}") {
             call.respondResult(useCases.deletePost.execute(DeleteBlogPostUc.Cmd(call.parameters[POST_ID].orEmpty(), call.panelActor())))
+        }
+
+        get("/admin/blog/authors") {
+            call.respondResult(useCases.listAuthors.execute(ListBlogAuthorsUc.Qry)) { authors -> authors.map { AdminBlogAuthorHttpResponse.from(it, mediaUrls) } }
         }
     }
 }

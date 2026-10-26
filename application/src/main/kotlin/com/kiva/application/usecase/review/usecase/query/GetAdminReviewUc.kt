@@ -29,7 +29,7 @@ class GetAdminReviewUc(
         if (id == null) return Result.failure(Failure.ReviewNotFound)
         return transactionManager.inTransaction {
             val review = reviewRepository.find(id) ?: return@inTransaction Result.failure(Failure.ReviewNotFound)
-            Result.success(reviews.of(review, Reviews.Viewer(viewer = null, panel = true)))
+            Result.success(reviews.of(review, Reviews.Viewer(viewer = null, panel = true, withProduct = true)))
         }
     }
 

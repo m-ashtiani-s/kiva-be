@@ -8,7 +8,7 @@ import com.kiva.domain.aggregate.product.model.valueobject.ProductStatus
 import com.kiva.domain.aggregate.product.model.valueobject.Sku
 
 /**
- * A product named somewhere else (the contract's ProductRef: a review in «نظرات من», a purchase awaiting a review), in
+ * A product named somewhere else (the contract's ProductRef: a review in «نظرات من» or the panel, a purchase awaiting a review), in
  * whatever status it is now, with the first photo of its default color.
  */
 data class ProductBriefQm(

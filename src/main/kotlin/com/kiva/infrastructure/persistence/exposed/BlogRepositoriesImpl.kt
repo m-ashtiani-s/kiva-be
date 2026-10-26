@@ -56,6 +56,9 @@ class BlogAuthorRepositoryImpl : BlogAuthorRepository {
         return BlogAuthorTbl.selectAll().where { BlogAuthorTbl.id inList ids.map { it.value } }.map { it.toAuthor() }.associateBy { it.id }
     }
 
+    override fun findAll(): List<BlogAuthor> =
+        BlogAuthorTbl.selectAll().orderBy(BlogAuthorTbl.isDefault to SortOrder.DESC, BlogAuthorTbl.id to SortOrder.ASC).map { it.toAuthor() }
+
     private fun ResultRow.toAuthor() = BlogAuthor.constructFromPersisted(
         BlogAuthorId.constructFromPersisted(this[BlogAuthorTbl.id].value),
         this[BlogAuthorTbl.name],

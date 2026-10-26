@@ -403,7 +403,7 @@ fun Application.configureRouting() {
             webV1Contact(ContactUseCases(get(), get(), get(), get()))
             webV1AdminNewsletter(AdminNewsletterUseCases(checkPanelAccessUc, get()))
             webV1Blog(BlogUseCases(get(), get(), get(), get(), get()), config.shop.siteUrl, mediaUrls)
-            webV1AdminBlog(AdminBlogUseCases(checkPanelAccessUc, get(), get(), get(), get(), get()), config.shop.siteUrl, mediaUrls)
+            webV1AdminBlog(AdminBlogUseCases(checkPanelAccessUc, get(), get(), get(), get(), get(), get()), config.shop.siteUrl, mediaUrls)
             webV1AdminSupport(AdminSupportUseCases(checkPanelAccessUc, get(), get()))
         }
     }

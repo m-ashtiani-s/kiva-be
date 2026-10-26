@@ -87,6 +87,9 @@ interface BlogAuthorRepository {
     fun findDefault(): BlogAuthor?
 
     fun findAll(ids: Collection<BlogAuthorId>): Map<BlogAuthorId, BlogAuthor>
+
+    /** Every author (the panel's picker): the default first, then in the order they were made. */
+    fun findAll(): List<BlogAuthor>
 }
 
 /**

@@ -1,6 +1,7 @@
 package com.kiva.infrastructure.httpserver.controller.httprest.model.response
 
 import com.kiva.application.dto.ActorNameDto
+import com.kiva.application.dto.AdminBlogAuthorDto
 import com.kiva.application.dto.AdminBlogPostDto
 import com.kiva.application.dto.BlogAuthorDto
 import com.kiva.application.dto.BlogBlockDto
@@ -53,6 +54,25 @@ data class BlogAuthorHttpResponse(val id: Long, val name: String, val title: Str
             avatarUrl = author.avatar?.let { urls.of(it.thumbnailPath) },
             bio = author.bio,
         )
+    }
+}
+
+/** Contract schema `AdminBlogAuthor`: every field of `BlogAuthor`, and whether a post without `authorId` gets this one. */
+@Serializable
+data class AdminBlogAuthorHttpResponse(
+    val id: Long,
+    val name: String,
+    val title: String?,
+    val initial: String,
+    val avatarUrl: String?,
+    val bio: String?,
+    val isDefault: Boolean,
+) {
+    companion object {
+        fun from(admin: AdminBlogAuthorDto, urls: MediaUrls): AdminBlogAuthorHttpResponse {
+            val a = BlogAuthorHttpResponse.from(admin.author, urls)
+            return AdminBlogAuthorHttpResponse(a.id, a.name, a.title, a.initial, a.avatarUrl, a.bio, admin.isDefault)
+        }
     }
 }
 

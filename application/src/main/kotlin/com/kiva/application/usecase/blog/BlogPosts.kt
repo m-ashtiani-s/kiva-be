@@ -1,6 +1,7 @@
 package com.kiva.application.usecase.blog
 
 import com.kiva.application.dto.ActorNameDto
+import com.kiva.application.dto.AdminBlogAuthorDto
 import com.kiva.application.dto.AdminBlogPostDto
 import com.kiva.application.dto.BlogAuthorDto
 import com.kiva.application.dto.BlogBlockDto
@@ -100,6 +101,15 @@ class BlogPosts(
             val votes = stats[post.id] ?: BlogFeedbackRepository.Stats(0, 0)
             val detail = BlogPostDetailDto(summary, post.lead, emptyList(), votes.helpful, votes.notHelpful, post.seo, post.updatedOn, shareChannels)
             adminDto(post, detail, post.productIds().filterNot { it in inShop }.map { it.value }, emptyList(), accounts, now)
+        }
+    }
+
+    /** Every author for the panel's picker, the default first, their avatars in one read. */
+    fun authors(): List<AdminBlogAuthorDto> {
+        val authors = blogAuthorRepository.findAll()
+        val media = mediaOf(authors.mapNotNull { it.avatarMediaId })
+        return authors.map { author ->
+            AdminBlogAuthorDto(BlogAuthorDto(author.id.value, author.name, author.title, author.bio, author.avatarMediaId?.let(media::get)), author.isDefault)
         }
     }
 

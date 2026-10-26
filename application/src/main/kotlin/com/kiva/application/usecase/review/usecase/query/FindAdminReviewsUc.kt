@@ -44,7 +44,7 @@ class FindAdminReviewsUc(
         }
         return transactionManager.inTransaction {
             val page = reviewRepository.pageAdmin(filter, query.pageable)
-            val seen = reviews.of(page.items, Reviews.Viewer(viewer = null, panel = true))
+            val seen = reviews.of(page.items, Reviews.Viewer(viewer = null, panel = true, withProduct = true))
             val accounts = adminCustomerRepository.findAll(page.items.map { it.userId }.distinct())
             val items = page.items.zip(seen) { review, dto ->
                 AdminReviewDto(dto, review.userId.value, review.contact?.value ?: accounts[review.userId]?.phone?.value)

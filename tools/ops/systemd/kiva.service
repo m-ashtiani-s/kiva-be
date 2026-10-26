@@ -11,7 +11,10 @@ User=kiva
 Group=kiva
 WorkingDirectory=/opt/kiva
 EnvironmentFile=/opt/kiva/conf/kiva.env
-ExecStart=/opt/kiva/bin/kiva-be
+# The server is shared (rasmiyab runs beside kiva): a capped heap, and the plain-text log config without colors.
+Environment="JAVA_OPTS=-Xms256m -Xmx512m -XX:+ExitOnOutOfMemoryError -Dlogback.configurationFile=/opt/kiva/conf/logback.xml"
+# Only nginx reaches the app: without this Ktor listens on every interface and 8080 is public until ufw (step 6.5).
+ExecStart=/opt/kiva/bin/kiva-be -P:ktor.deployment.host=127.0.0.1
 # Media files nginx (www-data, in the folder's group) must read.
 UMask=0027
 Restart=on-failure

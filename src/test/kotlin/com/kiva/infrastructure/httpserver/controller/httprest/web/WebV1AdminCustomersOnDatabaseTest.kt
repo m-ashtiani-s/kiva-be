@@ -242,7 +242,7 @@ class WebV1AdminCustomersOnDatabaseTest {
     }
 
     @Test
-    fun `a deleted account is no customer - not in the list, not by its old phone, its page and its roles 404`() = stack.app {
+    fun `a deleted account is no customer - not in the list, not by its old phone, its page 404 CUSTOMER_DELETED and its roles 404`() = stack.app {
         account(phone(30), Role.ADMIN)
         val admin = login(phone(30)).accessToken
         val gone = account(phone(31), name = "سارا محمدی")
@@ -256,7 +256,12 @@ class WebV1AdminCustomersOnDatabaseTest {
         assertTrue(gone.toString() !in everyone, "the whole list has the deleted account")
         assertTrue(customers(admin, q = phone(31)).phones().isEmpty())
         assertTrue(customers(admin, q = "سارا").phones().isEmpty())
-        assertEquals(HttpStatusCode.NotFound, client.get("$API_V1/admin/customers/$gone") { header(HttpHeaders.Authorization, "Bearer $admin") }.status)
+        val page = client.get("$API_V1/admin/customers/$gone") { header(HttpHeaders.Authorization, "Bearer $admin") }
+        assertEquals(HttpStatusCode.NotFound, page.status)
+        assertEquals("CUSTOMER_DELETED", page.json()["code"]?.jsonPrimitive?.content, "the panel tells a deleted account from a wrong link")
+        val nobody = client.get("$API_V1/admin/customers/999999999") { header(HttpHeaders.Authorization, "Bearer $admin") }
+        assertEquals(HttpStatusCode.NotFound, nobody.status)
+        assertEquals("NOT_FOUND", nobody.json()["code"]?.jsonPrimitive?.content)
         assertEquals(HttpStatusCode.NotFound, setRoles(admin, gone, """{"roles":["OPERATOR"]}""").status)
     }
 }
