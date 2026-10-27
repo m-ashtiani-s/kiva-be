@@ -28,7 +28,12 @@ id "$RUN_AS" >/dev/null 2>&1 || die "user $RUN_AS doesn't exist; LAUNCH.md step 
 [ -d "$ROOT" ] || die "$ROOT doesn't exist; LAUNCH.md step 6.1 makes it"
 command -v pm2 >/dev/null || die "pm2 isn't installed (npm install -g pm2)"
 
-as_app() { runuser -u "$RUN_AS" -- env PM2_HOME="$ROOT/.pm2" HOME="$ROOT" "$@"; }
+# Always from somewhere under $ROOT: from root's home (ssh's default), which the app's user can't enter, pm2 can't
+# spawn node (EACCES). A call already under $ROOT (npm ci in app.new) keeps its folder.
+as_app() {
+    (case "$PWD/" in "$ROOT"/*) ;; *) cd "$ROOT" ;; esac
+     runuser -u "$RUN_AS" -- env PM2_HOME="$ROOT/.pm2" HOME="$ROOT" "$@")
+}
 
 # pm2's definition of the release in <root>/app, from the mode deploy-fe.ps1 wrote into it.
 write_ecosystem() {
@@ -79,6 +84,8 @@ tar -xzf "$TARBALL" -C "$ROOT/app.new"
 [ -f "$ROOT/app.new/kiva-release.txt" ] || die "the release has no kiva-release.txt; was it made by deploy-fe.ps1?"
 log "release: $(tr '\n' ' ' < "$ROOT/app.new/kiva-release.txt")"
 chown -R "$RUN_AS:$RUN_AS" "$ROOT/app.new"
+# A tar made on Windows gives every folder 777; nobody but the app's user may change what it runs.
+chmod -R go-w "$ROOT/app.new"
 if [ "$(sed -n 's/^mode=//p' "$ROOT/app.new/kiva-release.txt")" = "npm" ]; then
     log "npm ci --omit=dev"
     (cd "$ROOT/app.new" && as_app npm ci --omit=dev --no-audit --no-fund)
