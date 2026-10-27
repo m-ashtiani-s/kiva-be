@@ -144,6 +144,8 @@ class BlogPosts(
         now: Instant,
     ) = AdminBlogPostDto(
         detail = detail,
+        excerpt = post.excerpt,
+        readingMinutes = post.readingMinutes,
         status = post.status,
         scheduled = post.isScheduledAt(now),
         createdOn = post.createdOn,

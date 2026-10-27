@@ -745,8 +745,8 @@ val useCaseModule = module(createdAtStart = true) {
     single {
         GetAdminOrderUc(
             transactionManager = get(), orderByCode = get(), orderDetails = get(), orderQmRepository = get(), paymentRepository = get(),
-            reservationGroupRepository = get(), adminCustomerRepository = get(), orderNoteRepository = get(), userRepository = get(),
-            shopSettingsRepository = get(), clock = get(),
+            reservationGroupRepository = get(), adminCustomerRepository = get(), orderNoteRepository = get(), returnRequestRepository = get(),
+            adminReturnRequests = get(), userRepository = get(), shopSettingsRepository = get(), clock = get(),
         )
     }
 

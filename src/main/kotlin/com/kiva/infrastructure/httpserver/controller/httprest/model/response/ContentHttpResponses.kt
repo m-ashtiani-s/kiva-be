@@ -47,6 +47,27 @@ data class PageSeoHttpResponse(
     val noIndex: Boolean,
 )
 
+/**
+ * Contract schema `AdminStaticPage`: [StaticPageHttpResponse] plus [seoInput], the SEO fields as saved (`seo` has the
+ * site's fallbacks), so the panel's form sends back only what someone typed.
+ */
+@Serializable
+data class AdminStaticPageHttpResponse(
+    val slug: String,
+    val title: String,
+    val content: String,
+    val updatedAt: String,
+    val seo: PageSeoHttpResponse,
+    val seoInput: SeoInputHttpResponse,
+) {
+    companion object {
+        fun from(page: StaticPageDto, siteUrl: String): AdminStaticPageHttpResponse {
+            val site = StaticPageHttpResponse.from(page, siteUrl)
+            return AdminStaticPageHttpResponse(site.slug, site.title, site.content, site.updatedAt, site.seo, SeoInputHttpResponse.from(page.seo))
+        }
+    }
+}
+
 /** Contract schema `AdminStaticPageSummary`: a row of the panel's list, without the content. */
 @Serializable
 data class AdminStaticPageSummaryHttpResponse(val slug: String, val title: String, val updatedAt: String) {

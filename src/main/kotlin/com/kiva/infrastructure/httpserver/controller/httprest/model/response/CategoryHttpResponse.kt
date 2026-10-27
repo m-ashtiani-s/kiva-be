@@ -63,7 +63,8 @@ data class CategorySeoHttpResponse(
 
 /**
  * Contract schema `AdminCategory`: [CategoryHttpResponse] plus the photo's media id, so the panel's edit form knows
- * which photo it has. Its `productCount` counts products of every status.
+ * which photo it has, and [seoInput], the SEO fields as saved (`seo` has the shop's fallbacks). Its `productCount`
+ * counts products of every status.
  */
 @Serializable
 data class AdminCategoryHttpResponse(
@@ -78,13 +79,14 @@ data class AdminCategoryHttpResponse(
     val sortOrder: Int,
     val showInMenu: Boolean,
     val seo: CategorySeoHttpResponse,
+    val seoInput: SeoInputHttpResponse,
 ) {
     companion object {
         fun from(dto: CategoryDto, urls: MediaUrls, siteUrl: String): AdminCategoryHttpResponse {
             val shop = CategoryHttpResponse.from(dto, urls, siteUrl)
             return AdminCategoryHttpResponse(
                 shop.id, shop.slug, shop.name, shop.description, shop.icon, shop.imageUrl, dto.imageMediaId, shop.productCount, shop.sortOrder,
-                shop.showInMenu, shop.seo,
+                shop.showInMenu, shop.seo, SeoInputHttpResponse.from(dto.seo),
             )
         }
     }

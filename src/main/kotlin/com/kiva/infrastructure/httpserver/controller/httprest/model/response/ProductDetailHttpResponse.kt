@@ -7,6 +7,7 @@ import com.kiva.domain.aggregate.product.model.valueobject.PocketInfo
 import com.kiva.domain.aggregate.product.model.valueobject.ProductSpecs
 import com.kiva.domain.aggregate.product.model.valueobject.StrapInfo
 import com.kiva.infrastructure.media.MediaUrls
+import com.kiva.common.valueobject.SeoMeta
 import kotlinx.serialization.Serializable
 
 /**
@@ -353,3 +354,14 @@ data class ProductPoliciesHttpResponse(val returnable: Boolean, val reservable: 
 /** Contract schema `SeoMeta`. */
 @Serializable
 data class SeoMetaHttpResponse(val title: String, val description: String? = null, val canonicalUrl: String)
+
+/**
+ * Contract schema `SeoInput`: a panel form's three SEO fields as they were saved, so a form that sends them back changes
+ * nothing. Null texts mean "the page's own name and summary" (what [SeoMetaHttpResponse] then shows).
+ */
+@Serializable
+data class SeoInputHttpResponse(val title: String?, val description: String?, val noIndex: Boolean) {
+    companion object {
+        fun from(seo: SeoMeta) = SeoInputHttpResponse(seo.title, seo.description, seo.noIndex)
+    }
+}

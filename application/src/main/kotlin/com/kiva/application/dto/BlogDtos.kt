@@ -70,9 +70,16 @@ data class BlogPostDetailDto(
     val shareChannels: List<SocialLink>,
 )
 
-/** A post in the panel (the contract's AdminBlogPost): its page with every block, and what only the panel sees. */
+/**
+ * A post in the panel (the contract's AdminBlogPost): its page with every block, and what only the panel sees.
+ *
+ * @property excerpt the excerpt as the form saved it; null when the page takes it from the text (`detail` has that one).
+ * @property readingMinutes the reading time as the form saved it; null when it is counted from the text.
+ */
 data class AdminBlogPostDto(
     val detail: BlogPostDetailDto,
+    val excerpt: String?,
+    val readingMinutes: Int?,
     val status: BlogPostStatus,
     val scheduled: Boolean,
     val createdOn: Instant,

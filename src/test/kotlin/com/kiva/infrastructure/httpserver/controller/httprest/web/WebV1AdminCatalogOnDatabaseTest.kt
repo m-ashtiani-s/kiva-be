@@ -200,6 +200,9 @@ class WebV1AdminCatalogOnDatabaseTest {
         assertEquals("کیف‌های کوچک", seo.getValue("description").jsonPrimitive.content)
         assertEquals("${PanelTestStack.SITE_URL}/categories/tst-mini", seo.getValue("canonicalUrl").jsonPrimitive.content)
         assertEquals(true, seo.getValue("noIndex").jsonPrimitive.content.toBoolean())
+        // The form's own: the description falls back to the category's in `seo` only.
+        val seoInput = body.getValue("seoInput").jsonObject
+        assertEquals(listOf("کیف مینی", null, "true"), listOf("title", "description", "noIndex").map { seoInput[it]?.takeUnless { v -> v == JsonNull }?.jsonPrimitive?.content })
         assertTrue(transaction(db) { stack.mediaRepository.findAll(listOf(MediaId.constructFromPersisted(photo))) }.single().isAttached)
         val row = auditRows(manager, "CATEGORY_CREATED").single()
         assertEquals("CATEGORY", row[AuditLogTbl.entityType])

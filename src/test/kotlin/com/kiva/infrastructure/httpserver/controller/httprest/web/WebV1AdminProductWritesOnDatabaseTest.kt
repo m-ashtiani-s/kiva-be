@@ -333,6 +333,32 @@ class WebV1AdminProductWritesOnDatabaseTest {
     }
 
     @Test
+    fun `the form's own price and SEO come back apart from the shop's - sending them back changes nothing`() = stack.app {
+        val variants = """[{"colorKey":"lilac","isDefault":true,"priceOverride":2100000,"compareAtPriceOverride":2400000},{"colorKey":"black"}]"""
+        val created = create(form(variants = variants, extra = ""","compareAtPrice":2000000,"seo":{"description":"کیف دوشی چرم","noIndex":true}"""))
+        val id = created.getValue("id").jsonPrimitive.content.toLong()
+
+        // The card's price is the default color's own; the product's is the form's.
+        assertEquals(2_100_000, created.getValue("price").jsonObject.getValue("price").jsonPrimitive.int)
+        assertEquals(listOf("1890000", "2000000"), listOf("basePrice", "baseCompareAtPrice").map { created.getValue(it).jsonPrimitive.content })
+        // The shop's SEO has the fallback title; the form's has none of its own.
+        assertEquals("کیف دوشی ماهک | کیوا", created.getValue("seo").jsonObject.getValue("title").jsonPrimitive.content)
+        val seoInput = created.getValue("seoInput").jsonObject
+        assertEquals(JsonNull, seoInput.getValue("title"))
+        assertEquals(listOf("کیف دوشی چرم", "true"), listOf("description", "noIndex").map { seoInput.getValue(it).jsonPrimitive.content })
+        val colors = created.getValue("adminVariants").jsonArray.map { it.jsonObject }
+        assertEquals(listOf("2100000", "2400000", "0"), listOf("priceOverride", "compareAtPriceOverride", "sortOrder").map { colors[0].getValue(it).jsonPrimitive.content })
+        assertEquals(listOf(JsonNull, JsonNull), listOf("priceOverride", "compareAtPriceOverride").map { colors[1].getValue(it) })
+        assertEquals(1, colors[1].getValue("sortOrder").jsonPrimitive.int)
+
+        val back = send("PUT", "/admin/products/$id", form(price = 1_890_000, extra = ""","compareAtPrice":2000000,"seo":$seoInput"""))
+
+        assertEquals(HttpStatusCode.OK, back.status, back.bodyAsText())
+        assertEquals(created.getValue("etag"), back.json().getValue("etag"))
+        assertEquals(listOf("ProductCreated", "VariantAdded", "VariantAdded"), productEvents(id))
+    }
+
+    @Test
     fun `PUT on an archived product is 422 PRODUCT_ARCHIVED - on one nobody has 404`() = stack.app {
         val id = create(form(extra = ""","status":"ARCHIVED"""")).getValue("id").jsonPrimitive.content.toLong()
 

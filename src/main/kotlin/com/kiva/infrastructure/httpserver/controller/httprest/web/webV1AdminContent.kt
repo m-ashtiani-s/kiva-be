@@ -20,7 +20,7 @@ import com.kiva.infrastructure.httpserver.controller.httprest.model.request.Stat
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.AdminStaticPageSummaryHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.AnnouncementHttpResponse
 import com.kiva.infrastructure.httpserver.controller.httprest.model.response.FaqGroupHttpResponse
-import com.kiva.infrastructure.httpserver.controller.httprest.model.response.StaticPageHttpResponse
+import com.kiva.infrastructure.httpserver.controller.httprest.model.response.AdminStaticPageHttpResponse
 import io.ktor.server.request.receive
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
@@ -49,12 +49,17 @@ fun Route.webV1AdminContent(useCases: AdminContentUseCases, siteUrl: String) {
         get("/admin/pages") {
             call.respondResult(useCases.listPages.execute(ListPagesUc.Qry)) { pages -> pages.map(AdminStaticPageSummaryHttpResponse::from) }
         }
-        // Made or rewritten, the answer is the page as the site shows it.
+        // The edit form's read: never cached (the site's GET /pages/{slug} may be), with the SEO fields as saved.
+        get("/admin/pages/{slug}") {
+            val query = GetPageUc.Qry(call.pathParameters["slug"].orEmpty())
+            call.respondResult(useCases.getPage.execute(query)) { AdminStaticPageHttpResponse.from(it, siteUrl) }
+        }
+        // Made or rewritten, the answer is the page as the edit form reads it.
         put("/admin/pages/{slug}") {
             val request = call.receive<StaticPageUpsertHttpRequest>()
             val command = SavePageUc.Cmd(call.pathParameters["slug"].orEmpty(), request.toFields(), call.panelActor())
             val slug = useCases.savePage.execute(command).unwrapOr { return@put call.respondFailure(it) }
-            call.respondResult(useCases.getPage.execute(GetPageUc.Qry(slug.value))) { StaticPageHttpResponse.from(it, siteUrl) }
+            call.respondResult(useCases.getPage.execute(GetPageUc.Qry(slug.value))) { AdminStaticPageHttpResponse.from(it, siteUrl) }
         }
         get("/admin/faq/groups") {
             call.respondResult(useCases.listFaq.execute(ListFaqForEditUc.Qry)) { FaqGroupHttpResponse.listOf(it) }

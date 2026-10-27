@@ -393,12 +393,15 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
     // --- orders (phase 2): paid the way the shop pays them, through the purchase's own stack ---
     val purchase = PurchaseTestStack(clock)
     val paidOrders = PaidOrders(purchase, clock)
+    val adminReturnRequests = AdminReturnRequests(
+        purchase.returnRequests, AdminCustomerRepositoryImpl(), purchase.refunds, purchase.payments, RefundDomainService(RefundIdGeneratorImpl()),
+    )
     val adminOrders = AdminOrderUseCases(
         checkPanelAccess = checkPanelAccess,
         findOrders = FindAdminOrdersUc(transactions, purchase.orderQm, AdminCustomerRepositoryImpl()),
         getOrder = GetAdminOrderUc(
             transactions, purchase.orderByCode, purchase.orderDetails, purchase.orderQm, purchase.payments, purchase.groups, AdminCustomerRepositoryImpl(),
-            OrderNoteRepositoryImpl(), users, purchase.settings, clock,
+            OrderNoteRepositoryImpl(), purchase.returns, adminReturnRequests, users, purchase.settings, clock,
         ),
         addNote = AddOrderNoteUc(transactions, purchase.orderByCode, OrderNoteRepositoryImpl(), users, auditTrail, clock),
         setPhotos = SetPreShipmentMediaUc(transactions, purchase.orderByCode, purchase.orders, mediaAttachments, auditTrail, clock),
@@ -430,9 +433,6 @@ class PanelTestStack(val clock: MutableClock, val mediaProcessor: MediaProcessor
     )
     val returnNotices = ReturnNotices(purchase.auth.sms)
     val returnByIdForPanel = ReturnByIdForPanel(purchase.returns, purchase.orderQm, purchase.orders)
-    val adminReturnRequests = AdminReturnRequests(
-        purchase.returnRequests, AdminCustomerRepositoryImpl(), purchase.refunds, purchase.payments, RefundDomainService(RefundIdGeneratorImpl()),
-    )
     val adminReturns = AdminReturnUseCases(
         checkPanelAccess,
         FindAdminReturnsUc(transactions, purchase.returns, adminReturnRequests, purchase.settings),

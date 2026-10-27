@@ -2,6 +2,7 @@ package com.kiva.application.repository
 
 import com.kiva.domain.aggregate.review.model.valueobject.RatingTally
 import com.kiva.application.dto.GalleryItemDto
+import com.kiva.common.valueobject.SeoMeta
 import com.kiva.common.valueobject.Slug
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
@@ -63,12 +64,17 @@ data class AdminProductQm(
  * variants hold only the active colors) and what only the panel sees.
  *
  * @property version the sequence of its last event: the ETag of the panel's form.
+ * @property basePrice the product's own price, the one every color without its own follows (the card's is the default
+ *   color's, which may be that color's own).
+ * @property seo the SEO fields as the form saved them (null texts: the page's name and summary are used).
  * @property variants every color, active or not, in display order (position, then id), with the exact stock.
  */
 data class AdminProductDetailQm(
     val detail: ProductDetailQm,
     val status: ProductStatus,
     val version: Long,
+    val basePrice: PriceTag,
+    val seo: SeoMeta,
     val createdOn: Instant,
     val createdBy: UserId,
     val publishAt: Instant?,
@@ -76,12 +82,19 @@ data class AdminProductDetailQm(
     val tags: List<String>,
     val variants: List<Variant>,
 ) {
+    /**
+     * @property priceTag what the color sells for: its own price, else the product's.
+     * @property ownPrice the color's own price as the form saved it; null when it follows the product's.
+     * @property sortOrder its position among the product's colors.
+     */
     data class Variant(
         val variantId: VariantId,
         val colorKey: ColorKey,
         val sku: Sku,
         val barcode: String?,
         val priceTag: PriceTag,
+        val ownPrice: PriceTag?,
+        val sortOrder: Int,
         val isDefault: Boolean,
         val isActive: Boolean,
         val onHand: Int,

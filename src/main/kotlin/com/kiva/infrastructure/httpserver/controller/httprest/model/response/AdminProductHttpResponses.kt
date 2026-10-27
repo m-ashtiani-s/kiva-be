@@ -62,6 +62,9 @@ data class AdminProductListItemHttpResponse(
  * (ProductDetailHttpResponse.from), so the panel sees exactly what a shopper would; then the panel's fields. The
  * shopper-only fields are always empty here (`isWishlisted`, `stockAlert`, `campaign` null, `perks` empty).
  *
+ * `price` and `seo` are what the shop shows (the default color's price, the fallback SEO texts); the form's own values
+ * are [basePrice] / [baseCompareAtPrice] and [seoInput], which a `PUT` sends back unchanged.
+ *
  * [etag] is the same text as the `ETag` header.
  */
 @Serializable
@@ -109,6 +112,9 @@ data class AdminProductHttpResponse(
     val publishedAt: String?,
     val updatedAt: String,
     val status: String,
+    val basePrice: Long,
+    val baseCompareAtPrice: Long?,
+    val seoInput: SeoInputHttpResponse,
     val adminVariants: List<AdminVariantHttpResponse>,
     val newUntil: String?,
     val sortPriority: Int,
@@ -167,6 +173,9 @@ data class AdminProductHttpResponse(
                 publishedAt = shop.publishedAt,
                 updatedAt = shop.updatedAt,
                 status = product.status.name,
+                basePrice = product.basePrice.price,
+                baseCompareAtPrice = product.basePrice.compareAtPrice,
+                seoInput = SeoInputHttpResponse.from(product.seo),
                 adminVariants = product.variants.map { AdminVariantHttpResponse.from(it, urls) },
                 newUntil = product.newUntil?.toString(),
                 sortPriority = product.sortPriority,
@@ -194,7 +203,11 @@ data class ProductCampaignHttpResponse(val slug: String, val title: String, val 
 @Serializable
 data class ProductStockAlertHttpResponse(val subscribed: Boolean, val alertId: Long?)
 
-/** Contract schema `AdminVariant`: the shop's ProductVariant of the color, then the exact stock. */
+/**
+ * Contract schema `AdminVariant`: the shop's ProductVariant of the color, then the exact stock. `price` is what the
+ * color sells for; [priceOverride] / [compareAtPriceOverride] are its own price as the form saved it (null: it follows
+ * the product's), which a `PUT` sends back unchanged.
+ */
 @Serializable
 data class AdminVariantHttpResponse(
     val id: Long,
@@ -205,6 +218,9 @@ data class AdminVariantHttpResponse(
     val stock: StockInfoHttpResponse,
     val media: List<ProductMediaHttpResponse>,
     val hasVideo: Boolean,
+    val priceOverride: Long?,
+    val compareAtPriceOverride: Long?,
+    val sortOrder: Int,
     val barcode: String?,
     val isActive: Boolean,
     val stockOnHand: Int,
@@ -225,6 +241,9 @@ data class AdminVariantHttpResponse(
                 stock = shop.stock,
                 media = shop.media,
                 hasVideo = shop.hasVideo,
+                priceOverride = variant.ownPrice?.price,
+                compareAtPriceOverride = variant.ownPrice?.compareAtPrice,
+                sortOrder = variant.sortOrder,
                 barcode = variant.barcode,
                 isActive = variant.isActive,
                 stockOnHand = variant.stockOnHand,

@@ -21,6 +21,7 @@ import com.kiva.application.usecase.product.usecase.query.ProductSorts
 import com.kiva.common.pagination.Page
 import com.kiva.common.pagination.Pageable
 import com.kiva.common.valueobject.Money
+import com.kiva.common.valueobject.SeoMeta
 import com.kiva.common.valueobject.Slug
 import com.kiva.common.valueobject.UserId
 import com.kiva.domain.aggregate.color.model.valueobject.ColorKey
@@ -42,6 +43,10 @@ import com.kiva.infrastructure.persistence.exposed.projector.ProductQmSummary
 import com.kiva.infrastructure.common.persistence.paginate
 import com.kiva.infrastructure.persistence.exposed.tbl.ProductQmTbl
 import com.kiva.infrastructure.persistence.exposed.tbl.ProductVariantQmTbl
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import org.jetbrains.exposed.v1.core.Column
 import org.jetbrains.exposed.v1.core.QueryBuilder
 import org.jetbrains.exposed.v1.core.ComparisonOp
@@ -230,6 +235,13 @@ class ProductQmRepositoryImpl : ProductQmRepository {
     private fun priceTagOf(price: Long, compareAtPrice: Long?): PriceTag =
         PriceTag.constructFromPersisted(Money.constructFromPersisted(price), compareAtPrice?.let { Money.constructFromPersisted(it) })
 
+    /** V24's `seo` JSONB back to the form's fields: only those set are in it (none is `{}`). */
+    private fun seoOf(seo: JsonObject): SeoMeta = SeoMeta.constructFromPersisted(
+        title = seo["title"]?.jsonPrimitive?.contentOrNull,
+        description = seo["description"]?.jsonPrimitive?.contentOrNull,
+        noIndex = seo["noIndex"]?.jsonPrimitive?.booleanOrNull ?: false,
+    )
+
     // ============ one product's page ============
 
     override fun findDetail(ref: ProductRef): ProductDetailQm? {
@@ -382,6 +394,8 @@ class ProductQmRepositoryImpl : ProductQmRepository {
             detail = detailOf(row, colors.filter { it[ProductVariantQmTbl.isActive] }),
             status = row[ProductQmTbl.status],
             version = row[ProductQmTbl.version],
+            basePrice = priceTagOf(row[ProductQmTbl.basePrice], row[ProductQmTbl.baseCompareAtPrice]),
+            seo = seoOf(row[ProductQmTbl.seo]),
             createdOn = row[ProductQmTbl.createdOn].toInstant(),
             createdBy = UserId.constructFromPersisted(row[ProductQmTbl.createdByUserId]),
             publishAt = row[ProductQmTbl.publishAt]?.toInstant(),
@@ -394,6 +408,8 @@ class ProductQmRepositoryImpl : ProductQmRepository {
                     sku = Sku.constructFromPersisted(it[ProductVariantQmTbl.sku]),
                     barcode = it[ProductVariantQmTbl.barcode],
                     priceTag = priceTagOf(it[ProductVariantQmTbl.price], it[ProductVariantQmTbl.compareAtPrice]),
+                    ownPrice = priceTagOf(it[ProductVariantQmTbl.price], it[ProductVariantQmTbl.compareAtPrice]).takeIf { _ -> it[ProductVariantQmTbl.hasOwnPrice] },
+                    sortOrder = it[ProductVariantQmTbl.sortOrder],
                     isDefault = it[ProductVariantQmTbl.isDefault],
                     isActive = it[ProductVariantQmTbl.isActive],
                     onHand = it[ProductVariantQmTbl.onHand],

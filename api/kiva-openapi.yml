@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: KIVA Store API — کیوا
-  version: 1.22.0
+  version: 1.23.0
   contact:
     name: KIVA Engineering
     email: support@kiva.ir
@@ -5104,7 +5104,7 @@ paths:
       tags: [Admin · Content]
       x-roles: [ADMIN, CONTENT_EDITOR]
       operationId: adminListPages
-      summary: "همه‌ی صفحه‌های ثابت (بدون محتوا؛ محتوای هر صفحه از `GET /pages/{slug}`)"
+      summary: "همه‌ی صفحه‌های ثابت (بدون محتوا؛ محتوای هر صفحه از `GET /admin/pages/{slug}`)"
       description: به ترتیب `slug`. بدون کش.
       security: [{ bearerAuth: [] }]
       responses:
@@ -5118,13 +5118,36 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
   /admin/pages/{slug}:
+    get:
+      tags: [Admin · Content]
+      x-roles: [ADMIN, CONTENT_EDITOR]
+      operationId: adminGetPage
+      summary: "یک صفحه‌ی ثابت برای فرم ویرایش"
+      description: |
+        بدون کش (برخلاف `GET /pages/{slug}` که تا ۵ دقیقه کش می‌شود)، تا فرم همیشه آخرین ذخیره را ببیند؛ با `seoInput`.
+        صفحه‌ی نبوده `404 NOT_FOUND`.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminStaticPage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
     put:
       tags: [Admin · Content]
       x-roles: [ADMIN, CONTENT_EDITOR]
       operationId: adminUpsertPage
       summary: "ساخت/ویرایش صفحه‌ی ثابت"
       description: |
-        صفحه‌ی نبوده را می‌سازد و بوده را ویرایش می‌کند؛ هر دو `200` با صفحه‌ی ذخیره‌شده (همان `GET /pages/{slug}`).
+        صفحه‌ی نبوده را می‌سازد و بوده را ویرایش می‌کند؛ هر دو `200` با صفحه‌ی ذخیره‌شده (همان `GET /admin/pages/{slug}`).
         `slug` ِ مسیر با الگوی slug (`400 SLUG_INVALID` روی `slug`). قانون‌های بدنه در `StaticPageUpsertRequest`؛ `content`
         پاک‌سازی می‌شود. حذف ندارد. هر ذخیره‌ی تغییردهنده یک ردیف `PAGE_SAVED` در لاگ تغییرات (بدون متن صفحه).
       security: [{ bearerAuth: [] }]
@@ -5143,7 +5166,7 @@ paths:
           description: OK
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/StaticPage' }
+              schema: { $ref: '#/components/schemas/AdminStaticPage' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
@@ -6495,6 +6518,17 @@ components:
       properties:
         label: { type: string, example: کیف دوشی }
         url: { type: string, nullable: true, example: '/products?category=shoulder' }
+    SeoInput:
+      type: object
+      required: [title, description, noIndex]
+      description: |
+        سه فیلد SEO ِ فرم پنل **همان‌طور که ذخیره شده‌اند** (نه جایگزین‌هایی که سایت در `seo` نشان می‌دهد). فرم همین را پر می‌کند
+        و همین را در `seo` ِ بدنه‌ی `PUT` پس می‌فرستد، پس ذخیره‌ی بی‌تغییر چیزی را عوض نمی‌کند. `null` یعنی «مال خود صفحه»
+        (عنوان: «نام | کیوا»، توضیح: خلاصه‌ی صفحه).
+      properties:
+        title: { type: string, nullable: true, maxLength: 70 }
+        description: { type: string, nullable: true, maxLength: 170 }
+        noIndex: { type: boolean }
     SeoMeta:
       type: object
       properties:
@@ -8514,6 +8548,14 @@ components:
             canonicalUrl: { type: string, format: uri }
             ogImageUrl: { type: string, format: uri, nullable: true }
             noIndex: { type: boolean }
+    AdminStaticPage:
+      description: 'صفحه‌ی ثابت در فرم پنل: همه‌ی `StaticPage` به‌علاوه‌ی `seoInput` (SEO ِ ذخیره‌شده؛ `seo` جایگزین‌های سایت را دارد)'
+      allOf:
+        - $ref: '#/components/schemas/StaticPage'
+        - type: object
+          required: [seoInput]
+          properties:
+            seoInput: { $ref: '#/components/schemas/SeoInput' }
     StaticPageUpsertRequest:
       type: object
       description: |
@@ -8649,8 +8691,11 @@ components:
       allOf:
         - $ref: '#/components/schemas/BlogPostDetail'
         - type: object
-          required: [status, scheduled, createdAt, unavailableProductIds, feedbackComments]
+          required: [excerptInput, readingMinutesInput, seoInput, status, scheduled, createdAt, unavailableProductIds, feedbackComments]
           properties:
+            excerptInput: { type: string, nullable: true, description: 'خلاصه همان‌طور که فرم ذخیره کرده؛ `null` = از متن ساخته می‌شود (`excerpt` همان ساخته‌شده است)' }
+            readingMinutesInput: { type: integer, nullable: true, description: 'زمان مطالعه همان‌طور که فرم ذخیره کرده؛ `null` = از متن شمرده می‌شود (`readingMinutes`)' }
+            seoInput: { $ref: '#/components/schemas/SeoInput' }
             status: { type: string, enum: [DRAFT, PUBLISHED, ARCHIVED] }
             scheduled: { type: boolean, description: '`PUBLISHED` با `publishedAt` ِ آینده: هنوز در مجله دیده نمی‌شود' }
             createdAt: { type: string, format: date-time }
@@ -8829,6 +8874,13 @@ components:
         - $ref: '#/components/schemas/ProductVariant'
         - type: object
           properties:
+            priceOverride:
+              type: integer
+              nullable: true
+              description: 'قیمت اختصاصی همین رنگ همان‌طور که فرم ذخیره کرده؛ `null` = قیمت محصول. `price` قیمتی است که رنگ با آن فروخته می‌شود'
+              example: 2450000
+            compareAtPriceOverride: { type: integer, nullable: true, description: 'قیمت قبل از تخفیف اختصاصی رنگ؛ فقط همراه `priceOverride`', example: null }
+            sortOrder: { type: integer, description: 'جای رنگ در میان رنگ‌های محصول (همان `sortOrder` ِ `VariantUpsertRequest`)', example: 0 }
             barcode: { type: string, nullable: true }
             isActive: { type: boolean }
             stockOnHand: { type: integer, description: موجودی فیزیکی, example: 12 }
@@ -8841,11 +8893,16 @@ components:
         همه‌ی فیلدهای `ProductDetail` (همان چیزی که مشتری می‌بیند) به‌اضافه‌ی فیلدهای پنل. `variants` فقط رنگ‌های **فعال** است و
         موجودی‌اش همان قانون فروشگاه را دارد؛ `adminVariants` **همه‌ی** رنگ‌ها (فعال و غیرفعال) با موجودی دقیق.
         فیلدهای فقط‌مشتری: `isWishlisted` و `stockAlert` و `campaign` همیشه `null`، `perks` خالی، `selectedColorKey` رنگ پیش‌فرض.
+        `price` و `seo` همان چیزی است که فروشگاه نشان می‌دهد (قیمت رنگ پیش‌فرض، SEO با جایگزین‌ها)؛ مقدارهای فرم
+        `basePrice`/`baseCompareAtPrice` و `seoInput` هستند و `PUT` همین‌ها را پس می‌فرستد.
       allOf:
         - $ref: '#/components/schemas/ProductDetail'
         - type: object
           properties:
             status: { $ref: '#/components/schemas/ProductStatus' }
+            basePrice: { type: integer, description: 'قیمت خود محصول (`price` ِ `ProductUpsertRequest`)؛ رنگ بی‌قیمت اختصاصی با همین فروخته می‌شود', example: 2450000 }
+            baseCompareAtPrice: { type: integer, nullable: true, description: '`compareAtPrice` ِ `ProductUpsertRequest`', example: 2900000 }
+            seoInput: { $ref: '#/components/schemas/SeoInput' }
             adminVariants:
               type: array
               items: { $ref: '#/components/schemas/AdminVariant' }
@@ -8946,9 +9003,10 @@ components:
       allOf:
         - $ref: '#/components/schemas/Category'
         - type: object
-          required: [imageMediaId]
+          required: [imageMediaId, seoInput]
           properties:
             imageMediaId: { type: string, nullable: true, description: 'همان `imageMediaId` ِ `CategoryUpsertRequest`؛ بدون عکس `null`', example: med_7Kx1 }
+            seoInput: { $ref: '#/components/schemas/SeoInput' }
     AdminStockAlertGroup:
       type: object
       description: اشتراک‌های فعال «موجود شد خبرم کن» برای یک ورینت (یا برای کل محصول، وقتی مشتری رنگ خاصی نخواسته)
@@ -9005,6 +9063,10 @@ components:
         - $ref: '#/components/schemas/OrderDetail'
         - type: object
           properties:
+            returns:
+              type: array
+              description: 'مرجوعی‌های سفارش به شکل صف پنل (`AdminReturnRequest`، با `allowedTransitions` و `suggestedRefund`)، نه شکل مشتری'
+              items: { $ref: '#/components/schemas/AdminReturnRequest' }
             customer:
               type: object
               properties:

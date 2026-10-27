@@ -1,5 +1,6 @@
 package com.kiva.application.dto
 
+import com.kiva.common.valueobject.SeoMeta
 import com.kiva.domain.aggregate.product.model.valueobject.ProductStatus
 import java.time.Instant
 
@@ -34,11 +35,15 @@ data class AdminProductListItemDto(
  * ([detail], built the same way; only active colors, the shop's stock rule), plus what only the panel sees.
  *
  * @property variants every color, active or not, with the exact stock.
+ * @property basePrice the product's own price (the form's `price` and `compareAtPrice`); the card's is the default color's.
+ * @property seo the SEO fields as the form saved them, not the ones the shop falls back to.
  * @property version the product's version, the ETag of its form (`W/"{version}"`).
  */
 data class AdminProductDto(
     val detail: ProductDetailDto,
     val status: ProductStatus,
+    val basePrice: PriceDto,
+    val seo: SeoMeta,
     val variants: List<AdminVariantDto>,
     val newUntil: Instant?,
     val sortPriority: Int,
@@ -52,9 +57,14 @@ data class AdminProductDto(
 /**
  * One color for the panel (the contract's AdminVariant): what the shop's page shows of a color ([shop]), and the
  * exact stock. Stock alerts come in phase 10; until then nobody waits.
+ *
+ * @property ownPrice the color's own price as the form saved it; null when it follows the product's.
+ * @property sortOrder its position among the product's colors.
  */
 data class AdminVariantDto(
     val shop: ProductDetailDto.Variant,
+    val ownPrice: PriceDto?,
+    val sortOrder: Int,
     val barcode: String?,
     val isActive: Boolean,
     val stockOnHand: Int,

@@ -146,6 +146,25 @@ class WebV1AdminReturnsOnDatabaseTest {
     }
 
     @Test
+    fun `the panel's order page has its returns as the queue shows them - where each may go next, the customer, the receipt`() = panel.app {
+        val sara = customer(1)
+        val code = with(returns) { delivered(sara, nila[0]) }
+        val returnId = with(returns) { asked(code, sara, "NOT_AS_PICTURED") }
+        decide(returnId, """{"approve":true}""")
+
+        val order = client.get("$API_V1/admin/orders/${code.value}") { header(HttpHeaders.Authorization, staff(Role.OPERATOR).bearer) }.json()
+
+        val ret = order.getValue("returns").jsonArray.single().jsonObject
+        assertEquals(adminReturnKeys, ret.keys)
+        assertEquals(listOf(returnId.toString(), "APPROVED"), listOf(ret.text("id"), ret.text("status")))
+        assertEquals(listOf("PICKUP_SCHEDULED", "RECEIVED", "CLOSED"), ret.allowed())
+        assertEquals(sara.userId.toString(), ret.getValue("customer").jsonObject.text("id"))
+        assertEquals(JsonNull, ret["suggestedRefund"])
+        // The customer's own page keeps the customer's shape.
+        assertEquals(ContractSchemas.propertiesOf("ReturnRequest"), myOrder(code, sara).getValue("returns").jsonArray.single().jsonObject.keys)
+    }
+
+    @Test
     fun `approved with the customer paying and staff's own words - both kept, the payer's change in the row`() = panel.app {
         val sara = customer(1)
         val code = with(returns) { delivered(sara, nila[0]) }
