@@ -255,7 +255,11 @@ data class BlogPostDetailHttpResponse(
     }
 }
 
-/** Contract schema `AdminBlogPost`: the page with every block, and what only the panel sees. */
+/**
+ * Contract schema `AdminBlogPost`: the page with every block, and what only the panel sees. `excerpt`,
+ * `readingMinutes` and `seo` are what the site shows (fallbacks filled in); [excerptInput], [readingMinutesInput] and
+ * [seoInput] are the form's own values as saved, which a `PUT` sends back unchanged.
+ */
 @Serializable
 data class AdminBlogPostHttpResponse(
     val id: Long,
@@ -279,6 +283,9 @@ data class AdminBlogPostHttpResponse(
     val helpfulStats: BlogHelpfulStatsHttpResponse,
     val seo: BlogSeoHttpResponse,
     val updatedAt: String,
+    val excerptInput: String?,
+    val readingMinutesInput: Int?,
+    val seoInput: SeoInputHttpResponse,
     val status: String,
     val scheduled: Boolean,
     val createdAt: String,
@@ -297,6 +304,9 @@ data class AdminBlogPostHttpResponse(
                 page.id, page.slug, page.title, page.excerpt, page.category, page.cover, page.coverBackground, page.readingMinutes, page.publishedAt,
                 page.author, page.isFeatured, page.tags, page.lead, page.blocks, page.toc, page.breadcrumbs, page.shareUrl, page.shareLinks,
                 page.helpfulStats, page.seo, page.updatedAt,
+                excerptInput = post.excerpt,
+                readingMinutesInput = post.readingMinutes,
+                seoInput = SeoInputHttpResponse.from(post.detail.seo),
                 status = post.status.name,
                 scheduled = post.scheduled,
                 createdAt = post.createdOn.toString(),

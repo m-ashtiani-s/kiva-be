@@ -215,6 +215,25 @@ class WebV1AdminVariantsOnDatabaseTest {
     }
 
     @Test
+    fun `a color's own price comes back as the form saved it - sent back with another barcode, it stays`() = stack.app {
+        val bag = product(listOf("lilac", "cream"))
+        val lilac = bag.variants.first()
+        val path = "/admin/products/${bag.id.value}/variants/${lilac.id.value}"
+        send("PUT", path, """{"colorKey":"lilac","priceOverride":1500000,"compareAtPriceOverride":1800000}""")
+
+        val shown = page(bag.id).adminVariant("lilac")
+        assertEquals(listOf("1500000", "1800000"), listOf("priceOverride", "compareAtPriceOverride").map { shown.getValue(it).jsonPrimitive.content })
+        assertEquals(JsonNull, page(bag.id).adminVariant("cream").getValue("priceOverride"))
+
+        val fields = listOf("priceOverride", "compareAtPriceOverride", "sortOrder", "isActive").joinToString(",") { "\"$it\":${shown.getValue(it)}" }
+        val edited = send("PUT", path, """{"colorKey":"lilac","barcode":"6260000123456",$fields}""")
+
+        assertEquals(HttpStatusCode.OK, edited.status, edited.bodyAsText())
+        assertEquals(1_500_000, edited.json().getValue("price").jsonObject.getValue("price").jsonPrimitive.int)
+        assertEquals(mapOf("barcode" to (null to "6260000123456")), changedFields(rows("VARIANT_UPDATED", lilac.id.value).last()))
+    }
+
+    @Test
     fun `the same values again are 200 with no event and no row`() = stack.app {
         val bag = product()
         val lilac = bag.variants.single()

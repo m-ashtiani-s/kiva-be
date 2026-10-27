@@ -49,9 +49,11 @@ data class AdminOrderListDto(val page: Page<Item>, val statusCounts: Map<OrderSt
  * @property payments every attempt to pay, oldest first.
  * @property notes the panel's internal notes, oldest first.
  * @property allowedTransitions what `POST …/status` takes now (OrderTransitionPolicy).
+ * @property returns the order's returns as the panel's queue shows them (`detail.returns` is the customer's view).
  */
 data class AdminOrderDto(
     val detail: OrderDetailDto,
+    val returns: List<AdminReturnRequestDto>,
     val customer: Customer,
     val shipmentGroup: ShipmentGroup?,
     val payments: List<OrderDetailDto.Payment>,

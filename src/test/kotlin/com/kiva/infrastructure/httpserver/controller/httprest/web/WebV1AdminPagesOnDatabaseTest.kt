@@ -81,6 +81,9 @@ class WebV1AdminPagesOnDatabaseTest {
     private suspend fun ApplicationTestBuilder.list(caller: PanelTestStack.Caller = editor): HttpResponse =
         client.get("$API_V1/admin/pages") { header(HttpHeaders.Authorization, caller.bearer) }
 
+    private suspend fun ApplicationTestBuilder.edit(slug: String, caller: PanelTestStack.Caller = editor): HttpResponse =
+        client.get("$API_V1/admin/pages/$slug") { header(HttpHeaders.Authorization, caller.bearer) }
+
     private suspend fun ApplicationTestBuilder.page(slug: String, ifNoneMatch: String? = null): HttpResponse =
         client.get("$API_V1/pages/$slug") { ifNoneMatch?.let { header(HttpHeaders.IfNoneMatch, it) } }
 
@@ -101,11 +104,11 @@ class WebV1AdminPagesOnDatabaseTest {
     }
 
     @Test
-    fun `PUT makes a page and rewrites it - both 200 with the page as the site shows it, one PAGE_SAVED row each, never the text`() = panel.app {
+    fun `PUT makes a page and rewrites it - both 200 with the page as the edit form reads it, one PAGE_SAVED row each, never the text`() = panel.app {
         val made = save("terms", body())
         assertEquals(HttpStatusCode.OK, made.status, made.bodyAsText())
         val page = made.json()
-        assertEquals(ContractSchemas.propertiesOf("StaticPage"), page.keys)
+        assertEquals(ContractSchemas.propertiesOf("AdminStaticPage"), page.keys)
         assertEquals(listOf("terms", "قوانین و حریم خصوصی", "<p>متن قوانین</p>", clock.now.toString()), listOf("slug", "title", "content", "updatedAt").map { page.text(it) })
         val seo = page.getValue("seo").jsonObject
         assertEquals(
@@ -126,6 +129,36 @@ class WebV1AdminPagesOnDatabaseTest {
         val changes = rows.last().second!!.map { it.jsonObject }.associate { it.text("field") to (it.text("from") to it.text("to")) }
         assertEquals(setOf("content", "seo"), changes.keys)
         assertEquals(null to null, changes["content"])
+    }
+
+    @Test
+    fun `the edit form reads the SEO as saved, not the site's fallbacks, never cached - sending it back changes nothing`() = panel.app {
+        save("terms", body())
+
+        val plain = edit("terms")
+
+        assertEquals(HttpStatusCode.OK, plain.status, plain.bodyAsText())
+        assertEquals(null, plain.headers[HttpHeaders.CacheControl])
+        val page = plain.json()
+        assertEquals(ContractSchemas.propertiesOf("AdminStaticPage"), page.keys)
+        assertEquals("قوانین و حریم خصوصی | کیوا", page.getValue("seo").jsonObject.text("title"))
+        val input = page.getValue("seoInput").jsonObject
+        assertEquals(listOf(null, null, "false"), listOf("title", "description", "noIndex").map { input.text(it) })
+
+        clock.advance(Duration.ofMinutes(1))
+        val again = save("terms", body(extra = ""","seo":$input"""))
+
+        assertEquals(HttpStatusCode.OK, again.status, again.bodyAsText())
+        assertEquals(1, savedRows(editor).size, "the form's own values sent back are no change")
+        assertEquals(null, again.json().getValue("seoInput").jsonObject.text("title"))
+    }
+
+    @Test
+    fun `the edit form of a page nobody wrote is 404, and only ADMIN and CONTENT_EDITOR read it`() = panel.app {
+        assertEquals(HttpStatusCode.NotFound, edit("privacy").status)
+        save("terms", body())
+        assertEquals(HttpStatusCode.OK, edit("terms", panel.callerWith(Role.ADMIN)).status)
+        listOf(Role.OPERATOR, Role.SUPPORT).forEach { assertEquals(HttpStatusCode.Forbidden, edit("terms", panel.callerWith(it)).status, "$it") }
     }
 
     @Test

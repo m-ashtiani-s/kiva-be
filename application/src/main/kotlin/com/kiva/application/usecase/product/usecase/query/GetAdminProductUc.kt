@@ -4,6 +4,7 @@ import com.kiva.application.usecase.stockalert.StockAlertCounts
 import com.kiva.application.dto.ActorNameDto
 import com.kiva.application.dto.AdminProductDto
 import com.kiva.application.dto.AdminVariantDto
+import com.kiva.application.dto.PriceDto
 import com.kiva.application.dto.ProductDetailDto
 import com.kiva.application.usecase.product.ProductCards
 import com.kiva.application.repository.ProductQmRepository
@@ -90,11 +91,15 @@ class GetAdminProductUc(
                 AdminProductDto(
                     detail = shopPart,
                     status = product.status,
+                    basePrice = PriceDto.from(product.basePrice),
+                    seo = product.seo,
                     variants = product.variants.map {
                         AdminVariantDto(
                             shop = ProductCards.variantOf(
                                 it.variantId, it.sku, it.colorKey, it.priceTag, it.isDefault, it.available, it.media, palette, maxPerOrder, settings.lowStockThreshold,
                             ),
+                            ownPrice = it.ownPrice?.let(PriceDto::from),
+                            sortOrder = it.sortOrder,
                             barcode = it.barcode,
                             isActive = it.isActive,
                             stockOnHand = it.onHand,

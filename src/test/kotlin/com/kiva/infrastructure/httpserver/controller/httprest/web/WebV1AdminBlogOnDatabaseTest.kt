@@ -134,6 +134,25 @@ class WebV1AdminBlogOnDatabaseTest {
     }
 
     @Test
+    fun `the form's own excerpt, reading time and SEO are apart from the page's - sent back, nothing becomes the post's own`() = panel.app {
+        val post = create(body()).json()
+
+        assertEquals("قد و فرم شانه مهمه.", post.text("excerpt"), "the page takes the excerpt from the lead")
+        assertEquals("راهنمای انتخاب کیف", post.getValue("seo").jsonObject.text("title")?.substringBefore(" |"))
+        assertEquals(listOf(null, null), listOf(post.text("excerptInput"), post.text("readingMinutesInput")))
+        val seoInput = post.getValue("seoInput").jsonObject
+        assertEquals(listOf(null, null, "false"), listOf("title", "description", "noIndex").map { seoInput.text(it) })
+
+        val own = ""","excerpt":null,"readingMinutes":null,"seo":$seoInput"""
+        val back = update(post.text("id")!!, body(extra = own))
+
+        assertEquals(HttpStatusCode.OK, back.status, back.bodyAsText())
+        val saved = back.json()
+        assertEquals(listOf(null, null), listOf(saved.text("excerptInput"), saved.text("readingMinutesInput")))
+        assertEquals(null, saved.getValue("seoInput").jsonObject.text("title"))
+    }
+
+    @Test
     fun `a paragraph's script and onerror are cleaned out - a relative link stays`() = panel.app {
         val html = """<p>بخون <a href=\"/products?onSale=true\">تخفیف‌ها</a><script>alert(1)</script><img src=x onerror=alert(1)></p>"""
         val made = create(body(blocks = """[{"type":"PARAGRAPH","html":"$html"}]""")).json()

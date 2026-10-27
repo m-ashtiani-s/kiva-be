@@ -96,7 +96,7 @@ data class AdminOrderHttpResponse(
     val timeline: List<OrderEventHttpResponse>,
     val customerNote: String?,
     val gift: OrderGiftHttpResponse?,
-    val returns: List<ReturnRequestHttpResponse>,
+    val returns: List<AdminReturnRequestHttpResponse>,
     val invoiceUrl: String?,
     val refunds: List<RefundHttpResponse>,
     // ---- AdminOrder ----
@@ -136,7 +136,7 @@ data class AdminOrderHttpResponse(
                 timeline = page.timeline,
                 customerNote = page.customerNote,
                 gift = page.gift,
-                returns = page.returns,
+                returns = order.returns.map { AdminReturnRequestHttpResponse.from(it, urls) },
                 invoiceUrl = page.invoiceUrl,
                 refunds = page.refunds,
                 customer = order.customer.let { AdminOrderCustomerHttpResponse(it.id, it.fullName, it.phone, it.ordersCount) },
